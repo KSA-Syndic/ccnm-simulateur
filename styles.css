@@ -53,23 +53,519 @@ body {
 .simulator-header {
     background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
     color: white;
-    padding: 30px;
+    padding: 20px;
     text-align: center;
 }
 
 .simulator-header h1 {
-    margin: 0 0 10px 0;
-    font-size: 1.8rem;
+    margin: 0 0 5px 0;
+    font-size: 1.4rem;
     font-weight: 700;
 }
 
 .simulator-header .subtitle {
     margin: 0;
     opacity: 0.9;
+    font-size: 0.9rem;
+}
+
+/* ============================================
+   WIZARD - Indicateur de progression
+   ============================================ */
+.wizard-progress {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 20px 30px;
+    background: var(--gray-100);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    cursor: default;
+    transition: var(--transition-fast);
+}
+
+.progress-step.clickable {
+    cursor: pointer;
+}
+
+.progress-step.clickable:hover .progress-dot {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.progress-dot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--gray-300);
+    color: var(--gray-500);
+    border-radius: 50%;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: var(--transition-normal);
+}
+
+.progress-step.active .progress-dot {
+    background: var(--color-link);
+    color: white;
+    box-shadow: 0 2px 8px rgba(9, 105, 218, 0.3);
+}
+
+.progress-step.completed .progress-dot {
+    background: var(--color-success);
+    color: white;
+}
+
+.progress-step.completed .progress-dot::after {
+    content: '✓';
+    font-size: 0.8rem;
+}
+
+.progress-step.completed .progress-dot {
+    font-size: 0;
+}
+
+.progress-label {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    font-weight: 500;
+    transition: var(--transition-fast);
+}
+
+.progress-step.active .progress-label {
+    color: var(--color-link);
+    font-weight: 600;
+}
+
+.progress-step.completed .progress-label {
+    color: var(--color-success);
+}
+
+.progress-line {
+    flex: 1;
+    height: 3px;
+    background: var(--gray-300);
+    margin: 0 10px;
+    margin-top: 16px; /* Centre sur le dot (36px/2 - 3px/2) */
+    max-width: 60px;
+    transition: var(--transition-normal);
+}
+
+.progress-line.completed {
+    background: var(--color-success);
+}
+
+/* ============================================
+   WIZARD - Étapes
+   ============================================ */
+.wizard-step {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.wizard-step.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.step-content {
+    padding: 30px;
+}
+
+.step-content h2 {
+    margin: 0 0 8px 0;
+    font-size: 1.3rem;
+    color: var(--body-font-color);
+}
+
+.step-subtitle {
+    margin: 0 0 25px 0;
+    color: var(--gray-500);
+    font-size: 0.95rem;
+}
+
+/* Cartes de choix (Étape 1A) */
+.choice-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.choice-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 25px 20px;
+    background: var(--body-background);
+    border: 2px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    text-align: center;
+}
+
+.choice-card:hover {
+    border-color: var(--color-link);
+    background: var(--gray-100);
+}
+
+.choice-icon {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.choice-title {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 5px;
+}
+
+.choice-desc {
+    font-size: 0.85rem;
+    color: var(--gray-500);
+}
+
+/* Classification directe (Étape 1B) */
+.classification-direct {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.select-group-large label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.book-select-large {
+    width: 100%;
+    padding: 12px 15px;
     font-size: 1rem;
 }
 
-/* Sections / Étapes */
+.classification-result-mini {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    padding: 20px;
+    background: var(--gray-100);
+    border-radius: var(--border-radius);
+    margin-bottom: 25px;
+}
+
+.classification-result-mini.vertical {
+    flex-direction: column;
+    gap: 10px;
+}
+
+.classification-result-mini.compact {
+    padding: 10px;
+    margin-bottom: 0;
+    background: transparent;
+}
+
+.classification-badge.large {
+    font-size: 1.5rem;
+    padding: 15px 25px;
+}
+
+/* Statut badge small */
+.statut-badge.small {
+    font-size: 0.75rem;
+    padding: 3px 10px;
+}
+
+/* Estimation (Étape 1C) */
+.estimation-result {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    padding: 15px;
+    background: var(--gray-100);
+    border-radius: var(--border-radius);
+    margin: 20px 0;
+    flex-wrap: wrap;
+}
+
+.estimation-result.vertical {
+    flex-direction: column;
+    gap: 10px;
+}
+
+.score-mini {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+}
+
+.score-mini .score-label {
+    font-size: 0.85rem;
+    color: var(--gray-500);
+}
+
+.score-mini .score-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--color-link);
+}
+
+.score-mini .score-max {
+    font-size: 0.85rem;
+    color: var(--gray-400);
+}
+
+/* Récap classification (Étape 2) */
+.recap-classification {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 15px;
+    background: var(--gray-100);
+    border-radius: var(--border-radius);
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+}
+
+.recap-badge-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.classification-badge.small {
+    padding: 5px 10px;
+    font-size: 0.9rem;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--color-link);
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0;
+    margin-left: auto;
+}
+
+.btn-link:hover {
+    text-decoration: underline;
+}
+
+/* Input avec unité */
+.input-with-unit {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.input-with-unit .book-input {
+    width: 100px;
+}
+
+.input-unit {
+    color: var(--gray-500);
+    font-size: 0.9rem;
+}
+
+/* Conditions de travail (collapsible) */
+.conditions-details {
+    margin-top: 20px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+}
+
+.conditions-details summary {
+    padding: 12px 15px;
+    cursor: pointer;
+    font-weight: 500;
+    background: var(--gray-100);
+    border-radius: var(--border-radius);
+}
+
+.conditions-details[open] summary {
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.conditions-content {
+    padding: 15px;
+}
+
+/* Actions des étapes */
+.step-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid var(--gray-200);
+}
+
+.step-actions .book-btn {
+    flex: 1;
+    max-width: 220px;
+    justify-content: center;
+}
+
+/* Accord Kuhn toggle */
+.accord-toggle {
+    margin-bottom: 15px;
+}
+
+/* Checkbox mise en valeur (accord entreprise) */
+.checkbox-highlight {
+    padding: 12px 15px;
+    background: var(--gray-100);
+    border-radius: var(--border-radius);
+    border: 2px solid var(--gray-200);
+    transition: var(--transition-fast);
+}
+
+.checkbox-highlight:hover {
+    background: var(--gray-200);
+    border-color: var(--gray-300);
+}
+
+.checkbox-highlight:has(input:checked) {
+    background: rgba(9, 105, 218, 0.08);
+    border-color: var(--color-link);
+}
+
+/* Résultat simplifié */
+.result-card {
+    text-align: center;
+    padding: 30px 20px;
+    border-radius: var(--border-radius);
+    margin: 20px 0;
+}
+
+.result-main .result-value {
+    display: block;
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.result-main .result-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.result-monthly {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+}
+
+.result-monthly .result-value-secondary {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.result-monthly .result-label {
+    font-size: 0.85rem;
+    opacity: 0.8;
+}
+
+/* Toggle 12/13 mois */
+.months-toggle {
+    display: inline-flex;
+    margin-top: 10px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 20px;
+    padding: 3px;
+}
+
+.month-btn {
+    padding: 5px 14px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: none;
+    border-radius: 17px;
+    background: transparent;
+    color: rgba(0,0,0,0.5);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.month-btn:hover:not(.active) {
+    background: rgba(255,255,255,0.2);
+}
+
+.month-btn.active {
+    background: rgba(255,255,255,0.95);
+    color: #1e3a5f;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* Détails du calcul (collapsible) */
+.result-details-toggle {
+    margin: 15px 0;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+}
+
+.result-details-toggle summary {
+    padding: 12px 15px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.result-details-toggle .result-details {
+    padding: 0 15px 15px;
+}
+
+/* Évolution (collapsible) */
+.evolution-details {
+    margin: 15px 0;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+}
+
+.evolution-details summary {
+    padding: 12px 15px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.evolution-details .evolution-panel {
+    padding: 15px;
+}
+
+.evolution-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 15px;
+    font-size: 0.85rem;
+}
+
+.evolution-controls label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Legacy - à conserver */
+/* Sections / Étapes (ancienne version) */
 .step-section {
     padding: 30px;
     border-bottom: 1px solid var(--gray-200);
@@ -582,32 +1078,81 @@ body {
 .book-btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
+    gap: 10px;
+    padding: 12px 24px;
     border: none;
     border-radius: var(--border-radius);
     font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
-    transition: var(--transition-fast);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.book-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.4s ease;
+}
+
+.book-btn:hover::before {
+    left: 100%;
+}
+
+.book-btn:active {
+    transform: scale(0.98);
 }
 
 .book-btn.btn-primary {
-    background: var(--color-link);
+    background: linear-gradient(135deg, var(--color-link) 0%, #0860ca 100%);
     color: white;
+    box-shadow: 0 2px 8px rgba(9, 105, 218, 0.25);
 }
 
 .book-btn.btn-primary:hover {
-    background: #0860ca;
+    background: linear-gradient(135deg, #0860ca 0%, #064ba0 100%);
+    box-shadow: 0 4px 12px rgba(9, 105, 218, 0.35);
+    transform: translateY(-1px);
+}
+
+.book-btn.btn-primary:active {
+    transform: translateY(0) scale(0.98);
 }
 
 .book-btn.btn-secondary {
-    background: var(--gray-200);
-    color: var(--body-font-color);
+    background: var(--body-background);
+    color: var(--gray-500);
+    border: 2px solid var(--gray-300);
 }
 
 .book-btn.btn-secondary:hover {
-    background: var(--gray-300);
+    background: var(--gray-100);
+    border-color: var(--gray-400);
+    color: var(--body-font-color);
+}
+
+.book-btn.btn-secondary:active {
+    background: var(--gray-200);
+}
+
+/* Icônes dans les boutons */
+.book-btn .btn-icon {
+    font-size: 1.1em;
+    transition: transform 0.2s ease;
+}
+
+.book-btn.btn-secondary:hover .btn-icon-left {
+    transform: translateX(-3px);
+}
+
+.book-btn.btn-primary:hover .btn-icon-right {
+    transform: translateX(3px);
 }
 
 /* Inputs & Selects */
@@ -887,7 +1432,50 @@ body {
     color: var(--color-success);
 }
 
-/* Options détaillées de l'accord */
+/* Options de calcul du résultat */
+.result-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.option-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.sub-options {
+    margin-top: 10px;
+    margin-left: 28px;
+    padding: 10px 15px;
+    background: var(--gray-100);
+    border-radius: var(--border-radius);
+    border-left: 3px solid var(--color-link);
+}
+
+.sub-options .checkbox-label {
+    font-weight: normal;
+    font-size: 0.9rem;
+}
+
+/* Container de hints multiples */
+.hints-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.hints-container:empty {
+    display: none;
+}
+
+.hints-container .book-hint {
+    margin: 0;
+}
+
+/* Legacy - Options détaillées de l'accord */
 .accord-options {
     margin-top: 15px;
     padding-top: 15px;

@@ -13,10 +13,29 @@
 
 ### 2. Parcours Utilisateur (User Flow)
 
-1. **Cotation (Le Diagnostic) :** L'utilisateur évalue son poste sur 6 critères via une interface ludique ("Carrousel").
-2. **Confirmation & Ajustement :** L'outil propose une classification (ex: F11). L'utilisateur peut valider ou "débrayer" pour saisir manuellement sa classe s'il la connaît déjà.
-3. **Modalités de Paie :** Selon la classe déterminée (Cadre ou Non-Cadre), l'outil demande les variables spécifiques (Ancienneté, Forfaits).
-4. **Résultat (Le Bilan) :** Affichage du Salaire Minimum Hiérarchique (SMH) annuel brut, détaillant la base et les majorations.
+Le simulateur utilise une interface de type **wizard** (assistant pas à pas) pour guider l'utilisateur.
+
+#### Étape 1 : Classification
+- **Choix initial :** "Connaissez-vous votre classification ?"
+  - **Oui** → Saisie directe du Groupe/Classe
+  - **Non** → Estimation via les 6 critères classants (Carrousels)
+- **Résultat :** Affichage du badge de classification et du statut Cadre/Non-Cadre
+
+#### Étape 2 : Situation
+- Récapitulatif de la classification (modifiable)
+- Ancienneté dans l'entreprise
+- Options spécifiques selon le profil :
+  - **Non-Cadres :** Valeur du Point Territorial
+  - **Cadres :** Type de forfait (35h, Heures +15%, Jours +30%)
+  - **Cadres débutants (F11/F12) :** Expérience professionnelle
+- Conditions de travail particulières (panneau dépliable)
+
+#### Étape 3 : Résultat
+- Options de calcul (Accord Kuhn, 13e mois)
+- Affichage du SMH annuel et mensuel
+- Détail du calcul (panneau dépliable)
+- **Hints contextuels multiples** (voir 3.6)
+- Graphique d'évolution vs inflation (panneau dépliable)
 
 ---
 
@@ -138,11 +157,22 @@ L'utilisateur peut activer l'accord d'entreprise Kuhn via une **checkbox**. Une 
   * Active la prime de vacances (525€, pré-cochée)
   * Active la prime d'équipe (non-cadres)
 
-#### 3.4. Graphique d'Évolution Salaire vs Inflation
+#### 3.4. Répartition sur 13 Mois
+
+Le 13e mois est une **modalité de versement**, pas un élément de rémunération supplémentaire.
+
+* **Principe :** Le SMH annuel reste identique, seule la répartition mensuelle change
+* **Affichage :** Petit sélecteur discret à côté du montant mensuel ("sur 12 mois" / "sur 13 mois")
+* **Calcul :**
+  * Sur 12 mois : SMH annuel ÷ 12
+  * Sur 13 mois : SMH annuel ÷ 13 (avec un mois de "bonus" versé selon l'entreprise)
+* **Note importante :** Le 13e mois est **inclus** dans la vérification du SMH minimum, contrairement à la prime d'ancienneté (non-cadres) qui en est exclue
+
+#### 3.5. Graphique d'Évolution Salaire vs Inflation
 
 Fonctionnalité permettant de visualiser l'évolution projetée du salaire comparée à l'inflation.
 
-##### 3.4.1. Fonctionnalités
+##### 3.5.1. Fonctionnalités
 
 * **Bouton "Comparer à l'inflation"** : Affiche/masque le panneau du graphique
 * **Projection temporelle** : 5, 10, 15, 20, 25, 30 ans ou jusqu'à la retraite
@@ -152,7 +182,7 @@ Fonctionnalité permettant de visualiser l'évolution projetée du salaire compa
 * **Augmentation générale annuelle** : Taux moyen d'augmentation appliqué dans l'entreprise (0% à 10%)
 * **Synchronisation automatique** : Le graphique se met à jour en temps réel avec le simulateur
 
-##### 3.4.2. Sources de Données Inflation
+##### 3.5.2. Sources de Données Inflation
 
 Ordre de priorité avec fallback automatique :
 1. **API Banque Mondiale** (source internationale officielle)
@@ -161,23 +191,42 @@ Ordre de priorité avec fallback automatique :
 L'affichage indique la source utilisée et la période des données (ex: "Banque Mondiale (1975-2024)").
 Plus la période récupérée sera longue, mieux ce sera.
 
-##### 3.4.3. Calcul de l'Évolution
+##### 3.5.3. Calcul de l'Évolution
 
 * **Réutilise le moteur `calculateRemuneration()`** : Garantit 100% de cohérence avec le simulateur
 * **Variables projetées** : Ancienneté et expérience professionnelle incrémentées chaque année
 * **Augmentation générale** : Appliquée sur la partie variable (hors prime vacances fixe)
 * **Inflation cumulée** : Calcul basé sur la moyenne historique des données récupérées
 
-##### 3.4.4. Affichage du Graphique
+##### 3.5.4. Affichage du Graphique
 
 * **Courbe bleue** : Évolution du salaire (ancienneté + augmentation générale)
 * **Courbe rouge pointillée** : Inflation cumulée (pouvoir d'achat à maintenir)
 * **Résumé** : Écart final en % par rapport à l'inflation
 * **Bibliothèque** : Chart.js
 
-#### 3.5. Contraintes de Cohérence des Données
+#### 3.6. Système de Hints Contextuels Multiples
 
-##### 3.5.1. Expérience Professionnelle ≥ Ancienneté
+L'interface peut afficher **plusieurs messages informatifs simultanément** selon la situation de l'utilisateur.
+
+##### Types de Hints
+
+| Type | Couleur | Cas d'affichage |
+| --- | --- | --- |
+| **Warning (orange)** | Barème salariés débutants | Cadre F11/F12 avec < 6 ans d'expérience |
+| **Success (vert)** | Accord Kuhn appliqué | Kuhn activé avec éléments calculés |
+| **Info (bleu)** | Majorations CCN | Majorations nuit/dimanche sans accord Kuhn |
+| **Info (bleu)** | Message par défaut | Minimum conventionnel |
+
+##### Combinaisons Possibles
+
+Plusieurs hints peuvent s'afficher ensemble, par exemple :
+- "Barème salariés débutants" + "Accord Kuhn appliqué"
+- Permet à l'utilisateur de comprendre précisément ce qui est pris en compte
+
+#### 3.7. Contraintes de Cohérence des Données
+
+##### 3.7.1. Expérience Professionnelle ≥ Ancienneté
 
 L'expérience professionnelle totale ne peut pas être inférieure à l'ancienneté dans l'entreprise :
 * **Si ancienneté augmente** : L'expérience pro est automatiquement ajustée si elle était inférieure
@@ -277,20 +326,29 @@ Le code est organisé en modules fonctionnels :
 9. **Majorations Kuhn :** Nuit = +20% (vs +15% CCN), Dimanche = +50% (vs +100% CCN)
 10. **Prime vacances :** 525€ ajoutés si Kuhn activé et option cochée
 
-#### 5.4. Tests de Cohérence des Données
-11. **Expérience ≥ Ancienneté :** Si ancienneté = 5, expérience pro ne peut pas être < 5
-12. **Synchronisation :** Modifier l'ancienneté met à jour l'expérience pro si nécessaire
+#### 5.4. Tests Répartition 13 Mois
+11. **Calcul sur 12 mois :** Classe A1 (21 700€) → 1 808€/mois
+12. **Calcul sur 13 mois :** Classe A1 (21 700€) → 1 669€/mois (total annuel inchangé)
 
-#### 5.5. Tests Graphique d'Évolution
-13. **Cohérence simulateur :** Le salaire année 0 du graphique = total affiché dans le simulateur
-14. **Évolution ancienneté :** L'ancienneté augmente de 1 par année projetée
-15. **Augmentation générale :** Avec 2%/an sur 10 ans, le salaire variable augmente d'environ 22%
-16. **Source inflation :** Affichage de la source (Banque Mondiale ou INSEE) et de la période
+#### 5.5. Tests de Cohérence des Données
+13. **Expérience ≥ Ancienneté :** Si ancienneté = 5, expérience pro ne peut pas être < 5
+14. **Synchronisation :** Modifier l'ancienneté met à jour l'expérience pro si nécessaire
 
-#### 5.6. Tests UI/UX
-17. **Responsive :** Carrousel et graphique utilisables sur mobile
-19. **Tooltips :** Informations contextuelles sur tous les champs avec "?"
-20. **Intégration Hugo :** Le code s'intègre sans casser le style du thème Book
+#### 5.6. Tests Graphique d'Évolution
+15. **Cohérence simulateur :** Le salaire année 0 du graphique = total affiché dans le simulateur
+16. **Évolution ancienneté :** L'ancienneté augmente de 1 par année projetée
+17. **Augmentation générale :** Avec 2%/an sur 10 ans, le salaire variable augmente d'environ 22%
+18. **Source inflation :** Affichage de la source (Banque Mondiale ou INSEE) et de la période
+
+#### 5.7. Tests Hints Multiples
+19. **Affichage combiné :** Cadre débutant + Kuhn activé → 2 hints visibles simultanément
+20. **Hint par défaut :** Si aucune condition spéciale, affiche "minimum conventionnel"
+
+#### 5.8. Tests UI/UX
+21. **Wizard navigation :** Navigation possible via les numéros d'étapes (stepper)
+22. **Responsive :** Carrousel et graphique utilisables sur mobile
+23. **Tooltips :** Informations contextuelles sur tous les champs avec "?"
+24. **Intégration Hugo :** Le code s'intègre sans casser le style du thème Book
 
 ---
 

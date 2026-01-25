@@ -7,10 +7,17 @@
 
 // État global de l'application
 const state = {
+    // === WIZARD ===
+    currentStep: 1,              // Étape actuelle du wizard
+    modeClassification: null,    // 'direct' ou 'estimation'
+    
+    // === CLASSIFICATION ===
     scores: [1, 1, 1, 1, 1, 1],  // Scores des 6 critères (1-10)
     modeManuel: false,           // Mode automatique par défaut
     groupeManuel: 'A',           // Groupe sélectionné manuellement
     classeManuel: 1,             // Classe sélectionnée manuellement
+    
+    // === SITUATION ===
     anciennete: 0,               // Ancienneté (Non-Cadres)
     pointTerritorial: 5.90,      // Valeur du Point Territorial - Bas-Rhin (2025)
     forfait: '35h',              // Type de forfait (Cadres)
@@ -26,7 +33,10 @@ const state = {
     
     // === ACCORD ENTREPRISE KUHN ===
     accordKuhn: false,           // Accord d'entreprise activé
-    primeVacances: true          // Prime de vacances (525€)
+    primeVacances: true,         // Prime de vacances (525€)
+    
+    // === AFFICHAGE ===
+    nbMois: 12                   // Répartition mensuelle (12 ou 13 mois)
 };
 
 /**
@@ -35,11 +45,251 @@ const state = {
  * ============================================
  */
 document.addEventListener('DOMContentLoaded', () => {
+    initWizard();
     initRoulettes();
     initControls();
     initTooltips();
     updateAll();
 });
+
+/**
+ * ============================================
+ * WIZARD - Navigation par étapes
+ * ============================================
+ */
+function initWizard() {
+    // Navigation par clic sur les indicateurs de progression
+    document.querySelectorAll('.progress-step').forEach(step => {
+        step.addEventListener('click', () => {
+            const targetStep = parseInt(step.dataset.step);
+            const maxStep = state.currentStep;
+            
+            // Autoriser la navigation vers les étapes déjà complétées ou l'étape actuelle
+            if (targetStep <= maxStep) {
+                navigateToStep(targetStep);
+            }
+        });
+    });
+
+    // Étape 1A : Choix du mode
+    const btnConnaisClasse = document.getElementById('btn-connais-classe');
+    const btnEstimerClasse = document.getElementById('btn-estimer-classe');
+    
+    if (btnConnaisClasse) {
+        btnConnaisClasse.addEventListener('click', () => {
+            state.modeClassification = 'direct';
+            state.modeManuel = true;
+            showSubStep('1b');
+            updateAll();
+        });
+    }
+    
+    if (btnEstimerClasse) {
+        btnEstimerClasse.addEventListener('click', () => {
+            state.modeClassification = 'estimation';
+            state.modeManuel = false;
+            showSubStep('1c');
+            updateAll();
+        });
+    }
+    
+    // Étape 1B : Saisie directe - Retour et Suivant
+    const btnBack1b = document.getElementById('btn-back-1b');
+    const btnNext1b = document.getElementById('btn-next-1b');
+    
+    if (btnBack1b) {
+        btnBack1b.addEventListener('click', () => showSubStep('1a'));
+    }
+    
+    if (btnNext1b) {
+        btnNext1b.addEventListener('click', () => goToStep(2));
+    }
+    
+    // Étape 1C : Estimation - Retour et Valider
+    const btnBack1c = document.getElementById('btn-back-1c');
+    const btnNext1c = document.getElementById('btn-next-1c');
+    
+    if (btnBack1c) {
+        btnBack1c.addEventListener('click', () => showSubStep('1a'));
+    }
+    
+    if (btnNext1c) {
+        btnNext1c.addEventListener('click', () => goToStep(2));
+    }
+    
+    // Étape 2 : Situation - Retour et Suivant
+    const btnBack2 = document.getElementById('btn-back-2');
+    const btnNext2 = document.getElementById('btn-next-2');
+    const btnModifierClasse = document.getElementById('btn-modifier-classe');
+    
+    if (btnBack2) {
+        btnBack2.addEventListener('click', () => goToStep(1));
+    }
+    
+    if (btnNext2) {
+        btnNext2.addEventListener('click', () => goToStep(3));
+    }
+    
+    if (btnModifierClasse) {
+        btnModifierClasse.addEventListener('click', () => goToStep(1));
+    }
+    
+    // Étape 3 : Résultat - Retour et Nouvelle simulation
+    const btnBack3 = document.getElementById('btn-back-3');
+    const btnRestart = document.getElementById('btn-restart');
+    
+    if (btnBack3) {
+        btnBack3.addEventListener('click', () => goToStep(2));
+    }
+    
+    if (btnRestart) {
+        btnRestart.addEventListener('click', () => {
+            // Réinitialiser et revenir au début
+            state.currentStep = 1;
+            state.modeClassification = null;
+            state.modeManuel = false;
+            showSubStep('1a');
+        });
+    }
+}
+
+/**
+ * Naviguer vers une étape du wizard (avance l'étape max)
+ */
+function goToStep(stepNumber) {
+    // Enregistrer l'étape maximale atteinte pour la navigation
+    state.currentStep = Math.max(state.currentStep, stepNumber);
+    navigateToStep(stepNumber);
+}
+
+/**
+ * Naviguer vers une étape spécifique (sans changer l'étape max)
+ */
+function navigateToStep(stepNumber) {
+    // Masquer toutes les étapes
+    document.querySelectorAll('.wizard-step').forEach(step => {
+        step.classList.remove('active');
+    });
+    
+    // Afficher l'étape cible
+    const targetStep = document.getElementById(`step-${stepNumber}`);
+    if (targetStep) {
+        targetStep.classList.remove('hidden'); // Important: retirer hidden
+        targetStep.classList.add('active');
+    }
+    
+    // Mettre à jour l'indicateur de progression (basé sur l'étape max atteinte)
+    updateProgressIndicator(state.currentStep, stepNumber);
+    
+    // Actions spécifiques par étape
+    if (stepNumber === 1) {
+        // Restaurer la bonne sous-étape
+        if (state.modeClassification === 'direct') {
+            showSubStep('1b');
+        } else if (state.modeClassification === 'estimation') {
+            showSubStep('1c');
+        } else {
+            showSubStep('1a');
+        }
+    } else if (stepNumber === 2) {
+        updateRecapClassification();
+        updateAll();
+    } else if (stepNumber === 3) {
+        updateAll();
+    }
+    
+    // Scroll en haut
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/**
+ * Afficher une sous-étape (1a, 1b, 1c)
+ */
+function showSubStep(subStep) {
+    // Masquer toutes les sous-étapes de l'étape 1
+    ['1a', '1b', '1c'].forEach(sub => {
+        const el = document.getElementById(`step-${sub}`);
+        if (el) el.classList.add('hidden');
+    });
+    
+    // Afficher la sous-étape cible
+    const target = document.getElementById(`step-${subStep}`);
+    if (target) {
+        target.classList.remove('hidden');
+    }
+    
+    // Si on affiche l'étape 1c (estimation), recalculer les positions des roulettes
+    // après que le DOM soit mis à jour
+    if (subStep === '1c') {
+        requestAnimationFrame(() => {
+            // Double RAF pour s'assurer que le layout est calculé
+            requestAnimationFrame(() => {
+                refreshAllRoulettes();
+            });
+        });
+    }
+}
+
+/**
+ * Rafraîchir l'affichage de toutes les roulettes
+ */
+function refreshAllRoulettes() {
+    for (let i = 0; i < state.scores.length; i++) {
+        updateRouletteDisplay(i);
+    }
+}
+
+/**
+ * Mettre à jour l'indicateur de progression
+ */
+function updateProgressIndicator(maxStep, activeStep = maxStep) {
+    const steps = document.querySelectorAll('.progress-step');
+    const lines = document.querySelectorAll('.progress-line');
+    
+    steps.forEach(step => {
+        const stepNum = parseInt(step.dataset.step);
+        step.classList.remove('active', 'completed', 'clickable');
+        
+        if (stepNum < maxStep) {
+            step.classList.add('completed', 'clickable');
+        } else if (stepNum === maxStep) {
+            step.classList.add('clickable');
+        }
+        
+        if (stepNum === activeStep) {
+            step.classList.add('active');
+        }
+    });
+    
+    // Mettre à jour les lignes de progression
+    lines.forEach((line, index) => {
+        if (index < maxStep - 1) {
+            line.classList.add('completed');
+        } else {
+            line.classList.remove('completed');
+        }
+    });
+}
+
+/**
+ * Mettre à jour le récapitulatif de la classification
+ */
+function updateRecapClassification() {
+    const { groupe, classe } = getActiveClassification();
+    const isCadre = classe >= CONFIG.SEUIL_CADRE;
+    
+    const recapGroupe = document.getElementById('recap-groupe');
+    const recapClasse = document.getElementById('recap-classe');
+    const recapStatut = document.getElementById('recap-statut');
+    
+    if (recapGroupe) recapGroupe.textContent = groupe;
+    if (recapClasse) recapClasse.textContent = classe;
+    if (recapStatut) {
+        recapStatut.textContent = isCadre ? 'Cadre' : 'Non-Cadre';
+        recapStatut.classList.toggle('cadre', isCadre);
+        recapStatut.classList.toggle('non-cadre', !isCadre);
+    }
+}
 
 /**
  * Initialisation des roulettes
@@ -232,36 +482,26 @@ function updateFullDescription(index, value) {
  * ============================================
  */
 function initControls() {
-    // Bouton mode manuel
-    const btnManuel = document.getElementById('btn-mode-manuel');
-    const btnAuto = document.getElementById('btn-mode-auto');
-    
-    btnManuel.addEventListener('click', () => {
-        state.modeManuel = true;
-        updateModeDisplay();
-        updateAll();
-    });
-
-    btnAuto.addEventListener('click', () => {
-        state.modeManuel = false;
-        updateModeDisplay();
-        updateAll();
-    });
-
-    // Sélecteurs manuels
+    // Sélecteurs manuels (wizard)
     const selectGroupe = document.getElementById('select-groupe');
     const selectClasse = document.getElementById('select-classe');
 
-    selectGroupe.addEventListener('change', (e) => {
-        state.groupeManuel = e.target.value;
-        updateClasseOptions();
-        updateAll();
-    });
+    if (selectGroupe) {
+        selectGroupe.addEventListener('change', (e) => {
+            state.groupeManuel = e.target.value;
+            state.modeManuel = true;
+            updateClasseOptions();
+            updateAll();
+        });
+    }
 
-    selectClasse.addEventListener('change', (e) => {
-        state.classeManuel = parseInt(e.target.value);
-        updateAll();
-    });
+    if (selectClasse) {
+        selectClasse.addEventListener('change', (e) => {
+            state.classeManuel = parseInt(e.target.value);
+            state.modeManuel = true;
+            updateAll();
+        });
+    }
 
     // Initialiser les options de classe
     updateClasseOptions();
@@ -364,31 +604,45 @@ function initControls() {
     
     const accordKuhnCheckbox = document.getElementById('accord-kuhn');
     const accordOptions = document.getElementById('accord-options');
-    const accordContainer = document.getElementById('accord-entreprise-container');
     
     // Checkbox principal accord Kuhn
-    accordKuhnCheckbox.addEventListener('change', (e) => {
-        state.accordKuhn = e.target.checked;
-        
-        // Afficher/masquer les options détaillées
-        if (state.accordKuhn) {
-            accordOptions.classList.remove('hidden');
-            accordContainer.classList.add('active');
-        } else {
-            accordOptions.classList.add('hidden');
-            accordContainer.classList.remove('active');
-        }
-        
-        updateConditionsTravailDisplay();
-        updateTauxInfo();
-        updateAll();
-    });
+    if (accordKuhnCheckbox) {
+        accordKuhnCheckbox.addEventListener('change', (e) => {
+            state.accordKuhn = e.target.checked;
+            
+            // Afficher/masquer les options détaillées
+            if (accordOptions) {
+                if (state.accordKuhn) {
+                    accordOptions.classList.remove('hidden');
+                } else {
+                    accordOptions.classList.add('hidden');
+                }
+            }
+            
+            updateConditionsTravailDisplay();
+            updateTauxInfo();
+            updateAll();
+        });
+    }
 
     // Prime de vacances
     const primeVacancesCheckbox = document.getElementById('prime-vacances');
-    primeVacancesCheckbox.addEventListener('change', (e) => {
-        state.primeVacances = e.target.checked;
-        updateAll();
+    if (primeVacancesCheckbox) {
+        primeVacancesCheckbox.addEventListener('change', (e) => {
+            state.primeVacances = e.target.checked;
+            updateAll();
+        });
+    }
+    
+    // Toggle nombre de mois (12 ou 13)
+    const monthBtns = document.querySelectorAll('.month-btn');
+    monthBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            monthBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.nbMois = parseInt(btn.dataset.months);
+            updateRemunerationDisplay(calculateRemuneration());
+        });
     });
 }
 
@@ -480,24 +734,27 @@ function updateTauxInfo() {
 }
 
 /**
- * Mettre à jour l'affichage du mode (auto/manuel)
+ * Mettre à jour l'affichage du mode (auto/manuel) - Legacy
  */
 function updateModeDisplay() {
+    // Fonction conservée pour compatibilité mais plus utilisée dans le wizard
     const btnManuel = document.getElementById('btn-mode-manuel');
     const btnAuto = document.getElementById('btn-mode-auto');
     const sectionManuel = document.getElementById('classification-manual');
     const sectionAuto = document.getElementById('classification-auto');
 
+    if (!btnManuel || !btnAuto) return; // Nouveau wizard
+
     if (state.modeManuel) {
         btnManuel.classList.add('hidden');
         btnAuto.classList.remove('hidden');
-        sectionManuel.classList.remove('hidden');
-        sectionAuto.style.opacity = '0.5';
+        if (sectionManuel) sectionManuel.classList.remove('hidden');
+        if (sectionAuto) sectionAuto.style.opacity = '0.5';
     } else {
         btnManuel.classList.remove('hidden');
         btnAuto.classList.add('hidden');
-        sectionManuel.classList.add('hidden');
-        sectionAuto.style.opacity = '1';
+        if (sectionManuel) sectionManuel.classList.add('hidden');
+        if (sectionAuto) sectionAuto.style.opacity = '1';
     }
 }
 
@@ -506,6 +763,8 @@ function updateModeDisplay() {
  */
 function updateClasseOptions() {
     const selectClasse = document.getElementById('select-classe');
+    if (!selectClasse) return;
+    
     const classes = CONFIG.GROUPE_CLASSES[state.groupeManuel];
     
     selectClasse.innerHTML = '';
@@ -895,7 +1154,7 @@ function calculateRemuneration() {
             total += montantVacances;
         }
     }
-
+    
     return {
         scenario,
         baseSMH,
@@ -915,47 +1174,65 @@ function calculateRemuneration() {
 function updateAll() {
     // Score total
     const totalScore = state.scores.reduce((sum, score) => sum + score, 0);
-    document.getElementById('score-total').textContent = totalScore;
+    const scoreTotal = document.getElementById('score-total');
+    if (scoreTotal) scoreTotal.textContent = totalScore;
 
     // Classification automatique
     const calcAuto = calculateClassification();
-    document.getElementById('groupe-auto').textContent = calcAuto.groupe;
-    document.getElementById('classe-auto').textContent = calcAuto.classe;
+    const groupeAuto = document.getElementById('groupe-auto');
+    const classeAuto = document.getElementById('classe-auto');
+    if (groupeAuto) groupeAuto.textContent = calcAuto.groupe;
+    if (classeAuto) classeAuto.textContent = calcAuto.classe;
 
     // Classification active
     const classification = getActiveClassification();
     const isCadre = classification.classe >= CONFIG.SEUIL_CADRE;
 
-    // Statut Cadre/Non-Cadre
-    const statutBadge = document.getElementById('statut-badge');
-    if (isCadre) {
-        statutBadge.textContent = 'Cadre';
-        statutBadge.classList.remove('non-cadre');
-        statutBadge.classList.add('cadre');
-    } else {
-        statutBadge.textContent = 'Non-Cadre';
-        statutBadge.classList.remove('cadre');
-        statutBadge.classList.add('non-cadre');
-    }
+    // Mettre à jour les affichages de classification (wizard)
+    const groupeDisplay = document.getElementById('groupe-display');
+    const classeDisplay = document.getElementById('classe-display');
+    if (groupeDisplay) groupeDisplay.textContent = classification.groupe;
+    if (classeDisplay) classeDisplay.textContent = classification.classe;
+
+    // Statut Cadre/Non-Cadre (plusieurs badges possibles)
+    const updateStatutBadge = (badge) => {
+        if (!badge) return;
+        if (isCadre) {
+            badge.textContent = 'Cadre';
+            badge.classList.remove('non-cadre');
+            badge.classList.add('cadre');
+        } else {
+            badge.textContent = 'Non-Cadre';
+            badge.classList.remove('cadre');
+            badge.classList.add('non-cadre');
+        }
+    };
+    
+    updateStatutBadge(document.getElementById('statut-badge'));
+    updateStatutBadge(document.getElementById('statut-badge-auto'));
 
     // Affichage des modalités
     const modalitesNonCadre = document.getElementById('modalites-non-cadre');
     const modalitesCadre = document.getElementById('modalites-cadre');
     const cadreDebutant = document.getElementById('cadre-debutant');
 
-    if (isCadre) {
-        modalitesNonCadre.classList.add('hidden');
-        modalitesCadre.classList.remove('hidden');
-        
-        // Groupe F débutants (F11 et F12)
-        if (classification.classe === 11 || classification.classe === 12) {
-            cadreDebutant.classList.remove('hidden');
+    if (modalitesNonCadre && modalitesCadre) {
+        if (isCadre) {
+            modalitesNonCadre.classList.add('hidden');
+            modalitesCadre.classList.remove('hidden');
+            
+            // Groupe F débutants (F11 et F12)
+            if (cadreDebutant) {
+                if (classification.classe === 11 || classification.classe === 12) {
+                    cadreDebutant.classList.remove('hidden');
+                } else {
+                    cadreDebutant.classList.add('hidden');
+                }
+            }
         } else {
-            cadreDebutant.classList.add('hidden');
+            modalitesNonCadre.classList.remove('hidden');
+            modalitesCadre.classList.add('hidden');
         }
-    } else {
-        modalitesNonCadre.classList.remove('hidden');
-        modalitesCadre.classList.add('hidden');
     }
 
     // Affichage des conditions de travail selon statut/forfait
@@ -979,8 +1256,8 @@ function updateRemunerationDisplay(remuneration) {
     // Total annuel
     document.getElementById('result-smh').textContent = formatMoney(remuneration.total);
     
-    // Mensuel (approximatif sur 12 mois)
-    const mensuel = Math.round(remuneration.total / 12);
+    // Mensuel (sur 12 ou 13 mois selon le choix)
+    const mensuel = Math.round(remuneration.total / state.nbMois);
     document.getElementById('result-mensuel').textContent = formatMoney(mensuel);
 
     // Détails
@@ -1015,11 +1292,13 @@ function updateRemunerationDisplay(remuneration) {
 }
 
 /**
- * Mettre à jour le hint informatif
+ * Mettre à jour les hints informatifs (plusieurs peuvent s'afficher)
  */
 function updateHintDisplay(remuneration) {
-    const hint = document.getElementById('hint-info');
-    const hintText = document.getElementById('hint-text');
+    const container = document.getElementById('hints-container');
+    if (!container) return;
+    
+    const hints = [];
     
     // Compter les éléments appliqués
     const kuhnDetails = remuneration.details.filter(d => d.isKuhn);
@@ -1028,11 +1307,21 @@ function updateHintDisplay(remuneration) {
     );
     const hasKuhnElements = kuhnDetails.length > 0;
     
+    // === HINT 1: Barème salariés débutants ===
+    if (remuneration.scenario === 'cadre-debutant') {
+        const smhStandard = CONFIG.SMH[remuneration.classe];
+        hints.push({
+            type: 'warning',
+            content: `
+                <strong>📋 Barème salariés débutants</strong><br>
+                Classe ${remuneration.groupe}${remuneration.classe} avec moins de 6 ans d'expérience professionnelle.<br>
+                <small>SMH standard (${formatMoney(smhStandard)}) applicable à partir de 6 ans d'expérience.</small>
+            `
+        });
+    }
+    
+    // === HINT 2: Accord Kuhn ===
     if (state.accordKuhn && hasKuhnElements) {
-        // Message spécifique Accord Kuhn avec résumé
-        hint.className = 'book-hint success';
-        
-        // Construire le résumé des éléments Kuhn
         const elementsKuhn = kuhnDetails.map(d => {
             if (d.label.includes('ancienneté')) return 'prime ancienneté';
             if (d.label.includes('équipe')) return 'prime équipe';
@@ -1044,54 +1333,45 @@ function updateHintDisplay(remuneration) {
         
         const listeElements = [...new Set(elementsKuhn)].join(', ');
         
-        hintText.innerHTML = `
-            <strong>🏢 Accord Kuhn appliqué</strong><br>
-            Éléments Kuhn : ${listeElements}.<br>
-            <small>Taux Kuhn : nuit poste +20%, matin/AM +15%, dimanche +50%, équipe 0.82€/h.</small>
-        `;
-    } else if (hasMajorations) {
-        // Majorations CCN appliquées
-        hint.className = 'book-hint info';
-        hintText.innerHTML = `
-            <strong>Majorations CCN appliquées</strong><br>
-            Taux CCN : nuit +15%, dimanche +100%.<br>
-            <small>Cochez "Accord Kuhn" pour appliquer les taux entreprise (nuit +20%, dimanche +50%).</small>
-        `;
-    } else if (remuneration.scenario === 'cadre-debutant') {
-        hint.className = 'book-hint warning';
-        const smhStandard = CONFIG.SMH[remuneration.classe];
-        hintText.innerHTML = `
-            <strong>Barème salariés débutants</strong> - Classe ${remuneration.groupe}${remuneration.classe} avec < 6 ans d'expérience.<br>
-            SMH standard (${formatMoney(smhStandard)}) à partir de 6 ans.
-        `;
-    } else if (remuneration.isCadre) {
-        hint.className = 'book-hint info';
-        const isForfaitJours = state.forfait === 'jours';
-        let msg = '';
-        if (isForfaitJours) {
-            msg = 'Forfait jours : les majorations nuit/dimanche donnent lieu à du repos compensateur (non simulé).';
-            if (state.accordKuhn) {
-                msg += ' Accord Kuhn : prime ancienneté applicable.';
-            }
-        } else {
-            msg = state.accordKuhn 
-                ? 'Accord Kuhn actif : prime d\'ancienneté cadres applicable. Majorations nuit/dimanche possibles.'
-                : 'Majorations nuit/dimanche possibles (base 35h ou forfait heures). Accord Kuhn : prime d\'ancienneté cadres.';
-        }
-        hintText.innerHTML = msg;
-    } else {
-        hint.className = 'book-hint info';
-        if (state.anciennete >= 3 || (state.accordKuhn && state.anciennete >= 2)) {
-            hintText.innerHTML = `
-                Prime d'ancienneté incluse. Renseignez vos conditions de travail (nuit, dimanche, équipe) si applicable.
-            `;
-        } else {
-            const seuilAnc = state.accordKuhn ? '2 ans (Kuhn)' : '3 ans (CCN)';
-            hintText.innerHTML = `
-                Minimum conventionnel. Prime d'ancienneté à partir de ${seuilAnc}.
-            `;
-        }
+        hints.push({
+            type: 'success',
+            content: `
+                <strong>🏢 Accord Kuhn appliqué</strong><br>
+                Éléments : ${listeElements}.<br>
+                <small>Taux spécifiques : nuit +20%, matin/AM +15%, dimanche +50%, équipe 0.82€/h.</small>
+            `
+        });
+    } else if (hasMajorations && !state.accordKuhn) {
+        // Majorations CCN sans Kuhn
+        hints.push({
+            type: 'info',
+            content: `
+                <strong>Majorations CCN appliquées</strong><br>
+                Taux CCN : nuit +15%, dimanche +100%.<br>
+                <small>Activez l'accord Kuhn pour les taux entreprise.</small>
+            `
+        });
     }
+    
+    // === HINT PAR DÉFAUT si aucun autre ===
+    if (hints.length === 0) {
+        const seuilAnc = state.accordKuhn ? '2 ans (Kuhn)' : '3 ans (CCN)';
+        const hasAnciennete = state.anciennete >= 3 || (state.accordKuhn && state.anciennete >= 2);
+        
+        hints.push({
+            type: 'info',
+            content: hasAnciennete
+                ? `Ce montant est le minimum conventionnel. Prime d'ancienneté incluse.`
+                : `Ce montant est le minimum conventionnel. Prime d'ancienneté à partir de ${seuilAnc}.`
+        });
+    }
+    
+    // Générer le HTML
+    container.innerHTML = hints.map(hint => `
+        <div class="book-hint ${hint.type}">
+            <p>${hint.content}</p>
+        </div>
+    `).join('');
 }
 
 /**
@@ -1156,7 +1436,6 @@ let isUpdatingChart = false;
  * Récupérer les données d'inflation depuis plusieurs sources officielles
  */
 async function fetchInflationData() {
-    console.log('fetchInflationData');
     // 1. Essayer l'API Banque Mondiale (source officielle internationale)
     try {
         const response = await fetch(
@@ -1217,8 +1496,9 @@ async function fetchInflationData() {
  * Synchroniser le graphique avec les données actuelles (si visible)
  */
 async function syncEvolutionChart() {
-    const panel = document.getElementById('evolution-section');
-    if (!panel || panel.classList.contains('hidden')) return;
+    // Vérifier si le bloc <details> d'évolution est ouvert
+    const evolutionDetails = document.querySelector('.evolution-details');
+    if (!evolutionDetails || !evolutionDetails.open) return;
     if (isUpdatingChart) return; // Éviter les appels multiples simultanés
     
     isUpdatingChart = true;
@@ -1516,20 +1796,18 @@ function getYearsToRetirement(currentAge) {
  * Initialiser les contrôles du graphique
  */
 function initEvolutionChart() {
-    const btnEvolution = document.getElementById('btn-evolution');
-    const btnClose = document.getElementById('btn-close-evolution');
-    const panel = document.getElementById('evolution-section');
+    const evolutionDetails = document.querySelector('.evolution-details');
     const yearsSelect = document.getElementById('projection-years');
     const ageInputWrapper = document.getElementById('age-input-wrapper');
     const ageInput = document.getElementById('age-actuel');
     
-    if (!btnEvolution) return;
+    if (!yearsSelect) return;
     
     // Fonction pour obtenir le nombre d'années à projeter
     const getProjectionYears = () => {
         const value = yearsSelect.value;
         if (value === 'retraite') {
-            const age = parseInt(ageInput.value) || 30;
+            const age = parseInt(ageInput?.value) || 30;
             return getYearsToRetirement(age);
         }
         return parseInt(value);
@@ -1537,34 +1815,37 @@ function initEvolutionChart() {
     
     // Afficher/masquer le champ d'âge selon la sélection
     const updateAgeInputVisibility = () => {
-        if (yearsSelect.value === 'retraite') {
-            ageInputWrapper.classList.remove('hidden');
-        } else {
-            ageInputWrapper.classList.add('hidden');
+        if (ageInputWrapper) {
+            if (yearsSelect.value === 'retraite') {
+                ageInputWrapper.classList.remove('hidden');
+            } else {
+                ageInputWrapper.classList.add('hidden');
+            }
         }
     };
     
-    btnEvolution.addEventListener('click', async () => {
-        panel.classList.remove('hidden');
-        btnEvolution.classList.add('hidden');
-        updateAgeInputVisibility();
-        await updateEvolutionChart(getProjectionYears());
-    });
-    
-    btnClose.addEventListener('click', () => {
-        panel.classList.add('hidden');
-        btnEvolution.classList.remove('hidden');
-    });
+    // Gérer l'ouverture du détails d'évolution
+    if (evolutionDetails) {
+        evolutionDetails.addEventListener('toggle', async (e) => {
+            if (e.target.open) {
+                updateAgeInputVisibility();
+                await updateEvolutionChart(getProjectionYears());
+            }
+        });
+    }
     
     yearsSelect.addEventListener('change', async () => {
         updateAgeInputVisibility();
-        await updateEvolutionChart(getProjectionYears());
+        // Mettre à jour seulement si le panneau est ouvert
+        if (evolutionDetails?.open) {
+            await updateEvolutionChart(getProjectionYears());
+        }
     });
     
     // Mettre à jour le graphique quand l'âge change
     if (ageInput) {
         ageInput.addEventListener('change', async () => {
-            if (yearsSelect.value === 'retraite') {
+            if (yearsSelect.value === 'retraite' && evolutionDetails?.open) {
                 await updateEvolutionChart(getProjectionYears());
             }
         });
@@ -1574,7 +1855,7 @@ function initEvolutionChart() {
     const augmentationInput = document.getElementById('augmentation-annuelle');
     if (augmentationInput) {
         augmentationInput.addEventListener('input', async () => {
-            if (!panel.classList.contains('hidden')) {
+            if (evolutionDetails?.open) {
                 await updateEvolutionChart(getProjectionYears());
             }
         });
@@ -1584,4 +1865,17 @@ function initEvolutionChart() {
 // Initialiser le graphique après le chargement
 document.addEventListener('DOMContentLoaded', () => {
     initEvolutionChart();
+    
+    // Recalculer les roulettes lors du redimensionnement (debounced)
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            // Rafraîchir les roulettes si l'étape 1c est visible
+            const step1c = document.getElementById('step-1c');
+            if (step1c && !step1c.classList.contains('hidden')) {
+                refreshAllRoulettes();
+            }
+        }, 150);
+    });
 });
