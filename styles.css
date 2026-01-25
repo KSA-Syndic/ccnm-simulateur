@@ -1,0 +1,1096 @@
+/* ============================================
+   Simulateur Classification Métallurgie 2024
+   Styles CSS - Compatible Hugo Book Theme
+   ============================================ */
+
+/* Variables CSS (compatibles Hugo Book) */
+:root {
+    --color-link: #0969da;
+    --body-background: #ffffff;
+    --body-font-color: #24292f;
+    --gray-100: #f6f8fa;
+    --gray-200: #eaeef2;
+    --gray-300: #d0d7de;
+    --gray-400: #8c959f;
+    --gray-500: #6e7781;
+    --color-success: #1a7f37;
+    --color-warning: #9a6700;
+    --color-danger: #cf222e;
+    --color-info: #0969da;
+    --border-radius: 8px;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.3s ease;
+}
+
+/* Reset & Base */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--gray-100);
+    color: var(--body-font-color);
+    line-height: 1.6;
+    margin: 0;
+    padding: 20px;
+}
+
+/* Container Principal */
+.simulator-container {
+    max-width: 900px;
+    margin: 0 auto;
+    background: var(--body-background);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+}
+
+/* Header */
+.simulator-header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+    color: white;
+    padding: 30px;
+    text-align: center;
+}
+
+.simulator-header h1 {
+    margin: 0 0 10px 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.simulator-header .subtitle {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1rem;
+}
+
+/* Sections / Étapes */
+.step-section {
+    padding: 30px;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.step-section:last-of-type {
+    border-bottom: none;
+}
+
+.step-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.step-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--color-link);
+    color: white;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.step-header h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: var(--body-font-color);
+    flex: 1;
+}
+
+.step-description {
+    width: 100%;
+    margin: 0;
+    color: var(--gray-500);
+    font-size: 0.95rem;
+}
+
+/* ============================================
+   COMPOSANT ROULETTE (Tambour avec descriptions)
+   ============================================ */
+.roulettes-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.roulette-item {
+    display: flex;
+    flex-direction: column;
+    background: var(--gray-100);
+    border-radius: var(--border-radius);
+    padding: 15px;
+    border: 1px solid var(--gray-200);
+}
+
+.roulette-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.roulette-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--body-font-color);
+}
+
+.tooltip-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: var(--gray-300);
+    color: var(--gray-500);
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: help;
+    transition: var(--transition-fast);
+}
+
+.tooltip-trigger:hover {
+    background: var(--color-link);
+    color: white;
+}
+
+.tooltip-trigger.info-trigger {
+    background: var(--color-info);
+    color: white;
+    font-style: italic;
+}
+
+/* Badge du degré sélectionné */
+.degree-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--color-link);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+/* Roulette / Tambour horizontal */
+.roulette-wrapper {
+    position: relative;
+    width: 100%;
+    height: auto;
+    min-height: 5.5em;
+    overflow: hidden;
+    border-radius: var(--border-radius);
+    background: white;
+    border: 2px solid var(--gray-300);
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Masques d'opacité (dégradés) gauche/droite */
+.roulette-wrapper::before,
+.roulette-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 60px;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.roulette-wrapper::before {
+    left: 0;
+    background: linear-gradient(to right, 
+        white 0%, 
+        rgba(255, 255, 255, 0.8) 40%,
+        transparent 100%);
+}
+
+.roulette-wrapper::after {
+    right: 0;
+    background: linear-gradient(to left, 
+        white 0%, 
+        rgba(255, 255, 255, 0.8) 40%,
+        transparent 100%);
+}
+
+/* Indicateur central */
+.roulette-indicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 12em;
+    transform: translateX(-50%);
+    background: rgba(9, 105, 218, 0.08);
+    border-left: 2px solid var(--color-link);
+    border-right: 2px solid var(--color-link);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Chevrons */
+.roulette-chevron {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent;
+    z-index: 3;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: var(--transition-fast);
+}
+
+.roulette-chevron:hover {
+    opacity: 1;
+}
+
+.roulette-chevron.chevron-up {
+    left: 10px;
+    border-right: 12px solid var(--color-link);
+}
+
+.roulette-chevron.chevron-down {
+    right: 10px;
+    border-left: 12px solid var(--color-link);
+}
+
+/* Liste des valeurs - horizontal */
+.roulette-scroll {
+    display: flex;
+    align-items: stretch;
+    transition: transform var(--transition-normal);
+    min-height: 100%;
+}
+
+.roulette-value {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 12em;
+    padding: 0.6em 1em;
+    text-align: center;
+    transition: var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.roulette-value .degree-number {
+    font-size: 1.4em;
+    font-weight: 700;
+    color: var(--gray-400);
+    margin-bottom: 0.2em;
+    flex-shrink: 0;
+    line-height: 1.2;
+    transition: var(--transition-fast);
+}
+
+.roulette-value .degree-text {
+    font-size: 0.85em;
+    line-height: 1.5;
+    color: var(--gray-500);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    padding-bottom: 0.15em;
+    transition: var(--transition-fast);
+}
+
+.roulette-value.selected .degree-number {
+    color: var(--color-link);
+    font-size: 1.6em;
+}
+
+.roulette-value.selected .degree-text {
+    color: var(--body-font-color);
+    font-weight: 600;
+}
+
+/* Description complète sous la roulette */
+.roulette-full-description {
+    margin-top: 12px;
+    padding: 12px 15px;
+    background: white;
+    border-radius: var(--border-radius);
+    border-left: 3px solid var(--color-link);
+}
+
+.roulette-full-description p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--body-font-color);
+}
+
+/* Score Total */
+.score-total {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px;
+    background: var(--gray-100);
+    border-radius: var(--border-radius);
+    margin-top: 20px;
+}
+
+.score-label {
+    font-weight: 600;
+    color: var(--gray-500);
+}
+
+.score-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-link);
+}
+
+.score-max {
+    font-size: 1.2rem;
+    color: var(--gray-400);
+}
+
+/* ============================================
+   CLASSIFICATION
+   ============================================ */
+.classification-result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.classification-auto {
+    text-align: center;
+}
+
+.classification-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 15px 30px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+    border-radius: 50px;
+    box-shadow: var(--shadow-md);
+}
+
+.classification-badge .groupe {
+    font-size: 2rem;
+    font-weight: 700;
+    color: white;
+}
+
+.classification-badge .classe {
+    font-size: 2rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.classification-label {
+    margin: 10px 0 0 0;
+    color: var(--gray-500);
+    font-size: 0.9rem;
+}
+
+/* Contrôles */
+.classification-controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+/* Sélection manuelle */
+.classification-manual {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    background: var(--gray-100);
+    border-radius: var(--border-radius);
+}
+
+.select-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.select-group label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--gray-500);
+}
+
+/* Indicateur Statut */
+.statut-indicator {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.statut-badge {
+    display: inline-block;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.statut-badge.non-cadre {
+    background: #ddf4ff;
+    color: #0969da;
+}
+
+.statut-badge.cadre {
+    background: #dafbe1;
+    color: #1a7f37;
+}
+
+/* ============================================
+   MODALITÉS DE PAIE
+   ============================================ */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--body-font-color);
+}
+
+.form-hint {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.8rem;
+    color: var(--gray-500);
+    font-style: italic;
+}
+
+/* ============================================
+   RÉSULTAT
+   ============================================ */
+.result-section {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+}
+
+.result-card {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: var(--shadow-md);
+    text-align: center;
+}
+
+.result-main {
+    margin-bottom: 20px;
+}
+
+.result-label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--gray-500);
+    margin-bottom: 5px;
+}
+
+.result-value {
+    display: block;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--color-success);
+}
+
+.result-details {
+    padding: 20px;
+    background: var(--gray-100);
+    border-radius: var(--border-radius);
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.result-detail-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.result-detail-item:last-child {
+    border-bottom: none;
+}
+
+.result-detail-item.total-row {
+    border-top: 2px solid var(--gray-300);
+    border-bottom: none;
+    padding-top: 12px;
+    margin-top: 8px;
+}
+
+.result-detail-label {
+    color: var(--gray-500);
+}
+
+.result-detail-value {
+    font-weight: 600;
+    color: var(--body-font-color);
+}
+
+.result-detail-value.positive {
+    color: var(--color-success);
+}
+
+.result-monthly {
+    padding-top: 15px;
+    border-top: 2px dashed var(--gray-300);
+}
+
+.result-value-secondary {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-link);
+}
+
+/* ============================================
+   COMPOSANTS HUGO BOOK
+   ============================================ */
+
+/* Boutons */
+.book-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.book-btn.btn-primary {
+    background: var(--color-link);
+    color: white;
+}
+
+.book-btn.btn-primary:hover {
+    background: #0860ca;
+}
+
+.book-btn.btn-secondary {
+    background: var(--gray-200);
+    color: var(--body-font-color);
+}
+
+.book-btn.btn-secondary:hover {
+    background: var(--gray-300);
+}
+
+/* Inputs & Selects */
+.book-input,
+.book-select {
+    width: 100%;
+    padding: 10px 15px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    background: white;
+    color: var(--body-font-color);
+    transition: var(--transition-fast);
+}
+
+.book-input:focus,
+.book-select:focus {
+    outline: none;
+    border-color: var(--color-link);
+    box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.15);
+}
+
+/* Hints / Alertes */
+.book-hint {
+    padding: 15px 20px;
+    border-radius: var(--border-radius);
+    margin-top: 20px;
+}
+
+.book-hint p {
+    margin: 0;
+}
+
+.book-hint p + p {
+    margin-top: 8px;
+}
+
+.book-hint.info {
+    background: #ddf4ff;
+    border-left: 4px solid var(--color-info);
+}
+
+.book-hint.warning {
+    background: #fff8c5;
+    border-left: 4px solid var(--color-warning);
+}
+
+.book-hint.danger {
+    background: #ffebe9;
+    border-left: 4px solid var(--color-danger);
+}
+
+.book-hint.success {
+    background: #dafbe1;
+    border-left: 4px solid var(--color-success);
+}
+
+/* ============================================
+   UTILITAIRES
+   ============================================ */
+.hidden {
+    display: none !important;
+}
+
+/* Footer */
+.simulator-footer {
+    padding: 20px 30px;
+    background: var(--gray-100);
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--gray-500);
+}
+
+.simulator-footer p {
+    margin: 5px 0;
+}
+
+.simulator-footer .disclaimer {
+    font-style: italic;
+    font-size: 0.8rem;
+}
+
+/* ============================================
+   TIPPY.JS CUSTOMIZATION
+   ============================================ */
+.tippy-box[data-theme~='metallurgie'] {
+    background-color: #1e3a5f;
+    color: white;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    max-width: 300px;
+    padding: 5px;
+}
+
+.tippy-box[data-theme~='metallurgie'][data-placement^='top'] > .tippy-arrow::before {
+    border-top-color: #1e3a5f;
+}
+
+.tippy-box[data-theme~='metallurgie'][data-placement^='bottom'] > .tippy-arrow::before {
+    border-bottom-color: #1e3a5f;
+}
+
+.tippy-box[data-theme~='metallurgie'][data-placement^='left'] > .tippy-arrow::before {
+    border-left-color: #1e3a5f;
+}
+
+.tippy-box[data-theme~='metallurgie'][data-placement^='right'] > .tippy-arrow::before {
+    border-right-color: #1e3a5f;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    .simulator-header {
+        padding: 20px;
+    }
+
+    .simulator-header h1 {
+        font-size: 1.4rem;
+    }
+
+    .step-section {
+        padding: 20px;
+    }
+
+    .roulette-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .degree-badge {
+        align-self: flex-end;
+    }
+
+    /* Réduire légèrement la taille des cases sur tablette */
+    .roulette-value {
+        width: 11em;
+        font-size: 0.95em;
+    }
+
+    .roulette-indicator {
+        width: 11em;
+    }
+
+    .roulette-full-description {
+        padding: 10px 12px;
+    }
+
+    .roulette-full-description p {
+        font-size: 0.85rem;
+    }
+
+    .classification-badge {
+        padding: 12px 25px;
+    }
+
+    .classification-badge .groupe,
+    .classification-badge .classe {
+        font-size: 1.6rem;
+    }
+
+    .result-value {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Réduire encore sur mobile */
+    .roulette-value {
+        width: 10em;
+        font-size: 0.9em;
+    }
+
+    .roulette-indicator {
+        width: 10em;
+    }
+
+    .classification-manual {
+        flex-direction: column;
+        gap: 15px;
+    }
+}
+
+/* ============================================
+   Conditions de travail (Non-Cadres)
+   ============================================ */
+
+.conditions-travail {
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    padding: 15px 20px;
+    margin-top: 20px;
+    background: var(--gray-100);
+}
+
+.conditions-travail legend {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--gray-500);
+    padding: 0 8px;
+}
+
+.conditions-travail .form-group {
+    margin-bottom: 12px;
+}
+
+.conditions-travail .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.taux-applique {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.85rem;
+    color: var(--color-link);
+    font-weight: 500;
+}
+
+.taux-applique.kuhn {
+    color: #2e7d32;
+}
+
+/* ============================================
+   Accord d'Entreprise (Checkbox Kuhn)
+   ============================================ */
+
+.accord-entreprise {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    padding: 15px 20px;
+    margin-bottom: 20px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--body-font-color);
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-link);
+    cursor: pointer;
+}
+
+.checkbox-label .tooltip-trigger {
+    margin-left: 5px;
+}
+
+.accord-kuhn-anciennete {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--gray-300);
+}
+
+.accord-kuhn-anciennete.hidden {
+    display: none;
+}
+
+/* Mise en évidence quand accord actif */
+.accord-entreprise.active {
+    background: #e6f4ea;
+    border-color: var(--color-success);
+}
+
+.accord-entreprise.active .checkbox-main {
+    color: var(--color-success);
+}
+
+/* Options détaillées de l'accord */
+.accord-options {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px dashed var(--gray-300);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.accord-options .form-group {
+    margin-bottom: 0;
+}
+
+.accord-options .checkbox-label {
+    font-weight: normal;
+    font-size: 0.95rem;
+}
+
+/* Sous-champs (heures, etc.) */
+.sub-field {
+    margin-top: 8px;
+    margin-left: 28px;
+    padding: 10px;
+    background: var(--body-background);
+    border-radius: 6px;
+    border: 1px solid var(--gray-200);
+}
+
+.sub-field label {
+    font-size: 0.85rem;
+    color: var(--gray-500);
+    margin-bottom: 4px;
+    display: block;
+}
+
+.sub-field .book-input {
+    width: 150px;
+}
+
+/* Grille pour les options sur desktop */
+@media (min-width: 768px) {
+    .accord-options {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+    
+    .accord-options .form-group:first-child {
+        grid-column: 1 / -1;
+    }
+}
+
+/* ============================================
+   Évolution Salaire vs Inflation
+   ============================================ */
+
+.evolution-wrapper {
+    margin-top: 20px;
+}
+
+.btn-evolution {
+    display: block;
+    width: 100%;
+    background: var(--gray-100);
+    border: 1px dashed var(--gray-300);
+    color: var(--gray-500);
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 12px 16px;
+    border-radius: var(--border-radius);
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.btn-evolution:hover {
+    color: var(--color-link);
+    border-color: var(--color-link);
+    background: rgba(37, 99, 235, 0.05);
+}
+
+.evolution-panel {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    padding: 15px;
+    margin-top: 10px;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.evolution-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.evolution-title {
+    font-size: 0.9rem;
+    color: var(--gray-500);
+}
+
+.book-select-inline {
+    display: inline-block;
+    width: auto;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    background: var(--body-background);
+}
+
+.btn-close-small {
+    background: transparent;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    color: var(--gray-400);
+    padding: 2px 6px;
+    border-radius: var(--border-radius);
+    line-height: 1;
+}
+
+.btn-close-small:hover {
+    background: var(--gray-200);
+    color: var(--body-font-color);
+}
+
+.evolution-age-input {
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+    color: var(--gray-500);
+}
+
+.evolution-params {
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+    color: var(--gray-500);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.evolution-params label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.book-input-small {
+    display: inline-block;
+    width: 60px;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    text-align: center;
+}
+
+.chart-container {
+    position: relative;
+    height: 220px;
+    width: 100%;
+    background: var(--body-background);
+    border-radius: var(--border-radius);
+    padding: 10px;
+}
+
+.evolution-summary {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.evolution-summary p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--body-font-color);
+}
+
+.evolution-summary .data-source {
+    color: var(--gray-400);
+    font-size: 0.75rem;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .chart-container {
+        height: 180px;
+    }
+    
+    .evolution-summary {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

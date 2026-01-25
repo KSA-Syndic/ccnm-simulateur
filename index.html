@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulateur de Classification et Rémunération - Métallurgie 2024</title>
+    <!-- Popper.js & Tippy.js pour les tooltips -->
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/animations/shift-away.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="simulator-container">
+        <!-- En-tête -->
+        <header class="simulator-header">
+            <h1>🏭 Simulateur de Classification et Rémunération</h1>
+            <p class="subtitle">Convention Collective Nationale de la Métallurgie 2024</p>
+        </header>
+
+        <!-- Étape 1: Cotation par Roulette -->
+        <section class="step-section" id="step-cotation">
+            <div class="step-header">
+                <span class="step-number">1</span>
+                <h2>Cotation de votre poste</h2>
+                <p class="step-description">Évaluez votre poste sur les 6 critères classants en utilisant les roulettes ci-dessous (de 1 à 10)</p>
+            </div>
+
+            <div class="roulettes-container" id="roulettes-container">
+                <!-- Les roulettes seront générées dynamiquement -->
+            </div>
+
+            <div class="score-total">
+                <span class="score-label">Score Total</span>
+                <span class="score-value" id="score-total">6</span>
+                <span class="score-max">/ 60</span>
+            </div>
+        </section>
+
+        <!-- Étape 2: Confirmation & Ajustement -->
+        <section class="step-section" id="step-classification">
+            <div class="step-header">
+                <span class="step-number">2</span>
+                <h2>Votre Classification</h2>
+                <p class="step-description">Classification calculée automatiquement ou ajustez manuellement si vous la connaissez déjà</p>
+            </div>
+
+            <div class="classification-result">
+                <div class="classification-auto" id="classification-auto">
+                    <div class="classification-badge">
+                        <span class="groupe" id="groupe-auto">A</span>
+                        <span class="classe" id="classe-auto">1</span>
+                    </div>
+                    <p class="classification-label">Classification calculée</p>
+                </div>
+
+                <div class="classification-controls">
+                    <button class="book-btn btn-secondary" id="btn-mode-manuel">
+                        ✏️ Ajuster manuellement
+                    </button>
+                    <button class="book-btn btn-primary hidden" id="btn-mode-auto">
+                        🔄 Récupérer le calcul automatique
+                    </button>
+                </div>
+
+                <div class="classification-manual hidden" id="classification-manual">
+                    <div class="select-group">
+                        <label for="select-groupe">Groupe</label>
+                        <select id="select-groupe" class="book-select">
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                            <option value="E">E</option>
+                            <option value="F">F</option>
+                            <option value="G">G</option>
+                            <option value="H">H</option>
+                            <option value="I">I</option>
+                        </select>
+                    </div>
+                    <div class="select-group">
+                        <label for="select-classe">Classe</label>
+                        <select id="select-classe" class="book-select">
+                            <!-- Options générées dynamiquement -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Indicateur Cadre/Non-Cadre -->
+            <div class="statut-indicator" id="statut-indicator">
+                <span class="statut-badge non-cadre" id="statut-badge">Non-Cadre</span>
+            </div>
+        </section>
+
+        <!-- Étape 3: Modalités de Paie -->
+        <section class="step-section" id="step-modalites">
+            <div class="step-header">
+                <span class="step-number">3</span>
+                <h2>Modalités de Paie</h2>
+                <p class="step-description">Renseignez les informations complémentaires selon votre situation</p>
+            </div>
+
+            <!-- Champ Ancienneté (commun à tous) -->
+            <div class="form-group">
+                <label for="anciennete">
+                    Ancienneté dans l'entreprise (années)
+                    <span class="tooltip-trigger" data-tippy-content="Prime d'ancienneté : CCN dès 3 ans (non-cadres), Kuhn dès 2 ans (tous statuts).">?</span>
+                </label>
+                <input type="number" id="anciennete" class="book-input" min="0" max="50" value="0">
+            </div>
+
+            <!-- Options Non-Cadre -->
+            <div class="modalites-non-cadre" id="modalites-non-cadre">
+                <div class="form-group">
+                    <label for="point-territorial">
+                        Valeur du Point Territorial (€)
+                        <span class="tooltip-trigger" data-tippy-content="Valeur définie par accord territorial. Utilisé pour le calcul CCN de la prime d'ancienneté.">?</span>
+                    </label>
+                    <input type="number" id="point-territorial" class="book-input" min="0" max="20" step="0.01" value="5.90">
+                    <small class="form-hint">Valeur Bas-Rhin (2025) : 5.90€. <a href="https://code.travail.gouv.fr/contribution/3248-quand-le-salarie-a-t-il-droit-a-une-prime-danciennete-quel-est-son-montant" target="_blank">Vérifier</a></small>
+                </div>
+            </div>
+
+            <!-- Options Cadre -->
+            <div class="modalites-cadre hidden" id="modalites-cadre">
+                <div class="form-group">
+                    <label for="forfait">Type de forfait</label>
+                    <select id="forfait" class="book-select">
+                        <option value="35h">Base 35h (pas de majoration)</option>
+                        <option value="heures">Forfait Heures Annuel (+15%)</option>
+                        <option value="jours">Forfait Jours (+30%)</option>
+                    </select>
+                </div>
+
+                <!-- Options spécifiques Cadre Débutant (F11 et F12) -->
+                <div class="cadre-debutant hidden" id="cadre-debutant">
+                    <div class="form-group">
+                        <label for="experience-pro">
+                            Expérience professionnelle (années)
+                            <span class="tooltip-trigger" data-tippy-content="Expérience professionnelle totale (≥ ancienneté entreprise).">?</span>
+                        </label>
+                        <input type="number" id="experience-pro" class="book-input" min="0" max="50" value="0">
+                    </div>
+                    <div class="book-hint warning">
+                        <p><strong>⚠️ Groupe F détecté (F11/F12)</strong></p>
+                        <p>Si vous avez moins de 6 ans d'expérience professionnelle, le barème des salariés débutants s'applique.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conditions de travail (Non-Cadres + Cadres hors forfait jours) -->
+            <fieldset class="conditions-travail" id="conditions-travail">
+                <legend>Conditions de travail particulières</legend>
+                
+                <!-- Note forfait jours (cadres) -->
+                <div class="book-hint info hidden" id="hint-forfait-jours">
+                    <p><strong>Forfait jours</strong> : les majorations nuit/dimanche donnent lieu à du <strong>repos compensateur</strong>, non simulable ici.</p>
+                </div>
+                
+                <!-- Travail de nuit -->
+                <div class="form-group" id="group-nuit">
+                    <label for="type-nuit">
+                        Travail de nuit
+                        <span class="tooltip-trigger" data-tippy-content="CCN: +15% | Kuhn: poste nuit +20%, poste matin/AM +15%">?</span>
+                    </label>
+                    <select id="type-nuit" class="book-select">
+                        <option value="aucun">Aucun</option>
+                        <option value="poste-nuit">Poste de nuit (≥2h entre 20h-6h)</option>
+                        <option value="poste-matin">Poste matin ou après-midi (heures entre 20h-6h)</option>
+                    </select>
+                    <div class="sub-field hidden" id="heures-nuit-field">
+                        <label for="heures-nuit">Heures de nuit mensuelles</label>
+                        <input type="number" id="heures-nuit" class="book-input" min="0" max="200" value="0">
+                        <small class="taux-applique" id="taux-nuit-info"></small>
+                    </div>
+                </div>
+
+                <!-- Travail dimanche -->
+                <div class="form-group" id="group-dimanche">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="travail-dimanche" class="book-checkbox">
+                        <span>Travail le dimanche</span>
+                        <span class="tooltip-trigger" data-tippy-content="CCN: +100% | Kuhn: +50%">?</span>
+                    </label>
+                    <div class="sub-field hidden" id="heures-dimanche-field">
+                        <label for="heures-dimanche">Heures dimanche mensuelles</label>
+                        <input type="number" id="heures-dimanche" class="book-input" min="0" max="50" value="0">
+                        <small class="taux-applique" id="taux-dimanche-info"></small>
+                    </div>
+                </div>
+
+                <!-- Prime d'équipe (Kuhn, non-cadres uniquement) -->
+                <div class="form-group hidden" id="prime-equipe-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="travail-equipe" class="book-checkbox">
+                        <span>Travail en équipes postées</span>
+                        <span class="tooltip-trigger" data-tippy-content="Prime Kuhn : 0.82€/h pour les non-cadres en horaire posté.">?</span>
+                    </label>
+                    <div class="sub-field hidden" id="heures-equipe-field">
+                        <label for="heures-equipe">Heures mensuelles en équipe</label>
+                        <input type="number" id="heures-equipe" class="book-input" min="0" max="200" value="151.67" step="0.01">
+                    </div>
+                </div>
+            </fieldset>
+        </section>
+
+        <!-- Étape 4: Résultat -->
+        <section class="step-section result-section" id="step-resultat">
+            <div class="step-header">
+                <span class="step-number">4</span>
+                <h2>Votre Rémunération</h2>
+                <p class="step-description">Salaire Minimum Hiérarchique (SMH) annuel brut</p>
+            </div>
+
+            <!-- Option Accord d'Entreprise Kuhn -->
+            <div class="accord-entreprise" id="accord-entreprise-container">
+                <label class="checkbox-label checkbox-main">
+                    <input type="checkbox" id="accord-kuhn" class="book-checkbox">
+                    <span><strong>Appliquer l'accord d'entreprise Kuhn</strong></span>
+                    <span class="tooltip-trigger" data-tippy-content="Modifie les taux : ancienneté dès 2 ans (2%-16% du salaire), nuit +20%, dimanche +50%, prime équipe 0.82€/h, prime vacances 525€.">?</span>
+                </label>
+                
+                <!-- Options spécifiques Kuhn (visibles si accord activé) -->
+                <div class="accord-options hidden" id="accord-options">
+                    <!-- Prime de vacances -->
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="prime-vacances" class="book-checkbox" checked>
+                            <span>Prime de vacances (525€/an)</span>
+                            <span class="tooltip-trigger" data-tippy-content="Versée en juillet si ancienneté ≥ 1 an au 1er juin.">?</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-card">
+                <div class="result-main">
+                    <span class="result-label">SMH Annuel Brut</span>
+                    <span class="result-value" id="result-smh">21 500 €</span>
+                </div>
+
+                <div class="result-details" id="result-details">
+                    <!-- Détails générés dynamiquement -->
+                </div>
+
+                <div class="result-monthly">
+                    <span class="result-label">Soit environ par mois</span>
+                    <span class="result-value-secondary" id="result-mensuel">1 791,67 €</span>
+                </div>
+            </div>
+
+            <!-- Alertes et informations -->
+            <div class="book-hint info" id="hint-info">
+                <p><strong>ℹ️ Information</strong></p>
+                <p id="hint-text">Ce montant est le minimum conventionnel. Votre salaire réel peut être supérieur selon les accords d'entreprise.</p>
+            </div>
+
+            <!-- Évolution salaire vs inflation -->
+            <div class="evolution-wrapper">
+                <button class="btn-evolution" id="btn-evolution">
+                    📈 Comparer à l'inflation
+                </button>
+
+                <div class="evolution-panel hidden" id="evolution-section">
+                    <div class="evolution-header">
+                        <span class="evolution-title">Évolution sur 
+                            <select id="projection-years" class="book-select-inline">
+                                <option value="5">5 ans</option>
+                                <option value="10" selected>10 ans</option>
+                                <option value="15">15 ans</option>
+                                <option value="20">20 ans</option>
+                                <option value="25">25 ans</option>
+                                <option value="30">30 ans</option>
+                                <option value="retraite">Jusqu'à la retraite</option>
+                            </select>
+                        </span>
+                        <button class="btn-close-small" id="btn-close-evolution">✕</button>
+                    </div>
+                    <div class="evolution-age-input hidden" id="age-input-wrapper">
+                        <label for="age-actuel">Votre âge actuel : 
+                            <input type="number" id="age-actuel" class="book-input-small" min="18" max="66" value="30">
+                            ans
+                        </label>
+                    </div>
+                    <div class="evolution-params">
+                        <label for="augmentation-annuelle">
+                            Augmentation générale annuelle :
+                            <input type="number" id="augmentation-annuelle" class="book-input-small" min="0" max="10" step="0.1" value="0">
+                            %
+                            <span class="tooltip-trigger" data-tippy-content="Taux moyen d'augmentation générale appliqué chaque année dans votre entreprise (hors ancienneté).">?</span>
+                        </label>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="evolution-chart"></canvas>
+                    </div>
+                    <div class="evolution-summary">
+                        <p id="evolution-summary"></p>
+                        <small class="data-source" id="inflation-source">Inflation : chargement...</small>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="simulator-footer">
+            <p>Basé sur la Convention Collective Nationale de la Métallurgie 2024</p>
+            <p class="disclaimer">Cet outil est fourni à titre indicatif. Consultez votre service RH pour confirmation.</p>
+        </footer>
+    </div>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
