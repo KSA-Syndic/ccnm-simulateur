@@ -1388,6 +1388,7 @@ function initTooltips() {
         arrow: true,
         maxWidth: 300,
         interactive: true,
+        allowHTML: true,
         appendTo: document.body
     });
 }
