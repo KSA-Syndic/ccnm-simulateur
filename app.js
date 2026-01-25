@@ -1372,12 +1372,23 @@ async function updateEvolutionChart(years) {
         evolutionChart.destroy();
     }
     
-    // Construire le label du salaire selon si augmentation ou non
-    let salaryLabel = 'Votre salaire (ancienneté';
-    if (augmentationAnnuelle > 0) {
-        salaryLabel += ` + ${augmentationAnnuelle}%/an`;
+    // Détecter si on est sur mobile
+    const isMobile = window.innerWidth <= 768;
+    const isSmallMobile = window.innerWidth <= 480;
+    
+    // Construire le label du salaire selon si augmentation ou non (plus court sur mobile)
+    let salaryLabel, inflationLabel;
+    if (isMobile) {
+        salaryLabel = augmentationAnnuelle > 0 ? `Salaire (+${augmentationAnnuelle}%/an)` : 'Votre salaire';
+        inflationLabel = `Inflation (${avgInflation.toFixed(1)}%/an)`;
+    } else {
+        salaryLabel = 'Votre salaire (ancienneté';
+        if (augmentationAnnuelle > 0) {
+            salaryLabel += ` + ${augmentationAnnuelle}%/an`;
+        }
+        salaryLabel += ')';
+        inflationLabel = `Inflation cumulée (${avgInflation.toFixed(1)}%/an moy.)`;
     }
-    salaryLabel += ')';
     
     evolutionChart = new Chart(ctx, {
         type: 'line',
@@ -1388,21 +1399,23 @@ async function updateEvolutionChart(years) {
                     label: salaryLabel,
                     data: salaryDataArray,
                     borderColor: '#2563eb',
-                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    backgroundColor: 'rgba(37, 99, 235, 0.15)',
                     fill: true,
                     tension: 0.3,
-                    pointRadius: years > 20 ? 2 : 4,
+                    borderWidth: isMobile ? 3 : 2,
+                    pointRadius: isMobile ? 0 : (years > 20 ? 2 : 4),
                     pointHoverRadius: 6
                 },
                 {
-                    label: `Inflation cumulée (${avgInflation.toFixed(1)}%/an moy.)`,
+                    label: inflationLabel,
                     data: inflationDataArray,
                     borderColor: '#dc2626',
                     backgroundColor: 'rgba(220, 38, 38, 0.1)',
                     fill: true,
                     tension: 0.3,
+                    borderWidth: isMobile ? 2 : 2,
                     borderDash: [5, 5],
-                    pointRadius: years > 20 ? 1 : 3,
+                    pointRadius: isMobile ? 0 : (years > 20 ? 1 : 3),
                     pointHoverRadius: 5
                 }
             ]
@@ -1418,11 +1431,18 @@ async function updateEvolutionChart(years) {
                 legend: {
                     position: 'bottom',
                     labels: {
-                        boxWidth: 12,
-                        font: { size: 11 }
+                        boxWidth: isMobile ? 20 : 12,
+                        boxHeight: isMobile ? 3 : 12,
+                        padding: isMobile ? 15 : 10,
+                        font: { size: isMobile ? 12 : 11 },
+                        usePointStyle: !isMobile
                     }
                 },
                 tooltip: {
+                    enabled: true,
+                    titleFont: { size: isMobile ? 14 : 12 },
+                    bodyFont: { size: isMobile ? 13 : 12 },
+                    padding: isMobile ? 12 : 8,
                     callbacks: {
                         label: function(context) {
                             return context.dataset.label + ': ' + formatMoney(context.raw);
@@ -1433,17 +1453,29 @@ async function updateEvolutionChart(years) {
             scales: {
                 x: {
                     ticks: {
-                        maxTicksLimit: years > 20 ? 10 : 15,
-                        font: { size: 10 }
+                        maxTicksLimit: isMobile ? (isSmallMobile ? 5 : 7) : (years > 20 ? 10 : 15),
+                        font: { size: isMobile ? 11 : 10 },
+                        maxRotation: isMobile ? 0 : 45
+                    },
+                    grid: {
+                        display: !isMobile
                     }
                 },
                 y: {
                     beginAtZero: false,
                     ticks: {
                         callback: function(value) {
+                            // Format plus court sur mobile
+                            if (isMobile && value >= 1000) {
+                                return Math.round(value / 1000) + 'k€';
+                            }
                             return formatMoney(value);
                         },
-                        font: { size: 10 }
+                        font: { size: isMobile ? 11 : 10 },
+                        maxTicksLimit: isMobile ? 6 : 8
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
                     }
                 }
             }

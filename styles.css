@@ -792,7 +792,6 @@ body {
     }
 
     .classification-manual {
-        flex-direction: column;
         gap: 15px;
     }
 }
@@ -1083,14 +1082,77 @@ body {
     font-size: 0.75rem;
 }
 
-/* Responsive */
-@media (max-width: 600px) {
+/* Responsive graphique */
+@media (max-width: 768px) {
+    .evolution-panel {
+        padding: 12px;
+    }
+    
+    .evolution-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .evolution-title {
+        font-size: 0.9rem;
+    }
+    
+    .btn-close-small {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+    
+    .evolution-params {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .evolution-params label {
+        flex-wrap: wrap;
+    }
+    
     .chart-container {
-        height: 180px;
+        height: 280px; /* Plus grand sur mobile pour meilleure lisibilité */
+        margin: 15px -12px; /* Étendre aux bords */
+        width: calc(100% + 24px);
+        border-radius: 0;
     }
     
     .evolution-summary {
         flex-direction: column;
         align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .evolution-summary p {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .chart-container {
+        height: 320px; /* Encore plus grand sur petit mobile */
+    }
+    
+    .book-select-inline {
+        width: 100%;
+        margin-top: 5px;
+    }
+    
+    .evolution-age-input,
+    .evolution-params {
+        font-size: 0.8rem;
+    }
+    
+    .book-input-small {
+        width: 50px;
+        padding: 3px 5px;
+    }
+    
+    .btn-evolution {
+        font-size: 0.85rem;
+        padding: 10px;
     }
 }
