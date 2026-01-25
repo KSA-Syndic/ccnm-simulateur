@@ -1,0 +1,45 @@
+# Workflow pour déployer l'application sur GitHub Pages
+name: Deploy to GitHub Pages
+
+on:
+  # Se déclenche sur les push vers la branche main
+  push:
+    branches: ["main"]
+  
+  # Permet de lancer le workflow manuellement depuis l'onglet Actions
+  workflow_dispatch:
+
+# Définit les permissions du GITHUB_TOKEN pour permettre le déploiement sur GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Permet un seul déploiement concurrent
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # Job de déploiement
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Upload du répertoire racine (tous les fichiers statiques)
+          path: '.'
+      
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

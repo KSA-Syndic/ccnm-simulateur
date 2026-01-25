@@ -57,21 +57,36 @@ SMH: {
 }
 ```
 
-## Dépendances
+## Déploiement GitHub Pages
 
-- **Popper.js** (CDN) - Positionnement des tooltips
-- **Tippy.js** (CDN) - Gestion des tooltips
+L'application est automatiquement déployée sur GitHub Pages à chaque push sur la branche `main`.
 
-Aucun framework lourd (React/Vue) pour garantir la portabilité.
+### Configuration initiale
 
-## Tests de Cohérence
+1. **Créer le repository GitHub** et pousser le code :
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial commit"
+   git branch -M main
+   git remote add origin https://github.com/VOTRE_USERNAME/VOTRE_REPO.git
+   git push -u origin main
+   ```
 
-| Test | Entrée | Résultat Attendu |
-|------|--------|------------------|
-| Score minimum | 6 points | Classe A1 |
-| Score maximum | 60 points | Classe I18 |
-| Prime ancienneté | Classe 5, 10 ans | SMH + 10% |
-| Forfait jours | Classe F11 | SMH × 1.30 |
+2. **Activer GitHub Pages** :
+   - Allez dans les **Settings** du repository
+   - Dans la section **Pages** (menu latéral)
+   - Source : sélectionnez **GitHub Actions**
+
+3. Le workflow se déclenchera automatiquement et votre site sera disponible à :
+   `https://VOTRE_USERNAME.github.io/VOTRE_REPO/`
+
+### Déploiement manuel
+
+Vous pouvez aussi déclencher un déploiement manuellement :
+1. Allez dans l'onglet **Actions** du repository
+2. Sélectionnez le workflow **Deploy to GitHub Pages**
+3. Cliquez sur **Run workflow**
 
 ## Licence
 

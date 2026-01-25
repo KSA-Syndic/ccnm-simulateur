@@ -1,0 +1,21 @@
+# Dépendances
+node_modules/
+
+# IDE et éditeurs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Fichiers temporaires
+*.tmp
+*.temp
