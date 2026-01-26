@@ -632,8 +632,28 @@ function initControls() {
     const heuresEquipeInput = document.getElementById('heures-equipe');
     
     travailEquipeCheckbox.addEventListener('change', (e) => {
-        state.travailEquipe = e.target.checked;
-        heuresEquipeField.classList.toggle('hidden', !e.target.checked);
+        const wasChecked = state.travailEquipe;
+        const isChecked = e.target.checked;
+        
+        // Si l'utilisateur coche sans accord Kuhn activé, activer automatiquement l'accord
+        if (isChecked && !state.accordKuhn) {
+            state.accordKuhn = true;
+            const accordKuhnCheckbox = document.getElementById('accord-kuhn');
+            if (accordKuhnCheckbox) {
+                accordKuhnCheckbox.checked = true;
+            }
+            const accordOptions = document.getElementById('accord-options');
+            if (accordOptions) {
+                accordOptions.classList.remove('hidden');
+            }
+            showToast('✅ L\'accord d\'entreprise Kuhn a été activé automatiquement pour permettre cette option.', 'success', 4000);
+            // Mettre à jour l'affichage des conditions de travail et des taux
+            updateConditionsTravailDisplay();
+            updateTauxInfo();
+        }
+        
+        state.travailEquipe = isChecked;
+        heuresEquipeField.classList.toggle('hidden', !isChecked);
         updateAll();
     });
     
@@ -652,7 +672,32 @@ function initControls() {
     // Checkbox principal accord Kuhn
     if (accordKuhnCheckbox) {
         accordKuhnCheckbox.addEventListener('change', (e) => {
-            state.accordKuhn = e.target.checked;
+            const wasActive = state.accordKuhn;
+            const isActive = e.target.checked;
+            state.accordKuhn = isActive;
+            
+            // Si l'accord est activé, informer que la prime d'équipe est disponible (pour non-cadres)
+            if (!wasActive && isActive) {
+                const { classe } = getActiveClassification();
+                const isCadre = classe >= CONFIG.SEUIL_CADRE;
+                if (!isCadre) {
+                    showToast('💡 L\'option "Travail en équipes postées" est maintenant disponible dans l\'étape Situation.', 'info', 4000);
+                }
+            }
+            
+            // Si l'accord est désactivé alors que la prime d'équipe est cochée
+            if (wasActive && !isActive && state.travailEquipe) {
+                state.travailEquipe = false;
+                const travailEquipeCheckbox = document.getElementById('travail-equipe');
+                if (travailEquipeCheckbox) {
+                    travailEquipeCheckbox.checked = false;
+                }
+                const heuresEquipeField = document.getElementById('heures-equipe-field');
+                if (heuresEquipeField) {
+                    heuresEquipeField.classList.add('hidden');
+                }
+                showToast('ℹ️ L\'option "Travail en équipes postées" a été décochée car l\'accord d\'entreprise n\'est plus actif.', 'info', 4000);
+            }
             
             // Afficher/masquer les options détaillées
             if (accordOptions) {
@@ -763,13 +808,14 @@ function updateConditionsTravailDisplay() {
         groupNuit.classList.remove('hidden');
         groupDimanche.classList.remove('hidden');
         
-        // Prime d'équipe : Kuhn + non-cadres uniquement
-        if (state.accordKuhn && !isCadre) {
+        // Prime d'équipe : visible pour non-cadres (activée uniquement si accord Kuhn)
+        if (!isCadre) {
             primeEquipeGroup.classList.remove('hidden');
         } else {
             primeEquipeGroup.classList.add('hidden');
             state.travailEquipe = false;
-            document.getElementById('travail-equipe').checked = false;
+            const travailEquipeCheckbox = document.getElementById('travail-equipe');
+            if (travailEquipeCheckbox) travailEquipeCheckbox.checked = false;
             document.getElementById('heures-equipe-field').classList.add('hidden');
         }
     }
@@ -1453,6 +1499,37 @@ function updateHintDisplay(remuneration) {
             <p>${hint.content}</p>
         </div>
     `).join('');
+}
+
+/**
+ * Afficher un message temporaire (toast)
+ * @param {string} message - Message à afficher
+ * @param {string} type - Type de message ('info', 'warning', 'success')
+ * @param {number} duration - Durée d'affichage en ms (défaut: 3000)
+ */
+function showToast(message, type = 'info', duration = 3000) {
+    // Créer l'élément toast
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    
+    // Ajouter au body
+    document.body.appendChild(toast);
+    
+    // Animation d'entrée
+    requestAnimationFrame(() => {
+        toast.classList.add('toast-visible');
+    });
+    
+    // Supprimer après la durée spécifiée
+    setTimeout(() => {
+        toast.classList.remove('toast-visible');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300); // Attendre la fin de l'animation de sortie
+    }, duration);
 }
 
 /**

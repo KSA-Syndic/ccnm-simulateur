@@ -447,6 +447,39 @@ body {
     padding: 15px;
 }
 
+/* Transitions pour les champs qui apparaissent */
+.sub-field {
+    transition: opacity 0.2s ease, max-height 0.2s ease;
+    overflow: hidden;
+}
+
+.sub-field.hidden {
+    opacity: 0;
+    max-height: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.sub-field:not(.hidden) {
+    opacity: 1;
+    max-height: 200px;
+    margin-top: 10px;
+}
+
+/* Animation pour les groupes qui apparaissent */
+.form-group {
+    transition: opacity 0.3s ease;
+}
+
+.form-group.hidden {
+    opacity: 0;
+    pointer-events: none;
+    max-height: 0;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
 /* Actions des étapes */
 .step-actions {
     display: flex;
@@ -1808,4 +1841,54 @@ body {
         font-size: 0.85rem;
         padding: 10px;
     }
+    
+    .toast {
+        right: 10px;
+        left: 10px;
+        max-width: none;
+        bottom: 10px;
+    }
+}
+
+/* ============================================
+   TOAST NOTIFICATIONS
+   ============================================ */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 18px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    font-size: 0.9rem;
+    z-index: 10000;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    max-width: 400px;
+    border-left: 4px solid var(--gray-400);
+}
+
+.toast.toast-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast.toast-info {
+    border-left-color: var(--color-link);
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.toast.toast-warning {
+    border-left-color: #ff9800;
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.toast.toast-success {
+    border-left-color: var(--color-success);
+    background: #e8f5e9;
+    color: #2e7d32;
 }
