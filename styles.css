@@ -406,6 +406,23 @@ body {
     font-size: 0.9rem;
 }
 
+/* Validation des champs */
+.field-error {
+    margin-top: 5px;
+    padding: 8px 12px;
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 4px;
+    color: #c33;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.input-error {
+    border-color: #fcc !important;
+    background-color: #fff5f5;
+}
+
 /* Conditions de travail (collapsible) */
 .conditions-details {
     margin-top: 20px;
@@ -1056,7 +1073,6 @@ body {
     padding: 20px;
     background: var(--gray-100);
     border-radius: var(--border-radius);
-    margin-bottom: 20px;
     text-align: left;
 }
 
@@ -1065,9 +1081,16 @@ body {
     justify-content: space-between;
     padding: 8px 0;
     border-bottom: 1px solid var(--gray-200);
+    gap: 0.5em;
 }
 
-.result-detail-item:last-child {
+/* Retirer la bordure du dernier élément qui n'est pas total-row */
+/* Si total-row existe (dernier enfant), c'est l'avant-dernier qui est le dernier non-total-row */
+.result-detail-item:not(.total-row):nth-last-child(2) {
+    border-bottom: none;
+}
+/* Si pas de total-row, c'est le dernier élément */
+.result-detail-item:not(.total-row):last-child {
     border-bottom: none;
 }
 

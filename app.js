@@ -512,6 +512,25 @@ function initControls() {
     const forfaitSelect = document.getElementById('forfait');
     const experienceProInput = document.getElementById('experience-pro');
 
+    // Amélioration UX : sélectionner automatiquement le contenu au focus
+    function setupNumberInputUX(input) {
+        if (!input) return;
+        input.addEventListener('focus', function() {
+            // Sélectionner tout le contenu pour faciliter la modification
+            this.select();
+        });
+    }
+
+    // Appliquer à tous les champs numériques
+    setupNumberInputUX(ancienneteInput);
+    setupNumberInputUX(pointTerritorialInput);
+    setupNumberInputUX(experienceProInput);
+    setupNumberInputUX(document.getElementById('heures-nuit'));
+    setupNumberInputUX(document.getElementById('heures-dimanche'));
+    setupNumberInputUX(document.getElementById('heures-equipe'));
+    setupNumberInputUX(document.getElementById('age-actuel'));
+    setupNumberInputUX(document.getElementById('augmentation-annuelle'));
+
     ancienneteInput.addEventListener('input', (e) => {
         state.anciennete = parseInt(e.target.value) || 0;
         // L'expérience pro ne peut pas être inférieure à l'ancienneté
@@ -519,6 +538,7 @@ function initControls() {
             state.experiencePro = state.anciennete;
             experienceProInput.value = state.anciennete;
         }
+        updateExperienceProValidation();
         updateAll();
     });
 
@@ -533,16 +553,40 @@ function initControls() {
         updateAll();
     });
 
+    // Variable pour suivre si on vient de forcer une valeur
+    let experienceProWasForced = false;
+
     experienceProInput.addEventListener('input', (e) => {
         let value = parseInt(e.target.value) || 0;
+        const attemptedValue = value;
+        
         // L'expérience pro ne peut pas être inférieure à l'ancienneté
-        if (value < state.anciennete) {
+        if (value < state.anciennete && state.anciennete > 0) {
+            // Afficher le message d'avertissement
+            experienceProWasForced = true;
             value = state.anciennete;
             experienceProInput.value = value;
+            // Mettre à jour la validation pour afficher le message
+            updateExperienceProValidation(attemptedValue);
+        } else {
+            experienceProWasForced = false;
+            updateExperienceProValidation();
         }
+        
         state.experiencePro = value;
         updateAll();
     });
+
+    // Au blur, masquer le message si la valeur est correcte
+    experienceProInput.addEventListener('blur', () => {
+        if (state.experiencePro >= state.anciennete) {
+            experienceProWasForced = false;
+            updateExperienceProValidation();
+        }
+    });
+
+    // Validation initiale
+    updateExperienceProValidation();
 
     // ═══════════════════════════════════════════════════════════════
     // CONTRÔLES CONDITIONS DE TRAVAIL (Non-Cadres)
@@ -644,6 +688,43 @@ function initControls() {
             updateRemunerationDisplay(calculateRemuneration());
         });
     });
+}
+
+/**
+ * Mettre à jour la validation du champ expérience professionnelle
+ * @param {number} attemptedValue - Valeur que l'utilisateur a tenté de saisir (optionnel)
+ */
+function updateExperienceProValidation(attemptedValue = null) {
+    const experienceProInput = document.getElementById('experience-pro');
+    const experienceProGroup = experienceProInput?.closest('.form-group');
+    if (!experienceProGroup) return;
+
+    // Retirer l'ancien message s'il existe
+    const existingError = experienceProGroup.querySelector('.field-error');
+    if (existingError) {
+        existingError.remove();
+    }
+
+    // Vérifier si l'expérience est inférieure à l'ancienneté
+    const experienceValue = parseInt(experienceProInput.value) || 0;
+    
+    // Afficher le message si l'utilisateur a tenté de mettre une valeur inférieure
+    if (attemptedValue !== null && attemptedValue < state.anciennete && state.anciennete > 0) {
+        const errorMsg = document.createElement('div');
+        errorMsg.className = 'field-error';
+        errorMsg.textContent = `⚠️ La valeur saisie (${attemptedValue} ans) a été corrigée. L'expérience professionnelle ne peut pas être inférieure à l'ancienneté dans l'entreprise (${state.anciennete} ans minimum).`;
+        experienceProGroup.appendChild(errorMsg);
+        experienceProInput.classList.add('input-error');
+    } else if (experienceValue < state.anciennete && state.anciennete > 0) {
+        // Cas où la valeur est toujours incorrecte (ne devrait pas arriver normalement)
+        const errorMsg = document.createElement('div');
+        errorMsg.className = 'field-error';
+        errorMsg.textContent = `L'expérience professionnelle ne peut pas être inférieure à l'ancienneté dans l'entreprise (${state.anciennete} ans minimum).`;
+        experienceProGroup.appendChild(errorMsg);
+        experienceProInput.classList.add('input-error');
+    } else {
+        experienceProInput.classList.remove('input-error');
+    }
 }
 
 /**
@@ -1391,6 +1472,24 @@ function initTooltips() {
         allowHTML: true,
         appendTo: document.body
     });
+    
+    // Empêcher la propagation des clics sur les tooltips pour éviter de déclencher les actions parentes
+    // Ajouter un gestionnaire directement sur chaque tooltip
+    document.querySelectorAll('.tooltip-trigger, .tooltip-trigger__light').forEach(tooltip => {
+        tooltip.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault(); // Empêcher aussi le comportement par défaut (ex: activation du label)
+        });
+    });
+    
+    // Gestionnaire global en phase de capture pour intercepter aussi les clics sur les enfants du tooltip
+    document.addEventListener('click', (e) => {
+        const tooltipElement = e.target.closest('.tooltip-trigger, .tooltip-trigger__light');
+        if (tooltipElement) {
+            e.stopPropagation();
+            e.preventDefault();
+        }
+    }, true);
 }
 
 /**
