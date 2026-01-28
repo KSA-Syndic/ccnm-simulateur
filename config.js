@@ -9,6 +9,23 @@
  * STRUCTURE :
  * - CCN : Données Convention Collective Nationale Métallurgie 2024
  * - ACCORD_ENTREPRISE : Données spécifiques Accord Kuhn
+ * 
+ * RÈGLES MÉTIER - ASSIETTE SMH (pour arriérés « SMH seul » et référence générale)
+ * -------------------------------------------------------------------------------
+ * INCLUS dans l'assiette SMH :
+ * - Base SMH (ou barème débutants F11/F12 si < 6 ans)
+ * - Majorations forfaits cadres (heures +15%, jours +30%) : elles font partie du SMH
+ * - Majorations heures supplémentaires : incluses dans l'assiette SMH
+ * - 13e mois : fait partie du SMH (modalité de versement, répartition 12/13)
+ * EXCLUS de l'assiette SMH :
+ * - Primes d'ancienneté (CCN ou Kuhn)
+ * - Prime de vacances
+ * - Majorations pénibilité
+ * - Majorations nuit / dimanche / prime d'équipe
+ *
+ * Option « SMH seul » (arretesSurSMHSeul) : salaire dû = assiette SMH ci-dessus (base + forfait,
+ * sans prime vacances, prime ancienneté, majorations nuit/dimanche/équipe, majorations pénibilité).
+ * Répartition 12 ou 13 mois (accord Kuhn) s'applique. Saisie utilisateur = brut hors primes.
  */
 
 const CONFIG = {
@@ -126,7 +143,7 @@ const CONFIG = {
         plafond: 15     // Plafonné à 15 ans
     },
 
-    // Majorations Forfaits Cadres
+    // Majorations Forfaits Cadres – INCLUSES dans l'assiette SMH (font partie du SMH)
     FORFAITS: {
         '35h': 0,       // Pas de majoration
         'heures': 0.15, // +15%
@@ -134,11 +151,12 @@ const CONFIG = {
     },
 
     // Majorations CCN (Art. 145, 146)
+    // Nuit / dimanche : EXCLUES de l'assiette SMH. Heures sup : INCLUSES dans l'assiette SMH.
     MAJORATIONS_CCN: {
-        nuit: 0.15,         // +15% travail de nuit
-        dimanche: 1.00,     // +100% travail dimanche
-        heuresSup25: 0.25,  // +25% (8 premières HS)
-        heuresSup50: 0.50   // +50% (HS suivantes)
+        nuit: 0.15,         // +15% travail de nuit (exclu assiette SMH)
+        dimanche: 1.00,     // +100% travail dimanche (exclu assiette SMH)
+        heuresSup25: 0.25,  // +25% (8 premières HS) – inclus assiette SMH
+        heuresSup50: 0.50   // +50% (HS suivantes) – inclus assiette SMH
     },
 
     // ╔════════════════════════════════════════════════════════════════╗
@@ -207,7 +225,7 @@ const CONFIG = {
         // Spécifique Kuhn (non prévu CCN)
         // ─────────────────────────────────────────────────────────────
         primeVacances: {
-            montant: 525,           // € bruts (versé en juillet)
+            montant: 525,           // € bruts, versé en juillet uniquement (pas étalé). Utilisé pour la répartition mensuelle des arriérés (juillet = base/12 + montant). Exclu du mode « SMH seul » (voir règles en en-tête).
             conditions: [
                 'Ancienneté ≥ 1 an au 1er juin',
                 'Contrat ≥ 50% temps légal',

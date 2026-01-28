@@ -38,6 +38,11 @@
                 <span class="progress-dot">3</span>
                 <span class="progress-label">Résultat</span>
             </div>
+            <div class="progress-line stepper-step-4-optional" id="progress-line-before-4"></div>
+            <div class="progress-step stepper-step-4-optional" data-step="4" id="progress-step-4">
+                <span class="progress-dot">4</span>
+                <span class="progress-label">Arriérés</span>
+            </div>
         </div>
 
         <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -283,7 +288,7 @@
         <section class="wizard-step hidden" id="step-3">
             <div class="step-content">
                 <h2>Votre rémunération</h2>
-                <p class="step-subtitle">Salaire Minimum Hiérarchique (SMH) annuel brut</p>
+                <p class="step-subtitle">Total annuel brut (SMH + primes et majorations)</p>
 
                 <!-- Options de calcul -->
                 <div class="result-options">
@@ -370,12 +375,185 @@
                     </div>
                 </details>
 
+                <!-- Bouton pour vérifier les arriérés -->
+                <div class="arretees-check-card" id="arretees-check-card">
+                    <p class="arretees-check-text"><strong>💡 Vous pensez gagner moins que le minimum affiché ?</strong></p>
+                    <p class="arretees-check-text">Calculez vos arriérés de salaire et générez un rapport PDF pour les réclamer.</p>
+                    <button class="book-btn btn-primary" id="btn-check-arretees">
+                        Calculer mes arriérés
+                    </button>
+                </div>
+
                 <div class="step-actions">
                     <button class="book-btn btn-secondary" id="btn-back-3">
                         <span class="btn-icon btn-icon-left">‹</span> Modifier
                     </button>
                     <button class="book-btn btn-primary" id="btn-restart">
                         <span class="btn-icon">↻</span> Recommencer
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- ÉTAPE 4 : ARRIÉRÉS DE SALAIRE -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <section class="wizard-step hidden" id="step-4">
+            <div class="step-content">
+                <h2>Calcul des arriérés de salaire</h2>
+                <p class="step-subtitle">Saisissez vos salaires réels mois par mois pour calculer précisément vos arriérés</p>
+
+                <div class="book-hint warning" id="arretees-warning">
+                    <p><strong>⚠️ Important :</strong> Ce calcul est un outil d'aide. Pour toute action juridique, consultez un avocat spécialisé en droit du travail ou votre syndicat.</p>
+                </div>
+
+                <!-- Informations de base -->
+                <div class="arretees-base-info">
+                    <h3>Informations nécessaires</h3>
+                    <div class="form-group">
+                        <label for="date-embauche-arretees">
+                            Date d'embauche
+                            <span class="tooltip-trigger" data-tippy-content="Date de début de votre contrat dans cette entreprise.">?</span>
+                        </label>
+                        <input type="date" id="date-embauche-arretees" class="book-input">
+                    </div>
+
+                    <details class="arretees-options-accordion result-details-toggle" id="arretees-options-accordion">
+                        <summary class="arretees-options-accordion-title">Options et autres informations</summary>
+                        <div class="arretees-options-accordion-body">
+                            <div class="form-group">
+                                <label for="date-changement-classification-arretees">
+                                    Date de changement de classification
+                                    <span class="tooltip-trigger" data-tippy-content="Si votre classification a changé au cours de votre contrat, indiquez la date. Sinon, laissez vide.">?</span>
+                                </label>
+                                <input type="date" id="date-changement-classification-arretees" class="book-input">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="rupture-contrat-arretees" class="book-checkbox">
+                                    <span>Le contrat est rompu</span>
+                                </label>
+                            </div>
+
+                            <div class="form-group hidden" id="date-rupture-group-arretees">
+                                <label for="date-rupture-arretees">Date de rupture du contrat</label>
+                                <input type="date" id="date-rupture-arretees" class="book-input">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="accord-ecrit-arretees" class="book-checkbox">
+                                    <span>Un accord écrit existe avec l'employeur concernant la classification</span>
+                                </label>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="arretees-smh-seul" class="book-checkbox" checked>
+                                    <span>Calculer les arriérés sur le SMH seul</span>
+                                    <span 
+                                        class="tooltip-trigger"
+                                        data-tippy-content="Si coché : salaire dû = assiette SMH (base + majorations forfaits).<br>
+                                                            Inclus : forfaits heures/jours, 13e mois, heures sup.<br>
+                                                            Exclus : primes ancienneté/vacances, majorations pénibilité, nuit/dimanche/équipe.<br>
+                                                            Décochez pour comparer à la rémunération complète."
+                                    >?</span>
+                                </label>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+
+                <!-- Interface de saisie avec graphique et bloc flottant (affichée uniquement quand la date d'embauche est renseignée) -->
+                <div class="salary-curve-container hidden" id="salary-curve-container">
+                    <h3>Saisie de vos salaires par mois</h3>
+                    <p class="curve-help">Saisissez votre salaire mensuel brut pour chaque mois. Le graphique ci-dessous montre l'évolution du salaire dû au fil du temps.</p>
+                    <div class="book-hint warning arretees-salaire-hint" id="arretees-salaire-hint">
+                        <p><strong>Attention :</strong> Lorsque « SMH seul » est coché, saisissez le <strong>salaire mensuel brut hors primes</strong> (sans prime vacances, prime ancienneté, majorations pénibilité, nuit/dimanche/équipe). Le 13e mois et les majorations forfaits font partie du SMH. Sinon, indiquez le total brut du bulletin (y compris primes si vous comparez à la rémunération complète).</p>
+                    </div>
+                    
+                    <!-- Message quand pas de date (le canvas n'est jamais supprimé) -->
+                    <div class="timeline-no-date-message" id="timeline-no-date-message">
+                        <p class="timeline-help">Veuillez renseigner la date d'embauche pour générer la courbe.</p>
+                    </div>
+                    
+                    <!-- Canvas pour la courbe (toujours présent dans le DOM) -->
+                    <div class="curve-chart-wrapper hidden" id="curve-chart-wrapper">
+                        <canvas id="salary-curve-chart"></canvas>
+                        <!-- Bloc flottant pour saisie -->
+                        <div class="floating-input-block" id="floating-input-block">
+                            <div class="floating-label">
+                                <span id="floating-period-label">...</span>
+                                <span class="tooltip-trigger" id="floating-info-icon" data-tippy-content="Salaire mensuel brut : indiquez le « Total brut » de votre fiche de paie pour ce mois.">?</span>
+                            </div>
+                            <div class="input-with-unit floating-input">
+                                <input type="number" id="floating-salary-input" class="book-input" min="0" step="100" placeholder="Salaire mensuel brut">
+                                <span class="input-unit">€</span>
+                            </div>
+                            <p class="floating-hint">Appuyez sur <kbd>Entrée</kbd> pour valider</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Légende -->
+                    <div class="curve-legend">
+                        <div class="legend-item">
+                            <span class="legend-color" style="background: #4caf50;"></span>
+                            <span>Salaire réel saisi</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background: #2196f3;"></span>
+                            <span>Salaire dû</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Progression -->
+                    <div class="curve-progress">
+                        <span id="curve-progress-text">0 mois saisis</span>
+                    </div>
+                </div>
+                
+                <!-- Bouton de calcul sticky (affiché uniquement quand la date d'embauche est renseignée) -->
+                <div class="arretees-calc-sticky hidden" id="arretees-calc-sticky">
+                    <button class="book-btn btn-primary btn-large" id="btn-calculer-arretees-sticky">
+                        Calculer les arriérés
+                    </button>
+                </div>
+
+                <!-- Résultats (style aligné sur la section résultat rémunération) -->
+                <div class="arretees-results hidden" id="arretees-results">
+                    <div class="arretees-results-card">
+                        <h3 class="arretees-results-title">Résultats du calcul</h3>
+                        <div id="arretees-summary"></div>
+                        <div id="arretees-legal-info"></div>
+                        <button class="book-btn btn-primary" id="btn-generer-pdf-arretees">
+                            Générer le rapport PDF
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Guide juridique (toujours visible après saisie, moderne et ludique) -->
+                <div class="legal-guide-section hidden" id="legal-instructions">
+                    <div class="legal-guide-header">
+                        <h3 class="legal-guide-title">Guide juridique et prochaines étapes</h3>
+                        <div class="legal-guide-nav">
+                            <button class="carousel-btn carousel-btn-prev" id="legal-carousel-prev" aria-label="Précédent">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                            </button>
+                            <span class="carousel-counter"><span id="legal-carousel-current">1</span> / <span id="legal-carousel-total">6</span></span>
+                            <button class="carousel-btn carousel-btn-next" id="legal-carousel-next" aria-label="Suivant">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="legal-guide-content" id="legal-carousel-content">
+                        <!-- Contenu généré dynamiquement -->
+                    </div>
+                </div>
+
+                <div class="step-actions">
+                    <button class="book-btn btn-secondary" id="btn-back-4">
+                        <span class="btn-icon btn-icon-left">‹</span> Retour
                     </button>
                 </div>
             </div>
@@ -389,6 +567,8 @@
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jsPDF pour génération PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="config.js"></script>
     <script src="app.js"></script>
 </body>

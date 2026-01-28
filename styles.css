@@ -183,6 +183,17 @@ body {
     background: var(--color-success);
 }
 
+/* Étape 4 (Arriérés) masquée dans le stepper tant que l'utilisateur n'a pas cliqué sur "Calculer mes arriérés" */
+.stepper-step-4-optional {
+    display: none !important;
+}
+.progress-step.stepper-step-4-optional.stepper-step-4-visible {
+    display: flex !important;
+}
+.progress-line.stepper-step-4-optional.stepper-step-4-visible {
+    display: block !important;
+}
+
 /* ============================================
    WIZARD - Étapes
    ============================================ */
@@ -586,17 +597,21 @@ body {
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
-/* Détails du calcul (collapsible) */
+/* Détails du calcul (collapsible) – style de référence pour étape 3 et arriérés */
 .result-details-toggle {
     margin: 15px 0;
     border: 1px solid var(--gray-200);
     border-radius: var(--border-radius);
 }
 
-.result-details-toggle summary {
+.result-details-toggle summary,
+.result-details-toggle .arretees-accordion-summary-title,
+.result-details-toggle .arretees-accordion-detail-title,
+.result-details-toggle .arretees-options-accordion-title {
     padding: 12px 15px;
     cursor: pointer;
     font-weight: 500;
+    font-size: 1rem;
 }
 
 .result-details-toggle .result-details {
@@ -618,6 +633,1325 @@ body {
 
 .evolution-details .evolution-panel {
     padding: 15px;
+}
+
+/* Carte de vérification arriérés (Étape 3) */
+.arretees-check-card {
+    margin: 20px 0;
+    padding: 25px;
+    background: linear-gradient(135deg, #e3f2fd 0%, #f5f5f5 100%);
+    border: 2px solid var(--color-link);
+    border-radius: var(--border-radius);
+    text-align: center;
+}
+
+.arretees-check-text {
+    margin: 0 0 10px 0;
+    color: var(--body-font-color);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.arretees-check-text:first-child {
+    font-size: 1rem;
+    margin-bottom: 8px;
+}
+
+.arretees-check-text:last-of-type {
+    margin-bottom: 0;
+}
+
+.arretees-check-card button {
+    margin-top: 15px;
+}
+
+.label-optional {
+    font-weight: normal;
+    color: var(--gray-600);
+    font-size: 0.9em;
+}
+
+/* Rapport Arriérés - Étape 4 */
+.arretees-base-info {
+    margin: 20px 0;
+    padding: 20px;
+    background: var(--gray-100);
+    border-radius: var(--border-radius);
+}
+
+/* Courbe interactive pour saisie des salaires */
+.salary-curve-container {
+    margin: 30px 0;
+    padding: 25px;
+    background: white;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--gray-200);
+    position: relative;
+}
+
+.salary-curve-container h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.curve-help {
+    color: var(--gray-600);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+.curve-help kbd {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-family: monospace;
+    font-size: 0.85em;
+    color: var(--body-font-color);
+}
+
+.curve-chart-wrapper {
+    position: relative;
+    height: 400px;
+    margin: 20px 0;
+    padding: 15px;
+    background: var(--gray-50);
+    border-radius: var(--border-radius);
+    overflow: visible; /* Permettre au bloc flottant de dépasser */
+}
+
+/* Bloc flottant pour saisie */
+.floating-input-block {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 20px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 2px solid var(--color-link);
+    z-index: 10;
+    min-width: 280px;
+    transition: all 0.3s ease;
+    opacity: 1;
+}
+
+.floating-input-block.animating {
+    pointer-events: none;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.floating-input-block.floating-block-hidden {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.floating-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-weight: 600;
+    color: var(--body-font-color);
+    font-size: 1rem;
+}
+
+.floating-info-icon {
+    cursor: help;
+    color: var(--color-link);
+    display: inline-flex;
+    align-items: center;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.floating-info-icon:hover {
+    opacity: 1;
+}
+
+.floating-input {
+    margin-bottom: 8px;
+}
+
+.floating-hint {
+    margin: 8px 0 0 0;
+    font-size: 0.85rem;
+    color: var(--gray-600);
+    text-align: center;
+}
+
+.floating-hint kbd {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-family: monospace;
+    font-size: 0.85em;
+}
+
+.curve-legend {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: var(--gray-700);
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+.curve-progress {
+    text-align: center;
+    color: var(--gray-600);
+    font-size: 0.9rem;
+    margin-top: 15px;
+}
+
+/* Frise chronologique - Style calendrier */
+.timeline-container {
+    margin: 30px 0;
+}
+
+.timeline-container h3 {
+    margin-bottom: 10px;
+}
+
+.timeline-help {
+    color: var(--gray-600);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.timeline {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--gray-200);
+    min-height: 200px;
+}
+
+.timeline-period {
+    padding: 12px 10px;
+    background: white;
+    border: 1.5px solid var(--gray-300);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    position: relative;
+    min-height: 90px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.timeline-period:hover {
+    border-color: var(--color-link);
+    transform: translateY(-2px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+    z-index: 1;
+}
+
+.timeline-period.filled {
+    background: #f1f8f4;
+    border-color: #4caf50;
+}
+
+.timeline-period.filled:hover {
+    border-color: #388e3c;
+}
+
+.timeline-period.missing {
+    background: #fff8f0;
+    border-color: #ffb74d;
+    border-style: dashed;
+}
+
+.timeline-period.missing:hover {
+    border-color: #ff9800;
+    border-style: solid;
+}
+
+.timeline-period.invalid {
+    background: #ffebee;
+    border-color: #e57373;
+}
+
+.timeline-period .period-label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--body-font-color);
+    margin-bottom: 6px;
+    text-transform: capitalize;
+    line-height: 1.2;
+}
+
+.timeline-period .period-salary {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #2e7d32;
+    margin: 4px 0;
+    word-break: break-word;
+}
+
+.timeline-period .period-status {
+    font-size: 0.7rem;
+    color: var(--gray-600);
+    margin-top: 4px;
+    font-style: italic;
+}
+
+.timeline-period .period-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: var(--color-link);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+}
+
+/* Modal pour saisie salaire */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    backdrop-filter: blur(2px);
+}
+
+.modal-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 30px;
+    max-width: 550px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.visible .modal {
+    transform: scale(1);
+}
+
+.modal h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--body-font-color);
+}
+
+.modal .modal-subtitle {
+    margin: -8px 0 18px 0;
+    font-size: 0.9rem;
+    color: var(--gray-600);
+}
+
+.modal .form-group {
+    margin-bottom: 20px;
+}
+
+.modal .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.modal .period-display {
+    padding: 12px;
+    background: var(--gray-100);
+    border-radius: 6px;
+    font-weight: 600;
+    color: var(--body-font-color);
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.modal .fiche-paie-illustration {
+    margin: 15px 0;
+    padding: 15px;
+    background: #f9f9f9;
+    border: 1px solid var(--gray-300);
+    border-radius: 6px;
+    text-align: center;
+}
+
+.modal .fiche-paie-illustration svg {
+    max-width: 100%;
+    height: auto;
+}
+
+.modal .fiche-paie-illustration p {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: var(--gray-600);
+}
+
+.modal .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 25px;
+}
+
+.label-optional {
+    color: var(--gray-600);
+    font-weight: normal;
+    font-size: 0.9em;
+}
+
+/* Instructions juridiques interactives */
+.legal-instructions {
+    margin: 30px 0;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+}
+
+.legal-instructions summary {
+    padding: 15px;
+    cursor: pointer;
+    font-weight: 600;
+    background: var(--gray-100);
+    border-radius: var(--border-radius);
+    user-select: none;
+}
+
+.legal-instructions[open] summary {
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.legal-instructions-content {
+    padding: 20px;
+}
+
+.legal-step {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: white;
+    border-left: 4px solid var(--color-link);
+    border-radius: var(--border-radius);
+    transition: all 0.3s ease;
+}
+
+.legal-step:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.legal-step h4 {
+    margin-top: 0;
+    color: var(--color-link);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.legal-step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: var(--color-link);
+    color: white;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.legal-step-content {
+    margin-top: 10px;
+    color: var(--gray-700);
+    line-height: 1.6;
+}
+
+.legal-step-content ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.legal-step-content li {
+    margin: 5px 0;
+}
+
+/* Guide juridique - Section toujours visible, moderne et ludique */
+.legal-guide-section {
+    margin: 32px 0;
+    padding: 28px;
+    background: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 16px;
+    border: 1px solid var(--gray-200);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.legal-guide-section.hidden {
+    display: none;
+}
+
+.legal-guide-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--color-link);
+}
+
+.legal-guide-title {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--body-font-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.legal-guide-title::before {
+    content: '📚';
+    font-size: 1.3rem;
+}
+
+.legal-guide-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.legal-guide-content {
+    padding: 8px 0;
+    min-height: 280px;
+    position: relative;
+}
+
+.legal-guide-content .carousel-slide {
+    border-radius: 12px;
+    padding: 24px 28px;
+}
+
+.legal-guide-content .legal-step {
+    margin: 0;
+}
+
+.legal-guide-content .legal-step h4 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 16px 0;
+    font-size: 1.05rem;
+    color: var(--color-link);
+}
+
+.legal-guide-content .legal-step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, var(--color-link), #0d6efd);
+    color: white;
+    border-radius: 50%;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.legal-guide-content .legal-step-content {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--gray-700);
+}
+
+.legal-guide-content .legal-step-content p {
+    margin: 0 0 12px 0;
+}
+
+.legal-guide-content .legal-step-content ul {
+    margin: 10px 0;
+    padding-left: 22px;
+}
+
+.legal-guide-content .legal-step-content li {
+    margin: 6px 0;
+}
+
+/* Rétrocompat carousel */
+.legal-instructions-accordion,
+.legal-instructions-carousel {
+    margin: 30px 0;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background: white;
+}
+
+.legal-instructions-accordion.hidden,
+.legal-instructions-carousel.hidden {
+    display: none;
+}
+
+.carousel-nav-above-cards {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.carousel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px;
+    background: var(--gray-100);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.carousel-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--body-font-color);
+}
+
+.carousel-nav {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.carousel-btn {
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--body-font-color);
+    padding: 0;
+}
+
+.carousel-btn:hover:not(:disabled) {
+    background: var(--color-link);
+    border-color: var(--color-link);
+    color: white;
+    transform: scale(1.05);
+}
+
+.carousel-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.carousel-counter {
+    font-weight: 600;
+    color: var(--gray-700);
+    font-size: 0.95rem;
+    min-width: 50px;
+    text-align: center;
+}
+
+.carousel-content {
+    padding: 30px;
+    min-height: 300px;
+    position: relative;
+    overflow: hidden;
+}
+
+.carousel-slide {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.carousel-slide.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.carousel-slide .legal-step {
+    margin: 0;
+}
+
+/* Guide juridique avec onglets (ancienne version - à supprimer progressivement) */
+.legal-instructions-tabs {
+    margin: 30px 0;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background: white;
+}
+
+.tabs-header {
+    display: flex;
+    background: var(--gray-100);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 15px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--gray-600);
+    transition: all 0.2s ease;
+    font-size: 0.95rem;
+    font-family: inherit;
+}
+
+.tab-btn:hover {
+    background: var(--gray-50);
+    color: var(--body-font-color);
+}
+
+.tab-btn.active {
+    color: var(--color-link);
+    border-bottom-color: var(--color-link);
+    background: white;
+}
+
+.tabs-content {
+    background: white;
+}
+
+.tab-panel {
+    display: none;
+    padding: 25px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+/* Styles pour les étapes juridiques dans les onglets */
+.tab-panel .legal-step {
+    margin-bottom: 25px;
+    padding: 20px;
+    background: var(--gray-50);
+    border-radius: var(--border-radius);
+    border-left: 4px solid var(--color-link);
+}
+
+.tab-panel .legal-step:last-child {
+    margin-bottom: 0;
+}
+
+.tab-panel .legal-step h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--body-font-color);
+    font-size: 1.1rem;
+}
+
+.tab-panel .legal-step-content {
+    color: var(--gray-700);
+    line-height: 1.7;
+}
+
+.tab-panel .legal-step-content p {
+    margin-bottom: 12px;
+}
+
+.tab-panel .legal-step-content ul {
+    margin: 12px 0;
+    padding-left: 25px;
+}
+
+.tab-panel .legal-step-content li {
+    margin-bottom: 8px;
+}
+
+/* Badge Kuhn dans les détails */
+.kuhn-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 2px 6px;
+    background: rgba(9, 105, 218, 0.1);
+    color: var(--color-link);
+    border-radius: 3px;
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .curve-chart-wrapper {
+        height: 300px;
+        padding: 10px;
+    }
+    
+    .curve-input-group {
+        flex-direction: column;
+    }
+    
+    .curve-input-group label,
+    .curve-input-group .input-with-unit {
+        width: 100%;
+    }
+    
+    .curve-input-group .btn-small {
+        width: 100%;
+    }
+    
+    .tabs-header {
+        flex-direction: column;
+    }
+    
+    .tab-panel {
+        max-height: 400px;
+    }
+    
+    .timeline {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 8px;
+        padding: 15px;
+    }
+    
+    .timeline-period {
+        min-height: 80px;
+        padding: 10px 8px;
+    }
+    
+    .timeline-period .period-label {
+        font-size: 0.8rem;
+    }
+    
+    .timeline-period .period-salary {
+        font-size: 0.85rem;
+    }
+    
+    .modal {
+        padding: 20px;
+        width: 95%;
+    }
+    
+    .arretees-detail-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding: 10px;
+    }
+    
+    .detail-difference {
+        text-align: left;
+    }
+    
+    .detail-montants {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    
+    .detail-separator {
+        display: none;
+    }
+}
+
+/* Rapport Arriérés - Ancien (à garder pour compatibilité) */
+.arretees-details {
+    margin: 15px 0;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+}
+
+.arretees-details summary {
+    padding: 12px 15px;
+    cursor: pointer;
+    font-weight: 500;
+    background: var(--gray-100);
+    border-radius: var(--border-radius);
+}
+
+.arretees-details[open] summary {
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.arretees-panel {
+    padding: 15px;
+}
+
+.arretees-form h3,
+.arretees-results h3,
+.arretees-instructions h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    color: var(--body-font-color);
+}
+
+/* Résultats arriérés : aligné sur la section résultat rémunération */
+.arretees-results {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 2px solid var(--gray-200);
+}
+
+.arretees-results-card {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: var(--shadow-md);
+    margin-bottom: 20px;
+}
+
+.arretees-results-title {
+    margin: 0 0 20px 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--body-font-color);
+    text-align: center;
+}
+
+.arretees-en-ordre-msg {
+    margin: 0;
+    padding: 16px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #2e7d32;
+    text-align: center;
+    background: rgba(46, 125, 50, 0.08);
+    border-radius: var(--border-radius);
+}
+
+/* Contenu résumé arriérés – même style que .result-details étape 3 */
+.arretees-summary.result-details {
+    background: var(--gray-100);
+    padding: 0 15px 15px;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    margin-bottom: 0;
+}
+
+/* Tailles de police alignées sur "Détail du calcul" étape 3 (1rem) */
+.arretees-summary.result-details .result-detail-value {
+    font-size: 1rem;
+}
+.arretees-summary.result-details .result-detail-item.total-row {
+    font-size: 1rem;
+}
+.arretees-details-table.result-details .detail-montants-inline,
+.arretees-details-table.result-details .detail-diff-value {
+    font-size: 1rem;
+}
+
+/* Lignes du résumé arriérés (sans strong, classes simplifiées) */
+.arretees-summary.result-details .result-detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--gray-200);
+}
+.arretees-summary.result-details .result-detail-item:last-child,
+.arretees-summary.result-details .result-detail-item.total-row {
+    border-bottom: none;
+}
+.arretees-summary.result-details .result-detail-item.total-row {
+    font-weight: 600;
+    font-size: 1.15rem;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 2px solid var(--gray-300);
+}
+.arretees-summary.result-details .result-detail-item.total-row .result-detail-value {
+    color: var(--color-link);
+    font-size: 1.3rem;
+}
+
+.arretees-summary-header {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--gray-300);
+}
+
+.arretees-summary-header h4 {
+    margin: 0;
+    color: var(--body-font-color);
+    font-size: 1.1rem;
+}
+
+.arretees-summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.arretees-summary-item:last-child {
+    border-bottom: none;
+}
+
+.arretees-summary-item.arretees-total {
+    font-weight: 600;
+    font-size: 1.15rem;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 2px solid var(--gray-300);
+}
+
+.arretees-total-amount {
+    color: var(--color-link);
+    font-size: 1.3rem;
+}
+
+.arretees-details-list {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 2px solid var(--gray-200);
+}
+
+.arretees-details-list h4 {
+    margin-bottom: 15px;
+    color: var(--body-font-color);
+    font-size: 1rem;
+}
+
+.arretees-details-table {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.arretees-detail-row {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--gray-200);
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 15px;
+    align-items: center;
+}
+
+.arretees-detail-row:last-child {
+    border-bottom: none;
+}
+
+/* Accordéon résultats arriérés – aligné sur "Détail du calcul" étape 3 quand .result-details-toggle est présent */
+.arretees-accordion-summary:not(.result-details-toggle),
+.arretees-accordion-detail:not(.result-details-toggle) {
+    margin-bottom: 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    background: var(--gray-50);
+}
+
+.result-details-toggle.arretees-accordion-summary,
+.result-details-toggle.arretees-accordion-detail {
+    background: transparent;
+}
+
+.arretees-accordion-summary-title,
+.arretees-accordion-detail-title {
+    list-style: none;
+    display: flex;
+    align-items: center;
+}
+
+.arretees-accordion-summary-title::-webkit-details-marker,
+.arretees-accordion-detail-title::-webkit-details-marker {
+    display: none;
+}
+
+.arretees-accordion-summary-title::before,
+.arretees-accordion-detail-title::before {
+    content: '▸';
+    display: inline-block;
+    margin-right: 8px;
+    transition: transform 0.2s;
+}
+
+.arretees-accordion-summary[open] .arretees-accordion-summary-title::before,
+.arretees-accordion-detail[open] .arretees-accordion-detail-title::before {
+    transform: rotate(90deg);
+}
+
+/* Accordéon « Options et autres informations » (étape 4 arriérés) */
+.arretees-options-accordion-title {
+    list-style: none;
+    display: flex;
+    align-items: center;
+}
+.arretees-options-accordion-title::-webkit-details-marker {
+    display: none;
+}
+.arretees-options-accordion-title::before {
+    content: '▸';
+    display: inline-block;
+    margin-right: 8px;
+    transition: transform 0.2s;
+}
+.arretees-options-accordion[open] .arretees-options-accordion-title::before {
+    transform: rotate(90deg);
+}
+.arretees-options-accordion-body {
+    padding: 0 15px 15px;
+}
+
+.arretees-summary-compact {
+    padding: 8px 14px 12px;
+    background: white;
+    margin: 0;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+}
+
+.arretees-summary-item-inline {
+    padding: 4px 0;
+    border-bottom: none;
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.arretees-summary-item-inline.arretees-total {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--gray-200);
+    font-size: 1rem;
+}
+
+.arretees-details-compact {
+    padding: 0;
+    border: none;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+}
+
+.arretees-detail-row-inline {
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+    grid-template-columns: unset;
+    font-size: 0.88rem;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.arretees-detail-row-inline .detail-periode {
+    min-width: 100px;
+}
+
+.arretees-detail-row-inline .detail-montants-inline {
+    flex: 1;
+    color: var(--gray-600);
+}
+
+.arretees-detail-row-inline .detail-diff-value {
+    font-weight: 600;
+    color: var(--color-link);
+}
+
+/* Détail par période : même fond et padding que "Détail du calcul" étape 3 */
+.arretees-details-table.result-details {
+    padding: 0 15px 15px;
+    background: var(--gray-100);
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+}
+
+.arretees-detail-header {
+    display: grid;
+    grid-template-columns: minmax(110px, 1.2fr) minmax(140px, 2fr) minmax(80px, 1fr);
+    gap: 16px 0;
+    padding: 10px 0 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    border-bottom: 2px solid var(--gray-200);
+    align-items: center;
+}
+
+.arretees-detail-header .detail-col-periode { text-align: left; }
+.arretees-detail-header .detail-col-montants { text-align: center; }
+.arretees-detail-header .detail-col-diff { text-align: right; }
+
+.arretees-detail-row-elegant {
+    display: grid;
+    grid-template-columns: minmax(110px, 1.2fr) minmax(140px, 2fr) minmax(80px, 1fr);
+    gap: 16px 0;
+    padding: 8px 0;
+    font-size: 1rem;
+    border-bottom: 1px solid var(--gray-200);
+    align-items: center;
+}
+
+.arretees-detail-row-elegant:last-child {
+    border-bottom: none;
+}
+
+.arretees-detail-row-elegant .detail-periode {
+    font-weight: 500;
+    color: var(--body-font-color);
+    text-align: left;
+}
+
+.arretees-detail-row-elegant .detail-montants-inline {
+    color: var(--gray-600);
+    text-align: center;
+}
+
+.arretees-detail-row-elegant .detail-diff-value {
+    font-weight: 600;
+    text-align: right;
+}
+
+/* Arriérés (sous-paiement) en rouge */
+.detail-row-arretees .detail-diff-value {
+    color: #c62828;
+}
+
+/* Mois positif (conforme ou surplus) en vert */
+.detail-row-positif .detail-diff-value {
+    color: #2e7d32;
+}
+
+.detail-periode {
+    font-weight: 600;
+    color: var(--body-font-color);
+    text-transform: capitalize;
+}
+
+.detail-montants {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.9rem;
+}
+
+.detail-label {
+    color: var(--gray-600);
+}
+
+.detail-value {
+    font-weight: 500;
+    color: var(--body-font-color);
+}
+
+.detail-separator {
+    color: var(--gray-400);
+    margin: 0 4px;
+}
+
+.detail-difference {
+    text-align: right;
+}
+
+.detail-diff-label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--gray-600);
+    margin-bottom: 4px;
+}
+
+.detail-diff-value {
+    font-weight: 700;
+    color: var(--color-link);
+    font-size: 1.05rem;
+}
+
+.arretees-legal-info {
+    background: #fff9e6;
+    border: 1px solid #ffd700;
+    border-radius: var(--border-radius);
+    padding: 15px;
+    margin: 15px 0;
+    font-size: 0.9rem;
+}
+
+.arretees-legal-info h4 {
+    margin-top: 0;
+    color: #856404;
+}
+
+.arretees-legal-info ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.arretees-instructions {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid var(--gray-200);
+}
+
+.arretees-instructions-content {
+    background: #e3f2fd;
+    border-left: 4px solid var(--color-link);
+    padding: 15px;
+    border-radius: var(--border-radius);
+    margin-top: 15px;
+}
+
+.arretees-instructions-content ol {
+    margin: 10px 0;
+    padding-left: 25px;
+}
+
+.arretees-instructions-content li {
+    margin: 8px 0;
+    line-height: 1.6;
 }
 
 .evolution-controls {
@@ -1136,6 +2470,29 @@ body {
 
 .result-detail-label {
     color: var(--gray-500);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.result-detail-info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--gray-300);
+    color: var(--gray-600);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: help;
+    flex-shrink: 0;
+}
+
+.result-detail-info-icon:hover {
+    background: var(--color-link);
+    color: white;
 }
 
 .result-detail-value {

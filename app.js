@@ -5,11 +5,20 @@
  * ============================================
  */
 
-// État global de l'application
+    // État global de l'application
 const state = {
     // === WIZARD ===
     currentStep: 1,              // Étape actuelle du wizard
     modeClassification: null,    // 'direct' ou 'estimation'
+    
+    // === ARRIÉRÉS ===
+    salairesParMois: {},         // { '2024-01': 24000, '2024-02': 24000, ... }
+    dateEmbaucheArretees: null,
+    dateChangementClassificationArretees: null,
+    ruptureContratArretees: false,
+    dateRuptureArretees: null,
+    accordEcritArretees: false,
+    arretesSurSMHSeul: true,     // true = salaire dû = assiette SMH (base + forfait ; exclut primes, pénibilité, nuit/dim/équipe)
     
     // === CLASSIFICATION ===
     scores: [1, 1, 1, 1, 1, 1],  // Scores des 6 critères (1-10)
@@ -144,12 +153,182 @@ function initWizard() {
     
     if (btnRestart) {
         btnRestart.addEventListener('click', () => {
-            // Réinitialiser et revenir au début
+            // Réinitialiser l'état et naviguer vers l'étape 1
             state.currentStep = 1;
             state.modeClassification = null;
             state.modeManuel = false;
-            showSubStep('1a');
+            navigateToStep(1);
         });
+    }
+
+    // Bouton vérifier arriérés (Étape 3) : afficher l'étape 4 dans le stepper puis naviguer
+    const btnCheckArretees = document.getElementById('btn-check-arretees');
+    if (btnCheckArretees) {
+        btnCheckArretees.addEventListener('click', () => {
+            document.querySelectorAll('.stepper-step-4-optional').forEach(el => el.classList.add('stepper-step-4-visible'));
+            goToStep(4);
+            // Le guide juridique reste caché jusqu'à ce que les arriérés aient été calculés (voir calculerArreteesFinal)
+        });
+    }
+
+    // Étape 4 : Arriérés
+    const btnBack4 = document.getElementById('btn-back-4');
+    const btnCalculerArreteesFinal = document.getElementById('btn-calculer-arretees-final');
+    
+    if (btnBack4) {
+        btnBack4.addEventListener('click', () => navigateToStep(3));
+    }
+
+    if (btnCalculerArreteesFinal) {
+        btnCalculerArreteesFinal.addEventListener('click', () => {
+            calculerArreteesFinal();
+        });
+    }
+
+    // Bouton générer PDF : ouvre d'abord le modal des infos personnelles
+    const btnGenererPDFArretees = document.getElementById('btn-generer-pdf-arretees');
+    if (btnGenererPDFArretees) {
+        btnGenererPDFArretees.addEventListener('click', () => {
+            openPdfInfosModal();
+        });
+    }
+
+    // Bouton calcul sticky
+    const btnCalculerSticky = document.getElementById('btn-calculer-arretees-sticky');
+    if (btnCalculerSticky) {
+        btnCalculerSticky.addEventListener('click', () => {
+            calculerArreteesFinal();
+            // Scroll vers les résultats
+            setTimeout(() => {
+                const resultsDiv = document.getElementById('arretees-results');
+                if (resultsDiv && !resultsDiv.classList.contains('hidden')) {
+                    resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
+        });
+    }
+
+    // Navigation courbe interactive avec bloc flottant
+    const floatingInput = document.getElementById('floating-salary-input');
+    
+    if (floatingInput) {
+        // Navigation avec Entrée
+        floatingInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveCurrentSalaryAndNext();
+            }
+        });
+    }
+
+    // Onglets guide juridique - Initialiser après le chargement du contenu
+    function initLegalTabs() {
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        if (tabBtns.length === 0) {
+            // Réessayer après un court délai si les éléments ne sont pas encore chargés
+            setTimeout(initLegalTabs, 100);
+            return;
+        }
+        
+        tabBtns.forEach(btn => {
+            // Retirer les listeners précédents pour éviter les doublons
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            
+            newBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tabName = newBtn.dataset.tab;
+                if (!tabName) return;
+                
+                // Désactiver tous les onglets
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+                
+                // Activer l'onglet sélectionné
+                newBtn.classList.add('active');
+                const targetPanel = document.getElementById(`tab-${tabName}`);
+                if (targetPanel) {
+                    targetPanel.classList.add('active');
+                }
+            });
+        });
+    }
+    
+    // Initialiser le carrousel juridique
+    initLegalCarousel();
+
+    // Initialiser les arriérés
+    initArreteesNew();
+}
+
+/**
+ * Sauvegarder le salaire actuel et passer au suivant avec animation
+ * Le salaire est maintenant stocké en mensuel brut
+ */
+function saveCurrentSalaryAndNext() {
+    if (periodsData.length === 0 || currentPeriodIndex >= periodsData.length) return;
+
+    const floatingInput = document.getElementById('floating-salary-input');
+    const floatingBlock = document.getElementById('floating-input-block');
+    const amount = parseFloat(floatingInput?.value) || 0;
+
+    if (amount > 0) {
+        const currentPeriod = periodsData[currentPeriodIndex];
+        // Stocker en mensuel brut (pas besoin de diviser par 12)
+        state.salairesParMois[currentPeriod.key] = amount;
+        currentPeriod.salaireReel = amount;
+        
+        // Animation : le bloc se rétrécit et se déplace vers le point puis disparaît
+        if (floatingBlock && salaryCurveChart) {
+            animateBlockToPoint(floatingBlock, currentPeriodIndex, () => {
+                updateCurveChart();
+                const nextIndex = periodsData.findIndex((p, i) => i > currentPeriodIndex && !p.salaireReel);
+                const firstMissing = periodsData.findIndex(p => !p.salaireReel);
+                if (nextIndex !== -1) {
+                    currentPeriodIndex = nextIndex;
+                    floatingBlock.classList.remove('floating-block-hidden');
+                    floatingBlock.style.visibility = '';
+                    updateCurveControls();
+                    floatingBlock.style.opacity = '0.88';
+                    floatingBlock.style.transform = 'translate(-50%, -50%) scale(0.92)';
+                    floatingBlock.style.transition = 'opacity 0.2s ease-out, transform 0.2s ease-out';
+                    requestAnimationFrame(() => {
+                        floatingBlock.style.opacity = '1';
+                        floatingBlock.style.transform = 'translate(-50%, -50%) scale(1)';
+                    });
+                } else if (firstMissing !== -1) {
+                    currentPeriodIndex = firstMissing;
+                    floatingBlock.classList.remove('floating-block-hidden');
+                    floatingBlock.style.visibility = '';
+                    updateCurveControls();
+                    floatingBlock.style.opacity = '0.88';
+                    floatingBlock.style.transform = 'translate(-50%, -50%) scale(0.92)';
+                    floatingBlock.style.transition = 'opacity 0.2s ease-out, transform 0.2s ease-out';
+                    requestAnimationFrame(() => {
+                        floatingBlock.style.opacity = '1';
+                        floatingBlock.style.transform = 'translate(-50%, -50%) scale(1)';
+                    });
+                } else {
+                    currentPeriodIndex = Math.min(currentPeriodIndex + 1, periodsData.length - 1);
+                    updateCurveChart();
+                    updateCurveControls({ skipAutoFocus: true });
+                    showToast('✅ Tous les salaires ont été saisis ! Vous pouvez cliquer sur un point pour modifier un mois, puis calculer les arriérés.', 'success', 4000);
+                    // Le bloc reste visible pour permettre de modifier un salaire en cliquant sur un point
+                }
+                const stickyBtn = document.getElementById('arretees-calc-sticky');
+                if (stickyBtn) stickyBtn.classList.remove('hidden');
+            });
+        } else {
+            // Pas d'animation, mise à jour directe
+            updateCurveChart();
+            const nextIndex = periodsData.findIndex((p, i) => i > currentPeriodIndex && !p.salaireReel);
+            if (nextIndex !== -1) {
+                currentPeriodIndex = nextIndex;
+            }
+            updateCurveControls();
+        }
+    } else {
+        showToast('⚠️ Veuillez saisir un montant valide.', 'warning', 3000);
     }
 }
 
@@ -196,6 +375,19 @@ function navigateToStep(stepNumber) {
         updateAll();
     } else if (stepNumber === 3) {
         updateAll();
+    } else if (stepNumber === 4) {
+        const legalSec = document.getElementById('legal-instructions');
+        if (legalSec) {
+            if (window.arreteesDataFinal) {
+                legalSec.classList.remove('hidden');
+                afficherInstructionsJuridiques();
+            } else {
+                legalSec.classList.add('hidden');
+            }
+        }
+        if (!window.arreteesDataFinal) {
+            initTimeline();
+        }
     }
     
     // Scroll en haut
@@ -246,6 +438,7 @@ function updateProgressIndicator(maxStep, activeStep = maxStep) {
     const steps = document.querySelectorAll('.progress-step');
     const lines = document.querySelectorAll('.progress-line');
     
+    // Gérer jusqu'à 4 étapes maintenant
     steps.forEach(step => {
         const stepNum = parseInt(step.dataset.step);
         step.classList.remove('active', 'completed', 'clickable');
@@ -539,6 +732,7 @@ function initControls() {
             experienceProInput.value = state.anciennete;
         }
         updateExperienceProValidation();
+        updateDateEmbaucheFromAnciennete();
         updateAll();
     });
 
@@ -1294,6 +1488,30 @@ function calculateRemuneration() {
 }
 
 /**
+ * Retourne le montant annuel brut de l'assiette SMH (SMH seul).
+ * Utilisé pour le calcul des arriérés quand "SMH seul" est coché.
+ * INCLUT : base SMH (ou barème débutants F11/F12 avec < 6 ans) + majorations forfaits cadres (heures/jours).
+ * Les majorations forfaits font partie du SMH. Les majorations heures sup sont incluses dans l'assiette SMH
+ * (non calculées ici tant que l'app ne simule pas les HS). EXCLUT : primes ancienneté, prime vacances,
+ * majorations pénibilité, majorations nuit/dimanche, prime d'équipe.
+ */
+function getMontantAnnuelSMHSeul() {
+    const { groupe, classe } = getActiveClassification();
+    const isCadre = classe >= CONFIG.SEUIL_CADRE;
+    let baseSMH = CONFIG.SMH[classe];
+    if ((classe === 11 || classe === 12) && state.experiencePro < 6) {
+        let tranche = 0;
+        if (state.experiencePro >= 4) tranche = 4;
+        else if (state.experiencePro >= 2) tranche = 2;
+        const bareme = CONFIG.BAREME_DEBUTANTS[classe];
+        baseSMH = bareme[tranche];
+    }
+    const tauxForfait = isCadre && state.forfait && CONFIG.FORFAITS[state.forfait];
+    const forfaitMontant = (tauxForfait && tauxForfait > 0) ? Math.round(baseSMH * tauxForfait) : 0;
+    return baseSMH + forfaitMontant;
+}
+
+/**
  * ============================================
  * MISE À JOUR GLOBALE
  * ============================================
@@ -1387,35 +1605,149 @@ function updateRemunerationDisplay(remuneration) {
     const mensuel = Math.round(remuneration.total / state.nbMois);
     document.getElementById('result-mensuel').textContent = formatMoney(mensuel);
 
-    // Détails
+    // Détails avec agrégation intelligente
     const detailsContainer = document.getElementById('result-details');
     let detailsHTML = '';
     
-    remuneration.details.forEach(detail => {
+    // Agréger les éléments similaires pour épurer l'affichage
+    const aggregatedDetails = aggregateRemunerationDetails(remuneration.details);
+    
+    aggregatedDetails.forEach(detail => {
         const valueClass = detail.isPositive ? 'positive' : '';
         const prefix = detail.isPositive ? '+' : '';
+        const kuhnBadge = detail.isKuhn ? ' <span class="kuhn-badge">🏢 Kuhn</span>' : '';
+        const origin = detail.tooltipOrigin || (detail.isKuhn ? 'Accord d\'entreprise Kuhn' : 'Convention collective (CCN)');
+        let tipContent = '<strong>Origine :</strong> ' + (typeof origin === 'string' ? origin : (detail.isKuhn ? 'Accord d\'entreprise Kuhn' : 'Convention collective (CCN)')) + '<br>';
+        if (detail.breakdown && detail.breakdown.length) {
+            tipContent += '<strong>Détail du calcul :</strong><br>';
+            detail.breakdown.forEach(b => {
+                tipContent += '• ' + escapeHTML(b.label) + ' : ' + formatMoney(b.value) + '<br>';
+            });
+        } else if (detail.tooltipDetail) {
+            tipContent += '<strong>Détail :</strong> ' + escapeHTML(detail.tooltipDetail) + '<br>';
+        } else {
+            tipContent += '<strong>Détail :</strong> ' + escapeHTML(detail.label) + ' : ' + formatMoney(detail.value);
+        }
+        const tipAttr = tipContent.replace(/"/g, '&quot;');
         detailsHTML += `
             <div class="result-detail-item">
-                <span class="result-detail-label">${detail.label}</span>
+                <span class="result-detail-label">${detail.label}${kuhnBadge}
+                    <span class="result-detail-info-icon tooltip-trigger" data-tippy-content="${tipAttr}" data-tippy-allowHTML="true" aria-label="Détails">i</span>
+                </span>
                 <span class="result-detail-value ${valueClass}">${prefix}${formatMoney(detail.value)}</span>
             </div>
         `;
     });
 
     // Ligne total si plusieurs éléments
-    if (remuneration.details.length > 1) {
+    if (aggregatedDetails.length > 1) {
         detailsHTML += `
             <div class="result-detail-item total-row">
-                <span class="result-detail-label"><strong>Total</strong></span>
+                <span class="result-detail-label"><strong>Total annuel brut</strong></span>
                 <span class="result-detail-value"><strong>${formatMoney(remuneration.total)}</strong></span>
             </div>
         `;
     }
 
-    detailsContainer.innerHTML = detailsHTML;
+    if (detailsContainer) {
+        detailsContainer.innerHTML = detailsHTML;
+        if (typeof initTooltips === 'function') initTooltips();
+    }
 
     // Hint informatif
     updateHintDisplay(remuneration);
+}
+
+/**
+ * Agréger les détails de rémunération pour épurer l'affichage.
+ * Séparation CCN / Accord d'entreprise : le badge Kuhn ne s'affiche que sur les lignes 100 % Kuhn.
+ */
+function aggregateRemunerationDetails(details) {
+    const aggregated = [];
+    let majorationsCCN = 0;
+    let majorationsKuhn = 0;
+    const majorationsBreakdownCCN = [];
+    const majorationsBreakdownKuhn = [];
+    let primesCCN = 0;
+    let primesKuhn = 0;
+    const primesBreakdownCCN = [];
+    const primesBreakdownKuhn = [];
+    
+    details.forEach(detail => {
+        // SMH de base toujours affiché (avec origine pour tooltip)
+        if (detail.isBase) {
+            aggregated.push({
+                ...detail,
+                tooltipOrigin: 'CCN Métallurgie 2024',
+                tooltipDetail: detail.label
+            });
+        }
+        // Agréger les majorations en CCN vs Kuhn
+        else if (detail.label.includes('Majoration') || detail.label.includes('Forfait')) {
+            if (detail.isKuhn) {
+                majorationsKuhn += detail.value;
+                majorationsBreakdownKuhn.push({ label: detail.label, value: detail.value, isKuhn: true });
+            } else {
+                majorationsCCN += detail.value;
+                majorationsBreakdownCCN.push({ label: detail.label, value: detail.value, isKuhn: false });
+            }
+        }
+        // Agréger les primes en CCN vs Kuhn
+        else if (detail.isPositive && !detail.isBase) {
+            if (detail.isKuhn) {
+                primesKuhn += detail.value;
+                primesBreakdownKuhn.push({ label: detail.label, value: detail.value, isKuhn: true });
+            } else {
+                primesCCN += detail.value;
+                primesBreakdownCCN.push({ label: detail.label, value: detail.value, isKuhn: false });
+            }
+        }
+    });
+    
+    // Lignes agrégées séparées CCN / Accord d'entreprise (badge Kuhn + tooltip pour l'origine)
+    if (majorationsCCN > 0) {
+        aggregated.push({
+            label: 'Majorations et forfaits',
+            value: majorationsCCN,
+            isPositive: true,
+            isKuhn: false,
+            tooltipOrigin: 'Convention collective (CCN)',
+            breakdown: majorationsBreakdownCCN
+        });
+    }
+    if (majorationsKuhn > 0) {
+        aggregated.push({
+            label: 'Majorations et forfaits',
+            value: majorationsKuhn,
+            isPositive: true,
+            isKuhn: true,
+            tooltipOrigin: 'Accord d\'entreprise Kuhn',
+            breakdown: majorationsBreakdownKuhn
+        });
+    }
+    
+    if (primesCCN > 0) {
+        aggregated.push({
+            label: 'Primes (ancienneté, etc.)',
+            value: primesCCN,
+            isPositive: true,
+            isKuhn: false,
+            tooltipOrigin: 'Convention collective (CCN)',
+            breakdown: primesBreakdownCCN
+        });
+    }
+    if (primesKuhn > 0) {
+        aggregated.push({
+            label: 'Primes (ancienneté, vacances, etc.)',
+            value: primesKuhn,
+            isPositive: true,
+            isKuhn: true,
+            tooltipOrigin: 'Accord d\'entreprise Kuhn',
+            breakdown: primesBreakdownKuhn
+        });
+    }
+    
+    return aggregated;
 }
 
 /**
@@ -1574,13 +1906,31 @@ function initTooltips() {
  * UTILITAIRES
  * ============================================
  */
+/**
+ * Formater un montant avec espaces comme séparateurs de milliers (ex: "35 000 €").
+ * Conforme PRD : pas de slash, format français.
+ */
 function formatMoney(amount) {
-    return new Intl.NumberFormat('fr-FR', {
-        style: 'currency',
-        currency: 'EUR',
+    const n = Math.round(Number(amount));
+    const s = new Intl.NumberFormat('fr-FR', {
         minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    }).format(amount);
+        maximumFractionDigits: 0,
+        useGrouping: true
+    }).format(n);
+    return s.replace(/\u202f/g, ' ') + ' €';
+}
+
+/**
+ * Formater un montant pour le PDF (espaces comme séparateurs de milliers, ex: "35 000 €").
+ */
+function formatMoneyPDF(amount) {
+    const n = Math.round(Number(amount));
+    const s = new Intl.NumberFormat('fr-FR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+        useGrouping: true
+    }).format(n);
+    return s.replace(/\u202f/g, ' ') + ' €';
 }
 
 function escapeHTML(str) {
@@ -2039,9 +2389,2191 @@ function initEvolutionChart() {
     }
 }
 
+/**
+ * ============================================
+ * RAPPORT ARRIÉRÉS DE SALAIRE
+ * ============================================
+ */
+
+/**
+ * Mettre à jour la date d'embauche basée sur l'ancienneté
+ */
+function updateDateEmbaucheFromAnciennete() {
+    const dateEmbaucheInput = document.getElementById('date-embauche');
+    if (dateEmbaucheInput && state.anciennete > 0 && !dateEmbaucheInput.value) {
+        // Ne mettre à jour que si le champ est vide
+        const today = new Date();
+        const dateEmbauche = new Date(today);
+        dateEmbauche.setFullYear(today.getFullYear() - state.anciennete);
+        dateEmbaucheInput.value = dateEmbauche.toISOString().split('T')[0];
+    }
+}
+
+/**
+ * Initialiser les contrôles du rapport d'arriérés
+ */
+/**
+ * ============================================
+ * ARRIÉRÉS DE SALAIRE - NOUVELLE VERSION (Étape 4)
+ * ============================================
+ */
+
+/**
+ * Met à jour la visibilité du bloc « Saisie de vos salaires » et du bouton « Calculer les arriérés »
+ * selon que la date d'embauche est valide et complète. Utilise la validation native (validity.valid)
+ * du champ type="date" : année à 4 chiffres et date complète exigées.
+ */
+function updateArreteesUiFromDateEmbauche() {
+    const input = document.getElementById('date-embauche-arretees');
+    const container = document.getElementById('salary-curve-container');
+    const stickyWrap = document.getElementById('arretees-calc-sticky');
+    const warning = document.getElementById('arretees-warning');
+    if (!input || !container) return;
+    const val = (input.value || '').trim();
+    const isValid = val && input.validity && input.validity.valid;
+    if (isValid) {
+        state.dateEmbaucheArretees = val;
+        container.classList.remove('hidden');
+        if (stickyWrap) stickyWrap.classList.remove('hidden');
+        if (warning) warning.classList.add('hidden');
+        initTimeline();
+    } else {
+        container.classList.add('hidden');
+        if (stickyWrap) stickyWrap.classList.add('hidden');
+    }
+}
+
+/**
+ * Initialiser les contrôles de l'étape 4
+ */
+function initArreteesNew() {
+    // Date d'embauche
+    const dateEmbaucheInput = document.getElementById('date-embauche-arretees');
+    if (dateEmbaucheInput) {
+        // Pré-remplir depuis l'ancienneté si disponible et si le champ est vide
+        if (!dateEmbaucheInput.value && state.anciennete > 0) {
+            const aujourdhui = new Date();
+            // Calculer la date d'embauche en soustrayant l'ancienneté (années complètes)
+            // On utilise le 1er du mois actuel comme référence pour simplifier
+            const dateEmbauche = new Date(aujourdhui.getFullYear(), aujourdhui.getMonth(), 1);
+            dateEmbauche.setFullYear(dateEmbauche.getFullYear() - Math.floor(state.anciennete));
+            // Soustraire aussi les mois supplémentaires si l'ancienneté a des décimales
+            const moisSupplementaires = Math.floor((state.anciennete % 1) * 12);
+            dateEmbauche.setMonth(dateEmbauche.getMonth() - moisSupplementaires);
+            dateEmbaucheInput.value = dateEmbauche.toISOString().split('T')[0];
+        }
+        
+        // Valide dès que le champ est complet (sans attendre le blur) : 'input' et 'change'
+        dateEmbaucheInput.addEventListener('input', updateArreteesUiFromDateEmbauche);
+        dateEmbaucheInput.addEventListener('change', updateArreteesUiFromDateEmbauche);
+        // Appliquer l'état initial (afficher bloc + bouton si date déjà complète ou pré-remplie)
+        updateArreteesUiFromDateEmbauche();
+    }
+
+    // Date de changement de classification
+    const dateChangementInput = document.getElementById('date-changement-classification-arretees');
+    if (dateChangementInput) {
+        dateChangementInput.addEventListener('change', () => {
+            state.dateChangementClassificationArretees = dateChangementInput.value;
+            if (dateChangementInput.value) {
+                initTimeline();
+            }
+        });
+    }
+
+    // Rupture de contrat
+    const ruptureCheckbox = document.getElementById('rupture-contrat-arretees');
+    const dateRuptureGroup = document.getElementById('date-rupture-group-arretees');
+    const dateRuptureInput = document.getElementById('date-rupture-arretees');
+    
+    if (ruptureCheckbox) {
+        ruptureCheckbox.addEventListener('change', () => {
+            state.ruptureContratArretees = ruptureCheckbox.checked;
+            if (dateRuptureGroup) {
+                if (ruptureCheckbox.checked) {
+                    dateRuptureGroup.classList.remove('hidden');
+                } else {
+                    dateRuptureGroup.classList.add('hidden');
+                    state.dateRuptureArretees = null;
+                }
+            }
+            if (dateRuptureInput && ruptureCheckbox.checked) {
+                dateRuptureInput.addEventListener('change', () => {
+                    state.dateRuptureArretees = dateRuptureInput.value;
+                    initTimeline();
+                });
+            }
+        });
+    }
+
+    // Accord écrit
+    const accordEcritCheckbox = document.getElementById('accord-ecrit-arretees');
+    if (accordEcritCheckbox) {
+        accordEcritCheckbox.addEventListener('change', () => {
+            state.accordEcritArretees = accordEcritCheckbox.checked;
+        });
+    }
+
+    // SMH seul pour les arriérés (salaire dû = assiette SMH : base + forfait ; exclut primes, pénibilité, nuit/dim/équipe)
+    const arreteesSmhSeulCheckbox = document.getElementById('arretees-smh-seul');
+    if (arreteesSmhSeulCheckbox) {
+        state.arretesSurSMHSeul = arreteesSmhSeulCheckbox.checked;
+        updateArreteesSalaireHint();
+        arreteesSmhSeulCheckbox.addEventListener('change', () => {
+            state.arretesSurSMHSeul = arreteesSmhSeulCheckbox.checked;
+            updateArreteesSalaireHint();
+            initTimeline();
+        });
+    }
+}
+
+/**
+ * Met à jour le texte d'avertissement "salaire brut" selon l'option SMH seul,
+ * pour rappeler à l'utilisateur de ne pas inclure les primes quand il compare au SMH.
+ */
+function updateArreteesSalaireHint() {
+    const el = document.getElementById('arretees-salaire-hint');
+    if (!el) return;
+    const p = el.querySelector('p');
+    if (!p) return;
+    if (state.arretesSurSMHSeul) {
+        p.innerHTML = '<strong>Attention :</strong> Saisissez le <strong>salaire mensuel brut hors primes</strong> (sans prime de vacances, prime ancienneté, majorations nuit/dimanche/équipe, majorations pénibilité). Le 13e mois et les majorations forfaits font partie du SMH. N\'incluez pas les éléments exclus dans les montants saisis.';
+    } else {
+        p.innerHTML = '<strong>Attention :</strong> Indiquez le <strong>total brut</strong> du bulletin (y compris primes) pour comparer à la rémunération complète.';
+    }
+}
+
+/**
+ * Générer la courbe interactive pour saisie des salaires
+ */
+let salaryCurveChart = null;
+let currentPeriodIndex = 0;
+let periodsData = [];
+
+function initTimeline() {
+    const container = document.getElementById('salary-curve-container');
+    if (!container) return;
+
+    const dateEmbauche = document.getElementById('date-embauche-arretees')?.value;
+    const dateRupture = state.ruptureContratArretees && state.dateRuptureArretees 
+        ? state.dateRuptureArretees 
+        : null;
+    const dateChangement = state.dateChangementClassificationArretees || null;
+
+    const noDateMsg = document.getElementById('timeline-no-date-message');
+    const chartWrapper = container.querySelector('.curve-chart-wrapper');
+
+    if (!dateEmbauche) {
+        if (noDateMsg) {
+            const p = noDateMsg.querySelector('.timeline-help');
+            if (p) p.textContent = "Veuillez renseigner la date d'embauche pour générer la courbe.";
+            noDateMsg.classList.remove('hidden');
+        }
+        if (chartWrapper) chartWrapper.classList.add('hidden');
+        return;
+    }
+    if (noDateMsg) noDateMsg.classList.add('hidden');
+    if (chartWrapper) chartWrapper.classList.remove('hidden');
+
+    // Dates importantes
+    const dateCCNM = new Date('2024-01-01');
+    const dateEmbaucheObj = new Date(dateEmbauche);
+    const dateFinObj = dateRupture ? new Date(dateRupture) : new Date();
+    const datePrescription = new Date();
+    datePrescription.setFullYear(datePrescription.getFullYear() - 3);
+
+    // Date de début : le plus récent entre embauche, changement, CCNM, prescription
+    let dateDebut = new Date(Math.max(
+        dateEmbaucheObj.getTime(),
+        dateChangement ? new Date(dateChangement).getTime() : 0,
+        dateCCNM.getTime(),
+        datePrescription.getTime()
+    ));
+
+    // Générer les périodes mois par mois
+    periodsData = [];
+    let currentDate = new Date(dateDebut);
+    let index = 0;
+    
+    while (currentDate <= dateFinObj) {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth() + 1;
+        const periodKey = `${year}-${String(month).padStart(2, '0')}`;
+        const periodLabel = currentDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+        const salaireReel = state.salairesParMois[periodKey] || null;
+        
+        // Calculer le salaire dû pour ce mois (SMH seul ou rémunération complète)
+        const salaireAnnuelDuMois = calculateSalaireDuPourMois(currentDate, dateEmbaucheObj);
+        
+        let salaireMensuelDu;
+        const mois = currentDate.getMonth() + 1;
+        const estJuillet = mois === 7;
+        const estNovembre = mois === 11;
+        if (state.arretesSurSMHSeul) {
+            // SMH seul (assiette SMH) : base + majorations forfaits, sans prime vacances/ancienneté, sans majorations pénibilité/nuit/dimanche/équipe. Le 13e mois fait partie du SMH (répartition 12/13).
+            if (state.accordKuhn && state.nbMois === 13 && estNovembre) {
+                salaireMensuelDu = (salaireAnnuelDuMois / 13) * 2;
+            } else if (state.accordKuhn && state.nbMois === 13) {
+                salaireMensuelDu = salaireAnnuelDuMois / 13;
+            } else {
+                salaireMensuelDu = salaireAnnuelDuMois / 12;
+            }
+        } else {
+            const primeVacancesMontant = (state.accordKuhn && state.primeVacances && typeof CONFIG !== 'undefined' && CONFIG.ACCORD_ENTREPRISE?.primeVacances?.montant)
+                ? CONFIG.ACCORD_ENTREPRISE.primeVacances.montant
+                : 0;
+            const baseAnnuellePourRepartition = (estJuillet && primeVacancesMontant > 0)
+                ? salaireAnnuelDuMois - primeVacancesMontant
+                : salaireAnnuelDuMois;
+            if (state.accordKuhn && state.nbMois === 13 && estNovembre) {
+                salaireMensuelDu = (baseAnnuellePourRepartition / 13) * 2;
+            } else if (state.accordKuhn && state.nbMois === 13) {
+                salaireMensuelDu = baseAnnuellePourRepartition / 13;
+            } else {
+                salaireMensuelDu = baseAnnuellePourRepartition / 12;
+            }
+            if (estJuillet && primeVacancesMontant > 0) {
+                salaireMensuelDu += primeVacancesMontant;
+            }
+        }
+        
+        periodsData.push({
+            index: index++,
+            key: periodKey,
+            label: periodLabel,
+            date: new Date(currentDate),
+            salaireReel: salaireReel, // Mensuel brut (ou null si non saisi)
+            salaireDu: salaireMensuelDu, // Mensuel brut dû
+            salaireAnnuelDu: salaireAnnuelDuMois, // Annuel pour référence
+            monthLabel: currentDate.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
+        });
+
+        // Passer au mois suivant
+        currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+
+    if (periodsData.length === 0) {
+        if (noDateMsg) {
+            const p = noDateMsg.querySelector('.timeline-help');
+            if (p) p.textContent = 'Aucune période à afficher.';
+            noDateMsg.classList.remove('hidden');
+        }
+        if (chartWrapper) chartWrapper.classList.add('hidden');
+        return;
+    }
+
+    // Trouver le premier mois non saisi
+    currentPeriodIndex = periodsData.findIndex(p => !p.salaireReel);
+    if (currentPeriodIndex === -1) {
+        currentPeriodIndex = 0; // Tous saisis, commencer au début
+    }
+
+    // Créer ou mettre à jour la courbe après un délai pour que le conteneur soit visible et ait des dimensions
+    setTimeout(() => {
+        createSalaryCurve();
+        updateCurveControls({ skipAutoFocus: true });
+        if (salaryCurveChart && typeof salaryCurveChart.resize === 'function') {
+            setTimeout(() => salaryCurveChart.resize(), 100);
+        }
+        setTimeout(() => {
+            initTooltips();
+        }, 200);
+    }, 150);
+}
+
+/**
+ * Calculer le salaire dû pour un mois donné avec tous les paramètres
+ * Prend en compte les versements mensuels spécifiques de l'accord Kuhn :
+ * - Prime de vacances : seulement en juillet
+ * - 13e mois : seulement en novembre
+ */
+function calculateSalaireDuPourMois(dateMois, dateEmbauche) {
+    // Option « SMH seul » : salaire dû = assiette SMH (base + forfait ; exclut primes, pénibilité, nuit/dim/équipe)
+    if (state.arretesSurSMHSeul) {
+        return getMontantAnnuelSMHSeul();
+    }
+
+    // Sauvegarder l'état actuel
+    const ancienneteOriginale = state.anciennete;
+    const experienceProOriginale = state.experiencePro;
+    const forfaitOriginal = state.forfait;
+    const accordKuhnOriginal = state.accordKuhn;
+    const typeNuitOriginal = state.typeNuit;
+    const heuresNuitOriginales = state.heuresNuit;
+    const travailDimancheOriginal = state.travailDimanche;
+    const heuresDimancheOriginales = state.heuresDimanche;
+    const travailEquipeOriginal = state.travailEquipe;
+    const heuresEquipeOriginales = state.heuresEquipe;
+    const primeVacancesOriginale = state.primeVacances;
+    const nbMoisOriginal = state.nbMois;
+    
+    // Déterminer le mois (1-12) pour vérifier les versements spécifiques
+    const mois = dateMois.getMonth() + 1; // getMonth() retourne 0-11, donc +1 pour avoir 1-12
+    const estJuillet = mois === 7;
+    const estNovembre = mois === 11;
+    
+    // Calculer l'ancienneté pour ce mois
+    const moisDepuisEmbauche = (dateMois - dateEmbauche) / (365.25 * 24 * 60 * 60 * 1000 / 12);
+    const ancienneteMois = Math.floor(moisDepuisEmbauche / 12);
+    
+    // Mettre à jour temporairement l'état pour ce mois
+    state.anciennete = ancienneteMois;
+    // L'expérience professionnelle est déjà remplie à l'étape 2, on l'utilise telle quelle
+    // (pas de synchronisation automatique nécessaire)
+    
+    // Pour la rétrospective, on assume que les conditions de travail sont similaires
+    // (l'utilisateur peut les ajuster si nécessaire)
+    // On garde les valeurs actuelles mais on pourrait les faire varier
+    
+    // Ajuster les primes selon le mois pour l'accord Kuhn
+    // Prime de vacances : seulement en juillet
+    if (state.accordKuhn && state.primeVacances && !estJuillet) {
+        state.primeVacances = false; // Désactiver temporairement pour ce mois
+    }
+    
+    // Calculer la rémunération due avec cette ancienneté
+    // Note : calculateRemuneration() retourne toujours le salaire annuel brut total
+    // Le 13e mois n'affecte pas le total annuel, seulement la répartition mensuelle
+    const remunerationMois = calculateRemuneration();
+    const salaireAnnuelDuMois = remunerationMois.total;
+    
+    // Le 13e mois est géré dans le calcul mensuel (voir calculerArreteesFinal)
+    // Ici on retourne le salaire annuel brut total
+    
+    // Restaurer l'état original
+    state.anciennete = ancienneteOriginale;
+    state.experiencePro = experienceProOriginale;
+    state.forfait = forfaitOriginal;
+    state.accordKuhn = accordKuhnOriginal;
+    state.typeNuit = typeNuitOriginal;
+    state.heuresNuit = heuresNuitOriginales;
+    state.travailDimanche = travailDimancheOriginal;
+    state.heuresDimanche = heuresDimancheOriginales;
+    state.travailEquipe = travailEquipeOriginal;
+    state.heuresEquipe = heuresEquipeOriginales;
+    state.primeVacances = primeVacancesOriginale;
+    state.nbMois = nbMoisOriginal;
+    
+    return salaireAnnuelDuMois;
+}
+
+/**
+ * Créer la courbe Chart.js interactive
+ */
+function createSalaryCurve() {
+    const canvas = document.getElementById('salary-curve-chart');
+    if (!canvas) {
+        console.warn('Canvas salary-curve-chart non trouvé');
+        return;
+    }
+
+    // Vérifier que Chart.js est disponible
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js n\'est pas chargé');
+        const noDateMsg = document.getElementById('timeline-no-date-message');
+        if (noDateMsg) {
+            const p = noDateMsg.querySelector('.timeline-help') || document.createElement('p');
+            if (!p.classList.contains('timeline-help')) p.className = 'timeline-help';
+            p.textContent = 'Erreur : Chart.js n\'est pas chargé. Veuillez recharger la page.';
+            p.style.color = '#d32f2f';
+            if (!noDateMsg.contains(p)) noDateMsg.appendChild(p);
+            noDateMsg.classList.remove('hidden');
+        }
+        canvas.closest('.curve-chart-wrapper')?.classList.add('hidden');
+        return;
+    }
+
+    // Vérifier que nous avons des données
+    if (!periodsData || periodsData.length === 0) {
+        console.warn('Aucune donnée de période disponible');
+        return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.error('Impossible d\'obtenir le contexte 2D du canvas');
+        return;
+    }
+    
+    // Détruire le graphique existant s'il existe
+    if (salaryCurveChart) {
+        salaryCurveChart.destroy();
+        salaryCurveChart = null;
+    }
+
+    const labels = periodsData.map(p => p.monthLabel);
+    const salairesReels = periodsData.map(p => p.salaireReel || null);
+    const salairesDus = periodsData.map(p => p.salaireDu || 0);
+
+    // Couleurs des points selon leur état
+    const pointColors = periodsData.map((p, i) => {
+        if (p.salaireReel) {
+            return i === currentPeriodIndex ? '#2e7d32' : '#4caf50';
+        }
+        return i === currentPeriodIndex ? '#f57c00' : '#ff9800';
+    });
+
+    const pointRadius = periodsData.map((p, i) => i === currentPeriodIndex ? 8 : 5);
+    const pointHoverRadius = periodsData.map((p, i) => i === currentPeriodIndex ? 12 : 8);
+
+    salaryCurveChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Salaire réel saisi',
+                    data: salairesReels,
+                    borderColor: '#4caf50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    pointBackgroundColor: pointColors,
+                    pointBorderColor: pointColors,
+                    pointRadius: pointRadius,
+                    pointHoverRadius: pointHoverRadius,
+                    borderWidth: 2,
+                    tension: 0.4,
+                    spanGaps: true
+                },
+                {
+                    label: 'Salaire dû',
+                    data: salairesDus,
+                    borderColor: '#2196f3',
+                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const datasetLabel = context.dataset.label || '';
+                            const value = context.parsed.y;
+                            if (value === null) return null;
+                            // Formater en mensuel (les valeurs sont déjà en mensuel)
+                            return `${datasetLabel}: ${formatMoney(value)}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        callback: function(value) {
+                            // Les valeurs sont en mensuel brut
+                            return formatMoney(value);
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Salaire mensuel brut (€)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                }
+            },
+            onClick: (event, elements) => {
+                if (elements && elements.length > 0) {
+                    const element = elements[0];
+                    const datasetIndex = element.datasetIndex;
+                    const dataIndex = element.index;
+                    if (datasetIndex === 0 && dataIndex >= 0 && dataIndex < periodsData.length) {
+                        currentPeriodIndex = dataIndex;
+                        animatePointToCenter(dataIndex, () => {
+                            updateCurveControls();
+                            updateCurveChart();
+                            const inputEl = document.getElementById('floating-salary-input');
+                            if (inputEl) { inputEl.focus(); inputEl.select(); }
+                        });
+                    }
+                }
+            }
+        }
+    });
+    
+    // Forcer le redimensionnement du graphique après création
+    setTimeout(() => {
+        if (salaryCurveChart) {
+            salaryCurveChart.resize();
+        }
+    }, 100);
+}
+
+/**
+ * Mettre à jour la courbe après modification
+ */
+function updateCurveChart() {
+    if (!salaryCurveChart) return;
+
+    const salairesReels = periodsData.map(p => p.salaireReel || null);
+    const salairesDus = periodsData.map(p => p.salaireDu);
+
+    const pointColors = periodsData.map((p, i) => {
+        if (p.salaireReel) {
+            return i === currentPeriodIndex ? '#2e7d32' : '#4caf50';
+        }
+        return i === currentPeriodIndex ? '#f57c00' : '#ff9800';
+    });
+
+    const pointRadius = periodsData.map((p, i) => i === currentPeriodIndex ? 8 : 5);
+    const pointHoverRadius = periodsData.map((p, i) => i === currentPeriodIndex ? 12 : 8);
+
+    salaryCurveChart.data.datasets[0].data = salairesReels;
+    salaryCurveChart.data.datasets[0].pointBackgroundColor = pointColors;
+    salaryCurveChart.data.datasets[0].pointBorderColor = pointColors;
+    salaryCurveChart.data.datasets[0].pointRadius = pointRadius;
+    salaryCurveChart.data.datasets[0].pointHoverRadius = pointHoverRadius;
+    salaryCurveChart.data.datasets[1].data = salairesDus;
+
+    salaryCurveChart.update('none');
+}
+
+/**
+ * Mettre à jour les contrôles de la courbe avec bloc flottant
+ * @param {Object} [options]
+ * @param {boolean} [options.skipAutoFocus=false] - Ne pas focus l'input (navigation ou tout complété)
+ */
+function updateCurveControls(options) {
+    options = options || {};
+    const skipAutoFocus = options.skipAutoFocus === true;
+    if (periodsData.length === 0) return;
+
+    const currentPeriod = periodsData[currentPeriodIndex];
+    if (!currentPeriod) return;
+
+    const floatingBlock = document.getElementById('floating-input-block');
+    const floatingLabel = document.getElementById('floating-period-label');
+    const floatingInput = document.getElementById('floating-salary-input');
+    const floatingInfoIcon = document.getElementById('floating-info-icon');
+    const progressEl = document.getElementById('curve-progress-text');
+
+    if (floatingLabel) {
+        floatingLabel.textContent = currentPeriod.label;
+    }
+
+    if (floatingInput) {
+        floatingInput.value = currentPeriod.salaireReel || '';
+        // Focus et sélection uniquement si saisie en cours (pas à l'affichage ni quand tout est complété)
+        if (!skipAutoFocus && periodsData.some(p => !p.salaireReel)) {
+            setTimeout(() => {
+                floatingInput.focus();
+                floatingInput.select();
+            }, 100);
+        }
+    }
+
+    // Tooltip "?" : rappeler hors primes si SMH seul
+    if (floatingInfoIcon) {
+        const tooltipSMHSeul = state.arretesSurSMHSeul
+            ? ' Saisissez le brut hors primes (sans prime vacances, prime ancienneté, majorations nuit/dimanche/équipe, pénibilité). Le 13e mois et les majorations forfaits font partie du SMH.'
+            : ' Indiquez le « Total brut » de votre fiche de paie pour ce mois.';
+        floatingInfoIcon.setAttribute('data-tippy-content', 'Salaire mensuel brut :' + tooltipSMHSeul);
+    }
+
+    // Toujours afficher le bloc au centre pour la période sélectionnée, y compris quand tous les salaires sont saisis (permettre la modification)
+    if (floatingBlock && salaryCurveChart) {
+        positionFloatingBlock(currentPeriodIndex);
+    }
+
+    const saisis = periodsData.filter(p => p.salaireReel).length;
+    if (progressEl) {
+        progressEl.textContent = `${saisis} / ${periodsData.length} mois saisis`;
+    }
+}
+
+/**
+ * Positionner le bloc flottant au centre du conteneur du graphique
+ */
+function positionFloatingBlock(periodIndex) {
+    const floatingBlock = document.getElementById('floating-input-block');
+    const chartWrapper = document.getElementById('curve-chart-wrapper');
+    if (!floatingBlock || !chartWrapper) return;
+
+    floatingBlock.style.visibility = '';
+    floatingBlock.style.opacity = '1';
+    floatingBlock.classList.remove('floating-block-hidden');
+    floatingBlock.style.left = '50%';
+    floatingBlock.style.top = '50%';
+    floatingBlock.style.transform = 'translate(-50%, -50%)';
+}
+
+/**
+ * Obtenir les coordonnées d'un point du graphique relatives au wrapper
+ */
+function getPointCoordsInWrapper(periodIndex) {
+    if (!salaryCurveChart) return null;
+    const chart = salaryCurveChart;
+    const meta = chart.getDatasetMeta(0);
+    if (!meta || !meta.data[periodIndex]) return null;
+    const chartWrapper = document.getElementById('curve-chart-wrapper');
+    if (!chartWrapper) return null;
+    const point = meta.data[periodIndex];
+    const wrapperRect = chartWrapper.getBoundingClientRect();
+    const chartRect = chart.canvas.getBoundingClientRect();
+    return {
+        x: point.x + (chartRect.left - wrapperRect.left),
+        y: point.y + (chartRect.top - wrapperRect.top)
+    };
+}
+
+/**
+ * Animer le bloc du centre vers le point puis disparition (scale + déplacement)
+ */
+function animateBlockToPoint(block, periodIndex, callback) {
+    if (!salaryCurveChart || !block) {
+        if (callback) callback();
+        return;
+    }
+
+    const coords = getPointCoordsInWrapper(periodIndex);
+    if (!coords) {
+        if (callback) callback();
+        return;
+    }
+
+    block.classList.add('animating');
+    block.style.transition = 'all 0.28s cubic-bezier(0.4, 0, 0.2, 1)';
+    requestAnimationFrame(() => {
+        block.style.left = coords.x + 'px';
+        block.style.top = coords.y + 'px';
+        block.style.transform = 'translate(-50%, -50%) scale(0.08)';
+        block.style.opacity = '0';
+        setTimeout(() => {
+            block.classList.remove('animating');
+            block.classList.add('floating-block-hidden');
+            block.style.visibility = 'hidden';
+            block.style.transition = '';
+            if (callback) callback();
+        }, 300);
+    });
+}
+
+/**
+ * Animer le bloc du point vers le centre (pour édition au clic sur un point)
+ */
+function animatePointToCenter(periodIndex, callback) {
+    const floatingBlock = document.getElementById('floating-input-block');
+    const chartWrapper = document.getElementById('curve-chart-wrapper');
+    if (!floatingBlock || !chartWrapper || !salaryCurveChart) {
+        if (callback) callback();
+        return;
+    }
+
+    const coords = getPointCoordsInWrapper(periodIndex);
+    if (!coords) {
+        if (callback) callback();
+        return;
+    }
+
+    floatingBlock.classList.remove('floating-block-hidden');
+    floatingBlock.style.visibility = '';
+    floatingBlock.style.left = coords.x + 'px';
+    floatingBlock.style.top = coords.y + 'px';
+    floatingBlock.style.transform = 'translate(-50%, -50%) scale(0.2)';
+    floatingBlock.style.opacity = '0.9';
+    floatingBlock.style.transition = 'none';
+
+    requestAnimationFrame(() => {
+        floatingBlock.style.transition = 'all 0.28s cubic-bezier(0.4, 0, 0.2, 1)';
+        floatingBlock.style.left = '50%';
+        floatingBlock.style.top = '50%';
+        floatingBlock.style.transform = 'translate(-50%, -50%) scale(1)';
+        floatingBlock.style.opacity = '1';
+        setTimeout(() => {
+            if (callback) callback();
+        }, 300);
+    });
+}
+
+/**
+ * Ouvrir le modal pour saisir un salaire
+ */
+function openSalaryModal(periodKey, periodLabel, currentSalary) {
+    // Créer le modal s'il n'existe pas
+    let modalOverlay = document.getElementById('salary-modal-overlay');
+    if (!modalOverlay) {
+        modalOverlay = document.createElement('div');
+        modalOverlay.id = 'salary-modal-overlay';
+        modalOverlay.className = 'modal-overlay';
+        
+        // Image SVG illustrant une fiche de paie
+        const fichePaieSVG = `
+            <svg width="400" height="200" viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+                <!-- Fond de la fiche -->
+                <rect x="10" y="10" width="380" height="180" fill="#ffffff" stroke="#333" stroke-width="2" rx="4"/>
+                
+                <!-- En-tête -->
+                <rect x="10" y="10" width="380" height="30" fill="#f0f0f0"/>
+                <text x="20" y="28" font-family="Arial" font-size="12" font-weight="bold">FICHE DE PAIE</text>
+                <text x="300" y="28" font-family="Arial" font-size="10">Mois/Année</text>
+                
+                <!-- Ligne salaire de base -->
+                <line x1="10" y1="50" x2="390" y2="50" stroke="#ddd" stroke-width="1"/>
+                <text x="20" y="65" font-family="Arial" font-size="11">Salaire de base</text>
+                <text x="300" y="65" font-family="Arial" font-size="11" fill="#666">XXXX €</text>
+                
+                <!-- Ligne total brut -->
+                <line x1="10" y1="80" x2="390" y2="80" stroke="#ddd" stroke-width="1"/>
+                <text x="20" y="95" font-family="Arial" font-size="11" font-weight="bold">Total brut</text>
+                <text x="300" y="95" font-family="Arial" font-size="11" font-weight="bold" fill="#0969da">XXXX €</text>
+                
+                <!-- Flèche pointant vers le total brut -->
+                <path d="M 350 95 L 370 95 L 370 140 L 380 130 L 370 120 L 370 140 Z" fill="#0969da" opacity="0.7"/>
+                <text x="310" y="135" font-family="Arial" font-size="9" fill="#0969da" font-weight="bold">TOTAL BRUT MENSUEL</text>
+                
+                <!-- Zone mise en évidence -->
+                <rect x="280" y="85" width="100" height="20" fill="#e3f2fd" opacity="0.5" stroke="#0969da" stroke-width="2" stroke-dasharray="3,3"/>
+                
+                <!-- Note en bas -->
+                <text x="20" y="170" font-family="Arial" font-size="9" fill="#666">* Indiquez le Total brut du mois sur votre fiche de paie</text>
+            </svg>
+        `;
+        
+        modalOverlay.innerHTML = `
+            <div class="modal">
+                <h3>Saisir le salaire</h3>
+                <div class="period-display" id="modal-salary-period">${periodLabel}</div>
+                <div class="form-group">
+                    <label for="modal-salary-amount">
+                        Salaire mensuel brut
+                        <span class="tooltip-trigger" data-tippy-content="Indiquez le Total brut de votre fiche de paie pour ce mois.">?</span>
+                    </label>
+                    <div class="fiche-paie-illustration">
+                        ${fichePaieSVG}
+                        <p>Le salaire mensuel brut correspond au « Total brut » de votre fiche de paie pour ce mois.</p>
+                    </div>
+                    <div class="input-with-unit" style="margin-top: 15px;">
+                        <input type="number" id="modal-salary-amount" class="book-input" min="0" step="100" value="0">
+                        <span class="input-unit">€</span>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="book-btn btn-secondary" id="modal-cancel">Annuler</button>
+                    <button class="book-btn btn-primary" id="modal-save">Enregistrer</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modalOverlay);
+
+        // Gestionnaires d'événements
+        document.getElementById('modal-cancel').addEventListener('click', () => {
+            modalOverlay.classList.remove('visible');
+        });
+
+        // Stocker le periodKey dans le modal pour éviter le problème de closure
+        const modal = modalOverlay.querySelector('.modal');
+        
+        document.getElementById('modal-save').addEventListener('click', () => {
+            const currentPeriodKey = modal.dataset.periodKey;
+            const amount = parseFloat(document.getElementById('modal-salary-amount').value) || 0;
+            if (amount > 0) {
+                state.salairesParMois[currentPeriodKey] = amount;
+                initTimeline();
+                modalOverlay.classList.remove('visible');
+                // Réinitialiser les tooltips après mise à jour
+                setTimeout(() => {
+                    initTooltips();
+                }, 100);
+            } else {
+                showToast('⚠️ Veuillez saisir un montant valide.', 'warning', 3000);
+            }
+        });
+
+        // Fermer en cliquant sur l'overlay
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                modalOverlay.classList.remove('visible');
+            }
+        });
+    }
+
+    // Stocker le periodKey dans le modal
+    const modal = modalOverlay.querySelector('.modal');
+    modal.dataset.periodKey = periodKey;
+    
+    // Mettre à jour les données
+    document.getElementById('modal-salary-period').textContent = periodLabel;
+    const amountInput = document.getElementById('modal-salary-amount');
+    amountInput.value = currentSalary || '';
+    
+    // Réinitialiser les tooltips pour le nouveau contenu
+    initTooltips();
+    
+    // Afficher le modal
+    modalOverlay.classList.add('visible');
+    setTimeout(() => {
+        amountInput.focus();
+        amountInput.select();
+    }, 100);
+}
+
+/**
+ * Calculer les arriérés finaux (mois par mois)
+ */
+function calculerArreteesFinal() {
+    const dateEmbauche = document.getElementById('date-embauche-arretees')?.value;
+    if (!dateEmbauche) {
+        showToast('⚠️ Veuillez renseigner la date d\'embauche.', 'warning', 3000);
+        return;
+    }
+
+    // Vérifier qu'au moins un salaire est saisi
+    const salairesSaisis = Object.keys(state.salairesParMois).length;
+    if (salairesSaisis === 0) {
+        showToast('⚠️ Veuillez saisir au moins un salaire dans la courbe interactive.', 'warning', 3000);
+        return;
+    }
+
+    // Calculer la rémunération due (utilise la classification actuelle)
+    const remuneration = calculateRemuneration();
+    const salaireDu = remuneration.total;
+
+    // Dates importantes
+    const dateCCNM = new Date('2024-01-01');
+    const dateEmbaucheObj = new Date(dateEmbauche);
+    const dateRuptureObj = state.ruptureContratArretees && state.dateRuptureArretees 
+        ? new Date(state.dateRuptureArretees) 
+        : new Date();
+    const dateChangementObj = state.dateChangementClassificationArretees 
+        ? new Date(state.dateChangementClassificationArretees) 
+        : null;
+    const datePrescription = new Date();
+    datePrescription.setFullYear(datePrescription.getFullYear() - 3);
+
+    // Date de début : le plus récent entre embauche, changement, CCNM, prescription
+    let dateDebut = new Date(Math.max(
+        dateEmbaucheObj.getTime(),
+        dateChangementObj ? dateChangementObj.getTime() : 0,
+        dateCCNM.getTime(),
+        datePrescription.getTime()
+    ));
+
+    // Calculer les arriérés mois par mois avec ancienneté progressive
+    let totalArretees = 0;
+    const detailsArretees = []; // Uniquement les mois avec arriérés (difference > 0) pour total et PDF
+    const detailsTousMois = []; // Tous les mois saisis pour affichage (rouge/vert)
+    let currentDate = new Date(dateDebut);
+    
+    // Calculer l'ancienneté de départ (en années complètes)
+    const ancienneteDepart = Math.floor((dateDebut - dateEmbaucheObj) / (365.25 * 24 * 60 * 60 * 1000));
+
+    while (currentDate <= dateRuptureObj) {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth() + 1;
+        const periodKey = `${year}-${String(month).padStart(2, '0')}`;
+        const salaireReel = state.salairesParMois[periodKey];
+        
+        if (salaireReel !== undefined) {
+            const salaireAnnuelDuMois = calculateSalaireDuPourMois(currentDate, dateEmbaucheObj);
+            
+            let salaireMensuelDu;
+            const mois = currentDate.getMonth() + 1;
+            const estJuillet = mois === 7;
+            const estNovembre = mois === 11;
+            if (state.arretesSurSMHSeul) {
+                // SMH seul (assiette SMH) : base + forfait, 13e mois inclus ; exclut primes, pénibilité, nuit/dim/équipe
+                if (state.accordKuhn && state.nbMois === 13 && estNovembre) {
+                    salaireMensuelDu = (salaireAnnuelDuMois / 13) * 2;
+                } else if (state.accordKuhn && state.nbMois === 13) {
+                    salaireMensuelDu = salaireAnnuelDuMois / 13;
+                } else {
+                    salaireMensuelDu = salaireAnnuelDuMois / 12;
+                }
+            } else {
+                const primeVacancesMontant = (state.accordKuhn && state.primeVacances && typeof CONFIG !== 'undefined' && CONFIG.ACCORD_ENTREPRISE?.primeVacances?.montant) 
+                    ? CONFIG.ACCORD_ENTREPRISE.primeVacances.montant 
+                    : 0;
+                const baseAnnuellePourRepartition = (estJuillet && primeVacancesMontant > 0) 
+                    ? salaireAnnuelDuMois - primeVacancesMontant 
+                    : salaireAnnuelDuMois;
+                if (state.accordKuhn && state.nbMois === 13 && estNovembre) {
+                    salaireMensuelDu = (baseAnnuellePourRepartition / 13) * 2;
+                } else if (state.accordKuhn && state.nbMois === 13) {
+                    salaireMensuelDu = baseAnnuellePourRepartition / 13;
+                } else {
+                    salaireMensuelDu = baseAnnuellePourRepartition / 12;
+                }
+                if (estJuillet && primeVacancesMontant > 0) {
+                    salaireMensuelDu += primeVacancesMontant;
+                }
+            }
+            
+            // Le salaire réel saisi est maintenant en mensuel brut (pas besoin de diviser par 12)
+            const salaireMensuelReel = salaireReel;
+            const difference = salaireMensuelDu - salaireMensuelReel;
+            
+            const row = {
+                periode: currentDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
+                periodeKey: periodKey,
+                dateMois: new Date(currentDate),
+                salaireReel: salaireReel,
+                salaireMensuelReel: salaireMensuelReel,
+                salaireDu: salaireAnnuelDuMois,
+                salaireMensuelDu: salaireMensuelDu,
+                difference: difference
+            };
+            detailsTousMois.push(row);
+            if (difference > 0) {
+                totalArretees += difference;
+                detailsArretees.push(row);
+            }
+        }
+
+        // Passer au mois suivant
+        currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+
+    if (totalArretees <= 0) {
+        showToast('✅ Aucun arriéré détecté. Votre salaire est conforme.', 'success', 4000);
+        const resultsDiv = document.getElementById('arretees-results');
+        const summaryDiv = document.getElementById('arretees-summary');
+        const legalInfoDiv = document.getElementById('arretees-legal-info');
+        const btnPdf = document.getElementById('btn-generer-pdf-arretees');
+        const legalSec = document.getElementById('legal-instructions');
+        if (resultsDiv) {
+            resultsDiv.classList.remove('hidden');
+            if (summaryDiv) {
+                summaryDiv.innerHTML = '<p class="arretees-en-ordre-msg">Votre salaire est conforme, vous êtes en ordre.</p>';
+            }
+            if (legalInfoDiv) {
+                legalInfoDiv.innerHTML = '';
+                legalInfoDiv.classList.add('hidden');
+            }
+            if (btnPdf) btnPdf.style.display = 'none';
+        }
+        if (legalSec) legalSec.classList.add('hidden');
+        return;
+    }
+
+    // Afficher les résultats (detailsTousMois pour le tableau, detailsArretees pour total et PDF)
+    afficherResultatsArreteesFinal({
+        salaireDu,
+        totalArretees,
+        detailsArretees,
+        detailsTousMois,
+        dateDebut,
+        dateFin: dateRuptureObj,
+        datePrescription
+    });
+    
+    // Afficher le guide juridique maintenant que le calcul est terminé
+    const legalCarousel = document.getElementById('legal-instructions');
+    if (legalCarousel) {
+        legalCarousel.classList.remove('hidden');
+        afficherInstructionsJuridiques();
+    }
+    
+    // Afficher le bouton sticky
+    const stickyBtn = document.getElementById('arretees-calc-sticky');
+    if (stickyBtn) {
+        stickyBtn.classList.remove('hidden');
+    }
+}
+
+/**
+ * Afficher les résultats finaux
+ */
+function afficherResultatsArreteesFinal(data) {
+    const resultsDiv = document.getElementById('arretees-results');
+    if (!resultsDiv) return;
+
+    resultsDiv.classList.remove('hidden');
+    const btnPdf = document.getElementById('btn-generer-pdf-arretees');
+    if (btnPdf) btnPdf.style.display = '';
+
+    // Résumé amélioré
+    const summaryDiv = document.getElementById('arretees-summary');
+    if (summaryDiv) {
+        const nombreMois = data.detailsArretees.length;
+        const moyenneMensuelle = nombreMois > 0 ? data.totalArretees / nombreMois : 0;
+        
+        const detailsPourTableau = data.detailsTousMois || data.detailsArretees || [];
+        summaryDiv.innerHTML = `
+            <details class="arretees-accordion-summary result-details-toggle" open>
+                <summary class="arretees-accordion-summary-title">Résumé du calcul</summary>
+                <div class="arretees-summary result-details">
+                    <div class="result-detail-item">
+                        <span class="result-detail-label">Période</span>
+                        <span class="result-detail-value">${data.dateDebut.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })} → ${data.dateFin.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                    </div>
+                    <div class="result-detail-item">
+                        <span class="result-detail-label">Mois avec arriérés</span>
+                        <span class="result-detail-value">${nombreMois}</span>
+                    </div>
+                    <div class="result-detail-item">
+                        <span class="result-detail-label">Arriérés moy./mois</span>
+                        <span class="result-detail-value">${formatMoney(moyenneMensuelle)}</span>
+                    </div>
+                    <div class="result-detail-item total-row">
+                        <span class="result-detail-label">Total des arriérés</span>
+                        <span class="result-detail-value">${formatMoney(data.totalArretees)}</span>
+                    </div>
+                </div>
+            </details>
+            ${detailsPourTableau.length > 0 ? `
+            <details class="arretees-accordion-detail result-details-toggle">
+                <summary class="arretees-accordion-detail-title">Détail par période</summary>
+                <div class="arretees-details-table result-details">
+                    <div class="arretees-detail-header">
+                        <span class="detail-col-periode">Période</span>
+                        <span class="detail-col-montants">Réel → Dû</span>
+                        <span class="detail-col-diff">Arriérés</span>
+                    </div>
+                    ${detailsPourTableau.map(detail => {
+                        const rowClass = detail.difference > 0 ? 'arretees-detail-row-elegant detail-row-arretees' : 'arretees-detail-row-elegant detail-row-positif';
+                        const sign = detail.difference > 0 ? '-' : (detail.difference < 0 ? '+' : '');
+                        const diffStr = sign ? `${sign} ${formatMoney(Math.abs(detail.difference))}` : formatMoney(0);
+                        return `
+                        <div class="${rowClass}">
+                            <span class="detail-periode">${detail.periode}</span>
+                            <span class="detail-montants-inline">${formatMoney(detail.salaireMensuelReel)} → ${formatMoney(detail.salaireMensuelDu)}</span>
+                            <span class="detail-diff-value">${diffStr}</span>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </details>
+            ` : ''}
+        `;
+    }
+
+    // Points juridiques
+    const legalInfoDiv = document.getElementById('arretees-legal-info');
+    if (legalInfoDiv) {
+        const conditionsValides = [];
+        const conditionsInvalides = [];
+
+        if (data.dateDebut < new Date('2024-01-01')) {
+            conditionsInvalides.push('Les arriérés avant le 1er janvier 2024 ne sont pas réclamables au titre de cette convention.');
+        }
+
+        if (data.dateDebut < data.datePrescription) {
+            conditionsInvalides.push(`La prescription de 3 ans limite les arriérés réclamables à partir du ${data.datePrescription.toLocaleDateString('fr-FR')}.`);
+        }
+
+        if (state.accordEcritArretees) {
+            conditionsValides.push('Un accord écrit avec l\'employeur renforce votre position juridique.');
+        }
+
+        if (state.dateChangementClassificationArretees) {
+            conditionsValides.push('Un changement de classification documenté peut faciliter la réclamation.');
+        }
+
+        const hasContent = conditionsInvalides.length > 0 || conditionsValides.length > 0;
+        if (!hasContent) {
+            legalInfoDiv.innerHTML = '';
+            legalInfoDiv.classList.add('hidden');
+            return;
+        }
+        legalInfoDiv.classList.remove('hidden');
+        let legalHTML = '<h4>Points d\'attention juridiques</h4>';
+        if (conditionsInvalides.length > 0) {
+            legalHTML += '<ul style="color: #d32f2f;">';
+            conditionsInvalides.forEach(cond => {
+                legalHTML += `<li>${cond}</li>`;
+            });
+            legalHTML += '</ul>';
+        }
+        if (conditionsValides.length > 0) {
+            legalHTML += '<ul style="color: #2e7d32;">';
+            conditionsValides.forEach(cond => {
+                legalHTML += `<li>✅ ${cond}</li>`;
+            });
+            legalHTML += '</ul>';
+        }
+        legalInfoDiv.innerHTML = legalHTML;
+    }
+
+    // Instructions juridiques (affichées seulement après la saisie complète)
+    // Ne pas appeler ici, sera appelé quand tous les salaires sont saisis
+
+    // Stocker les données pour le PDF (avec toutes les infos de contrat)
+    const dateEmbaucheInput = document.getElementById('date-embauche-arretees')?.value;
+    const dateChangementInput = document.getElementById('date-changement-classification-arretees')?.value;
+    const dateRuptureInput = document.getElementById('date-rupture-arretees')?.value;
+    
+    window.arreteesDataFinal = {
+        ...data,
+        salairesParMois: state.salairesParMois,
+        accordEcrit: state.accordEcritArretees,
+        ruptureContrat: state.ruptureContratArretees,
+        dateRupture: state.dateRuptureArretees,
+        dateEmbauche: dateEmbaucheInput,
+        dateChangementClassification: dateChangementInput,
+        dateRuptureInput: dateRuptureInput
+    };
+}
+
+/**
+ * Ouvrir le modal des infos personnelles avant génération du PDF
+ */
+function openPdfInfosModal() {
+    if (!window.arreteesDataFinal) {
+        showToast('⚠️ Veuillez d\'abord calculer les arriérés.', 'warning', 3000);
+        return;
+    }
+    const data = window.arreteesDataFinal;
+    if (!data.dateDebut || !data.dateFin || !data.detailsArretees) {
+        showToast('⚠️ Données des arriérés incomplètes. Recalculez les arriérés.', 'warning', 3000);
+        return;
+    }
+
+    let overlay = document.getElementById('pdf-infos-modal-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'pdf-infos-modal-overlay';
+        overlay.className = 'modal-overlay';
+        overlay.innerHTML = `
+            <div class="modal pdf-infos-modal" onclick="event.stopPropagation()">
+                <h3>Informations pour le dossier</h3>
+                <p class="modal-subtitle">Ces informations seront incluses dans le rapport PDF. Tous les champs sont facultatifs.</p>
+                <div class="form-group">
+                    <label for="pdf-infos-nom">Nom et prénom</label>
+                    <input type="text" id="pdf-infos-nom" class="book-input" placeholder="Ex. Dupont Jean">
+                </div>
+                <div class="form-group">
+                    <label for="pdf-infos-poste">Poste / intitulé du poste</label>
+                    <input type="text" id="pdf-infos-poste" class="book-input" placeholder="Ex. Soudeur, Technicien maintenance">
+                </div>
+                <div class="form-group">
+                    <label for="pdf-infos-employeur">Employeur / raison sociale</label>
+                    <input type="text" id="pdf-infos-employeur" class="book-input" placeholder="Ex. Société ABC">
+                </div>
+                <div class="form-group">
+                    <label for="pdf-infos-matricule">Matricule ou N° interne <span class="label-optional">(optionnel)</span></label>
+                    <input type="text" id="pdf-infos-matricule" class="book-input" placeholder="Ex. 12345">
+                </div>
+                <div class="form-group">
+                    <label for="pdf-infos-observations">Observations <span class="label-optional">(optionnel)</span></label>
+                    <textarea id="pdf-infos-observations" class="book-input" rows="3" placeholder="Précisions utiles pour votre dossier..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button class="book-btn btn-secondary" id="pdf-infos-cancel">Annuler</button>
+                    <button class="book-btn btn-primary" id="pdf-infos-generate">Générer le PDF</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        document.getElementById('pdf-infos-cancel').addEventListener('click', () => {
+            overlay.classList.remove('visible');
+        });
+        document.getElementById('pdf-infos-generate').addEventListener('click', () => {
+            const infos = {
+                nomPrenom: (document.getElementById('pdf-infos-nom')?.value || '').trim(),
+                poste: (document.getElementById('pdf-infos-poste')?.value || '').trim(),
+                employeur: (document.getElementById('pdf-infos-employeur')?.value || '').trim(),
+                matricule: (document.getElementById('pdf-infos-matricule')?.value || '').trim(),
+                observations: (document.getElementById('pdf-infos-observations')?.value || '').trim()
+            };
+            overlay.classList.remove('visible');
+            genererPDFArreteesFinal(infos);
+        });
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.classList.remove('visible');
+        });
+    }
+    overlay.classList.add('visible');
+}
+
+/**
+ * Générer le PDF final (nouvelle version - professionnel et courtois)
+ * @param {Object} [infosPersonnelles] - Nom, poste, employeur, etc. saisis dans le modal (optionnel)
+ */
+function genererPDFArreteesFinal(infosPersonnelles) {
+    if (!window.arreteesDataFinal) {
+        showToast('⚠️ Veuillez d\'abord calculer les arriérés.', 'warning', 3000);
+        return;
+    }
+    const data = window.arreteesDataFinal;
+    if (!data.dateDebut || !data.dateFin || !data.detailsArretees) {
+        showToast('⚠️ Données des arriérés incomplètes. Recalculez les arriérés.', 'warning', 3000);
+        return;
+    }
+
+    const jsPDF = (typeof window !== 'undefined' && window.jsPDF) ||
+        (window.jspdf && (window.jspdf.jsPDF || window.jspdf.default?.jsPDF));
+    if (!jsPDF) {
+        showToast('⚠️ Bibliothèque PDF non chargée. Rechargez la page.', 'warning', 3000);
+        return;
+    }
+
+    try {
+        const doc = new jsPDF();
+        const dateDebutObj = data.dateDebut instanceof Date ? data.dateDebut : new Date(data.dateDebut);
+        const dateFinObj = data.dateFin instanceof Date ? data.dateFin : new Date(data.dateFin);
+
+        const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    const marginRight = pageWidth - margin;
+    let yPos = margin;
+
+    const checkPageBreak = (requiredSpace = 20) => {
+        if (yPos + requiredSpace > pageHeight - 25) {
+            doc.addPage();
+            yPos = margin;
+        }
+    };
+
+    // En-tête type lettre juridique
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(30, 30, 30);
+    doc.text('Rapport de calcul d\'arriérés de salaire', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 7;
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(80, 80, 80);
+    doc.text('Convention collective nationale de la métallurgie 2024', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 8;
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    const todayStr = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    doc.text(`Document établi le ${todayStr}`, margin, yPos);
+    yPos += 6;
+    doc.setFont(undefined, 'bold');
+    doc.text('Objet : Calcul d\'arriérés de salaire au titre du SMH', margin, yPos);
+    yPos += 8;
+    doc.setFont(undefined, 'normal');
+    const classificationInfo = getActiveClassification();
+    doc.text(`Classification : ${classificationInfo.groupe}${classificationInfo.classe}`, margin, yPos);
+    yPos += 10;
+
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, yPos, marginRight, yPos);
+    yPos += 10;
+
+    checkPageBreak(30);
+
+    // Section 1 : Informations du contrat
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('1. Informations du contrat', margin, yPos);
+    yPos += 8;
+
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+
+    // Infos personnelles du salarié (si renseignées dans le modal)
+    const infos = infosPersonnelles || {};
+    const hasInfos = !!(infos.nomPrenom || infos.poste || infos.employeur || infos.matricule || infos.observations);
+    if (hasInfos) {
+        if (infos.nomPrenom) {
+            doc.text(`Salarié : ${infos.nomPrenom}`, margin + 5, yPos);
+            yPos += 6;
+        }
+        if (infos.poste) {
+            doc.text(`Poste / intitulé : ${infos.poste}`, margin + 5, yPos);
+            yPos += 6;
+        }
+        if (infos.employeur) {
+            doc.text(`Employeur / raison sociale : ${infos.employeur}`, margin + 5, yPos);
+            yPos += 6;
+        }
+        if (infos.matricule) {
+            doc.text(`Matricule ou N° interne : ${infos.matricule}`, margin + 5, yPos);
+            yPos += 6;
+        }
+        if (infos.observations) {
+            const obsLines = doc.splitTextToSize(infos.observations, pageWidth - margin - margin - 10);
+            doc.text('Observations :', margin + 5, yPos);
+            yPos += 5;
+            obsLines.forEach(line => {
+                doc.text(line, margin + 5, yPos);
+                yPos += 5;
+            });
+            yPos += 4;
+        }
+        yPos += 4;
+    }
+
+    const dateEmbaucheInput = data.dateEmbauche || document.getElementById('date-embauche-arretees')?.value;
+    const dateChangementInput = data.dateChangementClassification || document.getElementById('date-changement-classification-arretees')?.value;
+    const dateRuptureInput = data.dateRuptureInput || document.getElementById('date-rupture-arretees')?.value;
+
+    if (dateEmbaucheInput) {
+        const dateEmbaucheFormatted = new Date(dateEmbaucheInput).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+        doc.text(`Date d'embauche : ${dateEmbaucheFormatted}`, margin + 5, yPos);
+        yPos += 6;
+    }
+    if (dateChangementInput) {
+        const dateChangementFormatted = new Date(dateChangementInput).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+        doc.text(`Date de changement de classification : ${dateChangementFormatted}`, margin + 5, yPos);
+        yPos += 6;
+    }
+    if (data.ruptureContrat && dateRuptureInput) {
+        const dateRuptureFormatted = new Date(dateRuptureInput).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+        doc.text(`Date de rupture du contrat : ${dateRuptureFormatted}`, margin + 5, yPos);
+        yPos += 6;
+    } else if (!data.ruptureContrat) {
+        doc.text('Statut du contrat : En cours', margin + 5, yPos);
+        yPos += 6;
+    }
+    if (data.accordEcrit) {
+        doc.text('Accord écrit avec l\'employeur : Oui', margin + 5, yPos);
+        yPos += 6;
+    }
+    
+    yPos += 5;
+    checkPageBreak(30);
+
+    // Section 2 : Résumé du calcul
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('2. Résumé du calcul', margin, yPos);
+    yPos += 8;
+
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+        const dateDebutStr = dateDebutObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+        const dateFinStr = dateFinObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    
+    doc.text(`Période concernée : ${dateDebutStr} au ${dateFinStr}`, margin + 5, yPos);
+    yPos += 6;
+    doc.text(`Nombre de mois avec arriérés : ${data.detailsArretees.length}`, margin + 5, yPos);
+    yPos += 6;
+    const smhMensuel = data.salaireDu / (state.nbMois || 12);
+    doc.text(`SMH mensuel brut : ${formatMoneyPDF(smhMensuel)}`, margin + 5, yPos);
+    yPos += 6;
+    doc.text(`SMH annuel brut : ${formatMoneyPDF(data.salaireDu)}`, margin + 5, yPos);
+    yPos += 6;
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(9, 105, 218);
+    doc.text(`Total des arriérés (mensuels cumulés) : ${formatMoneyPDF(data.totalArretees)}`, margin + 5, yPos);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(undefined, 'normal');
+    yPos += 10;
+
+    checkPageBreak(40);
+
+    // Détail PDF : uniquement les mois avec arriérés (difference > 0)
+    const detailsPourPdf = (data.detailsArretees || []).filter(d => d.difference > 0);
+    if (detailsPourPdf.length > 0) {
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.text('3. Détail des arriérés par période', margin, yPos);
+        yPos += 8;
+
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'normal');
+        doc.setFont(undefined, 'bold');
+        doc.text('Période', margin + 5, yPos);
+        doc.text('Salaire brut perçu', margin + 55, yPos);
+        doc.text('SMH mensuel dû', margin + 105, yPos);
+        doc.text('Arriérés', margin + 155, yPos);
+        yPos += 5;
+        doc.setDrawColor(200, 200, 200);
+        doc.line(margin + 5, yPos, marginRight - 5, yPos);
+        yPos += 6;
+        doc.setFont(undefined, 'normal');
+
+        detailsPourPdf.forEach((detail) => {
+            checkPageBreak(12);
+            const periodeShort = detail.periode.substring(0, 15);
+            doc.text(periodeShort, margin + 5, yPos);
+            doc.text(formatMoneyPDF(detail.salaireMensuelReel), margin + 55, yPos);
+            doc.text(formatMoneyPDF(detail.salaireMensuelDu), margin + 105, yPos);
+            doc.setTextColor(9, 105, 218);
+            doc.setFont(undefined, 'bold');
+            doc.text(formatMoneyPDF(detail.difference), margin + 155, yPos);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'normal');
+            yPos += 6;
+        });
+
+        yPos += 5;
+    }
+
+    checkPageBreak(40);
+
+    // Section 4 : Points d'attention juridiques
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('4. Points d\'attention juridiques', margin, yPos);
+    yPos += 8;
+
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    doc.text('• Prescription : Conformément à l\'article L.3245-1 du Code du travail,', margin + 5, yPos);
+    yPos += 6;
+    doc.text('  l\'action en paiement de salaire se prescrit par 3 ans à compter de chaque', margin + 5, yPos);
+    yPos += 6;
+    doc.text('  échéance de paiement (chaque mois constitue une échéance distincte).', margin + 5, yPos);
+    yPos += 8;
+    doc.text('• Convention Collective : La Convention Collective Nationale de la', margin + 5, yPos);
+    yPos += 6;
+    doc.text('  Métallurgie 2024 est entrée en vigueur le 1er janvier 2024. Les arriérés', margin + 5, yPos);
+    yPos += 6;
+    doc.text('  antérieurs à cette date ne sont pas réclamables au titre de cette convention.', margin + 5, yPos);
+    yPos += 8;
+    
+    if (data.accordEcrit) {
+        doc.setTextColor(46, 125, 50);
+        doc.text('• Point favorable : Un accord écrit existe avec l\'employeur concernant', margin + 5, yPos);
+        yPos += 6;
+        doc.text('  la classification, ce qui renforce votre position juridique.', margin + 5, yPos);
+        doc.setTextColor(0, 0, 0);
+        yPos += 8;
+    }
+
+    checkPageBreak(80);
+
+    // Section 5 : Méthodologie de calcul
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('5. Méthodologie de calcul', margin, yPos);
+    yPos += 8;
+
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    
+    const classificationMethode = getActiveClassification();
+    const isCadre = classificationMethode.classe >= CONFIG.SEUIL_CADRE;
+    
+    doc.text('Ce calcul est basé sur la Convention Collective Nationale de la Métallurgie 2024', margin + 5, yPos);
+    yPos += 6;
+    doc.text(`et prend en compte les éléments suivants pour la classification ${classificationMethode.groupe}${classificationMethode.classe} :`, margin + 5, yPos);
+    yPos += 8;
+    
+    doc.setFont(undefined, 'bold');
+    doc.text('1. Salaire Minimum Hiérarchique (SMH) de base', margin + 5, yPos);
+    yPos += 6;
+    doc.setFont(undefined, 'normal');
+    doc.text(`   SMH base : ${formatMoneyPDF(CONFIG.SMH[classificationMethode.classe])} (annuel brut)`, margin + 5, yPos);
+    yPos += 8;
+    
+    if (state.accordKuhn) {
+        doc.setFont(undefined, 'bold');
+        doc.text('2. Accord d\'entreprise Kuhn appliqué', margin + 5, yPos);
+        yPos += 6;
+        doc.setFont(undefined, 'normal');
+        doc.text('   Les règles spécifiques de l\'accord Kuhn sont prises en compte :', margin + 5, yPos);
+        yPos += 6;
+        if (!isCadre || state.anciennete >= 2) {
+            doc.text('   • Prime d\'ancienneté : appliquée dès 2 ans (taux selon barème Kuhn)', margin + 5, yPos);
+            yPos += 6;
+        }
+        if (state.primeVacances) {
+            doc.text('   • Prime de vacances : 525 € (versée en juillet)', margin + 5, yPos);
+            yPos += 6;
+        }
+        if (state.nbMois === 13) {
+            doc.text('   • 13e mois : répartition sur 13 mois (versé en novembre)', margin + 5, yPos);
+            yPos += 6;
+        }
+        yPos += 4;
+    }
+    
+    if (isCadre && state.forfait !== 'aucun') {
+        doc.setFont(undefined, 'bold');
+        doc.text('3. Majoration forfait', margin + 5, yPos);
+        yPos += 6;
+        doc.setFont(undefined, 'normal');
+        const tauxForfait = CONFIG.FORFAITS[state.forfait];
+        doc.text(`   Majoration ${state.forfait === 'heures' ? 'heures' : 'jours'} : +${Math.round(tauxForfait * 100)}%`, margin + 5, yPos);
+        yPos += 8;
+    }
+    
+    doc.setFont(undefined, 'bold');
+    doc.text('4. Calcul rétrospectif mois par mois', margin + 5, yPos);
+    yPos += 6;
+    doc.setFont(undefined, 'normal');
+    doc.text('   Pour chaque mois de la période concernée :', margin + 5, yPos);
+    yPos += 6;
+    doc.text('   • L\'ancienneté est calculée progressivement depuis la date d\'embauche', margin + 5, yPos);
+    yPos += 6;
+    doc.text('   • Le SMH dû est recalculé avec cette ancienneté et tous les paramètres', margin + 5, yPos);
+    yPos += 6;
+    doc.text('   • Le salaire mensuel dû est comparé au salaire mensuel réel perçu', margin + 5, yPos);
+    yPos += 6;
+    doc.text('   • La différence positive constitue les arriérés pour ce mois', margin + 5, yPos);
+    yPos += 8;
+    
+    doc.setFont(undefined, 'bold');
+    doc.text('5. Sources et références', margin + 5, yPos);
+    yPos += 6;
+    doc.setFont(undefined, 'normal');
+    doc.text('   • Convention Collective Nationale de la Métallurgie 2024', margin + 5, yPos);
+    yPos += 6;
+    doc.text('   • Code du travail français (Art. L.3245-1 pour la prescription)', margin + 5, yPos);
+    yPos += 6;
+    if (state.accordKuhn) {
+        doc.text('   • Accord d\'entreprise Kuhn (spécificités)', margin + 5, yPos);
+        yPos += 6;
+    }
+    doc.text('   • Valeur du point territorial : Bas-Rhin (5,90 €)', margin + 5, yPos);
+    yPos += 10;
+
+    checkPageBreak(60);
+
+    const totalPages = (doc.internal.pages && doc.internal.pages.length) || 1;
+    const dateGen = new Date().toLocaleDateString('fr-FR');
+    for (let p = 1; p <= totalPages; p++) {
+        doc.setPage(p);
+        doc.setFontSize(8);
+        doc.setTextColor(128, 128, 128);
+        doc.text(totalPages > 1 ? `Page ${p} / ${totalPages}` : 'Page 1', pageWidth / 2, pageHeight - 10, { align: 'center' });
+        doc.text(`Généré le ${dateGen}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
+    }
+
+    const classificationStr = `${classificationMethode.groupe}${classificationMethode.classe}`;
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename = `Rapport_Arretees_${classificationStr}_${dateStr}.pdf`;
+
+    doc.save(filename);
+    showToast('✅ Rapport PDF généré avec succès !', 'success', 3000);
+    } catch (err) {
+        showToast('Erreur lors de la génération du PDF : ' + (err && err.message ? err.message : String(err)), 'error', 5000);
+    }
+}
+
+/**
+ * Afficher les instructions juridiques interactives (version carrousel)
+ */
+let legalCarouselIndex = 0;
+let legalGuidePlaceholder = false;
+const legalCarouselSteps = [
+    {
+        title: 'Vérification des informations',
+        content: `
+            <p>Avant toute démarche, vérifiez attentivement que toutes les informations sont correctes :</p>
+            <ul>
+                <li>Votre classification (Groupe/Classe)</li>
+                <li>Votre ancienneté dans l'entreprise</li>
+                <li>Les dates (embauche, changement de classification, rupture si applicable)</li>
+                <li>Les salaires saisis mois par mois</li>
+            </ul>
+            <p><strong>Conseil :</strong> Comparez avec vos bulletins de paie et votre contrat de travail.</p>
+        `
+    },
+    {
+        title: 'Consultation professionnelle',
+        content: `
+            <p><strong>Important :</strong> Ce calcul est un outil d'aide et ne constitue pas un avis juridique. Avant toute démarche, consultez :</p>
+            <ul>
+                <li><strong>Un avocat spécialisé en droit du travail</strong> pour un conseil juridique personnalisé</li>
+                <li><strong>Votre syndicat</strong> qui peut vous accompagner dans vos démarches</li>
+                <li><strong>L'inspection du travail</strong> pour des informations sur vos droits</li>
+            </ul>
+            <p>Ces professionnels pourront vous aider à évaluer la pertinence de votre demande et les chances de succès.</p>
+        `
+    },
+    {
+        title: 'Rassemblement des preuves',
+        content: `
+            <p>Pour appuyer votre demande, rassemblez tous les documents suivants :</p>
+            <ul>
+                <li><strong>Bulletins de paie</strong> de toute la période concernée</li>
+                <li><strong>Contrat de travail</strong> et tous les avenants</li>
+                <li><strong>Correspondances écrites</strong> mentionnant votre classification ou votre salaire</li>
+                <li><strong>Fiches de poste</strong> ou descriptions de fonction</li>
+                <li><strong>Évaluations</strong> ou entretiens annuels</li>
+                <li><strong>Emails ou courriers</strong> relatifs à votre rémunération</li>
+            </ul>
+            <p>Organisez ces documents par ordre chronologique pour faciliter leur consultation.</p>
+        `
+    },
+    {
+        title: 'Demande amiable',
+        content: `
+            <p>La première étape consiste à faire une demande amiable à votre employeur :</p>
+            <ul>
+                <li>Rédigez une <strong>lettre recommandée avec accusé de réception (LRAR)</strong></li>
+                <li>Joignez le <strong>rapport PDF généré</strong> par cet outil</li>
+                <li>Incluez les <strong>copies de vos bulletins de paie</strong> et autres justificatifs</li>
+                <li>Demandez un <strong>règlement des arriérés</strong> dans un délai raisonnable (ex: 1 mois)</li>
+            </ul>
+            <p><strong>Ton à adopter :</strong> Restez courtois et factuel. Présentez les faits de manière objective et référez-vous à la convention collective.</p>
+        `
+    },
+    {
+        title: 'Médiation ou saisine juridictionnelle',
+        content: `
+            <p>Si votre demande amiable n'aboutit pas ou est refusée :</p>
+            <ul>
+                <li><strong>Médiation :</strong> Vous pouvez proposer une médiation pour trouver un accord à l'amiable</li>
+                <li><strong>Conseil de Prud'hommes :</strong> Vous pouvez saisir le Conseil de Prud'hommes compétent</li>
+                <li><strong>Délai de prescription :</strong> Attention, la prescription est de <strong>3 ans</strong> à compter de chaque échéance de paiement (Art. L.3245-1 Code du travail)</li>
+            </ul>
+            <p><strong>Important :</strong> Conservez toutes les preuves de vos démarches (copies de lettres, accusés de réception, etc.).</p>
+        `
+    },
+    {
+        title: 'Délais et prescription',
+        content: `
+            <p>Respectez impérativement les délais légaux :</p>
+            <ul>
+                <li><strong>Prescription :</strong> 3 ans à compter de chaque échéance de paiement (chaque mois est une échéance distincte)</li>
+                <li><strong>Délai de réponse LRAR :</strong> Généralement 1 mois pour une réponse de l'employeur</li>
+                <li><strong>Saisine Prud'hommes :</strong> Doit être effectuée dans les délais de prescription</li>
+                <li><strong>CCNM 2024 :</strong> Les arriérés antérieurs au 1er janvier 2024 ne sont pas réclamables au titre de cette convention</li>
+            </ul>
+            <p><strong>Conseil :</strong> Ne tardez pas à agir. Plus vous attendez, plus vous risquez de perdre le droit à certains arriérés par prescription.</p>
+        `
+    }
+];
+
+function afficherInstructionsJuridiques() {
+    const carouselContent = document.getElementById('legal-carousel-content');
+    const carouselCurrent = document.getElementById('legal-carousel-current');
+    const carouselTotal = document.getElementById('legal-carousel-total');
+    
+    if (!carouselContent) return;
+    
+    // Mettre à jour le total
+    if (carouselTotal) {
+        carouselTotal.textContent = legalCarouselSteps.length;
+    }
+    
+    // Générer le contenu du carrousel
+    carouselContent.innerHTML = legalCarouselSteps.map((step, index) => `
+        <div class="carousel-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
+            <div class="legal-step">
+                <h4><span class="legal-step-number">${index + 1}</span> ${step.title}</h4>
+                <div class="legal-step-content">
+                    ${step.content}
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    // Mettre à jour l'index actuel
+    legalCarouselIndex = 0;
+    updateLegalCarousel();
+}
+
+/**
+ * Mettre à jour l'affichage du carrousel juridique
+ */
+function updateLegalCarousel() {
+    const slides = document.querySelectorAll('.carousel-slide');
+    const carouselCurrent = document.getElementById('legal-carousel-current');
+    const carouselPrev = document.getElementById('legal-carousel-prev');
+    const carouselNext = document.getElementById('legal-carousel-next');
+    
+    slides.forEach((slide, index) => {
+        if (index === legalCarouselIndex) {
+            slide.classList.add('active');
+        } else {
+            slide.classList.remove('active');
+        }
+    });
+    
+    if (carouselCurrent) {
+        carouselCurrent.textContent = legalCarouselIndex + 1;
+    }
+    
+    if (carouselPrev) {
+        carouselPrev.disabled = legalCarouselIndex === 0;
+    }
+    
+    if (carouselNext) {
+        carouselNext.disabled = legalCarouselIndex === legalCarouselSteps.length - 1;
+    }
+}
+
+/**
+ * Initialiser le carrousel juridique
+ */
+function initLegalCarousel() {
+    const carouselPrev = document.getElementById('legal-carousel-prev');
+    const carouselNext = document.getElementById('legal-carousel-next');
+    
+    if (carouselPrev) {
+        carouselPrev.addEventListener('click', () => {
+            if (legalGuidePlaceholder) return;
+            if (legalCarouselIndex > 0) {
+                legalCarouselIndex--;
+                updateLegalCarousel();
+            }
+        });
+    }
+    
+    if (carouselNext) {
+        carouselNext.addEventListener('click', () => {
+            if (legalGuidePlaceholder) return;
+            if (legalCarouselIndex < legalCarouselSteps.length - 1) {
+                legalCarouselIndex++;
+                updateLegalCarousel();
+            }
+        });
+    }
+    
+    // Navigation au clavier
+    document.addEventListener('keydown', (e) => {
+        if (legalGuidePlaceholder) return;
+        const legalCarousel = document.getElementById('legal-instructions');
+        if (legalCarousel && !legalCarousel.classList.contains('hidden')) {
+            if (e.key === 'ArrowLeft' && legalCarouselIndex > 0) {
+                legalCarouselIndex--;
+                updateLegalCarousel();
+            } else if (e.key === 'ArrowRight' && legalCarouselIndex < legalCarouselSteps.length - 1) {
+                legalCarouselIndex++;
+                updateLegalCarousel();
+            }
+        }
+    });
+}
+
+/**
+ * ============================================
+ * ARRIÉRÉS DE SALAIRE - ANCIENNE VERSION (à supprimer progressivement)
+ * ============================================
+ */
+
+function initArretees() {
+    const ruptureCheckbox = document.getElementById('rupture-contrat');
+    const dateRuptureGroup = document.getElementById('date-rupture-group');
+    const btnCalculer = document.getElementById('btn-calculer-arretees');
+    const btnGenererPDF = document.getElementById('btn-generer-pdf');
+
+    // Afficher/masquer la date de rupture
+    if (ruptureCheckbox && dateRuptureGroup) {
+        ruptureCheckbox.addEventListener('change', (e) => {
+            dateRuptureGroup.classList.toggle('hidden', !e.target.checked);
+        });
+    }
+
+    // Calculer les arriérés
+    if (btnCalculer) {
+        btnCalculer.addEventListener('click', calculerArretees);
+    }
+
+    // Générer le PDF
+    if (btnGenererPDF) {
+        btnGenererPDF.addEventListener('click', genererPDFArretees);
+    }
+
+    // Pré-remplir la date d'embauche basée sur l'ancienneté
+    updateDateEmbaucheFromAnciennete();
+}
+
+/**
+ * Calculer les arriérés de salaire
+ */
+function calculerArretees() {
+    const salaireActuel = parseFloat(document.getElementById('salaire-actuel').value) || 0;
+    const dateEmbauche = document.getElementById('date-embauche').value;
+    const dateChangementClassification = document.getElementById('date-changement-classification').value;
+    const ruptureContrat = document.getElementById('rupture-contrat').checked;
+    const dateRupture = document.getElementById('date-rupture').value;
+    const accordEcrit = document.getElementById('accord-ecrit').checked;
+
+    if (!dateEmbauche) {
+        showToast('⚠️ Veuillez renseigner la date d\'embauche.', 'warning', 3000);
+        return;
+    }
+
+    if (salaireActuel === 0) {
+        showToast('⚠️ Veuillez renseigner votre salaire actuel.', 'warning', 3000);
+        return;
+    }
+
+    // Calculer la rémunération due
+    const remuneration = calculateRemuneration();
+    const salaireDu = remuneration.total;
+
+    if (salaireActuel >= salaireDu) {
+        showToast('✅ Votre salaire actuel est conforme ou supérieur au minimum conventionnel.', 'success', 4000);
+        document.getElementById('arretees-results').classList.add('hidden');
+        return;
+    }
+
+    const difference = salaireDu - salaireActuel;
+
+    // Dates importantes
+    const dateCCNM = new Date('2024-01-01'); // Date d'entrée en vigueur de la CCNM
+    const dateEmbaucheObj = new Date(dateEmbauche);
+    const dateRuptureObj = ruptureContrat && dateRupture ? new Date(dateRupture) : new Date();
+    const dateChangementObj = dateChangementClassification ? new Date(dateChangementClassification) : null;
+
+    // Prescription : 3 ans en arrière depuis aujourd'hui
+    const datePrescription = new Date();
+    datePrescription.setFullYear(datePrescription.getFullYear() - 3);
+
+    // Date de début de calcul : le plus récent entre :
+    // - Date d'embauche
+    // - Date de changement de classification (si applicable)
+    // - Date d'entrée en vigueur CCNM (1er janv 2024)
+    // - Date de prescription (3 ans)
+    let dateDebutCalcul = dateEmbaucheObj;
+    if (dateChangementObj && dateChangementObj > dateDebutCalcul) {
+        dateDebutCalcul = dateChangementObj;
+    }
+    if (dateCCNM > dateDebutCalcul) {
+        dateDebutCalcul = dateCCNM;
+    }
+    if (datePrescription > dateDebutCalcul) {
+        dateDebutCalcul = datePrescription;
+    }
+
+    // Date de fin : rupture ou aujourd'hui
+    const dateFinCalcul = ruptureContrat && dateRupture ? dateRuptureObj : new Date();
+
+    // Vérifier que la date de début est avant la date de fin
+    if (dateDebutCalcul >= dateFinCalcul) {
+        showToast('⚠️ La période de calcul est invalide. Vérifiez les dates renseignées.', 'warning', 4000);
+        return;
+    }
+
+    // Calculer le nombre de mois (arrondi au mois complet)
+    const moisDiff = (dateFinCalcul.getFullYear() - dateDebutCalcul.getFullYear()) * 12 + 
+                     (dateFinCalcul.getMonth() - dateDebutCalcul.getMonth());
+    // Si on est dans le même mois, compter 1 mois minimum
+    const moisArretees = Math.max(1, moisDiff);
+
+    // Montant total des arriérés
+    const montantMensuel = difference / 12;
+    const totalArretees = Math.round(montantMensuel * moisArretees);
+
+    // Conditions juridiques
+    const conditionsValides = [];
+    const conditionsInvalides = [];
+
+    // Vérifier la cohérence des dates
+    if (dateChangementObj && dateChangementObj < dateEmbaucheObj) {
+        conditionsInvalides.push('⚠️ La date de changement de classification ne peut pas être antérieure à la date d\'embauche.');
+    }
+
+    if (dateChangementObj && dateChangementObj > dateFinCalcul) {
+        conditionsInvalides.push('⚠️ La date de changement de classification ne peut pas être postérieure à la date de fin de calcul.');
+    }
+
+    // Limites juridiques
+    if (dateDebutCalcul < dateCCNM) {
+        conditionsInvalides.push(`Les arriérés avant le 1er janvier 2024 (entrée en vigueur de la CCNM) ne sont pas réclamables au titre de cette convention.`);
+    }
+
+    if (dateDebutCalcul < datePrescription) {
+        conditionsInvalides.push(`La prescription de 3 ans (art. L.3245-1 Code du travail) limite les arriérés réclamables à partir du ${datePrescription.toLocaleDateString('fr-FR')}.`);
+    }
+
+    if (ruptureContrat && !dateRupture) {
+        conditionsInvalides.push('La date de rupture doit être renseignée si le contrat est rompu.');
+    }
+
+    // Points favorables
+    if (accordEcrit) {
+        conditionsValides.push('Un accord écrit avec l\'employeur sur la classification renforce votre position juridique.');
+    }
+
+    if (dateChangementObj) {
+        conditionsValides.push('Un changement de classification documenté peut faciliter la réclamation.');
+    }
+
+    // Afficher les résultats
+    afficherResultatsArretees({
+        salaireActuel,
+        salaireDu,
+        difference,
+        montantMensuel,
+        totalArretees,
+        moisArretees,
+        dateDebutCalcul,
+        dateFinCalcul,
+        datePrescription,
+        conditionsValides,
+        conditionsInvalides,
+        ruptureContrat,
+        dateRupture: dateRuptureObj
+    });
+}
+
+/**
+ * Afficher les résultats du calcul d'arriérés
+ */
+function afficherResultatsArretees(data) {
+    const resultsDiv = document.getElementById('arretees-results');
+    const summaryDiv = document.getElementById('arretees-summary');
+    const legalInfoDiv = document.getElementById('arretees-legal-info');
+    const instructionsDiv = document.getElementById('arretees-instructions');
+    const instructionsContent = document.getElementById('arretees-instructions-content');
+
+    // Résumé
+    summaryDiv.innerHTML = `
+        <div class="arretees-summary-item">
+            <span>Salaire actuel :</span>
+            <strong>${formatMoney(data.salaireActuel)}</strong>
+        </div>
+        <div class="arretees-summary-item">
+            <span>Salaire dû :</span>
+            <strong>${formatMoney(data.salaireDu)}</strong>
+        </div>
+        <div class="arretees-summary-item">
+            <span>Différence annuelle :</span>
+            <strong style="color: var(--color-link);">${formatMoney(data.difference)}</strong>
+        </div>
+        <div class="arretees-summary-item">
+            <span>Période concernée :</span>
+            <span>${data.dateDebutCalcul.toLocaleDateString('fr-FR')} → ${data.dateFinCalcul.toLocaleDateString('fr-FR')}</span>
+        </div>
+        <div class="arretees-summary-item">
+            <span>Nombre de mois :</span>
+            <strong>${data.moisArretees} mois</strong>
+        </div>
+        <div class="arretees-summary-item">
+            <span>Montant mensuel dû :</span>
+            <strong>${formatMoney(data.montantMensuel)}</strong>
+        </div>
+        <div class="arretees-summary-item">
+            <span><strong>Total des arriérés :</strong></span>
+            <strong>${formatMoney(data.totalArretees)}</strong>
+        </div>
+    `;
+
+    // Informations juridiques
+    let legalHTML = '<h4>⚠️ Points d\'attention juridiques</h4><ul>';
+    
+    if (data.conditionsInvalides.length > 0) {
+        legalHTML += '<li><strong>Limitations :</strong><ul>';
+        data.conditionsInvalides.forEach(condition => {
+            legalHTML += `<li>${condition}</li>`;
+        });
+        legalHTML += '</ul></li>';
+    }
+
+    if (data.conditionsValides.length > 0) {
+        legalHTML += '<li><strong>Points favorables :</strong><ul>';
+        data.conditionsValides.forEach(condition => {
+            legalHTML += `<li>${condition}</li>`;
+        });
+        legalHTML += '</ul></li>';
+    }
+
+    legalHTML += '<li><strong>Prescription :</strong> En France, la prescription est de 3 ans. Les arriérés au-delà de cette période ne sont généralement pas réclamables.</li>';
+    legalHTML += '<li><strong>CCNM 2024 :</strong> La nouvelle convention collective est entrée en vigueur le 1er janvier 2024. Les arriérés antérieurs à cette date ne sont pas réclamables au titre de cette convention.</li>';
+    
+    if (data.ruptureContrat) {
+        legalHTML += '<li><strong>Rupture de contrat :</strong> En cas de rupture, les arriérés sont calculés jusqu\'à la date de rupture.</li>';
+    }
+
+    legalHTML += '</ul>';
+    legalInfoDiv.innerHTML = legalHTML;
+
+    // Instructions
+    instructionsContent.innerHTML = `
+        <ol>
+            <li><strong>Vérifiez les informations :</strong> Assurez-vous que toutes les dates et montants sont corrects. Vérifiez notamment :
+                <ul>
+                    <li>Votre classification actuelle sur votre fiche de paie</li>
+                    <li>Votre ancienneté dans l'entreprise</li>
+                    <li>Les dates de changement éventuel de classification</li>
+                </ul>
+            </li>
+            <li><strong>Consultez un professionnel :</strong> Avant toute démarche, consultez :
+                <ul>
+                    <li>Un avocat spécialisé en droit du travail</li>
+                    <li>Votre syndicat (CFDT, CGT, FO, etc.)</li>
+                    <li>Les services de l'inspection du travail</li>
+                </ul>
+            </li>
+            <li><strong>Rassemblez les preuves :</strong>
+                <ul>
+                    <li>Tous vos bulletins de paie depuis la date de début de calcul</li>
+                    <li>Votre contrat de travail et avenants éventuels</li>
+                    <li>Correspondances avec l'employeur (emails, courriers)</li>
+                    <li>Fiches de poste ou descriptions de fonction</li>
+                    <li>Attestations de formation ou certifications</li>
+                </ul>
+            </li>
+            <li><strong>Demande amiable (étape obligatoire) :</strong>
+                <ul>
+                    <li>Rédigez une lettre recommandée avec accusé de réception (LRAR)</li>
+                    <li>Joignez ce rapport PDF et les documents justificatifs</li>
+                    <li>Demandez un rendez-vous pour discuter de la situation</li>
+                    <li>Conservez une copie de tous les documents envoyés</li>
+                </ul>
+            </li>
+            <li><strong>Si la demande amiable échoue :</strong>
+                <ul>
+                    <li><strong>Médiation :</strong> Vous pouvez proposer une médiation conventionnelle</li>
+                    <li><strong>Conseil de Prud'hommes :</strong> Saisie possible dans les 3 ans suivant la dernière échéance</li>
+                    <li><strong>Inspection du travail :</strong> Pour signaler un non-respect de la convention collective</li>
+                </ul>
+            </li>
+            <li><strong>Délais importants :</strong>
+                <ul>
+                    <li>Prescription de 3 ans : Agissez rapidement pour ne pas perdre vos droits</li>
+                    <li>Délai de réponse à une LRAR : 15 jours ouvrés</li>
+                    <li>Délai de saisine Prud'hommes : 3 ans à compter de chaque échéance</li>
+                </ul>
+            </li>
+        </ol>
+        <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+            <p style="margin: 0;"><strong>⚠️ Avertissement légal :</strong> Ce rapport est un outil d'aide au calcul basé sur les informations fournies. Il ne constitue pas un avis juridique. Seul un professionnel du droit (avocat, syndicat) peut vous conseiller sur la stratégie à adopter et la faisabilité de votre demande d'arriérés.</p>
+        </div>
+    `;
+
+    // Afficher les sections
+    resultsDiv.classList.remove('hidden');
+    instructionsDiv.classList.remove('hidden');
+
+    // Stocker les données pour le PDF
+    window.arreteesData = data;
+}
+
+/**
+ * Générer le PDF du rapport d'arriérés
+ */
+function genererPDFArretees() {
+    if (!window.arreteesData) {
+        showToast('⚠️ Veuillez d\'abord calculer les arriérés.', 'warning', 3000);
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const data = window.arreteesData;
+    const remuneration = calculateRemuneration();
+    const { groupe, classe } = getActiveClassification();
+
+    // En-tête
+    doc.setFontSize(16);
+    doc.text('Rapport d\'Arriérés de Salaire', 105, 20, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text('Convention Collective Métallurgie 2024', 105, 28, { align: 'center' });
+    doc.text(`Classification : ${groupe}${classe}`, 105, 34, { align: 'center' });
+
+    // Date du rapport
+    doc.setFontSize(9);
+    doc.text(`Date du rapport : ${new Date().toLocaleDateString('fr-FR')}`, 20, 45);
+
+    // Informations
+    let y = 55;
+    doc.setFontSize(11);
+    doc.text('Informations', 20, y);
+    y += 8;
+    doc.setFontSize(9);
+    doc.text(`Salaire annuel brut actuel : ${formatMoney(data.salaireActuel)}`, 20, y);
+    y += 6;
+    doc.text(`Salaire minimum hiérarchique dû : ${formatMoney(data.salaireDu)}`, 20, y);
+    y += 6;
+    doc.text(`Différence annuelle : ${formatMoney(data.difference)}`, 20, y);
+    y += 10;
+
+    // Calcul des arriérés
+    doc.setFontSize(11);
+    doc.text('Calcul des Arriérés', 20, y);
+    y += 8;
+    doc.setFontSize(9);
+    doc.text(`Période : ${data.dateDebutCalcul.toLocaleDateString('fr-FR')} → ${data.dateFinCalcul.toLocaleDateString('fr-FR')}`, 20, y);
+    y += 6;
+    doc.text(`Nombre de mois : ${data.moisArretees}`, 20, y);
+    y += 6;
+    doc.text(`Montant mensuel dû : ${formatMoney(data.montantMensuel)}`, 20, y);
+    y += 8;
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text(`TOTAL DES ARRIÉRÉS : ${formatMoney(data.totalArretees)}`, 20, y);
+    doc.setFont(undefined, 'normal');
+    y += 15;
+
+    // Points juridiques
+    if (data.conditionsInvalides.length > 0 || data.conditionsValides.length > 0) {
+        doc.setFontSize(11);
+        doc.text('Points d\'attention juridiques', 20, y);
+        y += 8;
+        doc.setFontSize(9);
+        
+        if (data.conditionsInvalides.length > 0) {
+            doc.text('Limitations :', 20, y);
+            y += 6;
+            data.conditionsInvalides.forEach(condition => {
+                doc.text(`• ${condition}`, 25, y);
+                y += 6;
+            });
+            y += 3;
+        }
+        
+        if (data.conditionsValides.length > 0) {
+            doc.text('Points favorables :', 20, y);
+            y += 6;
+            data.conditionsValides.forEach(condition => {
+                doc.text(`• ${condition}`, 25, y);
+                y += 6;
+            });
+        }
+        y += 10;
+    }
+
+    // Informations juridiques générales
+    y += 5;
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'bold');
+    doc.text('Informations juridiques importantes', 20, y);
+    y += 8;
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(8);
+    
+    const legalTexts = [
+        '• Prescription : 3 ans à compter de chaque échéance (art. L.3245-1 du Code du travail)',
+        '• CCNM 2024 : Entrée en vigueur le 1er janvier 2024',
+        '• Demande amiable recommandée avant toute action judiciaire',
+        '• Conseil de Prud\'hommes compétent pour les litiges'
+    ];
+    
+    legalTexts.forEach(text => {
+        if (y > 270) {
+            doc.addPage();
+            y = 20;
+        }
+        doc.text(text, 20, y, { maxWidth: 170 });
+        y += 6;
+    });
+
+    // Avertissement
+    y += 5;
+    if (y > 270) {
+        doc.addPage();
+        y = 20;
+    }
+    doc.setFontSize(9);
+    doc.setTextColor(150, 0, 0);
+    doc.text('⚠️ Ce rapport est indicatif. Consultez un avocat spécialisé en droit du travail ou votre syndicat avant toute démarche juridique.', 20, y, { maxWidth: 170 });
+    doc.setTextColor(0, 0, 0);
+
+    // Pied de page sur toutes les pages
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        const pageHeight = doc.internal.pageSize.height;
+        doc.setFontSize(8);
+        doc.setTextColor(100);
+        doc.text('Généré par le Simulateur Métallurgie 2024', 105, pageHeight - 10, { align: 'center' });
+        doc.text(`Page ${i}/${pageCount}`, 105, pageHeight - 5, { align: 'center' });
+        doc.setTextColor(0);
+    }
+
+    // Télécharger
+    const fileName = `Rapport_Arretees_${groupe}${classe}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+    
+    showToast('✅ Rapport PDF généré avec succès.', 'success', 3000);
+}
+
 // Initialiser le graphique après le chargement
 document.addEventListener('DOMContentLoaded', () => {
     initEvolutionChart();
+    initArretees();
     
     // Recalculer les roulettes lors du redimensionnement (debounced)
     let resizeTimeout;
