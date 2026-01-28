@@ -185,13 +185,14 @@ function initWizard() {
         });
     }
 
-    // Bouton générer PDF : ouvre d'abord le modal des infos personnelles
-    const btnGenererPDFArretees = document.getElementById('btn-generer-pdf-arretees');
-    if (btnGenererPDFArretees) {
-        btnGenererPDFArretees.addEventListener('click', () => {
+    // Bouton générer PDF : délégation pour garantir que le clic est toujours pris en charge
+    document.body.addEventListener('click', (e) => {
+        const btn = e.target.closest('#btn-generer-pdf-arretees');
+        if (btn) {
+            e.preventDefault();
             openPdfInfosModal();
-        });
-    }
+        }
+    });
 
     // Bouton calcul sticky
     const btnCalculerSticky = document.getElementById('btn-calculer-arretees-sticky');
@@ -212,14 +213,30 @@ function initWizard() {
     const floatingInput = document.getElementById('floating-salary-input');
     
     if (floatingInput) {
-        // Navigation avec Entrée
         floatingInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 saveCurrentSalaryAndNext();
             }
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                dismissFloatingBlockFromGraph();
+            }
         });
     }
+
+    // Échap ferme le popup du graphique (n'importe quel focus) tant qu'aucun autre modal n'est ouvert
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const pdfOverlay = document.getElementById('pdf-infos-modal-overlay');
+        if (pdfOverlay && pdfOverlay.classList.contains('visible')) return;
+        const step4 = document.getElementById('step-4');
+        const block = document.getElementById('floating-input-block');
+        if (step4 && step4.classList.contains('active') && block && !block.classList.contains('floating-block-hidden')) {
+            dismissFloatingBlockFromGraph();
+            e.preventDefault();
+        }
+    });
 
     // Onglets guide juridique - Initialiser après le chargement du contenu
     function initLegalTabs() {
@@ -309,11 +326,11 @@ function saveCurrentSalaryAndNext() {
                         floatingBlock.style.transform = 'translate(-50%, -50%) scale(1)';
                     });
                 } else {
+                    // Dernier salaire saisi : fermer le popup et ne plus rouvrir pour laisser contempler le graphique complet
                     currentPeriodIndex = Math.min(currentPeriodIndex + 1, periodsData.length - 1);
                     updateCurveChart();
-                    updateCurveControls({ skipAutoFocus: true });
+                    dismissFloatingBlockFromGraph();
                     showToast('✅ Tous les salaires ont été saisis ! Vous pouvez cliquer sur un point pour modifier un mois, puis calculer les arriérés.', 'success', 4000);
-                    // Le bloc reste visible pour permettre de modifier un salaire en cliquant sur un point
                 }
                 const stickyBtn = document.getElementById('arretees-calc-sticky');
                 if (stickyBtn) stickyBtn.classList.remove('hidden');
@@ -2419,6 +2436,14 @@ function updateDateEmbaucheFromAnciennete() {
  */
 
 /**
+ * Invalide les données arriérés utilisées pour le PDF (date d'embauche, rupture ou classification modifiée).
+ * À appeler avant initTimeline() quand un paramètre du calcul change, pour forcer un nouveau calcul avant génération PDF.
+ */
+function invalidateArreteesDataFinal() {
+    window.arreteesDataFinal = null;
+}
+
+/**
  * Met à jour la visibilité du bloc « Saisie de vos salaires » et du bouton « Calculer les arriérés »
  * selon que la date d'embauche est valide et complète. Utilise la validation native (validity.valid)
  * du champ type="date" : année à 4 chiffres et date complète exigées.
@@ -2433,6 +2458,7 @@ function updateArreteesUiFromDateEmbauche() {
     const isValid = val && input.validity && input.validity.valid;
     if (isValid) {
         state.dateEmbaucheArretees = val;
+        invalidateArreteesDataFinal();
         container.classList.remove('hidden');
         if (stickyWrap) stickyWrap.classList.remove('hidden');
         if (warning) warning.classList.add('hidden');
@@ -2476,6 +2502,7 @@ function initArreteesNew() {
         dateChangementInput.addEventListener('change', () => {
             state.dateChangementClassificationArretees = dateChangementInput.value;
             if (dateChangementInput.value) {
+                invalidateArreteesDataFinal();
                 initTimeline();
             }
         });
@@ -2489,6 +2516,7 @@ function initArreteesNew() {
     if (ruptureCheckbox) {
         ruptureCheckbox.addEventListener('change', () => {
             state.ruptureContratArretees = ruptureCheckbox.checked;
+            invalidateArreteesDataFinal();
             if (dateRuptureGroup) {
                 if (ruptureCheckbox.checked) {
                     dateRuptureGroup.classList.remove('hidden');
@@ -2500,6 +2528,7 @@ function initArreteesNew() {
             if (dateRuptureInput && ruptureCheckbox.checked) {
                 dateRuptureInput.addEventListener('change', () => {
                     state.dateRuptureArretees = dateRuptureInput.value;
+                    invalidateArreteesDataFinal();
                     initTimeline();
                 });
             }
@@ -2549,6 +2578,8 @@ function updateArreteesSalaireHint() {
 let salaryCurveChart = null;
 let currentPeriodIndex = 0;
 let periodsData = [];
+/** true quand l'utilisateur a « fermé » le bloc flottant en recliquant sur le point déjà sélectionné (ex. dernière date) */
+let floatingBlockDismissed = false;
 
 function initTimeline() {
     const container = document.getElementById('salary-curve-container');
@@ -2667,6 +2698,7 @@ function initTimeline() {
     if (currentPeriodIndex === -1) {
         currentPeriodIndex = 0; // Tous saisis, commencer au début
     }
+    floatingBlockDismissed = false; // nouveau contexte, bloc affiché par défaut
 
     // Créer ou mettre à jour la courbe après un délai pour que le conteneur soit visible et ait des dimensions
     setTimeout(() => {
@@ -2897,6 +2929,24 @@ function createSalaryCurve() {
                     const datasetIndex = element.datasetIndex;
                     const dataIndex = element.index;
                     if (datasetIndex === 0 && dataIndex >= 0 && dataIndex < periodsData.length) {
+                        if (dataIndex === currentPeriodIndex) {
+                            // Reclic sur le point déjà sélectionné : basculer visibilité (fermer / rouvrir)
+                            const block = document.getElementById('floating-input-block');
+                            const isHidden = block ? block.classList.contains('floating-block-hidden') : true;
+                            floatingBlockDismissed = !isHidden;
+                            if (block) {
+                                if (floatingBlockDismissed) {
+                                    block.classList.add('floating-block-hidden');
+                                    block.style.visibility = 'hidden';
+                                } else {
+                                    block.classList.remove('floating-block-hidden');
+                                    block.style.visibility = '';
+                                    positionFloatingBlock(currentPeriodIndex);
+                                }
+                            }
+                            return;
+                        }
+                        floatingBlockDismissed = false; // nouveau point sélectionné, afficher le bloc
                         currentPeriodIndex = dataIndex;
                         animatePointToCenter(dataIndex, () => {
                             updateCurveControls();
@@ -2989,9 +3039,16 @@ function updateCurveControls(options) {
         floatingInfoIcon.setAttribute('data-tippy-content', 'Salaire mensuel brut :' + tooltipSMHSeul);
     }
 
-    // Toujours afficher le bloc au centre pour la période sélectionnée, y compris quand tous les salaires sont saisis (permettre la modification)
+    // Afficher le bloc au centre sauf si « dernière date, tout saisi » et l'utilisateur l'a fermé (évite réouverture en boucle)
+    const allFilled = !periodsData.some(p => !p.salaireReel);
+    const isLastIndex = currentPeriodIndex === periodsData.length - 1;
     if (floatingBlock && salaryCurveChart) {
-        positionFloatingBlock(currentPeriodIndex);
+        if (allFilled && isLastIndex && floatingBlockDismissed) {
+            floatingBlock.classList.add('floating-block-hidden');
+            floatingBlock.style.visibility = 'hidden';
+        } else {
+            positionFloatingBlock(currentPeriodIndex);
+        }
     }
 
     const saisis = periodsData.filter(p => p.salaireReel).length;
@@ -3014,6 +3071,19 @@ function positionFloatingBlock(periodIndex) {
     floatingBlock.style.left = '50%';
     floatingBlock.style.top = '50%';
     floatingBlock.style.transform = 'translate(-50%, -50%)';
+}
+
+/**
+ * Fermer le popup du graphique (bloc flottant) — Échap ou clic sur le point déjà sélectionné.
+ * Pour rouvrir : cliquer sur un point du graphique (intuitif, sans instruction).
+ */
+function dismissFloatingBlockFromGraph() {
+    floatingBlockDismissed = true;
+    const block = document.getElementById('floating-input-block');
+    if (block) {
+        block.classList.add('floating-block-hidden');
+        block.style.visibility = 'hidden';
+    }
 }
 
 /**
@@ -3358,9 +3428,29 @@ function calculerArreteesFinal() {
                 legalInfoDiv.innerHTML = '';
                 legalInfoDiv.classList.add('hidden');
             }
-            if (btnPdf) btnPdf.style.display = 'none';
+            if (btnPdf) btnPdf.style.display = '';
         }
         if (legalSec) legalSec.classList.add('hidden');
+        // Stocker les données pour le PDF même en cas « conforme » (0 arriérés) – même structure que totalArretees > 0
+        const dateEmbaucheInput = document.getElementById('date-embauche-arretees')?.value;
+        const dateChangementInput = document.getElementById('date-changement-classification-arretees')?.value;
+        const dateRuptureInput = document.getElementById('date-rupture-arretees')?.value;
+        window.arreteesDataFinal = {
+            salaireDu,
+            totalArretees: 0,
+            detailsArretees: [],
+            detailsTousMois,
+            dateDebut,
+            dateFin: dateRuptureObj,
+            datePrescription,
+            salairesParMois: state.salairesParMois,
+            accordEcrit: state.accordEcritArretees,
+            ruptureContrat: state.ruptureContratArretees,
+            dateRupture: state.dateRuptureArretees,
+            dateEmbauche: dateEmbaucheInput,
+            dateChangementClassification: dateChangementInput,
+            dateRuptureInput: dateRuptureInput
+        };
         return;
     }
 
@@ -3523,16 +3613,37 @@ function afficherResultatsArreteesFinal(data) {
 }
 
 /**
- * Ouvrir le modal des infos personnelles avant génération du PDF
+ * Validation centralisée des données arriérés pour le PDF.
+ * Accepte à la fois le cas « conforme » (detailsArretees: []) et « avec arriérés ».
+ * @returns {{ valid: boolean, error?: string, data?: object }}
+ */
+function getArreteesDataForPdf() {
+    if (!window.arreteesDataFinal) {
+        return { valid: false, error: 'Veuillez d\'abord calculer les arriérés.' };
+    }
+    const d = window.arreteesDataFinal;
+    if (!d || typeof d !== 'object') {
+        return { valid: false, error: 'Données invalides. Recalculez les arriérés.' };
+    }
+    const dateDebutOk = d.dateDebut != null && (d.dateDebut instanceof Date || (typeof d.dateDebut === 'string' && d.dateDebut.length > 0));
+    const dateFinOk = d.dateFin != null && (d.dateFin instanceof Date || (typeof d.dateFin === 'string' && d.dateFin.length > 0));
+    if (!dateDebutOk || !dateFinOk) {
+        return { valid: false, error: 'Données de période incomplètes. Recalculez les arriérés.' };
+    }
+    if (!Array.isArray(d.detailsArretees)) {
+        return { valid: false, error: 'Données des arriérés incomplètes. Recalculez les arriérés.' };
+    }
+    return { valid: true, data: d };
+}
+
+/**
+ * Ouvrir le modal des infos personnelles avant génération du PDF.
+ * Stocke les données déjà validées sur l’overlay pour que la génération ne dépende pas de window.arreteesDataFinal au moment du clic.
  */
 function openPdfInfosModal() {
-    if (!window.arreteesDataFinal) {
-        showToast('⚠️ Veuillez d\'abord calculer les arriérés.', 'warning', 3000);
-        return;
-    }
-    const data = window.arreteesDataFinal;
-    if (!data.dateDebut || !data.dateFin || !data.detailsArretees) {
-        showToast('⚠️ Données des arriérés incomplètes. Recalculez les arriérés.', 'warning', 3000);
+    const result = getArreteesDataForPdf();
+    if (!result.valid) {
+        showToast('⚠️ ' + result.error, 'warning', 3000);
         return;
     }
 
@@ -3577,6 +3688,11 @@ function openPdfInfosModal() {
             overlay.classList.remove('visible');
         });
         document.getElementById('pdf-infos-generate').addEventListener('click', () => {
+            const data = overlay._pdfData;
+            if (!data) {
+                showToast('⚠️ Données perdues. Recalculez les arriérés puis générez le PDF.', 'warning', 3000);
+                return;
+            }
             const infos = {
                 nomPrenom: (document.getElementById('pdf-infos-nom')?.value || '').trim(),
                 poste: (document.getElementById('pdf-infos-poste')?.value || '').trim(),
@@ -3585,28 +3701,30 @@ function openPdfInfosModal() {
                 observations: (document.getElementById('pdf-infos-observations')?.value || '').trim()
             };
             overlay.classList.remove('visible');
-            genererPDFArreteesFinal(infos);
+            genererPDFArreteesFinal(infos, data);
         });
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) overlay.classList.remove('visible');
         });
     }
+    overlay._pdfData = result.data;
     overlay.classList.add('visible');
 }
 
 /**
  * Générer le PDF final (nouvelle version - professionnel et courtois)
  * @param {Object} [infosPersonnelles] - Nom, poste, employeur, etc. saisis dans le modal (optionnel)
+ * @param {Object} [dataPrevalide] - Données arriérés déjà validées (passées par le modal). Si absent, lit window.arreteesDataFinal.
  */
-function genererPDFArreteesFinal(infosPersonnelles) {
-    if (!window.arreteesDataFinal) {
-        showToast('⚠️ Veuillez d\'abord calculer les arriérés.', 'warning', 3000);
-        return;
-    }
-    const data = window.arreteesDataFinal;
-    if (!data.dateDebut || !data.dateFin || !data.detailsArretees) {
-        showToast('⚠️ Données des arriérés incomplètes. Recalculez les arriérés.', 'warning', 3000);
-        return;
+function genererPDFArreteesFinal(infosPersonnelles, dataPrevalide) {
+    let data = dataPrevalide;
+    if (!data) {
+        const result = getArreteesDataForPdf();
+        if (!result.valid) {
+            showToast('⚠️ ' + result.error, 'warning', 3000);
+            return;
+        }
+        data = result.data;
     }
 
     const jsPDF = (typeof window !== 'undefined' && window.jsPDF) ||
@@ -4360,7 +4478,7 @@ function afficherResultatsArretees(data) {
     }
 
     legalHTML += '<li><strong>Prescription :</strong> En France, la prescription est de 3 ans. Les arriérés au-delà de cette période ne sont généralement pas réclamables.</li>';
-    legalHTML += '<li><strong>CCNM 2024 :</strong> La nouvelle convention collective est entrée en vigueur le 1er janvier 2024. Les arriérés antérieurs à cette date ne sont pas réclamables au titre de cette convention.</li>';
+    legalHTML += '<li><strong>Convention collective nationale de la métallurgie (CCNM) 2024 :</strong> La nouvelle convention collective est entrée en vigueur le 1er janvier 2024. Les arriérés antérieurs à cette date ne sont pas réclamables au titre de cette convention.</li>';
     
     if (data.ruptureContrat) {
         legalHTML += '<li><strong>Rupture de contrat :</strong> En cas de rupture, les arriérés sont calculés jusqu\'à la date de rupture.</li>';

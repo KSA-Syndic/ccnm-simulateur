@@ -1424,6 +1424,7 @@ body {
 /* Badge Kuhn dans les détails */
 .kuhn-badge {
     display: inline-block;
+    white-space: nowrap;
     margin-left: 6px;
     padding: 2px 6px;
     background: rgba(9, 105, 218, 0.1);
@@ -1503,6 +1504,128 @@ body {
     
     .detail-separator {
         display: none;
+    }
+
+    /* Étape 4 Arriérés : marges au minimum comme les autres pages (.step-section = 20px) */
+    #step-4 .step-content {
+        padding: 20px;
+    }
+    #step-4 .book-hint.warning {
+        margin: 12px 0;
+        padding: 10px 12px;
+    }
+    #step-4 .arretees-base-info {
+        margin: 12px 0;
+        padding: 14px;
+    }
+    #step-4 .arretees-options-accordion-body {
+        padding: 0 12px 12px;
+    }
+    #step-4 .result-details-toggle .arretees-options-accordion-title {
+        padding: 10px 12px;
+        font-size: 0.95rem;
+    }
+    #step-4 .salary-curve-container {
+        margin: 16px 0;
+        padding: 14px;
+        border-left: none;
+        border-right: none;
+        border-radius: 0;
+    }
+    #step-4 .salary-curve-container h3 {
+        font-size: 1.05rem;
+    }
+    #step-4 .curve-help,
+    #step-4 .arretees-salaire-hint {
+        font-size: 0.85rem;
+        margin-bottom: 12px;
+        padding: 8px 10px;
+    }
+    #step-4 .curve-chart-wrapper {
+        height: 280px;
+        margin: 12px 0;
+        padding: 8px;
+    }
+    #step-4 .floating-input-block {
+        min-width: 0;
+        width: calc(100% - 24px);
+        max-width: 320px;
+        padding: 14px;
+        left: 50%;
+    }
+    #step-4 .curve-legend {
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    #step-4 .curve-progress {
+        margin-top: 8px;
+        font-size: 0.9rem;
+    }
+    #step-4 .arretees-calc-sticky {
+        margin: 16px 0 0;
+        padding: 0;
+    }
+    #step-4 .arretees-calc-sticky .book-btn {
+        width: 100%;
+    }
+    /* Boutons étape 4 : pleine largeur sur mobile pour cohérence */
+    #step-4 .arretees-results .book-btn,
+    #step-4 .arretees-results-card .book-btn {
+        width: 100%;
+    }
+    #step-4 .step-actions .book-btn {
+        width: 100%;
+        max-width: none;
+    }
+    #step-4 .arretees-results {
+        margin-top: 20px;
+        padding-top: 16px;
+    }
+    #step-4 .arretees-results-card {
+        padding: 14px;
+    }
+    #step-4 .arretees-results-title {
+        font-size: 1.05rem;
+    }
+    #step-4 .legal-guide-section {
+        margin-top: 16px;
+    }
+    #step-4 .legal-guide-header {
+        padding: 10px 12px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    #step-4 .legal-guide-title {
+        font-size: 1rem;
+    }
+    /* Page 4 : retirer les marges des slides du carrousel (guide juridique) en vue mobile */
+    #step-4 .carousel-slide {
+        padding: 0;
+    }
+
+    /* Étape 3 : mêmes règles de marge des containers que la page 4 en vue mobile */
+    #step-3 .step-content {
+        padding: 20px;
+    }
+    #step-3 .result-options {
+        margin: 12px 0;
+        padding: 14px;
+    }
+    #step-3 .result-card {
+        padding: 14px;
+        margin: 12px 0;
+    }
+    #step-3 .result-details-toggle {
+        margin: 12px 0;
+    }
+    #step-3 .arretees-check-card {
+        margin: 20px 0;
+        padding: 14px;
+    }
+    #step-3 .step-actions .book-btn {
+        width: 100%;
+        max-width: none;
     }
 }
 
@@ -2793,6 +2916,35 @@ body {
 
     .classification-manual {
         gap: 15px;
+    }
+
+    /* Étape 4 : très petit écran – marges au minimum comme les autres pages */
+    #step-4 .step-content {
+        padding: 16px;
+    }
+    #step-4 .arretees-base-info,
+    #step-4 .salary-curve-container {
+        padding: 12px;
+    }
+    #step-4 .curve-chart-wrapper {
+        height: 260px;
+    }
+    #step-4 .floating-input-block {
+        padding: 12px;
+    }
+
+    /* Étape 3 : mêmes règles que la page 4 en très petit écran */
+    #step-3 .step-content {
+        padding: 16px;
+    }
+    #step-3 .result-options {
+        padding: 12px 0;
+    }
+    #step-3 .result-card {
+        padding: 12px;
+    }
+    #step-3 .arretees-check-card {
+        padding: 12px;
     }
 }
 

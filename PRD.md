@@ -542,6 +542,7 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
   * **Labels Carrousel :** Textes synthétiques courts.
   * **Hint :** Description complète du degré sélectionné.
   * **Tooltips (?) :** Définition globale du critère.
+  * **Acronymes :** Chaque acronyme est défini **une seule fois**, à sa **première apparition** dans l'application (forme complète puis acronyme entre parenthèses, ex. « Convention collective nationale (CCN) »). Toutes les occurrences suivantes utilisent le seul acronyme. Exemples : CCN, CCNM, SMH, PDF.
 
 #### C. Structure des Données (`CONFIG`)
 

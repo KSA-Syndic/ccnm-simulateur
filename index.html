@@ -18,7 +18,7 @@
             <h1>🏭 Simulateur Métallurgie 2024</h1>
             <p class="subtitle">
                 Classification et Rémunération
-                <span class="header-info tooltip-trigger__light" data-tippy-content="Estimez votre classification et vérifiez vos minima salariaux, selon la &lt;strong&gt;Convention Collective Métallurgie 2024&lt;/strong&gt; et l'&lt;strong&gt;Accord Kuhn&lt;/strong&gt;.&lt;br&gt;📋 &lt;a href='https://cfdt-kuhn.fr/droits/convention-collective-metallurgie/' target='_blank'&gt;Voir méthodologie et convention PDF&lt;/a&gt;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+                <span class="header-info tooltip-trigger__light" data-tippy-content="Estimez votre classification et vérifiez vos minima salariaux, selon la &lt;strong&gt;Convention Collective Métallurgie 2024&lt;/strong&gt; et l'&lt;strong&gt;Accord Kuhn&lt;/strong&gt;.&lt;br&gt;📋 &lt;a href='https://cfdt-kuhn.fr/droits/convention-collective-metallurgie/' target='_blank'&gt;Voir méthodologie et convention (PDF, format de document portable)&lt;/a&gt;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
             </p>
         </header>
 
@@ -173,7 +173,7 @@
                 <div class="form-group">
                     <label for="anciennete">
                         Ancienneté dans l'entreprise
-                        <span class="tooltip-trigger" data-tippy-content="Prime d'ancienneté : CCN dès 3 ans (non-cadres), Kuhn dès 2 ans (tous).">?</span>
+                        <span class="tooltip-trigger" data-tippy-content="Prime d'ancienneté : Convention collective nationale (CCN) dès 3 ans (non-cadres), Kuhn dès 2 ans (tous).">?</span>
                     </label>
                     <div class="input-with-unit">
                         <input type="number" id="anciennete" class="book-input" min="0" max="50" value="0">
@@ -288,7 +288,7 @@
         <section class="wizard-step hidden" id="step-3">
             <div class="step-content">
                 <h2>Votre rémunération</h2>
-                <p class="step-subtitle">Total annuel brut (SMH + primes et majorations)</p>
+                <p class="step-subtitle">Total annuel brut (salaire minimum hiérarchique (SMH) + primes et majorations)</p>
 
                 <!-- Options de calcul -->
                 <div class="result-options">
@@ -452,11 +452,11 @@
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="arretees-smh-seul" class="book-checkbox" checked>
                                     <span>Calculer les arriérés sur le SMH seul</span>
-                                    <span 
+                                    <span
                                         class="tooltip-trigger"
                                         data-tippy-content="Si coché : salaire dû = assiette SMH (base + majorations forfaits).<br>
-                                                            Inclus : forfaits heures/jours, 13e mois, heures sup.<br>
-                                                            Exclus : primes ancienneté/vacances, majorations pénibilité, nuit/dimanche/équipe.<br>
+                                                            <strong>Inclus :</strong> <br>• forfaits heures/jours, <br>• 13e mois, <br>• heures sup.<br>
+                                                            <strong>Exclus :</strong> <br>• primes ancienneté/vacances, <br>• majorations pénibilité, <br>• nuit/dimanche/équipe.<br>
                                                             Décochez pour comparer à la rémunération complète."
                                     >?</span>
                                 </label>
