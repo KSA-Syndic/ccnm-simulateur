@@ -207,6 +207,8 @@ Le 13e mois est une **modalité de versement**, pas un élément de rémunérati
 
 #### 3.4.1. Assiette SMH – Ce qui est inclus ou exclu
 
+**Convention de référence :** Convention collective nationale de la métallurgie (IDCC 3248), dispositions relatives aux salaires minima hiérarchiques et à leur assiette.
+
 **INCLUS dans l'assiette SMH :**
 * Base SMH (ou barème débutants F11/F12 si &lt; 6 ans)
 * **Majorations forfaits cadres** (heures +15 %, jours +30 %) : elles font partie du SMH
@@ -343,7 +345,7 @@ Le formulaire demande :
 * **Date de changement de classification** : Optionnelle, si la classification a changé
 * **Rupture de contrat** : Checkbox avec date de rupture si applicable
 * **Accord écrit** : Checkbox indiquant si un accord écrit existe avec l'employeur sur la classification
-* **Calculer les arriérés sur le SMH seul** : Option (cochée par défaut). Si coché, le salaire dû = assiette SMH : base + forfait cadres (les majorations forfaits font partie du SMH), sans prime de vacances, prime d'ancienneté, majorations nuit/dimanche/équipe, majorations pénibilité. Les majorations heures sup sont incluses dans l'assiette SMH ; les majorations pénibilité en sont exclues (voir § 3.4.1). **Le 13e mois fait partie du SMH**. L'utilisateur doit saisir les salaires mensuels bruts **hors primes** ; un avertissement et un tooltip le rappellent.
+* **Calculer les arriérés sur le SMH seul** : Option (cochée par défaut) pour l'affichage et le calcul à l'écran. Si coché, le salaire dû = assiette SMH : base + forfait cadres (les majorations forfaits font partie du SMH), sans prime de vacances, prime d'ancienneté, majorations nuit/dimanche/équipe, majorations pénibilité. Les majorations heures sup sont incluses dans l'assiette SMH ; les majorations pénibilité en sont exclues (voir § 3.4.1). **Le 13e mois fait partie du SMH**. L'utilisateur doit saisir les salaires mensuels bruts **hors primes** ; un avertissement et un tooltip le rappellent. **Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, le rapport PDF est toujours généré sur la base du SMH** (option forcée, voir § 3.9.5).
 
 ##### 3.9.3. Frise Chronologique Interactive
 
@@ -410,6 +412,13 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 
 ##### 3.9.5. Génération du Rapport PDF
 
+**Règle : PDF uniquement sur la base du SMH**
+* **Conformément à la convention collective nationale de la métallurgie (IDCC 3248), dispositions relatives aux salaires minima hiérarchiques et à leur assiette**, le rapport PDF est **toujours** établi sur la base du SMH (assiette conventionnelle hors primes).
+* L'option « SMH seul » est **forcée** pour la génération du PDF : les données sont recalculées en mode SMH seul avant ouverture du modal, quel que soit l'état de la case « Calculer les arriérés sur le SMH seul » à l'écran.
+* L'utilisateur est **prévenu** :
+  * Par un **toast** à l'ouverture du modal : « Le rapport PDF est établi uniquement sur la base du SMH (assiette hors primes). »
+  * Par une **notice visible dans le modal** (avant les champs) : « Le rapport PDF est établi uniquement sur la base du SMH (assiette conventionnelle hors primes). L'option « SMH seul » est appliquée automatiquement pour la génération. »
+
 **Contenu exhaustif du PDF :**
 
 **Section 1 : Informations du contrat**
@@ -437,6 +446,19 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 * Prescription : Article L.3245-1 du Code du travail (3 ans par échéance)
 * Convention Collective : Limitation aux arriérés postérieurs au 1er janvier 2024
 * Points favorables : Accord écrit, changement de classification documenté (si applicable)
+
+**Section 5 : Méthodologie de calcul** (résumé)
+* **Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette**, le rapport PDF est **toujours** établi sur la base du SMH (option « SMH seul » forcée).
+* SMH de base, majoration forfait, répartition 12/13 mois (13e mois en novembre si accord Kuhn). Accord Kuhn : prime ancienneté, prime vacances, 13e mois — mentionnés pour contexte, mais **le salaire dû retenu dans le PDF = assiette SMH uniquement** (base + forfait, hors primes). L'ancienneté n'affecte pas l'assiette SMH.
+* Calcul rétrospectif mois par mois : pour chaque mois, le salaire dû = assiette SMH ; comparé au salaire perçu (hors primes). Sources et références : CCN Métallurgie (IDCC 3248), SMH et assiette ; Code du travail art. L.3245-1 ; Accord Kuhn si pertinent.
+
+**Section 6 : Méthodes de calcul détaillées**
+* **Principe** : Conformément à la convention collective nationale de la métallurgie (IDCC 3248), dispositions relatives aux salaires minima hiérarchiques et à leur assiette, ce rapport est établi uniquement sur la base du SMH (assiette conventionnelle hors primes). Pour chaque mois, le salaire dû = assiette SMH (base + majorations forfait), comparé au salaire perçu (hors primes). L'assiette SMH **ne dépend pas de l'ancienneté**.
+* **Période** : Date de début (embauche / changement de classification / 01/01/2024 / prescription 3 ans), date de fin (rupture ou aujourd'hui).
+* **Calcul du salaire mensuel dû** : Le salaire dû retenu dans ce rapport = assiette SMH uniquement (base + forfait ; inclus : base, forfaits cadres, 13e mois ; exclus : primes ancienneté, prime vacances, majorations pénibilité/nuit/dimanche/équipe). Répartition 12 ou 13 mois (13e mois en novembre si Kuhn).
+* **Formule** : `Arriérés(mois) = max(0 ; Salaire mensuel dû(mois) − Salaire mensuel perçu(mois))` ; total = somme sur tous les mois. Le texte de la formule est découpé en largeur (`splitTextToSize`) pour ne pas dépasser la marge du PDF.
+* **Base de calcul du rapport : assiette SMH** : Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives à l'assiette SMH (inclus / exclus). Ce rapport retient uniquement l'assiette SMH comme salaire dû. Les salaires saisis pour la comparaison sont les salaires mensuels bruts hors primes.
+* **Références** : Convention collective nationale de la métallurgie (IDCC 3248), dispositions relatives aux salaires minima hiérarchiques et à leur assiette ; Code du travail, art. L.3245-1 ; Accord Kuhn si pertinent.
 
 **Formatage et lisibilité :**
 * **Formatage des nombres** : Utilisation de `formatMoneyPDF()` qui utilise des espaces comme séparateurs de milliers (conforme aux standards français)
@@ -516,19 +538,19 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 
 * **Langages :** HTML5, CSS3, JavaScript (ES6+).
 * **Dépendances Externes :**
-  * `Popper.js` (Core positionnement).
-  * `Tippy.js` (Gestion des tooltips).
+* `Popper.js` (Core positionnement).
+* `Tippy.js` (Gestion des tooltips).
   * `Chart.js` (Graphiques d'évolution).
   * `jsPDF` (Génération de rapports PDF).
-  * *Aucun framework lourd (React/Vue) pour garantir la portabilité.*
+* *Aucun framework lourd (React/Vue) pour garantir la portabilité.*
 * **APIs Externes :**
   * API Banque Mondiale (données inflation France) - avec fallback local INSEE
 
 #### B. Interface Utilisateur (UI)
 
 * **Intégration Thème :**
-  * Utilisation des variables CSS natives : `var(--color-link)`, `var(--body-background)`, `var(--gray-200)`.
-  * Composants natifs : Boutons `.book-btn`, Alertes `.book-hint`.
+* Utilisation des variables CSS natives : `var(--color-link)`, `var(--body-background)`, `var(--gray-200)`.
+* Composants natifs : Boutons `.book-btn`, Alertes `.book-hint`.
 
 * **Le Composant "Carrousel" (Tambour horizontal) :**
   * Affichage horizontal des options (1 à 10) avec labels synthétiques.
@@ -538,10 +560,10 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
   * **Description complète :** Affichée sous le carrousel (hint).
 
 * **Gestion des Contenus (Textes) :**
-  * **Titres :** Vulgarisés (ex: "Autonomie").
+* **Titres :** Vulgarisés (ex: "Autonomie").
   * **Labels Carrousel :** Textes synthétiques courts.
   * **Hint :** Description complète du degré sélectionné.
-  * **Tooltips (?) :** Définition globale du critère.
+* **Tooltips (?) :** Définition globale du critère.
   * **Acronymes :** Chaque acronyme est défini **une seule fois**, à sa **première apparition** dans l'application (forme complète puis acronyme entre parenthèses, ex. « Convention collective nationale (CCN) »). Toutes les occurrences suivantes utilisent le seul acronyme. Exemples : CCN, CCNM, SMH, PDF.
 
 #### C. Structure des Données (`CONFIG`)
@@ -658,6 +680,7 @@ Le code est organisé en modules fonctionnels :
 36. **Calcul sans arriérés :** Tous les salaires saisis ≥ SMH mensuel → Message "aucun arriéré"
 37. **Calcul avec arriérés :** Salaires inférieurs au SMH → Calcul mois par mois des différences
 37bis. **Option « SMH seul » :** Si cochée, salaire dû = assiette SMH (base + forfaits ; forfaits et heures sup inclus, pénibilité et primes ancienneté exclues) avec répartition 12/13 mois ; le 13e mois fait partie du SMH. Saisie utilisateur = brut hors primes ; avertissement et tooltip le rappellent
+37ter. **PDF uniquement sur SMH :** Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, le rapport PDF est toujours généré sur la base du SMH (assiette hors primes). L'option « SMH seul » est forcée à l'ouverture du modal PDF ; toast et notice dans le modal préviennent l'utilisateur.
 38. **Prescription 3 ans :** Date embauche 2015, aujourd'hui 2025 → Période limitée à 3 ans (2022-2025) ou CCNM (2024-2025) si plus récent
 39. **CCNM 2024 :** Date embauche 2020 → Période commence au 01/01/2024 (pas avant)
 40. **Changement classification :** Date changement après embauche → Période commence à la date de changement
@@ -742,7 +765,7 @@ Le code est organisé en modules fonctionnels :
 
 **Références légales :**
 * **Prescription :** Article L.3245-1 du Code du travail - 3 ans à compter de chaque échéance
-* **CCNM 2024 :** Entrée en vigueur le 1er janvier 2024
+* **CCNM 2024 (IDCC 3248) :** Entrée en vigueur le 1er janvier 2024 ; dispositions relatives aux salaires minima hiérarchiques et à leur assiette (inclus / exclus, voir § 3.4.1)
 * **Maintien de salaire :** Article L.2261-22 - Obligation de maintien si nouvelle classification fait baisser la rémunération
 
 **Conditions de réclamation :**

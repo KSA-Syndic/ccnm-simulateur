@@ -989,6 +989,16 @@ body {
     color: var(--gray-600);
 }
 
+.modal .pdf-smh-only-notice {
+    margin: 0 0 16px 0;
+    padding: 10px 12px;
+    font-size: 0.88rem;
+    background: var(--gray-100);
+    border-left: 4px solid var(--primary);
+    border-radius: 4px;
+    color: var(--body-font-color);
+}
+
 .modal .form-group {
     margin-bottom: 20px;
 }

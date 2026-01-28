@@ -48,6 +48,9 @@ const state = {
     nbMois: 12                   // Répartition mensuelle (12 ou 13 mois)
 };
 
+/** Source de vérité unique pour les données PDF arriérés (étape 4). Remplit uniquement par calculerArreteesFinal / afficherResultatsArreteesFinal, vidé par invalidateArreteesDataFinal. */
+let arreteesPdfStore = null;
+
 /**
  * ============================================
  * INITIALISATION
@@ -395,14 +398,14 @@ function navigateToStep(stepNumber) {
     } else if (stepNumber === 4) {
         const legalSec = document.getElementById('legal-instructions');
         if (legalSec) {
-            if (window.arreteesDataFinal) {
+            if (arreteesPdfStore ?? window.arreteesDataFinal) {
                 legalSec.classList.remove('hidden');
                 afficherInstructionsJuridiques();
             } else {
                 legalSec.classList.add('hidden');
             }
         }
-        if (!window.arreteesDataFinal) {
+        if (!arreteesPdfStore && !window.arreteesDataFinal) {
             initTimeline();
         }
     }
@@ -2457,8 +2460,9 @@ function updateArreteesUiFromDateEmbauche() {
     const val = (input.value || '').trim();
     const isValid = val && input.validity && input.validity.valid;
     if (isValid) {
+        const prevVal = state.dateEmbaucheArretees;
         state.dateEmbaucheArretees = val;
-        invalidateArreteesDataFinal();
+        if (prevVal !== val) invalidateArreteesDataFinal();
         container.classList.remove('hidden');
         if (stickyWrap) stickyWrap.classList.remove('hidden');
         if (warning) warning.classList.add('hidden');
@@ -2500,11 +2504,12 @@ function initArreteesNew() {
     const dateChangementInput = document.getElementById('date-changement-classification-arretees');
     if (dateChangementInput) {
         dateChangementInput.addEventListener('change', () => {
+            const prev = state.dateChangementClassificationArretees;
             state.dateChangementClassificationArretees = dateChangementInput.value;
-            if (dateChangementInput.value) {
+            if (dateChangementInput.value && prev !== dateChangementInput.value) {
                 invalidateArreteesDataFinal();
-                initTimeline();
             }
+            if (dateChangementInput.value) initTimeline();
         });
     }
 
@@ -2527,8 +2532,9 @@ function initArreteesNew() {
             }
             if (dateRuptureInput && ruptureCheckbox.checked) {
                 dateRuptureInput.addEventListener('change', () => {
+                    const prev = state.dateRuptureArretees;
                     state.dateRuptureArretees = dateRuptureInput.value;
-                    invalidateArreteesDataFinal();
+                    if (prev !== dateRuptureInput.value) invalidateArreteesDataFinal();
                     initTimeline();
                 });
             }
@@ -3039,6 +3045,11 @@ function updateCurveControls(options) {
         floatingInfoIcon.setAttribute('data-tippy-content', 'Salaire mensuel brut :' + tooltipSMHSeul);
     }
 
+    const saisis = periodsData.filter(p => p.salaireReel).length;
+    if (progressEl) {
+        progressEl.textContent = `${saisis} / ${periodsData.length} mois saisis`;
+    }
+    
     // Afficher le bloc au centre sauf si « dernière date, tout saisi » et l'utilisateur l'a fermé (évite réouverture en boucle)
     const allFilled = !periodsData.some(p => !p.salaireReel);
     const isLastIndex = currentPeriodIndex === periodsData.length - 1;
@@ -3051,10 +3062,6 @@ function updateCurveControls(options) {
         }
     }
 
-    const saisis = periodsData.filter(p => p.salaireReel).length;
-    if (progressEl) {
-        progressEl.textContent = `${saisis} / ${periodsData.length} mois saisis`;
-    }
 }
 
 /**
@@ -3435,7 +3442,7 @@ function calculerArreteesFinal() {
         const dateEmbaucheInput = document.getElementById('date-embauche-arretees')?.value;
         const dateChangementInput = document.getElementById('date-changement-classification-arretees')?.value;
         const dateRuptureInput = document.getElementById('date-rupture-arretees')?.value;
-        window.arreteesDataFinal = {
+        const pdfData = {
             salaireDu,
             totalArretees: 0,
             detailsArretees: [],
@@ -3451,6 +3458,8 @@ function calculerArreteesFinal() {
             dateChangementClassification: dateChangementInput,
             dateRuptureInput: dateRuptureInput
         };
+        arreteesPdfStore = pdfData;
+        window.arreteesDataFinal = pdfData;
         return;
     }
 
@@ -3485,6 +3494,23 @@ function calculerArreteesFinal() {
 function afficherResultatsArreteesFinal(data) {
     const resultsDiv = document.getElementById('arretees-results');
     if (!resultsDiv) return;
+
+    // Stocker les données pour le PDF en premier (avant tout early return)
+    const dateEmbaucheInput = document.getElementById('date-embauche-arretees')?.value;
+    const dateChangementInput = document.getElementById('date-changement-classification-arretees')?.value;
+    const dateRuptureInput = document.getElementById('date-rupture-arretees')?.value;
+    const pdfData = {
+        ...data,
+        salairesParMois: state.salairesParMois,
+        accordEcrit: state.accordEcritArretees,
+        ruptureContrat: state.ruptureContratArretees,
+        dateRupture: state.dateRuptureArretees,
+        dateEmbauche: dateEmbaucheInput,
+        dateChangementClassification: dateChangementInput,
+        dateRuptureInput: dateRuptureInput
+    };
+    arreteesPdfStore = pdfData;
+    window.arreteesDataFinal = pdfData;
 
     resultsDiv.classList.remove('hidden');
     const btnPdf = document.getElementById('btn-generer-pdf-arretees');
@@ -3593,35 +3619,20 @@ function afficherResultatsArreteesFinal(data) {
     }
 
     // Instructions juridiques (affichées seulement après la saisie complète)
-    // Ne pas appeler ici, sera appelé quand tous les salaires sont saisis
-
-    // Stocker les données pour le PDF (avec toutes les infos de contrat)
-    const dateEmbaucheInput = document.getElementById('date-embauche-arretees')?.value;
-    const dateChangementInput = document.getElementById('date-changement-classification-arretees')?.value;
-    const dateRuptureInput = document.getElementById('date-rupture-arretees')?.value;
-    
-    window.arreteesDataFinal = {
-        ...data,
-        salairesParMois: state.salairesParMois,
-        accordEcrit: state.accordEcritArretees,
-        ruptureContrat: state.ruptureContratArretees,
-        dateRupture: state.dateRuptureArretees,
-        dateEmbauche: dateEmbaucheInput,
-        dateChangementClassification: dateChangementInput,
-        dateRuptureInput: dateRuptureInput
-    };
+    // Données PDF déjà stockées en tête de fonction (évite tout early return sans store)
 }
 
 /**
  * Validation centralisée des données arriérés pour le PDF.
+ * Lit la source de vérité (arreteesPdfStore) puis window.arreteesDataFinal en repli.
  * Accepte à la fois le cas « conforme » (detailsArretees: []) et « avec arriérés ».
  * @returns {{ valid: boolean, error?: string, data?: object }}
  */
 function getArreteesDataForPdf() {
-    if (!window.arreteesDataFinal) {
+    const d = arreteesPdfStore ?? window.arreteesDataFinal;
+    if (!d) {
         return { valid: false, error: 'Veuillez d\'abord calculer les arriérés.' };
     }
-    const d = window.arreteesDataFinal;
     if (!d || typeof d !== 'object') {
         return { valid: false, error: 'Données invalides. Recalculez les arriérés.' };
     }
@@ -3641,11 +3652,26 @@ function getArreteesDataForPdf() {
  * Stocke les données déjà validées sur l’overlay pour que la génération ne dépende pas de window.arreteesDataFinal au moment du clic.
  */
 function openPdfInfosModal() {
-    const result = getArreteesDataForPdf();
+    const savedSmh = state.arretesSurSMHSeul;
+    state.arretesSurSMHSeul = true;
+    calculerArreteesFinal();
+    let result = getArreteesDataForPdf();
     if (!result.valid) {
-        showToast('⚠️ ' + result.error, 'warning', 3000);
-        return;
+        const step4 = document.getElementById('step-4');
+        const hasDate = !!document.getElementById('date-embauche-arretees')?.value;
+        const hasSalaries = Object.keys(state.salairesParMois || {}).length > 0;
+        if (step4?.classList.contains('active') && hasDate && hasSalaries) {
+            result = getArreteesDataForPdf();
+        }
+        if (!result.valid) {
+            state.arretesSurSMHSeul = savedSmh;
+            calculerArreteesFinal();
+            showToast('⚠️ ' + result.error, 'warning', 3000);
+            return;
+        }
     }
+    state.arretesSurSMHSeul = savedSmh;
+    calculerArreteesFinal();
 
     let overlay = document.getElementById('pdf-infos-modal-overlay');
     if (!overlay) {
@@ -3656,6 +3682,7 @@ function openPdfInfosModal() {
             <div class="modal pdf-infos-modal" onclick="event.stopPropagation()">
                 <h3>Informations pour le dossier</h3>
                 <p class="modal-subtitle">Ces informations seront incluses dans le rapport PDF. Tous les champs sont facultatifs.</p>
+                <p class="pdf-smh-only-notice"><strong>Le rapport PDF est établi uniquement sur la base du SMH</strong> (assiette conventionnelle hors primes). L'option « SMH seul » est appliquée automatiquement pour la génération.</p>
                 <div class="form-group">
                     <label for="pdf-infos-nom">Nom et prénom</label>
                     <input type="text" id="pdf-infos-nom" class="book-input" placeholder="Ex. Dupont Jean">
@@ -3708,6 +3735,7 @@ function openPdfInfosModal() {
         });
     }
     overlay._pdfData = result.data;
+    showToast('Le rapport PDF est établi uniquement sur la base du SMH (assiette hors primes).', 'info', 4000);
     overlay.classList.add('visible');
 }
 
@@ -3718,6 +3746,7 @@ function openPdfInfosModal() {
  */
 function genererPDFArreteesFinal(infosPersonnelles, dataPrevalide) {
     let data = dataPrevalide;
+    const forceSmhSeul = !!dataPrevalide;
     if (!data) {
         const result = getArreteesDataForPdf();
         if (!result.valid) {
@@ -3979,27 +4008,14 @@ function genererPDFArreteesFinal(infosPersonnelles, dataPrevalide) {
     doc.text(`   SMH base : ${formatMoneyPDF(CONFIG.SMH[classificationMethode.classe])} (annuel brut)`, margin + 5, yPos);
     yPos += 8;
     
-    if (state.accordKuhn) {
-        doc.setFont(undefined, 'bold');
-        doc.text('2. Accord d\'entreprise Kuhn appliqué', margin + 5, yPos);
-        yPos += 6;
-        doc.setFont(undefined, 'normal');
-        doc.text('   Les règles spécifiques de l\'accord Kuhn sont prises en compte :', margin + 5, yPos);
-        yPos += 6;
-        if (!isCadre || state.anciennete >= 2) {
-            doc.text('   • Prime d\'ancienneté : appliquée dès 2 ans (taux selon barème Kuhn)', margin + 5, yPos);
-            yPos += 6;
-        }
-        if (state.primeVacances) {
-            doc.text('   • Prime de vacances : 525 € (versée en juillet)', margin + 5, yPos);
-            yPos += 6;
-        }
-        if (state.nbMois === 13) {
-            doc.text('   • 13e mois : répartition sur 13 mois (versé en novembre)', margin + 5, yPos);
-            yPos += 6;
-        }
-        yPos += 4;
-    }
+    // Ce rapport est toujours établi sur la base du SMH seul : ne pas afficher « Accord Kuhn » (primes, etc.) comme partie du salaire dû
+    doc.setFont(undefined, 'bold');
+    doc.text('2. Base de calcul du présent rapport : assiette SMH uniquement', margin + 5, yPos);
+    yPos += 6;
+    doc.setFont(undefined, 'normal');
+    const lignesS5Base = doc.splitTextToSize('   Conformément à la CCN Métallurgie (IDCC 3248), seul l\'assiette SMH (base + forfait cadres le cas échéant) est retenue comme salaire dû. Les primes (ancienneté, vacances, etc.) et les majorations pénibilité/nuit/dimanche/équipe ne font pas partie du salaire dû du présent rapport.', pageWidth - margin - margin - 10);
+    lignesS5Base.forEach(l => { doc.text(l, margin + 5, yPos); yPos += 5; });
+    yPos += 4;
     
     if (isCadre && state.forfait !== 'aucun') {
         doc.setFont(undefined, 'bold');
@@ -4015,13 +4031,15 @@ function genererPDFArreteesFinal(infosPersonnelles, dataPrevalide) {
     doc.text('4. Calcul rétrospectif mois par mois', margin + 5, yPos);
     yPos += 6;
     doc.setFont(undefined, 'normal');
+    const largeurS5 = pageWidth - margin - margin - 10;
+    const lignesS5CCN = doc.splitTextToSize('   Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, ce rapport est établi uniquement sur la base du SMH (assiette hors primes).', largeurS5);
+    lignesS5CCN.forEach(l => { doc.text(l, margin + 5, yPos); yPos += 5; });
+    yPos += 2;
     doc.text('   Pour chaque mois de la période concernée :', margin + 5, yPos);
     yPos += 6;
-    doc.text('   • L\'ancienneté est calculée progressivement depuis la date d\'embauche', margin + 5, yPos);
+    doc.text('   • Le salaire dû = assiette SMH (base + majorations forfait) ; l\'ancienneté n\'affecte pas le SMH', margin + 5, yPos);
     yPos += 6;
-    doc.text('   • Le SMH dû est recalculé avec cette ancienneté et tous les paramètres', margin + 5, yPos);
-    yPos += 6;
-    doc.text('   • Le salaire mensuel dû est comparé au salaire mensuel réel perçu', margin + 5, yPos);
+    doc.text('   • Le salaire mensuel dû est comparé au salaire mensuel réel perçu (hors primes)', margin + 5, yPos);
     yPos += 6;
     doc.text('   • La différence positive constitue les arriérés pour ce mois', margin + 5, yPos);
     yPos += 8;
@@ -4030,7 +4048,7 @@ function genererPDFArreteesFinal(infosPersonnelles, dataPrevalide) {
     doc.text('5. Sources et références', margin + 5, yPos);
     yPos += 6;
     doc.setFont(undefined, 'normal');
-    doc.text('   • Convention Collective Nationale de la Métallurgie 2024', margin + 5, yPos);
+    doc.text('   • Convention collective nationale de la métallurgie (IDCC 3248), SMH et assiette', margin + 5, yPos);
     yPos += 6;
     doc.text('   • Code du travail français (Art. L.3245-1 pour la prescription)', margin + 5, yPos);
     yPos += 6;
@@ -4039,7 +4057,102 @@ function genererPDFArreteesFinal(infosPersonnelles, dataPrevalide) {
         yPos += 6;
     }
     doc.text('   • Valeur du point territorial : Bas-Rhin (5,90 €)', margin + 5, yPos);
-    yPos += 10;
+    yPos += 12;
+
+    checkPageBreak(120);
+
+    // Section 6 : Méthodes de calcul détaillées
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('6. Méthodes de calcul détaillées', margin, yPos);
+    yPos += 8;
+
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    const margeTexte = margin + 5;
+    const largeurTexte = pageWidth - margin - margin - 10;
+
+    const lignesPrincipe = doc.splitTextToSize(
+        'Conformément à la convention collective nationale de la métallurgie (IDCC 3248), dispositions relatives aux salaires minima hiérarchiques et à leur assiette, ce rapport est établi uniquement sur la base du SMH (assiette conventionnelle hors primes). Pour chaque mois, le salaire dû = assiette SMH (base + majorations forfait), comparé au salaire perçu (hors primes). La différence positive constitue les arriérés du mois ; le total est la somme sur tous les mois. L\'assiette SMH ne dépend pas de l\'ancienneté.',
+        largeurTexte
+    );
+    lignesPrincipe.forEach(l => { doc.text(l, margeTexte, yPos); yPos += 5; });
+    yPos += 4;
+
+    doc.setFont(undefined, 'bold');
+    doc.text('Période prise en compte', margeTexte, yPos);
+    yPos += 6;
+    doc.setFont(undefined, 'normal');
+    const lignesPeriode = doc.splitTextToSize(
+        '• Date de début = le plus récent parmi : date d\'embauche, date de changement de classification, 1er janvier 2024 (entrée en vigueur CCN Métallurgie 2024), date de prescription (3 ans avant aujourd\'hui, art. L.3245-1 Code du travail).',
+        largeurTexte
+    );
+    lignesPeriode.forEach(l => { doc.text(l, margeTexte, yPos); yPos += 5; });
+    doc.text('• Date de fin = date de rupture du contrat ou date du jour si le contrat est en cours.', margeTexte, yPos);
+    yPos += 8;
+
+    doc.setFont(undefined, 'bold');
+    doc.text('Calcul du salaire mensuel dû (par mois)', margeTexte, yPos);
+    yPos += 6;
+    doc.setFont(undefined, 'normal');
+    const lignesAssiette = doc.splitTextToSize(
+        'Le salaire dû retenu dans ce rapport est l\'assiette SMH uniquement : base + majorations forfait (heures +15 %, jours +30 % si cadre). L\'ancienneté n\'affecte pas l\'assiette SMH. Il est déterminé selon la classification, le barème débutants (F11/F12 si applicable), puis converti en mensuel :',
+        largeurTexte
+    );
+    lignesAssiette.forEach(l => { doc.text(l, margeTexte, yPos); yPos += 5; });
+    yPos += 6;
+    if (state.nbMois === 13 && state.accordKuhn) {
+        doc.text('• Répartition sur 13 mois (accord Kuhn) : SMH annuel / 13 ; mois de novembre : (SMH annuel / 13) × 2.', margeTexte, yPos);
+        yPos += 5;
+        if (!forceSmhSeul && state.primeVacances) {
+            doc.text('• Prime de vacances (525 €) ajoutée au mois de juillet si accord Kuhn + prime vacances cochés.', margeTexte, yPos);
+            yPos += 5;
+        }
+    } else {
+        doc.text('• Répartition sur 12 mois : SMH annuel / 12.', margeTexte, yPos);
+        yPos += 5;
+    }
+    yPos += 4;
+
+    doc.setFont(undefined, 'bold');
+    doc.text('Formule des arriérés (par mois)', margeTexte, yPos);
+    yPos += 6;
+    doc.setFont(undefined, 'normal');
+    const formuleArretees = 'Arriérés(mois) = max(0 ; Salaire mensuel dû(mois) − Salaire mensuel perçu(mois))';
+    const lignesFormule = doc.splitTextToSize(formuleArretees, largeurTexte);
+    lignesFormule.forEach(l => { doc.text(l, margeTexte, yPos); yPos += 5; });
+    const lignesTotal = doc.splitTextToSize('Total des arriérés = somme des Arriérés(mois) pour tous les mois de la période.', largeurTexte);
+    lignesTotal.forEach(l => { doc.text(l, margeTexte, yPos); yPos += 5; });
+    yPos += 4;
+
+    const smhSeul = forceSmhSeul || state.arretesSurSMHSeul === true || (typeof state.arretesSurSMHSeul !== 'undefined' && state.arretesSurSMHSeul);
+    if (smhSeul) {
+        doc.setFont(undefined, 'bold');
+        doc.text('Base de calcul du rapport : assiette SMH', margeTexte, yPos);
+        yPos += 6;
+        doc.setFont(undefined, 'normal');
+        const lignesSMH = doc.splitTextToSize(
+            'Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives à l\'assiette SMH (inclus : base, forfaits cadres, 13e mois ; exclus : primes ancienneté, prime vacances, majorations pénibilité/nuit/dimanche/équipe), ce rapport retient uniquement l\'assiette SMH comme salaire dû : base + majorations forfait (heures/jours). Les salaires saisis pour la comparaison sont les salaires mensuels bruts hors primes.',
+            largeurTexte
+        );
+        lignesSMH.forEach(l => { doc.text(l, margeTexte, yPos); yPos += 5; });
+        yPos += 4;
+    }
+
+    doc.setFont(undefined, 'bold');
+    doc.text('Références', margeTexte, yPos);
+    yPos += 6;
+    doc.setFont(undefined, 'normal');
+    doc.text('• Convention collective nationale de la métallurgie (IDCC 3248), dispositions relatives aux salaires minima hiérarchiques et à leur assiette.', margeTexte, yPos);
+    yPos += 5;
+    doc.text('• Code du travail, art. L.3245-1 : prescription de 3 ans à compter de chaque échéance de paiement.', margeTexte, yPos);
+    yPos += 5;
+    if (state.accordKuhn) {
+        doc.text('• Accord d\'entreprise Kuhn : prime d\'ancienneté dès 2 ans, prime vacances, 13e mois, modalités spécifiques.', margeTexte, yPos);
+        yPos += 5;
+    }
+    doc.text('• Outil indicatif ; pour toute action juridique, consultez un avocat ou votre syndicat.', margeTexte, yPos);
+    yPos += 12;
 
     checkPageBreak(60);
 
