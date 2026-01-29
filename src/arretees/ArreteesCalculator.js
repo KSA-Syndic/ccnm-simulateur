@@ -8,9 +8,7 @@
  */
 
 import { calculateAnnualRemuneration, getMontantAnnuelSMHSeul } from '../remuneration/RemunerationCalculator.js';
-import { getActiveAgreement } from '../agreements/AgreementLoader.js';
-import { state } from '../core/state.js';
-import { CONSTANTS } from '../core/constants.js';
+import { getMontantPrimesFixesAnnuel, getMontantPrimesVerseesCeMois } from '../remuneration/PrimesFixesHelper.js';
 
 /**
  * Calculer le salaire dû pour un mois donné avec tous les paramètres
@@ -107,15 +105,9 @@ export function calculerArreteesMoisParMois(params) {
                     salaireMensuelDu = salaireAnnuelDuMois / 12;
                 }
             } else {
-                // Rémunération complète : gérer prime de vacances et 13e mois
-                const primeVacancesMontant = (agreement && agreement.primes?.vacances && stateSnapshot.primeVacances)
-                    ? agreement.primes.vacances.montant
-                    : 0;
-                
-                const baseAnnuellePourRepartition = (estJuillet && primeVacancesMontant > 0)
-                    ? salaireAnnuelDuMois - primeVacancesMontant
-                    : salaireAnnuelDuMois;
-                
+                // Rémunération complète : primes à versement unique (vacances, Noël, Pâques, etc.) selon moisVersement
+                const primesFixesAnnuel = agreement ? getMontantPrimesFixesAnnuel(stateMois, agreement) : 0;
+                const baseAnnuellePourRepartition = salaireAnnuelDuMois - primesFixesAnnuel;
                 if (agreement && agreement.repartition13Mois && agreement.repartition13Mois.actif && nbMois === 13) {
                     if (estNovembre) {
                         salaireMensuelDu = (baseAnnuellePourRepartition / 13) * 2;
@@ -125,10 +117,8 @@ export function calculerArreteesMoisParMois(params) {
                 } else {
                     salaireMensuelDu = baseAnnuellePourRepartition / 12;
                 }
-                
-                if (estJuillet && primeVacancesMontant > 0) {
-                    salaireMensuelDu += primeVacancesMontant;
-                }
+                const primesCeMois = agreement ? getMontantPrimesVerseesCeMois(stateMois, agreement, month) : 0;
+                if (primesCeMois > 0) salaireMensuelDu += primesCeMois;
             }
             
             // Le salaire réel saisi est en mensuel brut

@@ -64,7 +64,7 @@ Pour ajouter un accord, nous avons besoin de :
 
 ## Exemple
 
-**Accord Kuhn** :
+**Exemple d'accord (ex. Kuhn)** :
 - Seuil ancienneté : 2 ans (au lieu de 3 ans CCN)
 - Plafond : 25 ans (au lieu de 15 ans CCN)
 - Majoration nuit : +20% (au lieu de +15% CCN)

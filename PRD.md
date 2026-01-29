@@ -9,7 +9,7 @@
 * **Sources Juridiques :**
   * **CCNM 2024 :** Convention Collective Nationale de la Métallurgie (IDCC 3248) - Entrée en vigueur 01/01/2024
   * **Code du Travail :** Art. L2254-2 (Principe de faveur)
-  * **Accord Kuhn :** Accord d'entreprise du 6 mars 2024, UES KUHN SAS/KUHN MGM SAS
+  * **Accords d'entreprise :** Définis dans le dossier `accords/` et chargés à l'exécution (voir documentation technique et `docs/AJOUTER_ACCORD.md`).
 * **Cible Technique :** Module web intégrable nativement dans un site de documentation statique (Hugo avec thème "Book") ou via iframe.
 * **Territoire cible :** Bas-Rhin (67) - valeur du point territorial configurée en conséquence.
 * **Extensibilité :** L'application supporte désormais un système générique d'accords d'entreprise, permettant d'ajouter facilement de nouveaux accords sans modifier le code de base.
@@ -82,149 +82,49 @@ Le simulateur doit gérer **3 profils distincts** avec des règles de paie radic
 ##### PROFIL A : OUVRIERS & ETAM (Non-Cadres - Cl. 1 à 10)
 
 * **Salaire Base :** SMH de la classe (Voir Annexe).
-* **Prime d'Ancienneté (Spécifique Métallurgie) :**
-  * *Condition :* Ancienneté ≥ 3 ans.
-  * *Formule 2024 :* `[[Point × Taux%] × 100] × Années` = montant **mensuel**. Annuel = mensuel × 12.
-  * *Exemple :* `[[5,90 × 2,20%] × 100] × 10 = 129,80 €/mois` soit `1 558 €/an`.
-  * *Plafond :* 15 ans.
-  * *Source :* CCNM Art. 142, Annexe 7
-  * *Contrainte UX :* Le simulateur doit demander la **"Valeur du Point (Territorial)"** (ex: 5.90€).
-  * *Principe de Faveur :* Si un accord d'entreprise prévoit une prime d'ancienneté, le système compare CCN et Accord et applique la règle la plus avantageuse (Art. L2254-2 Code du Travail).
+* **Prime d'ancienneté (CCN, non-cadres) :**
+  * *Condition :* Ancienneté ≥ 3 ans (CONFIG.ANCIENNETE.seuil).
+  * *Base de calcul :* Valeur du point territorial (pas le SMH). *Source :* CCNM Art. 142.
+  * *Formule :* Point territorial × Taux (classe) × Années = montant **mensuel** ; annuel = mensuel × 12. Taux et plafond : CONFIG.TAUX_ANCIENNETE, CONFIG.ANCIENNETE.plafond (15 ans).
+  * *Exemple :* 5,90 × 2,20 × 10 = 129,80 €/mois → 1 558 €/an (classe C5, 10 ans).
+  * *Principe de faveur :* Si un accord prévoit une prime d'ancienneté plus avantageuse, le système applique la règle la plus favorable (Art. L2254-2).
 
-* **Majorations Conditions de Travail :**
-  * **Travail de nuit (21h-6h) :** +15% (CCNM Art. 145)
-  * **Travail du dimanche :** +100% (CCNM Art. 146)
-  * *Principe de Faveur :* Si un accord prévoit des taux différents, le système applique la règle la plus avantageuse pour le salarié.
-  * Ces majorations sont calculables dans le simulateur si l'utilisateur renseigne ses heures.
+* **Majorations conditions de travail (CCNM Art. 145, 146) :** Nuit +15 %, dimanche +100 % (CONFIG.MAJORATIONS_CCN). Exclues de l'assiette SMH. Principe de faveur : si un accord prévoit des taux différents, le système applique le plus avantageux. Saisie des heures dans le simulateur pour le calcul.
 
 ##### PROFIL B : CADRES CONFIRMÉS (Cl. 11 à 18, hors débutants)
 
-* **Salaire Base :** SMH de la classe.
-* **Prime d'Ancienneté :** 0€ (Incluse dans le salaire de base des cadres - CCNM Art. 142).
-* **Majorations Forfaits (CCNM Art. 139) :**
-  * Forfait Heures (Annuel) : Majoration **+15%** (inclus dans l'assiette SMH).
-  * Forfait Jours : Majoration **+30%** (inclus dans l'assiette SMH).
-* **Source :** CCNM Art. 139 - Les majorations forfaits sont incluses dans l'assiette SMH.
-
-* **Contrôle RAG :** Vérifier que le total est supérieur au SMH + Majoration.
+* **Salaire de base :** SMH de la classe (CONFIG.SMH).
+* **Prime d'ancienneté CCN :** 0 € (incluse dans le salaire de base des cadres — CCNM Art. 142). Un accord d'entreprise peut prévoir une prime d'ancienneté pour les cadres (base = rémunération de base ; CCNM Art. 139 : majoration +30 % sur le montant de la prime si forfait jours).
+* **Majorations forfaits (CCNM Art. 139) :** Forfait heures +15 %, forfait jours +30 % — **incluses dans l'assiette SMH** (CONFIG.FORFAITS).
 
 ##### PROFIL C : CADRES DÉBUTANTS (Classes F11 et F12)
 
-* **Déclencheur :** Si Classe = 11 ou 12, demander "Expérience professionnelle".
-* **Logique :** Si expérience < 6 ans, le SMH n'est PAS le standard mais suit une grille progressive (Voir Annexe).
-* **Source :** CCNM Art. 139, Annexe 6 - Barème salariés débutants
-* **Calcul de l'expérience :** 
-  * L'alternance/apprentissage compte pour moitié (2 ans alternance = 1 an expérience)
-  * Exemple : 2 ans alternance + 3 ans CDI = 4 ans d'expérience totale
-* **Tranches d'expérience :**
-  * < 2 ans : Barème spécifique
-  * 2 à < 4 ans : Barème spécifique
-  * 4 à 6 ans : Barème spécifique
-  * ≥ 6 ans : SMH standard de la classe
-* **Note :** Le barème inclut les majorations de 5% (2 ans) ou 8% (4 ans) prévues par l'Article 139.
+* **Déclencheur :** Si classe 11 ou 12, demander l’expérience professionnelle.
+* **Logique :** Si expérience &lt; 6 ans, le SMH suit le barème débutants (CONFIG.BAREME_DEBUTANTS), pas le SMH standard de la classe.
+* **Source :** CCNM Art. 139, barème salariés débutants.
+* **Tranches :** &lt; 2 ans, 2 à &lt; 4 ans, 4 à 6 ans, ≥ 6 ans (SMH standard). L’alternance compte pour moitié.
+* **Note :** Les montants du barème intègrent déjà les majorations Art. 139 (5 % à 2 ans, 8 % à 4 ans).
 
-#### 3.3. Accord d'Entreprise Kuhn (UES KUHN SAS/KUHN MGM SAS)
+#### 3.3. Accord d'entreprise
 
-*Source : Accord du 6 mars 2024 - Se substitue aux articles 142, 143, 144, 145, 146, 153-1 de la CCN*
+Les accords d'entreprise sont **définis en dehors du PRD** (dossier `accords/`, chargés à l'exécution). Le PRD ne fixe pas les règles d'un accord particulier.
 
-**Référence juridique :** Accord d'entreprise du 6 mars 2024, UES KUHN SAS/KUHN MGM SAS
+**Comportement générique :**
+* L'utilisateur peut activer un accord d'entreprise via une **checkbox** (libellé et liste d'accords fournis par les définitions chargées).
+* Une fois un accord activé, des options supplémentaires apparaissent pour configurer les éléments de rémunération prévus par cet accord (primes, majorations, etc.).
+* **Principe de faveur (Art. L2254-2 Code du Travail) :** Le système compare les règles CCN et accord et applique la règle la plus avantageuse pour le salarié (ex. prime d'ancienneté, majorations nuit/dimanche).
+* Les primes et majorations spécifiques à l'accord (prime d'équipe, prime de vacances, etc.) sont décrites dans chaque fichier d'accord ; l'UI s'adapte dynamiquement (options conditionnelles, activation/désactivation liée à l'accord).
+* **Répartition 12/13 mois :** Si l'accord prévoit une répartition sur 13 mois (ex. 13e mois en novembre), le sélecteur « sur 12 mois » / « sur 13 mois » et les calculs (SMH mensuel, arriérés) en tiennent compte.
 
-L'utilisateur peut activer l'accord d'entreprise Kuhn via une **checkbox**. Une fois activé, des options supplémentaires apparaissent pour configurer les différents éléments de rémunération.
+**Documentation :** Pour ajouter ou modifier un accord, voir `docs/AJOUTER_ACCORD.md` et `docs/INTEGRER_ACCORD_TEXTE_ET_IA.md`. Référence du schéma : `src/agreements/AgreementInterface.js` et exemples dans `accords/`.
 
-**Principe de Faveur (Art. L2254-2 Code du Travail) :** Le système compare systématiquement les règles CCN et Accord et applique la règle la plus avantageuse pour le salarié.
+**Règle d'architecture (ancre métier) :** L'application est **générique** vis-à-vis des accords : pas d'identifiants ni de conditions spécifiques à un accord ou à une prime ; seuls les types du schéma (ex. `valueType`, `stateKeyHeures`, `defaultActif`) sont utilisés. Options accord : affichage dynamique, délégation d'événements, `state.accordInputs`.
 
-##### 3.3.1. Prime d'Ancienneté (Art. 2.1 Accord)
-
-**Source :** Accord Kuhn Art. 2.1 - Remplace CCNM Art. 142, 143, 153-1
-
-| Règle | Convention Collective | Accord Kuhn | Principe de Faveur |
-| --- | --- | --- | --- |
-| **Seuil** | 3 ans | 2 ans |
-| **Classes éligibles** | Non-Cadres (A-E) | Toutes (A-I) |
-| **Base de calcul** | Point × Taux × 100 × Années | % du Salaire Brut |
-| **Plafond** | 15 ans | 25 ans (16% max) |
-
-**Barème :**
-
-| Années | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 25+ |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **Taux** | 2% | 3% | 4% | 5% | 6% | 7% | 8% | 9% | 10% | 11% | 12% | 13% | 14% | 15% | 16% |
-
-*Note : Le taux reste à 15% de 15 à 24 ans.*
-
-##### 3.3.2. Prime d'Équipe (Art. 2.2)
-
-* **Champ :** Non-cadres en équipes successives uniquement
-* **Conditions :** 
-  * Pause 20 min obligatoire
-  * Durée effective ≥ 6h par poste
-  * Horaire collectif posté (équipes successives)
-* **Montant :** 0.82 €/heure (au 01/01/2024)
-* **Calcul :** Montant horaire × Heures mensuelles en équipe
-* **UX Simulateur :**
-  * Option visible uniquement pour les non-cadres (classes 1-10)
-  * Apparition conditionnelle : visible si accord Kuhn activé, sinon affichage avec hint informatif
-  * Activation automatique : Si l'utilisateur coche cette option sans avoir activé l'accord Kuhn, l'accord est automatiquement activé avec notification
-  * Désactivation automatique : Si l'accord Kuhn est désactivé alors que la prime d'équipe est cochée, cette dernière est automatiquement décochée avec notification
-
-##### 3.3.3. Majorations Nuit (Art. 2.4)
-
-* **Poste de nuit** (≥2h entre 20h-6h) : **+20%** (CCN: +15%)
-* **Poste matin/après-midi** (heures entre 20h-6h) : **+15%**
-
-##### 3.3.4. Majoration Dimanche (Art. 2.3)
-
-* **Taux :** **+50%** (CCN: +100%)
-* Personnel en forfait jour : contrepartie en repos
-
-##### 3.3.5. Prime de Vacances (Art. 2.5 Accord)
-
-**Source :** Accord Kuhn Art. 2.5
-
-* **Montant :** 525 € bruts
-* **Versement :** En juillet uniquement (accord Kuhn)
-* **Conditions d'éligibilité :**
-  * Ancienneté ≥ 1 an au 1er juin (condition stricte)
-  * Contrat ≥ 50% temps légal
-  * Contrat non suspendu sur période de référence
-* **Note juridique :** Le système vérifie automatiquement l'ancienneté et exclut la prime si < 1 an
-
-##### UX Simulateur
-
-**Étape 2 - Situation :**
-* **Ancienneté dans l'entreprise** (champ commun à tous)
-* Valeur du Point Territorial (non-cadres)
-* Type de forfait (cadres)
-* Expérience professionnelle (cadres débutants F11/F12)
-* **Conditions de travail particulières** (panneau accordéon) :
-  * Type de nuit (poste nuit / poste matin-AM) + heures mensuelles
-  * Travail le dimanche + heures mensuelles
-  * **Travail en équipes postées (Kuhn)** :
-    * Visible pour tous les non-cadres
-    * Si accord Kuhn non activé : Hint informatif visible
-    * Si accord Kuhn activé : Option fonctionnelle
-    * **Activation automatique** : Cocher cette option active automatiquement l'accord Kuhn (étape 3) avec notification toast
-    * **Désactivation automatique** : Désactiver l'accord Kuhn décoche automatiquement cette option avec notification
-  * **Note** : Cadres au forfait jours → majorations = repos (non simulable)
-
-**Étape 3 - Résultat :**
-* **Checkbox** "Appliquer l'accord d'entreprise Kuhn"
-  * Ajuste automatiquement les taux des majorations (nuit +20%, dimanche +50%)
-  * Active la prime d'ancienneté pour tous (y compris cadres, dès 2 ans)
-  * Active la prime de vacances (525€, pré-cochée)
-  * Rend disponible la prime d'équipe pour les non-cadres (voir 3.3.2)
-  * **Notification** : Si activé manuellement, notification pour non-cadres que la prime d'équipe est disponible dans l'étape 2
-
-**Étape 2 - Conditions de travail particulières :**
-* **Travail de nuit** : Type (poste nuit / poste matin-AM) + heures mensuelles
-* **Travail le dimanche** : Checkbox + heures mensuelles
-* **Travail en équipes postées (Kuhn)** : 
-  * Visible pour tous les non-cadres (même sans accord Kuhn activé)
-  * Si accord Kuhn non activé : Hint informatif visible
-  * Si accord Kuhn activé : Option fonctionnelle
-  * **Activation automatique** : Cocher cette option active automatiquement l'accord Kuhn avec notification
-  * **Désactivation automatique** : Désactiver l'accord Kuhn décoche automatiquement cette option avec notification
-* **Note forfait jours** : Cadres au forfait jours → majorations = repos compensateur (non simulable)
+**Méthodologie prime d'ancienneté et assiette SMH (convention / accord) :**
+* **Assiette SMH** (vérification du minimum conventionnel et mode « SMH seul » arriérés) = base SMH + majorations forfaits cadres si applicable. **Exclues** : primes d'ancienneté (CCN ou accord), prime de vacances, majorations nuit/dimanche/équipe, majorations pénibilité. La prime d'ancienneté **s'ajoute au minimum garanti** ; elle ne fait pas partie de l'assiette SMH.
+* **Base de calcul de la prime d'ancienneté :** CCN (non-cadres) = **valeur du point territorial** × taux (classe) × années (CCNM Art. 142). Accord (ex. Kuhn) = **rémunération de base brute** (dans l'app : SMH de la classe utilisé comme base) ; les dispositions accord se substituent aux art. 142/143 CCN.
+* **CCNM Art. 139 (majoration forfait jours) :** Pour un accord prévoyant une prime d'ancienneté pour les cadres, une **majoration de 30 %** s'applique **sur le montant de la prime** lorsque le salarié est en forfait jours. Ordre : 1) Calcul de la prime (base × taux barème accord) ; 2) Application de la majoration forfait jours sur ce montant si applicable.
+* **Principe de faveur (Art. L2254-2) :** Un accord **moins favorable ou illégal** par rapport à la convention n'est pas appliqué pour l'élément concerné ; la règle CCN prime.
 
 #### 3.4. Répartition sur 13 Mois
 
@@ -235,26 +135,18 @@ Le 13e mois est une **modalité de versement**, pas un élément de rémunérati
 * **Calcul :**
   * Sur 12 mois : SMH annuel ÷ 12
   * Sur 13 mois : SMH annuel ÷ 13 (avec un mois de "bonus" versé selon l'entreprise)
-* **Versement (accord Kuhn) :** Le 13e mois est versé en novembre uniquement (le salaire annuel est réparti sur 13 mois, avec le 13e mois versé en novembre)
-* **Note importante :** Le 13e mois est **inclus** dans la vérification du SMH minimum (il fait **partie du SMH**), contrairement à la prime d'ancienneté (non-cadres) ou à la prime de vacances qui en sont exclues. En mode « SMH seul » (étape 4 arriérés), la répartition sur 12 ou 13 mois s'applique donc au SMH : novembre = 2 × (SMH annuel / 13), autres mois = SMH annuel / 13 si accord Kuhn 13 mois, sinon SMH annuel / 12.
+* **Versement (si accord avec 13e mois) :** Selon l'accord, le 13e mois peut être versé en novembre (salaire annuel réparti sur 13 mois).
+* **Note importante :** Le 13e mois est **inclus** dans la vérification du SMH minimum (il fait **partie du SMH**), contrairement à la prime d'ancienneté (non-cadres) ou à la prime de vacances qui en sont exclues. En mode « SMH seul » (étape 4 arriérés), la répartition sur 12 ou 13 mois s'applique donc au SMH : novembre = 2 × (SMH annuel / 13), autres mois = SMH annuel / 13 si accord avec répartition 13 mois, sinon SMH annuel / 12.
 
-#### 3.4.1. Assiette SMH – Ce qui est inclus ou exclu
+#### 3.4.1. Assiette SMH – Inclus / Exclus
 
-**Convention de référence :** Convention collective nationale de la métallurgie (IDCC 3248), dispositions relatives aux salaires minima hiérarchiques et à leur assiette.
+Aligné sur la convention (IDCC 3248) et la config (config.js).
 
-**INCLUS dans l'assiette SMH :**
-* Base SMH (ou barème débutants F11/F12 si &lt; 6 ans)
-* **Majorations forfaits cadres** (heures +15 %, jours +30 %) : elles font partie du SMH
-* **Majorations heures supplémentaires** : incluses dans l'assiette SMH
-* **13e mois** : fait partie du SMH (modalité de versement, répartition 12/13)
+**INCLUS :** Base SMH (ou CONFIG.BAREME_DEBUTANTS si cadre F11/F12 &lt; 6 ans), majorations forfaits cadres (CONFIG.FORFAITS : heures +15 %, jours +30 %), majorations heures sup, 13e mois (répartition 12/13).
 
-**EXCLUS de l'assiette SMH :**
-* Primes d'ancienneté (CCN ou Kuhn)
-* Prime de vacances
-* **Majorations pénibilité**
-* Majorations nuit / dimanche / prime d'équipe
+**EXCLUS :** Primes d'ancienneté (CCN ou accord), prime de vacances, majorations pénibilité, majorations nuit / dimanche / prime d'équipe.
 
-Cette règle s'applique à la vérification du minimum conventionnel et au calcul « SMH seul » des arriérés (étape 4).
+S'applique à la vérification du minimum conventionnel et au mode « SMH seul » des arriérés (étape 4).
 
 #### 3.5. Graphique d'Évolution Salaire vs Inflation
 
@@ -310,7 +202,7 @@ Plus la période récupérée sera longue, mieux ce sera.
 L'application utilise un système de notifications temporaires pour informer l'utilisateur des actions automatiques.
 
 **Types de notifications :**
-* **Success (vert)** : Action réussie (ex: "Accord Kuhn activé automatiquement")
+* **Success (vert)** : Action réussie (ex: "Accord d'entreprise activé automatiquement")
 * **Warning (orange)** : Avertissement (ex: "Valeur corrigée")
 * **Info (bleu)** : Information (ex: "Option disponible dans l'étape Situation")
 
@@ -321,8 +213,8 @@ L'application utilise un système de notifications temporaires pour informer l'u
 * Responsive : Adaptation sur mobile (pleine largeur en bas)
 
 **Cas d'utilisation :**
-* Activation automatique de l'accord Kuhn lors de la sélection de la prime d'équipe
-* Désactivation automatique de la prime d'équipe lors de la désactivation de l'accord Kuhn
+* Activation automatique de l'accord lors de la sélection d'une option liée (ex. prime d'équipe)
+* Désactivation automatique de l'option lors de la désactivation de l'accord
 * Correction automatique de l'expérience professionnelle si inférieure à l'ancienneté
 * Validation des champs (salaire actuel, dates, etc.)
 
@@ -335,26 +227,26 @@ L'interface peut afficher **plusieurs messages informatifs simultanément** selo
 | Type | Couleur | Cas d'affichage |
 | --- | --- | --- |
 | **Warning (orange)** | Barème salariés débutants | Cadre F11/F12 avec < 6 ans d'expérience |
-| **Success (vert)** | Accord Kuhn appliqué | Kuhn activé avec éléments calculés |
-| **Info (bleu)** | Majorations CCN | Majorations nuit/dimanche sans accord Kuhn |
+| **Success (vert)** | Accord appliqué | Accord activé avec éléments calculés |
+| **Info (bleu)** | Majorations CCN | Majorations nuit/dimanche sans accord d'entreprise |
 | **Info (bleu)** | Message par défaut | Minimum conventionnel |
 
 ##### Combinaisons Possibles
 
 Plusieurs hints peuvent s'afficher ensemble, par exemple :
-- "Barème salariés débutants" + "Accord Kuhn appliqué"
+- "Barème salariés débutants" + "Accord d'entreprise appliqué"
 - Permet à l'utilisateur de comprendre précisément ce qui est pris en compte
 
 #### 3.8. Contraintes de Cohérence des Données
 
-##### 3.7.1. Expérience Professionnelle ≥ Ancienneté
+##### 3.8.1. Expérience professionnelle ≥ Ancienneté
 
 L'expérience professionnelle totale ne peut pas être inférieure à l'ancienneté dans l'entreprise :
 * **Si ancienneté augmente** : L'expérience pro est automatiquement ajustée si elle était inférieure
 * **Si expérience pro est modifiée** : Elle ne peut pas descendre en dessous de l'ancienneté
 * **Message d'avertissement** : Si l'utilisateur tente de saisir une valeur inférieure, un message temporaire explique la correction automatique
 
-##### 3.7.2. Amélioration UX des Champs Numériques
+##### 3.8.2. Amélioration UX des champs numériques
 
 * **Sélection automatique au focus** : Tous les champs numériques sélectionnent leur contenu au focus pour faciliter la modification
 * **Valeur 0** : Les champs à 0 sont particulièrement faciles à modifier sans avoir à supprimer d'abord
@@ -378,7 +270,7 @@ Le formulaire demande :
 * **Date de changement de classification** : Optionnelle, si la classification a changé
 * **Rupture de contrat** : Checkbox avec date de rupture si applicable
 * **Accord écrit** : Checkbox indiquant si un accord écrit existe avec l'employeur sur la classification
-* **Calculer les arriérés sur le SMH seul** : Option (cochée par défaut) pour l'affichage et le calcul à l'écran. Si coché, le salaire dû = assiette SMH : base + forfait cadres (les majorations forfaits font partie du SMH), sans prime de vacances, prime d'ancienneté, majorations nuit/dimanche/équipe, majorations pénibilité. Les majorations heures sup sont incluses dans l'assiette SMH ; les majorations pénibilité en sont exclues (voir § 3.4.1). **Le 13e mois fait partie du SMH**. L'utilisateur doit saisir les salaires mensuels bruts **hors primes** ; un avertissement et un tooltip le rappellent. **Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, le rapport PDF est toujours généré sur la base du SMH** (option forcée, voir § 3.9.5).
+* **Calculer les arriérés sur le SMH seul** : Option (cochée par défaut) pour l'affichage et le calcul à l'écran. Si coché, le salaire dû = assiette SMH : base + forfait cadres (les majorations forfaits font partie du SMH), sans prime de vacances, prime d'ancienneté, majorations nuit/dimanche/équipe, majorations pénibilité. Les majorations heures sup sont incluses dans l'assiette SMH ; les majorations pénibilité en sont exclues (voir § 3.4.1). **Le 13e mois fait partie du SMH**. L'utilisateur doit saisir les salaires mensuels bruts **hors primes** ; un avertissement et un tooltip le rappellent. **Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, le rapport PDF n'est généré qu'en mode « SMH seul »** : la génération est bloquée sinon, avec avertissement à l'utilisateur (voir § 3.9.5).
 
 ##### 3.9.3. Frise Chronologique Interactive
 
@@ -410,23 +302,23 @@ Le formulaire demande :
 **Option « SMH seul » (état `arretesSurSMHSeul`)**  
 Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 * **Salaire dû** = assiette SMH : base + **majorations forfaits** (heures/jours), le cas échéant. Sont **exclus** : prime de vacances, primes d'ancienneté, majorations nuit/dimanche/équipe, **majorations pénibilité**. Les majorations heures sup sont **incluses** dans l'assiette SMH (voir § 3.4.1).
-* **Le 13e mois fait partie du SMH** : la répartition sur 12 ou 13 mois (accord Kuhn) s'applique. Si répartition sur 13 mois : novembre = 2 × (SMH annuel / 13), autres mois = SMH annuel / 13 ; sinon SMH annuel / 12. Les salaires saisis par l'utilisateur doivent être **hors primes** pour comparer au SMH.
+* **Le 13e mois fait partie du SMH** : la répartition sur 12 ou 13 mois (selon l'accord) s'applique. Si répartition sur 13 mois : novembre = 2 × (SMH annuel / 13), autres mois = SMH annuel / 13 ; sinon SMH annuel / 12. Les salaires saisis par l'utilisateur doivent être **hors primes** pour comparer au SMH.
 
 **Logique de calcul précise et exhaustive :**
 * **Pour chaque mois** de la période réclamable :
   * Si un salaire réel a été saisi pour ce mois :
     * **Calcul rétrospectif du SMH dû** : Pour chaque mois, le système recalcule le SMH dû :
-      * **En mode SMH seul** : `getMontantAnnuelSMHSeul()` puis répartition mensuelle (12 ou 13 mois ; 13e mois en novembre si accord Kuhn). Le 13e mois fait partie du SMH.
-      * **En mode rémunération complète** : ancienneté progressive, expérience pro, forfait, accord Kuhn, conditions de travail, versements spécifiques :
+* **En mode SMH seul** : `getMontantAnnuelSMHSeul()` puis répartition mensuelle (12 ou 13 mois ; 13e mois en novembre si accord avec répartition 13 mois). Le 13e mois fait partie du SMH.
+* **En mode rémunération complète** : ancienneté progressive, expérience pro, forfait, accord d'entreprise, conditions de travail, versements spécifiques :
       * **Ancienneté progressive** : L'ancienneté au moment de ce mois précis (depuis la date d'embauche)
       * **Expérience professionnelle** : Utilisée telle quelle (déjà remplie à l'étape 2 du simulateur)
       * **Type de forfait** : Forfait heures, forfait jours, ou horaire collectif (selon l'état actuel)
-      * **Accord Kuhn** : Appliqué si activé (impact sur primes d'ancienneté, majorations, etc.)
-      * **Conditions de travail** : Majorations nuit/dimanche, prime d'équipe (selon l'état actuel)
-      * **Versements mensuels spécifiques (accord Kuhn)** :
+* **Accord d'entreprise** : Appliqué si activé (impact sur primes d'ancienneté, majorations, etc.)
+* **Conditions de travail** : Majorations nuit/dimanche, prime d'équipe (selon l'état actuel)
+* **Versements mensuels spécifiques (accord)** :
         * **Prime de vacances** : Versée **en une fois en juillet** (pas étalée sur l'année). Répartition : salaire mensuel dû en juillet = (salaire annuel hors prime)/12 + prime ; les autres mois = (salaire annuel hors prime)/12. Si 13e mois : idem avec dénominateur 13, et juillet = base/13 + prime.
         * **13e mois** : **Fait partie du SMH** (modalité de versement, pas une prime). Versé **en novembre uniquement** (si répartition sur 13 mois activée). En novembre, salaire mensuel dû = 2 × (salaire annuel / 13) ; les autres mois = salaire annuel / 13. S'applique aussi en mode « SMH seul ».
-      * **Toutes les autres primes** : Prime d'ancienneté (CCN ou Kuhn), etc.
+      * **Toutes les autres primes** : Prime d'ancienneté (CCN ou accord), etc.
     * Le calcul utilise, selon le mode, `getMontantAnnuelSMHSeul()` (SMH seul) ou la fonction `calculateRemuneration()` principale avec les paramètres temporairement ajustés pour ce mois spécifique
     * Salaire mensuel réel = Salaire mensuel saisi
     * Salaire mensuel dû = SMH calculé pour ce mois
@@ -447,10 +339,10 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 
 **Règle : PDF uniquement sur la base du SMH**
 * **Conformément à la convention collective nationale de la métallurgie (IDCC 3248), dispositions relatives aux salaires minima hiérarchiques et à leur assiette**, le rapport PDF est **toujours** établi sur la base du SMH (assiette conventionnelle hors primes).
-* L'option « SMH seul » est **forcée** pour la génération du PDF : les données sont recalculées en mode SMH seul avant ouverture du modal, quel que soit l'état de la case « Calculer les arriérés sur le SMH seul » à l'écran.
+* La génération du PDF n'est possible **qu'en mode « SMH seul »** : si la case n'est pas cochée, l'ouverture du modal est bloquée et un message avertit l'utilisateur de cocher l'option, saisir les salaires bruts hors primes et recalculez les arriérés.
 * L'utilisateur est **prévenu** :
   * Par un **toast** à l'ouverture du modal : « Le rapport PDF est établi uniquement sur la base du SMH (assiette hors primes). »
-  * Par une **notice visible dans le modal** (avant les champs) : « Le rapport PDF est établi uniquement sur la base du SMH (assiette conventionnelle hors primes). L'option « SMH seul » est appliquée automatiquement pour la génération. »
+  * Par une **notice visible dans le modal** (avant les champs) : « Le rapport PDF est établi sur la base du SMH (assiette conventionnelle hors primes). Assurez-vous d'avoir coché « SMH seul » et saisi les salaires bruts hors primes. »
 
 **Contenu exhaustif du PDF :**
 
@@ -481,17 +373,15 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 * Points favorables : Accord écrit, changement de classification documenté (si applicable)
 
 **Section 5 : Méthodologie de calcul** (résumé)
-* **Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette**, le rapport PDF est **toujours** établi sur la base du SMH (option « SMH seul » forcée).
-* SMH de base, majoration forfait, répartition 12/13 mois (13e mois en novembre si accord Kuhn). Accord Kuhn : prime ancienneté, prime vacances, 13e mois — mentionnés pour contexte, mais **le salaire dû retenu dans le PDF = assiette SMH uniquement** (base + forfait, hors primes). L'ancienneté n'affecte pas l'assiette SMH.
-* Calcul rétrospectif mois par mois : pour chaque mois, le salaire dû = assiette SMH ; comparé au salaire perçu (hors primes). Sources et références : CCN Métallurgie (IDCC 3248), SMH et assiette ; Code du travail art. L.3245-1 ; Accord Kuhn si pertinent.
+* **Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette**, le rapport PDF n'est généré **qu'en mode « SMH seul »** (génération bloquée sinon, avec avertissement).
+* SMH de base, majoration forfait, répartition 12/13 mois (13e mois en novembre si accord avec répartition 13 mois). Accord d'entreprise : prime ancienneté, prime vacances, 13e mois — mentionnés pour contexte, mais **le salaire dû retenu dans le PDF = assiette SMH uniquement** (base + forfait, hors primes). L'ancienneté n'affecte pas l'assiette SMH.
+* Calcul rétrospectif mois par mois : pour chaque mois, le salaire dû = assiette SMH ; comparé au salaire perçu (hors primes). Sources et références : CCN Métallurgie (IDCC 3248), SMH et assiette ; Code du travail art. L.3245-1 ; accord d'entreprise si pertinent.
 
 **Section 6 : Méthodes de calcul détaillées**
-* **Principe** : Conformément à la convention collective nationale de la métallurgie (IDCC 3248), dispositions relatives aux salaires minima hiérarchiques et à leur assiette, ce rapport est établi uniquement sur la base du SMH (assiette conventionnelle hors primes). Pour chaque mois, le salaire dû = assiette SMH (base + majorations forfait), comparé au salaire perçu (hors primes). L'assiette SMH **ne dépend pas de l'ancienneté**.
-* **Période** : Date de début (embauche / changement de classification / 01/01/2024 / prescription 3 ans), date de fin (rupture ou aujourd'hui).
-* **Calcul du salaire mensuel dû** : Le salaire dû retenu dans ce rapport = assiette SMH uniquement (base + forfait ; inclus : base, forfaits cadres, 13e mois ; exclus : primes ancienneté, prime vacances, majorations pénibilité/nuit/dimanche/équipe). Répartition 12 ou 13 mois (13e mois en novembre si Kuhn).
-* **Formule** : `Arriérés(mois) = max(0 ; Salaire mensuel dû(mois) − Salaire mensuel perçu(mois))` ; total = somme sur tous les mois. Le texte de la formule est découpé en largeur (`splitTextToSize`) pour ne pas dépasser la marge du PDF.
-* **Base de calcul du rapport : assiette SMH** : Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives à l'assiette SMH (inclus / exclus). Ce rapport retient uniquement l'assiette SMH comme salaire dû. Les salaires saisis pour la comparaison sont les salaires mensuels bruts hors primes.
-* **Références** : Convention collective nationale de la métallurgie (IDCC 3248), dispositions relatives aux salaires minima hiérarchiques et à leur assiette ; Code du travail, art. L.3245-1 ; Accord Kuhn si pertinent.
+* **Principe :** Rapport établi sur la base du SMH uniquement (assiette § 3.4.1). Pour chaque mois : salaire dû = assiette SMH ; comparé au salaire perçu (hors primes). L'assiette SMH ne dépend pas de l'ancienneté. Référence : CCN (IDCC 3248), Code du travail art. L.3245-1.
+* **Période :** Date de début (embauche / changement de classification / 01/01/2024 / prescription 3 ans), date de fin (rupture ou aujourd'hui).
+* **Salaire mensuel dû :** Assiette SMH (base + forfait, 13e mois ; hors primes, majorations nuit/dimanche/équipe, pénibilité). Répartition 12 ou 13 mois selon accord.
+* **Formule :** `Arriérés(mois) = max(0 ; Salaire mensuel dû(mois) − Salaire mensuel perçu(mois))` ; total = somme sur tous les mois.
 
 **Formatage et lisibilité :**
 * **Formatage des nombres** : Utilisation de `formatMoneyPDF()` qui utilise des espaces comme séparateurs de milliers (conforme aux standards français)
@@ -601,7 +491,7 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 
 #### C. Structure des Données (`CONFIG`)
 
-Le code doit centraliser toutes les données métier dans un objet constant pour faciliter la maintenance annuelle (mise à jour des SMH).
+Le code centralise les données **CCN** dans `config.js` (CONFIG) : SMH, BAREME_DEBUTANTS, TAUX_ANCIENNETE, FORFAITS, MAJORATIONS_CCN, etc. Les **accords d'entreprise** ne sont pas dans CONFIG : ils sont définis dans le dossier `accords/` (fichiers par accord) et chargés à l'exécution via AgreementLoader/AgreementRegistry.
 
 ```javascript
 const CONFIG = {
@@ -614,19 +504,12 @@ const CONFIG = {
     FORFAITS: { '35h': 0, 'heures': 0.15, 'jours': 0.30 },
     ANCIENNETE: { seuil: 3, plafond: 15 }, // CCN non-cadres
     POINT_TERRITORIAL_DEFAUT: 5.90, // Bas-Rhin 2025
-    ACCORD_ENTREPRISE: {
-        anciennete: { seuil: 2, plafond: 25, barème: {...} },
-        primeEquipe: { tauxHoraire: 0.82 },
-        majorations: { nuit: 0.20, nuitMatin: 0.15, dimanche: 0.50 },
-        primeVacances: { montant: 525 }
-    },
-    CCN: {
-        majorations: { nuit: 0.15, dimanche: 1.00 }
-    }
+    MAJORATIONS_CCN: { nuit: 0.15, dimanche: 1.00 }
 };
+// Accords : dossier accords/, chargés via AgreementLoader/AgreementRegistry
 ```
 
-**Audit config vs calculs et tooltips :** Tous les calculs (rémunération, arriérés, évolution) s'appuient sur les valeurs de `config.js` (CONFIG) : SMH, BAREME_DEBUTANTS, TAUX_ANCIENNETE, POINT_TERRITORIAL, ACCORD_ENTREPRISE, MAJORATIONS_CCN, FORFAITS, etc. Les tooltips du détail de rémunération (étape 3) indiquent l'origine de chaque ligne (CCN ou Accord d'entreprise Kuhn). Les conditions et montants affichés dans l'application doivent rester alignés sur la config pour éviter les régressions.
+**Audit config vs calculs et tooltips :** Les calculs (rémunération, arriérés, évolution) s'appuient sur `config.js` (CONFIG) pour la CCN : SMH, BAREME_DEBUTANTS, TAUX_ANCIENNETE, POINT_TERRITORIAL, MAJORATIONS_CCN, FORFAITS. Les accords d'entreprise sont définis dans le dossier `accords/` et chargés via AgreementLoader/AgreementRegistry. Les tooltips du détail de rémunération (étape 3) indiquent l'origine de chaque ligne (CCN ou accord d'entreprise). Les conditions et montants doivent rester alignés sur la config et les définitions d'accord pour éviter les régressions.
 
 #### D. Architecture du Code (`app.js`)
 
@@ -639,7 +522,7 @@ Le code est organisé en modules fonctionnels :
 * **Graphique d'évolution** : `calculateSalaryEvolution()` - **réutilise `calculateRemuneration()`**
 * **Rapport arriérés** : `calculerArretees()`, `afficherResultatsArretees()`, `genererPDFArretees()`
 * **Notifications** : `showToast()` - Messages temporaires pour actions automatiques
-* **Utilitaires** : `formatMoney()`, `calculatePrimeKuhn()`, `calculateMajorationNuit()`, etc.
+* **Utilitaires** : `formatMoney()`, `computePrime()`, `computeMajoration()`, `computeForfait()`, etc.
 
 **Principe de factorisation** : Le graphique d'évolution ne duplique pas la logique de calcul. Il modifie temporairement l'état, appelle `calculateRemuneration()`, puis restaure l'état original.
 
@@ -657,14 +540,12 @@ Le code est organisé en modules fonctionnels :
 5. **Cadre forfait jours :** F11 → SMH × 1.30
 6. **Cadre débutant :** F11, 4 ans d'expérience, forfait jours → 31 979€ × 1.30
 
-#### 5.3. Tests Accord Kuhn
-7. **Prime ancienneté Kuhn :** Classe F11, 5 ans ancienneté, Kuhn activé → Prime = SMH × 5%
-8. **Cadres éligibles :** Avec Kuhn activé, les cadres ont droit à la prime d'ancienneté
-9. **Majorations Kuhn :** Nuit = +20% (vs +15% CCN), Dimanche = +50% (vs +100% CCN)
-10. **Prime vacances :** 525€ ajoutés si Kuhn activé et option cochée
-11. **Prime d'équipe Kuhn :** Non-cadre, accord Kuhn activé, 151.67h/mois → Prime = 0.82 × 151.67 = 124€/mois
-12. **Activation automatique accord :** Cocher "Travail en équipes postées" sans accord → Accord activé automatiquement avec notification
-13. **Désactivation prime équipe :** Désactiver accord Kuhn avec prime équipe cochée → Prime équipe décochée automatiquement avec notification
+#### 5.3. Tests accord d'entreprise
+7. **Prime ancienneté accord :** Selon l'accord chargé (seuil, plafond, barème, majoration forfait jours si applicable).
+8. **Cadres éligibles :** Si l'accord prévoit la prime d'ancienneté pour tous les statuts, les cadres en bénéficient.
+9. **Majorations accord :** Les taux (nuit, dimanche) sont ceux de l'accord si activé ; principe de faveur avec la CCN.
+10. **Primes accord :** Primes spécifiques (vacances, équipe, etc.) selon la définition de l'accord et les options cochées.
+11. **Activation / désactivation :** Options liées à l'accord (ex. prime d'équipe) activent ou désactivent l'accord avec notification selon le comportement défini.
 
 #### 5.4. Tests Répartition 13 Mois
 11. **Calcul sur 12 mois :** Classe A1 (21 700€) → 1 808€/mois
@@ -682,11 +563,11 @@ Le code est organisé en modules fonctionnels :
 19. **Source inflation :** Affichage de la source (Banque Mondiale ou INSEE) et de la période
 20. **Lazy loading :** Les données d'inflation ne sont chargées qu'à l'ouverture du panneau
 21. **Projection retraite :** Option "Jusqu'à la retraite" calcule correctement les années restantes (64 ans - âge actuel)
-22. **Synchronisation :** Modification des paramètres (ancienneté, majorations, accord Kuhn) → graphique mis à jour automatiquement
+22. **Synchronisation :** Modification des paramètres (ancienneté, majorations, accord d'entreprise) → graphique mis à jour automatiquement
 23. **Responsive mobile :** Graphique lisible sur petits écrans (labels adaptés, tooltips optimisés)
 
 #### 5.7. Tests Hints Multiples
-19. **Affichage combiné :** Cadre débutant + Kuhn activé → 2 hints visibles simultanément
+19. **Affichage combiné :** Cadre débutant + accord d'entreprise activé → 2 hints visibles simultanément (ex.)
 20. **Hint par défaut :** Si aucune condition spéciale, affiche "minimum conventionnel"
 
 #### 5.8. Tests UI/UX
@@ -698,7 +579,7 @@ Le code est organisé en modules fonctionnels :
 26. **Toast notifications :** Messages temporaires pour actions automatiques (activation/désactivation accord, prime équipe)
 
 #### 5.9. Tests Notifications Toast
-27. **Activation automatique accord :** Cocher prime équipe sans accord → Toast success "Accord Kuhn activé automatiquement"
+27. **Activation automatique accord :** Cocher une option liée à un accord sans accord activé → Toast success (accord activé automatiquement)
 28. **Désactivation prime équipe :** Désactiver accord avec prime équipe cochée → Toast info "Option décochée car accord inactif"
 29. **Correction expérience :** Saisir expérience < ancienneté → Toast warning avec valeur tentée et correction
 30. **Disparition automatique :** Toast disparaît après 3-4 secondes avec animation
@@ -713,7 +594,7 @@ Le code est organisé en modules fonctionnels :
 36. **Calcul sans arriérés :** Tous les salaires saisis ≥ SMH mensuel → Message "aucun arriéré"
 37. **Calcul avec arriérés :** Salaires inférieurs au SMH → Calcul mois par mois des différences
 37bis. **Option « SMH seul » :** Si cochée, salaire dû = assiette SMH (base + forfaits ; forfaits et heures sup inclus, pénibilité et primes ancienneté exclues) avec répartition 12/13 mois ; le 13e mois fait partie du SMH. Saisie utilisateur = brut hors primes ; avertissement et tooltip le rappellent
-37ter. **PDF uniquement sur SMH :** Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, le rapport PDF est toujours généré sur la base du SMH (assiette hors primes). L'option « SMH seul » est forcée à l'ouverture du modal PDF ; toast et notice dans le modal préviennent l'utilisateur.
+37ter. **PDF uniquement sur SMH :** Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, le rapport PDF n'est généré qu'en mode « SMH seul ». Si l'option n'est pas cochée, la génération est bloquée et un message avertit l'utilisateur de cocher « SMH seul », saisir les salaires bruts hors primes et recalculer.
 38. **Prescription 3 ans :** Date embauche 2015, aujourd'hui 2025 → Période limitée à 3 ans (2022-2025) ou CCNM (2024-2025) si plus récent
 39. **CCNM 2024 :** Date embauche 2020 → Période commence au 01/01/2024 (pas avant)
 40. **Changement classification :** Date changement après embauche → Période commence à la date de changement

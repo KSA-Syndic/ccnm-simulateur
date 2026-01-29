@@ -2,23 +2,89 @@
  * ============================================
  * REMUNERATION CALCULATOR - Calculateur Principal
  * ============================================
- * 
+ *
  * Source unique de vérité pour tous les calculs de rémunération.
- * Remplace calculateRemuneration() et getMontantAnnuelSMHSeul().
- * 
- * Conformité Juridique :
- * - CCNM 2024 (IDCC 3248) - Entrée en vigueur 01/01/2024
- * - Principe de Faveur (Art. L2254-2 Code du Travail) : Compare CCN et Accord,
- *   applique la règle la plus avantageuse pour le salarié
- * - Assiette SMH : Base + Forfaits (inclus) ; Primes d'ancienneté, primes de vacances,
- *   majorations nuit/dimanche/équipe (exclus) - CCNM Art. 140
+ * Utilise uniquement l'API générique : computePrime, computeMajoration, computeForfait
+ * avec des définitions convention (CCN) ou accord. Séparation nette convention / accord.
  */
 
 import { CONFIG } from '../core/config.js';
 import { getActiveClassification, isCadre } from '../classification/ClassificationEngine.js';
-import { calculatePrimeAncienneteAccord, calculatePrimeAncienneteCCN, calculatePrimeEquipe, getPrimeVacances } from './PrimeCalculator.js';
-import { calculateMajorationNuit, calculateMajorationDimanche } from './MajorationCalculator.js';
+import { computePrime } from './PrimeCalculator.js';
+import { computeMajoration } from './MajorationCalculator.js';
+import { computeForfait } from './ForfaitCalculator.js';
 import { formatMoney } from '../utils/formatters.js';
+import { getAccordInput, getAccordPrimeDefsAsElements } from '../agreements/AgreementInterface.js';
+import { getConventionPrimeDefs, getConventionMajorationDefs, getConventionForfaitDefs } from '../convention/ConventionCatalog.js';
+import { SEMANTIC_ID, SOURCE_ACCORD } from '../core/RemunerationTypes.js';
+
+/**
+ * Construit le contexte de calcul commun (state + bases).
+ * @private
+ */
+function buildContext(state, baseSMH, classe, agreement) {
+    const tauxHoraire = baseSMH > 0 ? baseSMH / 12 / 151.67 : 0;
+    return {
+        state,
+        baseSMH,
+        salaireBase: baseSMH,
+        pointTerritorial: state.pointTerritorial,
+        classe,
+        agreement,
+        tauxHoraire
+    };
+}
+
+/**
+ * Définition prime ancienneté accord (pour principe de faveur).
+ * Entièrement dérivée de agreement.anciennete : seuil, plafond, barème, majoration forfait jours
+ * sont lus depuis l'instance d'accord (fichier accords/xxx.js). Modifier cet objet dans l'accord suffit.
+ * @private
+ */
+function buildAccordPrimeAncienneteDef(agreement) {
+    if (!agreement?.anciennete) return null;
+    return {
+        id: 'primeAnciennete',
+        semanticId: SEMANTIC_ID.PRIME_ANCIENNETE,
+        kind: 'prime',
+        source: SOURCE_ACCORD,
+        valueKind: 'pourcentage',
+        label: `Prime ancienneté ${agreement.nomCourt}`,
+        config: { barème: agreement.anciennete.barème }
+    };
+}
+
+/**
+ * Définitions majorations accord (nuit, dimanche).
+ * @private
+ */
+function buildAccordMajorationDefs(agreement) {
+    if (!agreement?.majorations) return [];
+    const defs = [];
+    if (agreement.majorations.nuit) {
+        defs.push({
+            id: 'majorationNuit',
+            semanticId: SEMANTIC_ID.MAJORATION_NUIT,
+            kind: 'majoration',
+            source: SOURCE_ACCORD,
+            valueKind: 'pourcentage',
+            label: `Majoration nuit ${agreement.nomCourt}`,
+            config: {}
+        });
+    }
+    if (agreement.majorations.dimanche != null) {
+        defs.push({
+            id: 'majorationDimanche',
+            semanticId: SEMANTIC_ID.MAJORATION_DIMANCHE,
+            kind: 'majoration',
+            source: SOURCE_ACCORD,
+            valueKind: 'pourcentage',
+            label: `Majoration dimanche ${agreement.nomCourt}`,
+            config: {}
+        });
+    }
+    return defs;
+}
 
 /**
  * Calculer la rémunération annuelle complète
@@ -30,16 +96,15 @@ import { formatMoney } from '../utils/formatters.js';
  * @returns {Object} { scenario, baseSMH, total, details, isCadre, groupe, classe }
  */
 export function calculateAnnualRemuneration(state, agreement, options = {}) {
-    const { mode = 'full', date } = options;
-    
+    const { mode = 'full' } = options;
+
     if (!state) {
         throw new Error('State is required for calculateAnnualRemuneration');
     }
-    
+
     const { groupe, classe } = getActiveClassification(state);
-    
-    // Protection contre classe invalide
-    if (!classe || classe < 1 || classe > 12) {
+
+    if (!classe || classe < 1 || classe > 18) {
         console.error('Classe invalide dans calculateAnnualRemuneration:', classe);
         return {
             scenario: 'error',
@@ -51,24 +116,16 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
             classe: classe || 1
         };
     }
-    
+
     const isCadreValue = isCadre(classe);
     const isGroupeF = classe === 11 || classe === 12;
-    
-    // Déterminer la base SMH
+
     let baseSMH = CONFIG.SMH[classe];
-    
-    // Protection contre SMH invalide
     if (!baseSMH || isNaN(baseSMH)) {
         console.error('SMH invalide pour classe', classe, ':', baseSMH);
         baseSMH = 0;
     }
-    
-    let scenario = '';
-    let details = [];
-    let total = baseSMH;
-    
-    // Gestion barème débutants pour F11/F12
+
     if ((classe === 11 || classe === 12) && state.experiencePro < 6) {
         let tranche = 0;
         if (state.experiencePro >= 4) tranche = 4;
@@ -76,238 +133,204 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         const bareme = CONFIG.BAREME_DEBUTANTS[classe];
         baseSMH = bareme[tranche];
     }
-    
-    // En mode SMH seul, on retourne uniquement la base + forfait
+
+    let scenario = '';
+    let details = [];
+    let total = baseSMH;
+    const context = buildContext(state, baseSMH, classe, agreement);
+
+    // ─── Mode SMH seul ───
     if (mode === 'smh-only') {
-        const tauxForfait = isCadreValue && state.forfait && CONFIG.FORFAITS[state.forfait];
-        const forfaitMontant = (tauxForfait && tauxForfait > 0) ? Math.round(baseSMH * tauxForfait) : 0;
+        const forfaitDefs = getConventionForfaitDefs();
+        const forfaitDef = forfaitDefs.find(d => d.config?.forfaitKey === state.forfait);
+        const forfaitResult = forfaitDef ? computeForfait(forfaitDef, context) : { amount: 0 };
+        const forfaitMontant = forfaitResult.amount || 0;
         return {
             scenario: 'smh-only',
             baseSMH,
             total: baseSMH + forfaitMontant,
-            details: [{
-                label: `SMH Base (${groupe}${classe})`,
-                value: baseSMH,
-                isBase: true
-            }],
+            details: [{ label: `SMH Base (${groupe}${classe})`, value: baseSMH, isBase: true }],
             isCadre: isCadreValue,
             groupe,
             classe
         };
     }
-    
-    // Mode full : calcul complet
+
+    // ─── Mode full ───
     if (!isCadreValue) {
-        // SCÉNARIO 1 : Non-Cadres (Classes 1 à 10)
         scenario = 'non-cadre';
-        details.push({
-            label: `SMH Base (${groupe}${classe})`,
-            value: baseSMH,
-            isBase: true
-        });
-        
-        // Prime d'ancienneté - PRINCIPE DE FAVEUR (Art. L2254-2 Code du Travail)
-        // Comparer CCN et Accord, appliquer la règle la plus avantageuse
-        let primeAncienneteCCN = { montant: 0 };
-        let primeAncienneteAccord = { montant: 0 };
-        
-        // Calculer les deux primes
-        if (state.anciennete >= CONFIG.ANCIENNETE.seuil) {
-            primeAncienneteCCN = calculatePrimeAncienneteCCN(state.pointTerritorial, classe, state.anciennete);
-        }
-        
-        if (agreement && agreement.anciennete && agreement.anciennete.tousStatuts && state.anciennete >= agreement.anciennete.seuil) {
-            primeAncienneteAccord = calculatePrimeAncienneteAccord(agreement, baseSMH, state.anciennete);
-        }
-        
-        // Appliquer le principe de faveur : choisir la prime la plus avantageuse
-        if (primeAncienneteCCN.montant > 0 || primeAncienneteAccord.montant > 0) {
-            if (primeAncienneteAccord.montant > primeAncienneteCCN.montant) {
-                // Accord plus avantageux
+        details.push({ label: `SMH Base (${groupe}${classe})`, value: baseSMH, isBase: true });
+
+        // Prime ancienneté : principe de faveur (convention vs accord)
+        const convPrimeDefs = getConventionPrimeDefs();
+        const defAncienneteCCN = convPrimeDefs.find(d => d.semanticId === SEMANTIC_ID.PRIME_ANCIENNETE);
+        const rCCN = defAncienneteCCN ? computePrime(defAncienneteCCN, context) : { amount: 0 };
+        const defAncienneteAccord = buildAccordPrimeAncienneteDef(agreement);
+        const rAccord = defAncienneteAccord && agreement.anciennete.tousStatuts && state.anciennete >= agreement.anciennete.seuil
+            ? computePrime(defAncienneteAccord, context)
+            : { amount: 0 };
+
+        if (rCCN.amount > 0 || rAccord.amount > 0) {
+            if (rAccord.amount > rCCN.amount) {
+                const suffixForfait = rAccord.meta?.majorationForfaitJours ? ' × 1,30 forfait jours' : '';
                 details.push({
-                    label: `Prime ancienneté ${agreement.nomCourt} (${formatMoney(baseSMH)} × ${primeAncienneteAccord.taux}%)`,
-                    value: primeAncienneteAccord.montant,
+                    label: `${defAncienneteAccord.label} (${formatMoney(baseSMH)} × ${rAccord.meta?.taux ?? 0}%${suffixForfait})`,
+                    value: rAccord.amount,
                     isPositive: true,
                     isAgreement: true,
                     agreementId: agreement.id,
-                    note: primeAncienneteCCN.montant > 0 ? 'Plus avantageux que CCN' : ''
+                    note: rCCN.amount > 0 ? 'Plus avantageux que CCN' : ''
                 });
-                total += primeAncienneteAccord.montant;
-            } else if (primeAncienneteCCN.montant > 0) {
-                // CCN plus avantageux ou seul disponible
+                total += rAccord.amount;
+            } else {
                 details.push({
-                    label: `Prime ancienneté CCN (${state.pointTerritorial}€ × ${primeAncienneteCCN.taux}% × ${primeAncienneteCCN.annees} ans × 12)`,
-                    value: primeAncienneteCCN.montant,
+                    label: `Prime ancienneté CCN (${state.pointTerritorial}€ × ${rCCN.meta?.taux ?? 0}% × ${rCCN.meta?.annees ?? 0} ans × 12)`,
+                    value: rCCN.amount,
                     isPositive: true,
-                    note: primeAncienneteAccord.montant > 0 ? 'Plus avantageux que l\'accord' : ''
+                    note: rAccord.amount > 0 ? 'Plus avantageux que l\'accord' : ''
                 });
-                total += primeAncienneteCCN.montant;
+                total += rCCN.amount;
             }
         }
-        
-    } else if ((classe === 11 || classe === 12) && state.experiencePro < 6) {
-        // SCÉNARIO 3 : Cadres Débutants (F11/F12 avec expérience < 6 ans)
+    } else if (isGroupeF && state.experiencePro < 6) {
         scenario = 'cadre-debutant';
-        
         let labelTranche = '< 2 ans';
         if (state.experiencePro >= 4) labelTranche = '4 à 6 ans';
         else if (state.experiencePro >= 2) labelTranche = '2 à 4 ans';
-        
         details.push({
             label: `Barème débutants ${groupe}${classe} (${labelTranche})`,
             value: baseSMH,
             isBase: true
         });
-        
-        // Majoration forfait
-        const tauxForfait = CONFIG.FORFAITS[state.forfait];
-        if (tauxForfait > 0) {
-            const montantForfait = Math.round(baseSMH * tauxForfait);
-            const labelForfait = state.forfait === 'heures' ? 'Forfait Heures (+15%)' : 'Forfait Jours (+30%)';
-            details.push({
-                label: labelForfait,
-                value: montantForfait,
-                isPositive: true
-            });
-            total = baseSMH + montantForfait;
-        } else {
-            total = baseSMH;
+
+        const forfaitDefs = getConventionForfaitDefs();
+        const forfaitDef = forfaitDefs.find(d => d.config?.forfaitKey === state.forfait);
+        if (forfaitDef) {
+            const rForfait = computeForfait(forfaitDef, context);
+            if (rForfait.amount > 0) {
+                details.push({ label: rForfait.label, value: rForfait.amount, isPositive: true });
+                total += rForfait.amount;
+            }
         }
-        
-        // Prime ancienneté accord (si applicable aux cadres)
-        if (agreement && agreement.anciennete && agreement.anciennete.tousStatuts) {
-            const primeAccord = calculatePrimeAncienneteAccord(agreement, baseSMH, state.anciennete);
-            if (primeAccord.montant > 0) {
+
+        if (agreement?.anciennete?.tousStatuts) {
+            const defAccord = buildAccordPrimeAncienneteDef(agreement);
+            const rAccord = computePrime(defAccord, context);
+            if (rAccord.amount > 0) {
+                const suffixForfait = rAccord.meta?.majorationForfaitJours ? ' × 1,30 forfait jours' : '';
                 details.push({
-                    label: `Prime ancienneté ${agreement.nomCourt} (${formatMoney(baseSMH)} × ${primeAccord.taux}%)`,
-                    value: primeAccord.montant,
+                    label: rAccord.label + ` (${formatMoney(baseSMH)} × ${rAccord.meta?.taux ?? 0}%${suffixForfait})`,
+                    value: rAccord.amount,
                     isPositive: true,
                     isAgreement: true,
                     agreementId: agreement.id
                 });
-                total += primeAccord.montant;
+                total += rAccord.amount;
             }
         }
-        
     } else {
-        // SCÉNARIO 2 : Cadres Confirmés (Classes 11 à 18)
         scenario = 'cadre';
-        details.push({
-            label: `SMH Base (${groupe}${classe})`,
-            value: baseSMH,
-            isBase: true
-        });
-        
-        // Majoration forfait
-        const tauxForfait = CONFIG.FORFAITS[state.forfait];
-        if (tauxForfait > 0) {
-            const montantForfait = Math.round(baseSMH * tauxForfait);
-            const labelForfait = state.forfait === 'heures' ? 'Forfait Heures (+15%)' : 'Forfait Jours (+30%)';
-            details.push({
-                label: labelForfait,
-                value: montantForfait,
-                isPositive: true
-            });
-            total += montantForfait;
+        details.push({ label: `SMH Base (${groupe}${classe})`, value: baseSMH, isBase: true });
+
+        const forfaitDefs = getConventionForfaitDefs();
+        const forfaitDef = forfaitDefs.find(d => d.config?.forfaitKey === state.forfait);
+        if (forfaitDef) {
+            const rForfait = computeForfait(forfaitDef, context);
+            if (rForfait.amount > 0) {
+                details.push({ label: rForfait.label, value: rForfait.amount, isPositive: true });
+                total += rForfait.amount;
+            }
         }
-        
-        // Prime ancienneté accord (si applicable aux cadres)
-        if (agreement && agreement.anciennete && agreement.anciennete.tousStatuts) {
-            const primeAccord = calculatePrimeAncienneteAccord(agreement, baseSMH, state.anciennete);
-            if (primeAccord.montant > 0) {
+
+        if (agreement?.anciennete?.tousStatuts) {
+            const defAccord = buildAccordPrimeAncienneteDef(agreement);
+            const rAccord = computePrime(defAccord, context);
+            if (rAccord.amount > 0) {
+                const suffixForfait = rAccord.meta?.majorationForfaitJours ? ' × 1,30 forfait jours' : '';
                 details.push({
-                    label: `Prime ancienneté ${agreement.nomCourt} (${formatMoney(baseSMH)} × ${primeAccord.taux}%)`,
-                    value: primeAccord.montant,
+                    label: rAccord.label + ` (${formatMoney(baseSMH)} × ${rAccord.meta?.taux ?? 0}%${suffixForfait})`,
+                    value: rAccord.amount,
                     isPositive: true,
                     isAgreement: true,
                     agreementId: agreement.id
                 });
-                total += primeAccord.montant;
+                total += rAccord.amount;
             }
         }
     }
-    
-    // ═══════════════════════════════════════════════════════════════
-    // MAJORATIONS CONDITIONS DE TRAVAIL
-    // Non-Cadres : toujours | Cadres : sauf forfait jours (repos)
-    // ═══════════════════════════════════════════════════════════════
-    
+
+    // ─── Majorations conditions de travail ───
     const isForfaitJours = isCadreValue && state.forfait === 'jours';
-    
     if (!isForfaitJours) {
-        // Calculer le taux horaire de base (pour les majorations)
-        const tauxHoraire = baseSMH / 12 / 151.67;
-        
-        // Majoration nuit
-        if (state.typeNuit !== 'aucun' && state.heuresNuit > 0) {
-            const majNuit = calculateMajorationNuit(state.typeNuit, state.heuresNuit, tauxHoraire, agreement);
-            const typePoste = state.typeNuit === 'poste-nuit' ? 'poste nuit' : 'poste matin/AM';
-            const labelNuit = agreement 
-                ? `Majoration nuit ${typePoste} (+${majNuit.taux}% ${agreement.nomCourt})`
-                : `Majoration nuit (+${majNuit.taux}% CCN)`;
-            details.push({
-                label: `${labelNuit} (${state.heuresNuit}h/mois)`,
-                value: majNuit.montantAnnuel,
-                isPositive: true,
-                isAgreement: majNuit.source !== 'CCN',
-                agreementId: agreement?.id
-            });
-            total += majNuit.montantAnnuel;
-        }
-        
-        // Majoration dimanche
-        if (state.travailDimanche && state.heuresDimanche > 0) {
-            const majDim = calculateMajorationDimanche(state.heuresDimanche, tauxHoraire, agreement);
-            const labelDim = agreement 
-                ? `Majoration dimanche (+${majDim.taux}% ${agreement.nomCourt})` 
-                : `Majoration dimanche (+${majDim.taux}% CCN)`;
-            details.push({
-                label: `${labelDim} (${state.heuresDimanche}h/mois)`,
-                value: majDim.montantAnnuel,
-                isPositive: true,
-                isAgreement: majDim.source !== 'CCN',
-                agreementId: agreement?.id
-            });
-            total += majDim.montantAnnuel;
-        }
-        
-        // Prime d'équipe (accord d'entreprise, non-cadres uniquement)
-        if (agreement && !isCadreValue && state.travailEquipe && state.heuresEquipe > 0) {
-            const primeEquipe = calculatePrimeEquipe(agreement, state.heuresEquipe);
-            if (primeEquipe.montantAnnuel > 0) {
+        const convMajDefs = getConventionMajorationDefs();
+        const accordMajDefs = buildAccordMajorationDefs(agreement);
+
+        const defNuit = (accordMajDefs.length && state.typeNuit !== 'aucun') 
+            ? accordMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_NUIT) ?? convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_NUIT)
+            : convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_NUIT);
+        if (defNuit && state.typeNuit !== 'aucun' && state.heuresNuit > 0) {
+            const rNuit = computeMajoration(defNuit, context);
+            if (rNuit.amount > 0) {
+                const typePoste = state.typeNuit === 'poste-nuit' ? 'poste nuit' : 'poste matin/AM';
                 details.push({
-                    label: `Prime équipe (${state.heuresEquipe}h × ${primeEquipe.tauxHoraire}€ ${agreement.nomCourt})`,
-                    value: primeEquipe.montantAnnuel,
+                    label: `Majoration nuit ${typePoste} (+${rNuit.meta?.taux ?? 0}%) (${state.heuresNuit}h/mois)`,
+                    value: rNuit.amount,
+                    isPositive: true,
+                    isAgreement: rNuit.source === SOURCE_ACCORD,
+                    agreementId: agreement?.id
+                });
+                total += rNuit.amount;
+            }
+        }
+
+        const defDim = (accordMajDefs.length && state.heuresDimanche > 0)
+            ? accordMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_DIMANCHE) ?? convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_DIMANCHE)
+            : convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_DIMANCHE);
+        if (defDim && state.travailDimanche && state.heuresDimanche > 0) {
+            const rDim = computeMajoration(defDim, context);
+            if (rDim.amount > 0) {
+                details.push({
+                    label: `Majoration dimanche (+${rDim.meta?.taux ?? 0}%) (${state.heuresDimanche}h/mois)`,
+                    value: rDim.amount,
+                    isPositive: true,
+                    isAgreement: rDim.source === SOURCE_ACCORD,
+                    agreementId: agreement?.id
+                });
+                total += rDim.amount;
+            }
+        }
+    }
+
+    // Primes accord (horaire, montant) — toujours si accord actif (tous profils : non-cadre, cadre 35h, cadre forfait jours)
+    if (agreement) {
+        const accordPrimeDefs = getAccordPrimeDefsAsElements(agreement);
+        for (const def of accordPrimeDefs) {
+            if (def.semanticId === SEMANTIC_ID.PRIME_ANCIENNETE) continue;
+            const actif = getAccordInput(state, def.config?.stateKeyActif);
+            if (actif !== true && actif !== 'true') continue;
+            const r = computePrime(def, context);
+            if (r.amount > 0) {
+                let label = r.label;
+                if (def.valueKind === 'horaire' && r.meta?.heures != null) {
+                    label = `${r.label} (${r.meta.heures}h × ${r.meta.tauxHoraire ?? 0}€ ${agreement.nomCourt})`;
+                } else if (def.valueKind === 'montant' && def.config?.moisVersement != null) {
+                    const moisNom = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'][def.config.moisVersement - 1];
+                    label = `${r.label} ${agreement.nomCourt} (${moisNom})`;
+                } else {
+                    label = `${r.label} ${agreement.nomCourt}`;
+                }
+                details.push({
+                    label,
+                    value: r.amount,
                     isPositive: true,
                     isAgreement: true,
                     agreementId: agreement.id
                 });
-                total += primeEquipe.montantAnnuel;
+                total += r.amount;
             }
         }
     }
-    
-    // ═══════════════════════════════════════════════════════════════
-    // PRIMES SPÉCIFIQUES ACCORD D'ENTREPRISE
-    // ═══════════════════════════════════════════════════════════════
-    
-    if (agreement) {
-        // Prime de vacances (avec vérification des conditions d'ancienneté)
-        const primeVacances = getPrimeVacances(agreement, state.primeVacances, state.anciennete);
-        if (primeVacances > 0) {
-            const moisVersement = agreement.primes?.vacances?.moisVersement || 7;
-            const moisNom = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'][moisVersement - 1];
-            details.push({
-                label: `Prime de vacances ${agreement.nomCourt} (${moisNom})`,
-                value: primeVacances,
-                isPositive: true,
-                isAgreement: true,
-                agreementId: agreement.id
-            });
-            total += primeVacances;
-        }
-    }
-    
+
     return {
         scenario,
         baseSMH,
@@ -321,7 +344,6 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
 
 /**
  * Obtenir le montant annuel brut de l'assiette SMH (SMH seul)
- * Wrapper de calculateAnnualRemuneration avec mode 'smh-only'
  * @param {Object} state - État de l'application
  * @returns {number} Montant annuel de l'assiette SMH
  */

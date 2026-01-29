@@ -5,7 +5,7 @@
 **Sources Juridiques de Référence :**
 - **CCNM 2024 :** Convention Collective Nationale de la Métallurgie (IDCC 3248) - Entrée en vigueur 01/01/2024
 - **Code du Travail :** Art. L2254-2 (Principe de faveur)
-- **Accord Kuhn :** Accord d'entreprise du 6 mars 2024, UES KUHN SAS/KUHN MGM SAS
+- **Accords d'entreprise :** Définis dans le dossier `accords/` (ex. KuhnAgreement.js), chargés à l'exécution
 
 **Principe de Faveur :** Le système applique systématiquement le principe de faveur (Art. L2254-2 Code du Travail) en comparant les règles CCN et Accord et en choisissant la plus avantageuse pour le salarié.
 
@@ -16,39 +16,29 @@ L'application est structurée de manière modulaire pour faciliter la maintenanc
 ### Structure des Modules
 
 ```
-src/
-├── core/                    # Modules fondamentaux
-│   ├── state.js            # État global de l'application
-│   ├── config.js           # Configuration CCN (données métier)
-│   ├── constants.js        # Constantes partagées
-│   └── URLParams.js        # Gestion paramètres URL et iframe
-├── agreements/              # Système d'accords d'entreprise
-│   ├── AgreementInterface.js  # Schéma standard des accords
-│   ├── KuhnAgreement.js       # Accord Kuhn (exemple)
-│   ├── AgreementRegistry.js   # Registre des accords
-│   └── AgreementLoader.js      # Chargement dynamique
-├── classification/          # Moteur de classification
-│   └── ClassificationEngine.js
-├── remuneration/            # Calculs de rémunération
-│   ├── RemunerationCalculator.js  # Calculateur principal unifié
-│   ├── SMHCalculator.js          # Calcul assiette SMH
-│   ├── PrimeCalculator.js        # Calculs primes
-│   ├── MajorationCalculator.js   # Calculs majorations
-│   └── ForfaitCalculator.js     # Calculs forfaits cadres
-├── arretees/               # Calculs arriérés
-│   ├── ArreteesCalculator.js    # Calcul arriérés mois par mois
-│   ├── TimelineManager.js       # Gestion frise chronologique
-│   ├── SalaryCurve.js           # Graphique Chart.js
-│   └── PDFGenerator.js          # Génération PDF
-├── ui/                     # Composants UI
-│   ├── Toast.js            # Notifications temporaires
-│   ├── Tooltips.js         # Initialisation tooltips
-│   ├── AgreementToggle.js  # Toggle accord d'entreprise
-│   ├── RemunerationDisplay.js  # Affichage résultats
-│   └── Labels.js           # Centralisation labels
-└── utils/                  # Utilitaires
-    ├── formatters.js       # Formatage montants
-    └── textHelpers.js      # Gestion acronymes et textes
+projet/
+├── accords/                 # Définitions des accords (à la racine, hors code app)
+│   └── KuhnAgreement.js     # Exemple d'accord d'entreprise (schéma générique)
+└── src/                     # Code applicatif
+    ├── core/                # Modules fondamentaux
+    │   ├── state.js
+    │   ├── config.js
+    │   ├── constants.js
+    │   └── URLParams.js
+    ├── agreements/          # Moteur accords (registre, chargement, schéma)
+    │   ├── AgreementInterface.js
+    │   ├── AgreementRegistry.js   # importe depuis ../../accords/
+    │   └── AgreementLoader.js
+    ├── classification/      # Moteur de classification
+    │   └── ClassificationEngine.js
+    ├── remuneration/       # Calculs de rémunération
+    │   ├── RemunerationCalculator.js
+    │   ├── PrimeCalculator.js
+    │   ├── MajorationCalculator.js
+    │   └── ForfaitCalculator.js
+    ├── arretees/           # Arriérés, timeline, PDF
+    ├── ui/                 # Composants UI
+    └── utils/
 ```
 
 ## Flux de Données

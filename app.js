@@ -37,12 +37,11 @@ const state = {
     heuresNuit: 0,               // Heures de nuit mensuelles
     travailDimanche: false,      // Travail le dimanche
     heuresDimanche: 0,           // Heures dimanche mensuelles
-    travailEquipe: false,        // Travail en équipes postées
-    heuresEquipe: 151.67,        // Heures mensuelles en équipe
     
-    // === ACCORD ENTREPRISE KUHN ===
-    accordKuhn: false,           // Accord d'entreprise activé
-    primeVacances: true,         // Prime de vacances (525€)
+    // === ACCORD ENTREPRISE (générique, listable) ===
+    accordActif: false,           // Accord d'entreprise activé (générique)
+    /** Entrées utilisateur par élément d'accord. Clés fournies par l'accord (stateKeyActif, stateKeyHeures). Initialisé à vide ; hydraté par hydrateAccordInputs(agreement, state) quand un accord est chargé/activé. */
+    accordInputs: {},
     
     // === AFFICHAGE ===
     nbMois: 12                   // Répartition mensuelle (12 ou 13 mois)
@@ -739,7 +738,6 @@ function initControls() {
     setupNumberInputUX(experienceProInput);
     setupNumberInputUX(document.getElementById('heures-nuit'));
     setupNumberInputUX(document.getElementById('heures-dimanche'));
-    setupNumberInputUX(document.getElementById('heures-equipe'));
     setupNumberInputUX(document.getElementById('age-actuel'));
     setupNumberInputUX(document.getElementById('augmentation-annuelle'));
 
@@ -839,86 +837,77 @@ function initControls() {
         updateAll();
     });
 
-    // Travail en équipe
-    const travailEquipeCheckbox = document.getElementById('travail-equipe');
-    const heuresEquipeField = document.getElementById('heures-equipe-field');
-    const heuresEquipeInput = document.getElementById('heures-equipe');
-    
-    travailEquipeCheckbox.addEventListener('change', (e) => {
-        const wasChecked = state.travailEquipe;
-        const isChecked = e.target.checked;
-        
-        // Si l'utilisateur coche sans accord Kuhn activé, activer automatiquement l'accord
-        if (isChecked && !state.accordKuhn) {
-            state.accordKuhn = true;
-            const accordKuhnCheckbox = document.getElementById('accord-kuhn');
-            if (accordKuhnCheckbox) {
-                accordKuhnCheckbox.checked = true;
+    // Primes horaires accord (délégation sur le conteneur dynamique)
+    const accordPrimesHorairesContainer = document.getElementById('accord-primes-horaires-container');
+    if (accordPrimesHorairesContainer) {
+        accordPrimesHorairesContainer.addEventListener('change', (e) => {
+            const keyActif = e.target.dataset?.stateKeyActif;
+            if (e.target.type === 'checkbox' && keyActif) {
+                const isChecked = e.target.checked;
+                if (isChecked && !state.accordActif) {
+                    state.accordActif = true;
+                    const accordCheckbox = document.getElementById('accord-actif');
+                    if (accordCheckbox) accordCheckbox.checked = true;
+                    const accordOptions = document.getElementById('accord-options');
+                    if (accordOptions) accordOptions.classList.remove('hidden');
+                    const accordNom = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? (window.AgreementLoader.getActiveAgreement()?.nomCourt || 'd\'entreprise') : 'd\'entreprise';
+                    showToast(`✅ L'accord ${accordNom} a été activé automatiquement pour permettre cette option.`, 'success', 4000);
+                    updateConditionsTravailDisplay();
+                    updateTauxInfo();
+                }
+                state.accordInputs[keyActif] = isChecked;
+                const formGroup = e.target.closest('.form-group');
+                const subField = formGroup?.querySelector('[data-heures-field-for]');
+                if (subField) subField.classList.toggle('hidden', !isChecked);
+                updateAll();
             }
-            const accordOptions = document.getElementById('accord-options');
-            if (accordOptions) {
-                accordOptions.classList.remove('hidden');
+        });
+        accordPrimesHorairesContainer.addEventListener('input', (e) => {
+            const keyHeures = e.target.dataset?.stateKeyHeures;
+            if (e.target.type === 'number' && keyHeures) {
+                state.accordInputs[keyHeures] = parseFloat(e.target.value) || 0;
+                updateAll();
             }
-            showToast('✅ L\'accord d\'entreprise Kuhn a été activé automatiquement pour permettre cette option.', 'success', 4000);
-            // Mettre à jour l'affichage des conditions de travail et des taux
-            updateConditionsTravailDisplay();
-            updateTauxInfo();
-        }
-        
-        state.travailEquipe = isChecked;
-        heuresEquipeField.classList.toggle('hidden', !isChecked);
-        updateAll();
-    });
-    
-    heuresEquipeInput.addEventListener('input', (e) => {
-        state.heuresEquipe = parseFloat(e.target.value) || 0;
-        updateAll();
-    });
+        });
+    }
 
     // ═══════════════════════════════════════════════════════════════
-    // CONTRÔLES ACCORD ENTREPRISE KUHN
+    // CONTRÔLES ACCORD ENTREPRISE (générique)
     // ═══════════════════════════════════════════════════════════════
     
-    const accordKuhnCheckbox = document.getElementById('accord-kuhn');
+    const accordCheckbox = document.getElementById('accord-actif');
     const accordOptions = document.getElementById('accord-options');
     
-    // Checkbox principal accord Kuhn
-    if (accordKuhnCheckbox) {
-        accordKuhnCheckbox.addEventListener('change', (e) => {
-            const wasActive = state.accordKuhn;
+    if (accordCheckbox) {
+        accordCheckbox.addEventListener('change', (e) => {
+            const wasActive = state.accordActif;
             const isActive = e.target.checked;
-            state.accordKuhn = isActive;
+            state.accordActif = isActive;
             
-            // Si l'accord est activé, informer que la prime d'équipe est disponible (pour non-cadres)
             if (!wasActive && isActive) {
+                const agreement = window.AgreementLoader?.getActiveAgreement?.();
+                if (agreement && window.AgreementHelpers?.hydrateAccordInputs) {
+                    window.AgreementHelpers.hydrateAccordInputs(agreement, state);
+                }
                 const { classe } = getActiveClassification();
                 const isCadre = classe >= CONFIG.SEUIL_CADRE;
-                if (!isCadre) {
-                    showToast('💡 L\'option "Travail en équipes postées" est maintenant disponible dans l\'étape Situation.', 'info', 4000);
-                }
+                if (!isCadre) showToast('💡 Les options de l\'accord sont maintenant disponibles dans l\'étape Situation.', 'info', 4000);
             }
-            
-            // Si l'accord est désactivé alors que la prime d'équipe est cochée
-            if (wasActive && !isActive && state.travailEquipe) {
-                state.travailEquipe = false;
-                const travailEquipeCheckbox = document.getElementById('travail-equipe');
-                if (travailEquipeCheckbox) {
-                    travailEquipeCheckbox.checked = false;
+
+            // Désactivation accord : réinitialiser les options sans connaître les clés (générique)
+            if (wasActive && !isActive) {
+                const agreement = window.AgreementLoader?.getActiveAgreement?.();
+                if (agreement && window.AgreementHelpers?.getPrimes) {
+                    window.AgreementHelpers.getPrimes(agreement).forEach(prime => {
+                        if (prime.stateKeyActif) state.accordInputs[prime.stateKeyActif] = false;
+                    });
                 }
-                const heuresEquipeField = document.getElementById('heures-equipe-field');
-                if (heuresEquipeField) {
-                    heuresEquipeField.classList.add('hidden');
-                }
-                showToast('ℹ️ L\'option "Travail en équipes postées" a été décochée car l\'accord d\'entreprise n\'est plus actif.', 'info', 4000);
+                accordOptions?.querySelectorAll('input[data-state-key-actif]').forEach(inp => { inp.checked = false; });
+                updateConditionsTravailDisplay();
+                showToast('ℹ️ Les options de l\'accord ont été réinitialisées.', 'info', 4000);
             }
-            
-            // Afficher/masquer les options détaillées
             if (accordOptions) {
-                if (state.accordKuhn) {
-                    accordOptions.classList.remove('hidden');
-                } else {
-                    accordOptions.classList.add('hidden');
-                }
+                accordOptions.classList.toggle('hidden', !state.accordActif);
             }
             
             updateConditionsTravailDisplay();
@@ -930,12 +919,23 @@ function initControls() {
         });
     }
 
-    // Prime de vacances
-    const primeVacancesCheckbox = document.getElementById('prime-vacances');
-    if (primeVacancesCheckbox) {
-        primeVacancesCheckbox.addEventListener('change', (e) => {
-            state.primeVacances = e.target.checked;
-            updateAll();
+    // Hydrater accordInputs à partir de l'accord (si chargé depuis URL) — pas de clés hardcodées
+    if (window.AgreementHelpers?.hydrateAccordInputs && window.AgreementLoader?.getActiveAgreement?.()) {
+        window.AgreementHelpers.hydrateAccordInputs(window.AgreementLoader.getActiveAgreement(), state);
+    }
+
+    // Options accord : délégation sur #accord-options (pas d'id de prime spécifique)
+    const accordOptionsEl = document.getElementById('accord-options');
+    if (accordOptionsEl) {
+        accordOptionsEl.addEventListener('change', (e) => {
+            const input = e.target.closest('input[data-state-key-actif]');
+            if (input) {
+                const key = input.getAttribute('data-state-key-actif');
+                if (key) {
+                    state.accordInputs[key] = input.checked;
+                    updateAll();
+                }
+            }
         });
     }
     
@@ -996,61 +996,137 @@ function updateConditionsTravailDisplay() {
     const isCadre = classe >= CONFIG.SEUIL_CADRE;
     const isForfaitJours = state.forfait === 'jours';
     
-    const conditionsTravail = document.getElementById('conditions-travail');
     const hintForfaitJours = document.getElementById('hint-forfait-jours');
     const groupNuit = document.getElementById('group-nuit');
     const groupDimanche = document.getElementById('group-dimanche');
-    const primeEquipeGroup = document.getElementById('prime-equipe-group');
+    const container = document.getElementById('accord-primes-horaires-container');
+    
+    const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
+    const primesHoraires = agreement && typeof window.AgreementHelpers?.getPrimes === 'function'
+        ? window.AgreementHelpers.getPrimes(agreement).filter(p => p.valueType === 'horaire' && p.stateKeyHeures)
+        : [];
+    const hasPrimeHeures = primesHoraires.length > 0;
     
     // Cadres au forfait jours : pas de majorations financières (repos uniquement)
     if (isCadre && isForfaitJours) {
         hintForfaitJours.classList.remove('hidden');
         groupNuit.classList.add('hidden');
         groupDimanche.classList.add('hidden');
-        primeEquipeGroup.classList.add('hidden');
-        
-        // Reset les valeurs
+        if (container) {
+            container.innerHTML = '';
+            container.classList.add('hidden');
+        }
         state.typeNuit = 'aucun';
         state.travailDimanche = false;
-        state.travailEquipe = false;
+        primesHoraires.forEach(p => {
+            if (p.stateKeyActif) state.accordInputs[p.stateKeyActif] = false;
+        });
         document.getElementById('type-nuit').value = 'aucun';
         document.getElementById('travail-dimanche').checked = false;
-        document.getElementById('travail-equipe').checked = false;
         document.getElementById('heures-nuit-field').classList.add('hidden');
         document.getElementById('heures-dimanche-field').classList.add('hidden');
-        document.getElementById('heures-equipe-field').classList.add('hidden');
     } else {
         hintForfaitJours.classList.add('hidden');
         groupNuit.classList.remove('hidden');
         groupDimanche.classList.remove('hidden');
         
-        // Prime d'équipe : visible pour non-cadres (activée uniquement si accord Kuhn)
-        if (!isCadre) {
-            primeEquipeGroup.classList.remove('hidden');
+        if (!container) return;
+        container.innerHTML = '';
+        if (!isCadre && hasPrimeHeures) {
+            container.classList.remove('hidden');
+            primesHoraires.forEach(prime => {
+                const actif = state.accordInputs[prime.stateKeyActif] === true;
+                const heures = state.accordInputs[prime.stateKeyHeures] != null ? state.accordInputs[prime.stateKeyHeures] : (prime.defaultHeures ?? 151.67);
+                const formGroup = document.createElement('div');
+                formGroup.className = 'form-group';
+                formGroup.dataset.stateKeyActif = prime.stateKeyActif;
+                formGroup.dataset.stateKeyHeures = prime.stateKeyHeures;
+                const labelCheck = document.createElement('label');
+                labelCheck.className = 'checkbox-label';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.className = 'book-checkbox';
+                cb.dataset.stateKeyActif = prime.stateKeyActif;
+                cb.checked = actif;
+                const spanLabel = document.createElement('span');
+                spanLabel.textContent = prime.label || "Prime horaire (accord d'entreprise)";
+                labelCheck.appendChild(cb);
+                labelCheck.appendChild(spanLabel);
+                if (prime.tooltip) {
+                    const tooltipSpan = document.createElement('span');
+                    tooltipSpan.className = 'tooltip-trigger';
+                    tooltipSpan.setAttribute('data-tippy-content', String(prime.tooltip).replace(/"/g, '&quot;'));
+                    tooltipSpan.setAttribute('aria-label', 'Aide');
+                    tooltipSpan.textContent = '?';
+                    labelCheck.appendChild(tooltipSpan);
+                }
+                const subField = document.createElement('div');
+                subField.className = 'sub-field' + (actif ? '' : ' hidden');
+                subField.dataset.heuresFieldFor = prime.stateKeyActif;
+                const labelHeures = document.createElement('label');
+                labelHeures.textContent = 'Heures / mois';
+                const inputHeures = document.createElement('input');
+                inputHeures.type = 'number';
+                inputHeures.className = 'book-input';
+                inputHeures.min = prime.min ?? 0;
+                inputHeures.max = prime.max ?? 200;
+                inputHeures.step = prime.step ?? 0.01;
+                inputHeures.value = heures;
+                inputHeures.dataset.stateKeyHeures = prime.stateKeyHeures;
+                inputHeures.addEventListener('focus', function () { this.select(); });
+                subField.appendChild(labelHeures);
+                subField.appendChild(inputHeures);
+                formGroup.appendChild(labelCheck);
+                formGroup.appendChild(subField);
+                container.appendChild(formGroup);
+            });
+            // Initialiser Tippy sur les nouveaux "?" (sans réinitialiser toute la page)
+            if (typeof tippy !== 'undefined') {
+                container.querySelectorAll('.tooltip-trigger[data-tippy-content]').forEach((el) => {
+                    if (!el._tippy) {
+                        const instances = tippy(el, {
+                            theme: 'metallurgie',
+                            animation: 'shift-away',
+                            duration: [200, 150],
+                            arrow: true,
+                            maxWidth: 300,
+                            interactive: true,
+                            allowHTML: true,
+                            appendTo: document.body
+                        });
+                        if (instances && instances[0]) el._tippy = instances[0];
+                        el.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                        });
+                    }
+                });
+            }
         } else {
-            primeEquipeGroup.classList.add('hidden');
-            state.travailEquipe = false;
-            const travailEquipeCheckbox = document.getElementById('travail-equipe');
-            if (travailEquipeCheckbox) travailEquipeCheckbox.checked = false;
-            document.getElementById('heures-equipe-field').classList.add('hidden');
+            container.classList.add('hidden');
+            primesHoraires.forEach(p => {
+                if (p.stateKeyActif) state.accordInputs[p.stateKeyActif] = false;
+            });
         }
     }
 }
 
 /**
- * Mettre à jour les informations de taux appliqués (CCN vs Kuhn)
+ * Mettre à jour les informations de taux appliqués (CCN vs accord)
  */
 function updateTauxInfo() {
     const tauxNuitInfo = document.getElementById('taux-nuit-info');
     const tauxDimancheInfo = document.getElementById('taux-dimanche-info');
-    
+    const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
+    const nomAccord = agreement?.nomCourt || 'accord';
+
     // Taux de nuit
     if (tauxNuitInfo) {
         if (state.typeNuit !== 'aucun') {
-            if (state.accordKuhn) {
+            if (state.accordActif && agreement) {
                 const taux = state.typeNuit === 'poste-nuit' ? '+20%' : '+15%';
-                tauxNuitInfo.textContent = `Taux Kuhn : ${taux}`;
-                tauxNuitInfo.className = 'taux-applique kuhn';
+                tauxNuitInfo.textContent = `Taux ${nomAccord} : ${taux}`;
+                tauxNuitInfo.className = 'taux-applique accord';
             } else {
                 tauxNuitInfo.textContent = 'Taux CCN : +15%';
                 tauxNuitInfo.className = 'taux-applique';
@@ -1059,13 +1135,13 @@ function updateTauxInfo() {
             tauxNuitInfo.textContent = '';
         }
     }
-    
+
     // Taux dimanche
     if (tauxDimancheInfo) {
         if (state.travailDimanche) {
-            if (state.accordKuhn) {
-                tauxDimancheInfo.textContent = 'Taux Kuhn : +50%';
-                tauxDimancheInfo.className = 'taux-applique kuhn';
+            if (state.accordActif && agreement) {
+                tauxDimancheInfo.textContent = `Taux ${nomAccord} : +50%`;
+                tauxDimancheInfo.className = 'taux-applique accord';
             } else {
                 tauxDimancheInfo.textContent = 'Taux CCN : +100%';
                 tauxDimancheInfo.className = 'taux-applique';
@@ -1278,8 +1354,14 @@ function updateAll() {
 
     // Affichage des conditions de travail selon statut/forfait
     updateConditionsTravailDisplay();
-    
-    // Mise à jour des taux affichés (CCN vs Kuhn)
+
+    // Synchroniser la checkbox accord et le bloc options depuis state
+    const accordCheckboxEl = document.getElementById('accord-actif');
+    const accordOptionsEl = document.getElementById('accord-options');
+    if (accordCheckboxEl) accordCheckboxEl.checked = !!state.accordActif;
+    if (accordOptionsEl) accordOptionsEl.classList.toggle('hidden', !state.accordActif);
+
+    // Mise à jour des taux affichés (CCN vs accord)
     updateTauxInfo();
 
     // Calcul et affichage rémunération
@@ -1314,12 +1396,15 @@ function updateRemunerationDisplay(remuneration) {
     // Agréger les éléments similaires pour épurer l'affichage
     const aggregatedDetails = aggregateRemunerationDetails(remuneration.details);
     
+    const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
+    const nomAccord = agreement?.nomCourt || 'accord';
     aggregatedDetails.forEach(detail => {
         const valueClass = detail.isPositive ? 'positive' : '';
         const prefix = detail.isPositive ? '+' : '';
-        const kuhnBadge = detail.isKuhn ? ' <span class="kuhn-badge">🏢 Kuhn</span>' : '';
-        const origin = detail.tooltipOrigin || (detail.isKuhn ? 'Accord d\'entreprise Kuhn' : 'Convention collective (CCN)');
-        let tipContent = '<strong>Origine :</strong> ' + (typeof origin === 'string' ? origin : (detail.isKuhn ? 'Accord d\'entreprise Kuhn' : 'Convention collective (CCN)')) + '<br>';
+        const isAccord = detail.isAgreement ?? detail.isKuhn;
+        const accordBadge = isAccord ? ` <span class="accord-badge">🏢 ${nomAccord}</span>` : '';
+        const origin = detail.tooltipOrigin || (isAccord ? `Accord d'entreprise ${nomAccord}` : 'Convention collective (CCN)');
+        let tipContent = '<strong>Origine :</strong> ' + (typeof origin === 'string' ? origin : (isAccord ? `Accord d'entreprise ${nomAccord}` : 'Convention collective (CCN)')) + '<br>';
         if (detail.breakdown && detail.breakdown.length) {
             tipContent += '<strong>Détail du calcul :</strong><br>';
             detail.breakdown.forEach(b => {
@@ -1333,7 +1418,7 @@ function updateRemunerationDisplay(remuneration) {
         const tipAttr = tipContent.replace(/"/g, '&quot;');
         detailsHTML += `
             <div class="result-detail-item">
-                <span class="result-detail-label">${detail.label}${kuhnBadge}
+                <span class="result-detail-label">${detail.label}${accordBadge}
                     <span class="result-detail-info-icon tooltip-trigger" data-tippy-content="${tipAttr}" data-tippy-allowHTML="true" aria-label="Détails">i</span>
                 </span>
                 <span class="result-detail-value ${valueClass}">${prefix}${formatMoney(detail.value)}</span>
@@ -1362,19 +1447,20 @@ function updateRemunerationDisplay(remuneration) {
 
 /**
  * Agréger les détails de rémunération pour épurer l'affichage.
- * Séparation CCN / Accord d'entreprise : le badge Kuhn ne s'affiche que sur les lignes 100 % Kuhn.
+ * Séparation CCN / Accord d'entreprise : le badge accord ne s'affiche que sur les lignes 100 % accord.
  */
 function aggregateRemunerationDetails(details) {
     const aggregated = [];
     let majorationsCCN = 0;
-    let majorationsKuhn = 0;
+    let majorationsAccord = 0;
     const majorationsBreakdownCCN = [];
-    const majorationsBreakdownKuhn = [];
+    const majorationsBreakdownAccord = [];
     let primesCCN = 0;
-    let primesKuhn = 0;
+    let primesAccord = 0;
     const primesBreakdownCCN = [];
-    const primesBreakdownKuhn = [];
-    
+    const primesBreakdownAccord = [];
+    const isAccordDetail = (d) => d.isAgreement ?? d.isKuhn;
+
     details.forEach(detail => {
         // SMH de base toujours affiché (avec origine pour tooltip)
         if (detail.isBase) {
@@ -1384,71 +1470,74 @@ function aggregateRemunerationDetails(details) {
                 tooltipDetail: detail.label
             });
         }
-        // Agréger les majorations en CCN vs Kuhn
+        // Agréger les majorations en CCN vs accord
         else if (detail.label.includes('Majoration') || detail.label.includes('Forfait')) {
-            if (detail.isKuhn) {
-                majorationsKuhn += detail.value;
-                majorationsBreakdownKuhn.push({ label: detail.label, value: detail.value, isKuhn: true });
+            if (isAccordDetail(detail)) {
+                majorationsAccord += detail.value;
+                majorationsBreakdownAccord.push({ label: detail.label, value: detail.value, isAgreement: true });
             } else {
                 majorationsCCN += detail.value;
-                majorationsBreakdownCCN.push({ label: detail.label, value: detail.value, isKuhn: false });
+                majorationsBreakdownCCN.push({ label: detail.label, value: detail.value, isAgreement: false });
             }
         }
-        // Agréger les primes en CCN vs Kuhn
+        // Agréger les primes en CCN vs accord
         else if (detail.isPositive && !detail.isBase) {
-            if (detail.isKuhn) {
-                primesKuhn += detail.value;
-                primesBreakdownKuhn.push({ label: detail.label, value: detail.value, isKuhn: true });
+            if (isAccordDetail(detail)) {
+                primesAccord += detail.value;
+                primesBreakdownAccord.push({ label: detail.label, value: detail.value, isAgreement: true });
             } else {
                 primesCCN += detail.value;
-                primesBreakdownCCN.push({ label: detail.label, value: detail.value, isKuhn: false });
+                primesBreakdownCCN.push({ label: detail.label, value: detail.value, isAgreement: false });
             }
         }
     });
-    
-    // Lignes agrégées séparées CCN / Accord d'entreprise (badge Kuhn + tooltip pour l'origine)
+
+    const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
+    const nomAccord = agreement?.nomCourt || 'accord';
+
+    // Lignes agrégées séparées CCN / Accord d'entreprise (badge + tooltip pour l'origine)
     if (majorationsCCN > 0) {
         aggregated.push({
             label: 'Majorations et forfaits',
             value: majorationsCCN,
             isPositive: true,
-            isKuhn: false,
+            isAgreement: false,
             tooltipOrigin: 'Convention collective (CCN)',
             breakdown: majorationsBreakdownCCN
         });
     }
-    if (majorationsKuhn > 0) {
+    if (majorationsAccord > 0) {
         aggregated.push({
             label: 'Majorations et forfaits',
-            value: majorationsKuhn,
+            value: majorationsAccord,
             isPositive: true,
-            isKuhn: true,
-            tooltipOrigin: 'Accord d\'entreprise Kuhn',
-            breakdown: majorationsBreakdownKuhn
+            isAgreement: true,
+            tooltipOrigin: `Accord d'entreprise ${nomAccord}`,
+            breakdown: majorationsBreakdownAccord
         });
     }
-    
+
     if (primesCCN > 0) {
         aggregated.push({
             label: 'Primes (ancienneté, etc.)',
             value: primesCCN,
             isPositive: true,
-            isKuhn: false,
+            isAgreement: false,
             tooltipOrigin: 'Convention collective (CCN)',
             breakdown: primesBreakdownCCN
         });
     }
-    if (primesKuhn > 0) {
+    if (primesAccord > 0) {
         aggregated.push({
             label: 'Primes (ancienneté, vacances, etc.)',
-            value: primesKuhn,
+            value: primesAccord,
             isPositive: true,
-            isKuhn: true,
-            tooltipOrigin: 'Accord d\'entreprise Kuhn',
-            breakdown: primesBreakdownKuhn
+            isAgreement: true,
+            tooltipOrigin: `Accord d'entreprise ${nomAccord}`,
+            breakdown: primesBreakdownAccord
         });
     }
-    
+
     return aggregated;
 }
 
@@ -1461,13 +1550,15 @@ function updateHintDisplay(remuneration) {
     
     const hints = [];
     
-    // Compter les éléments appliqués
-    const kuhnDetails = remuneration.details.filter(d => d.isKuhn);
-    const hasMajorations = remuneration.details.some(d => 
+    // Compter les éléments appliqués (accord = isAgreement ou isKuhn pour compat)
+    const accordDetails = remuneration.details.filter(d => d.isAgreement ?? d.isKuhn);
+    const hasMajorations = remuneration.details.some(d =>
         d.label.includes('nuit') || d.label.includes('dimanche') || d.label.includes('équipe')
     );
-    const hasKuhnElements = kuhnDetails.length > 0;
-    
+    const hasAccordElements = accordDetails.length > 0;
+    const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
+    const nomAccord = agreement?.nomCourt || 'accord';
+
     // === HINT 1: Barème salariés débutants ===
     if (remuneration.scenario === 'cadre-debutant') {
         const smhStandard = CONFIG.SMH[remuneration.classe];
@@ -1481,9 +1572,9 @@ function updateHintDisplay(remuneration) {
         });
     }
     
-    // === HINT 2: Accord Kuhn ===
-    if (state.accordKuhn && hasKuhnElements) {
-        const elementsKuhn = kuhnDetails.map(d => {
+    // === HINT 2: Accord d'entreprise ===
+    if (state.accordActif && hasAccordElements && agreement) {
+        const elementsAccord = accordDetails.map(d => {
             if (d.label.includes('ancienneté')) return 'prime ancienneté';
             if (d.label.includes('équipe')) return 'prime équipe';
             if (d.label.includes('nuit')) return 'majoration nuit';
@@ -1491,18 +1582,17 @@ function updateHintDisplay(remuneration) {
             if (d.label.includes('vacances')) return 'prime vacances';
             return null;
         }).filter(Boolean);
-        
-        const listeElements = [...new Set(elementsKuhn)].join(', ');
-        
+        const listeElements = [...new Set(elementsAccord)].join(', ');
+        const descTaux = agreement.tooltip ? agreement.tooltip : `Taux et primes selon l'accord ${nomAccord}.`;
         hints.push({
             type: 'success',
             content: `
-                <strong>🏢 Accord Kuhn appliqué</strong><br>
+                <strong>🏢 Accord ${nomAccord} appliqué</strong><br>
                 Éléments : ${listeElements}.<br>
-                <small>Taux spécifiques : nuit +20%, matin/AM +15%, dimanche +50%, équipe 0.82€/h.</small>
+                <small>${descTaux}</small>
             `
         });
-    } else if (hasMajorations && !state.accordKuhn) {
+    } else if (hasMajorations && !state.accordActif) {
         // Majorations CCN sans Kuhn
         hints.push({
             type: 'info',
@@ -1524,9 +1614,11 @@ function updateHintDisplay(remuneration) {
                 content: 'Ce montant est le minimum conventionnel.'
             });
         } else {
-            // Non-cadres : prime d'ancienneté CCN (ou Kuhn si accord)
-            const seuilAnc = state.accordKuhn ? '2 ans (Kuhn)' : '3 ans (CCN)';
-            const hasAnciennete = state.anciennete >= 3 || (state.accordKuhn && state.anciennete >= 2);
+            // Non-cadres : prime d'ancienneté CCN (ou accord si accord actif)
+            const agreementAnc = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
+            const seuilAccord = agreementAnc?.anciennete?.seuil;
+            const seuilAnc = state.accordActif && typeof seuilAccord === 'number' ? `${seuilAccord} ans (${agreementAnc?.nomCourt || 'accord'})` : '3 ans (CCN)';
+            const hasAnciennete = state.anciennete >= 3 || (state.accordActif && typeof seuilAccord === 'number' && state.anciennete >= seuilAccord);
             hints.push({
                 type: 'info',
                 content: hasAnciennete
@@ -1805,13 +1897,11 @@ function calculateSalaryEvolution(years, augmentationAnnuelle = 0) {
         // L'augmentation s'applique sur le total hors primes fixes (vacances)
         const augmentationFactor = Math.pow(1 + augmentationAnnuelle / 100, i);
         
-        // Séparer les éléments fixes des éléments proportionnels
+        // Séparer les éléments fixes (primes à versement unique) des éléments proportionnels
         let salaryVariable = remuneration.total;
         let salaryFixe = 0;
-        
-        // La prime de vacances Kuhn est fixe (525€)
-        if (state.accordKuhn && state.primeVacances) {
-            salaryFixe = CONFIG.ACCORD_ENTREPRISE.primeVacances.montant;
+        if (state.accordActif && typeof window.getMontantPrimesFixesAnnuelFromModules === 'function') {
+            salaryFixe = window.getMontantPrimesFixesAnnuelFromModules(state);
             salaryVariable -= salaryFixe;
         }
         
@@ -2115,17 +2205,28 @@ function initEvolutionChart() {
  */
 
 /**
- * Mettre à jour la date d'embauche basée sur l'ancienneté
+ * Mettre à jour la date d'embauche (page 4) à partir de l'ancienneté (page 2).
+ * Garde les champs liés ancienneté / date d'embauche cohérents.
  */
 function updateDateEmbaucheFromAnciennete() {
-    const dateEmbaucheInput = document.getElementById('date-embauche');
-    if (dateEmbaucheInput && state.anciennete > 0 && !dateEmbaucheInput.value) {
-        // Ne mettre à jour que si le champ est vide
-        const today = new Date();
-        const dateEmbauche = new Date(today);
-        dateEmbauche.setFullYear(today.getFullYear() - state.anciennete);
-        dateEmbaucheInput.value = dateEmbauche.toISOString().split('T')[0];
+    const dateEmbaucheInput = document.getElementById('date-embauche-arretees');
+    if (!dateEmbaucheInput) return;
+    if (state.anciennete <= 0) {
+        dateEmbaucheInput.value = '';
+        state.dateEmbaucheArretees = null;
+        invalidateArreteesDataFinal();
+        if (typeof updateArreteesUiFromDateEmbauche === 'function') updateArreteesUiFromDateEmbauche();
+        return;
     }
+    const aujourdhui = new Date();
+    const dateEmbauche = new Date(aujourdhui.getFullYear(), aujourdhui.getMonth(), 1);
+    dateEmbauche.setFullYear(dateEmbauche.getFullYear() - Math.floor(state.anciennete));
+    const moisSupplementaires = Math.floor((state.anciennete % 1) * 12);
+    dateEmbauche.setMonth(dateEmbauche.getMonth() - moisSupplementaires);
+    const dateStr = dateEmbauche.toISOString().split('T')[0];
+    dateEmbaucheInput.value = dateStr;
+    state.dateEmbaucheArretees = dateStr;
+    invalidateArreteesDataFinal();
 }
 
 /**
@@ -2149,6 +2250,7 @@ function invalidateArreteesDataFinal() {
  * Met à jour la visibilité du bloc « Saisie de vos salaires » et du bouton « Calculer les arriérés »
  * selon que la date d'embauche est valide et complète. Utilise la validation native (validity.valid)
  * du champ type="date" : année à 4 chiffres et date complète exigées.
+ * Synchronise aussi l'ancienneté (page 2) avec la date d'embauche pour garder les champs liés cohérents.
  */
 function updateArreteesUiFromDateEmbauche() {
     const input = document.getElementById('date-embauche-arretees');
@@ -2162,6 +2264,23 @@ function updateArreteesUiFromDateEmbauche() {
         const prevVal = state.dateEmbaucheArretees;
         state.dateEmbaucheArretees = val;
         if (prevVal !== val) invalidateArreteesDataFinal();
+        // Synchroniser l'ancienneté (page 2) avec la date d'embauche
+        const dateEmbaucheObj = new Date(val);
+        const today = new Date();
+        const anneesDecimal = (today.getTime() - dateEmbaucheObj.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+        const ancienneteAnnee = Math.max(0, Math.floor(anneesDecimal));
+        if (state.anciennete !== ancienneteAnnee) {
+            state.anciennete = ancienneteAnnee;
+            const ancienneteInput = document.getElementById('anciennete');
+            if (ancienneteInput) ancienneteInput.value = ancienneteAnnee;
+            const experienceProInput = document.getElementById('experience-pro');
+            if (experienceProInput && state.experiencePro < state.anciennete) {
+                state.experiencePro = state.anciennete;
+                experienceProInput.value = state.anciennete;
+                if (typeof updateExperienceProValidation === 'function') updateExperienceProValidation();
+            }
+            updateAll();
+        }
         container.classList.remove('hidden');
         if (stickyWrap) stickyWrap.classList.remove('hidden');
         if (warning) warning.classList.add('hidden');
@@ -2337,42 +2456,47 @@ function initTimeline() {
         const periodKey = `${year}-${String(month).padStart(2, '0')}`;
         const periodLabel = currentDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
         const salaireReel = state.salairesParMois[periodKey] || null;
-        
-        // Calculer le salaire dû pour ce mois (SMH seul ou rémunération complète)
-        const salaireAnnuelDuMois = calculateSalaireDuPourMois(currentDate, dateEmbaucheObj);
-        
+
+        // State pour ce mois : ancienneté et expérience à cette date (cohérent avec courbe évolution vs inflation)
+        const moisDepuisEmbauche = (currentDate.getTime() - dateEmbaucheObj.getTime()) / (365.25 * 24 * 60 * 60 * 1000 / 12);
+        const ancienneteMois = Math.floor(moisDepuisEmbauche / 12);
+        const yearsFromMoisToNow = (Date.now() - currentDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+        const experienceProMois = Math.max(0, Math.floor((state.experiencePro ?? 0) - yearsFromMoisToNow));
+        const stateMois = { ...state, anciennete: ancienneteMois, experiencePro: experienceProMois };
+
+        // Calculer le salaire annuel dû pour ce mois (SMH seul ou rémunération complète)
+        const salaireAnnuelDuMois = calculateSalaireDuPourMois(currentDate, dateEmbaucheObj, stateMois);
+
         let salaireMensuelDu;
         const mois = currentDate.getMonth() + 1;
         const estJuillet = mois === 7;
         const estNovembre = mois === 11;
         if (state.arretesSurSMHSeul) {
-            // SMH seul (assiette SMH) : base + majorations forfaits, sans prime vacances/ancienneté, sans majorations pénibilité/nuit/dimanche/équipe. Le 13e mois fait partie du SMH (répartition 12/13).
-            if (state.accordKuhn && state.nbMois === 13 && estNovembre) {
+            // SMH seul (assiette SMH) : base + majorations forfaits, sans prime vacances/ancienneté. Le 13e mois fait partie du SMH (répartition 12/13) si accord avec nbMois 13.
+            if (state.accordActif && state.nbMois === 13 && estNovembre) {
                 salaireMensuelDu = (salaireAnnuelDuMois / 13) * 2;
-            } else if (state.accordKuhn && state.nbMois === 13) {
+            } else if (state.accordActif && state.nbMois === 13) {
                 salaireMensuelDu = salaireAnnuelDuMois / 13;
             } else {
                 salaireMensuelDu = salaireAnnuelDuMois / 12;
             }
         } else {
-            const primeVacancesMontant = (state.accordKuhn && state.primeVacances && typeof CONFIG !== 'undefined' && CONFIG.ACCORD_ENTREPRISE?.primeVacances?.montant)
-                ? CONFIG.ACCORD_ENTREPRISE.primeVacances.montant
-                : 0;
-            const baseAnnuellePourRepartition = (estJuillet && primeVacancesMontant > 0)
-                ? salaireAnnuelDuMois - primeVacancesMontant
-                : salaireAnnuelDuMois;
-            if (state.accordKuhn && state.nbMois === 13 && estNovembre) {
+            // Rémunération complète : primes à versement unique selon ancienneté/conditions du mois
+            const primesFixesAnnuel = (typeof window.getMontantPrimesFixesAnnuelFromModules === 'function')
+                ? window.getMontantPrimesFixesAnnuelFromModules(stateMois) : 0;
+            const baseAnnuellePourRepartition = salaireAnnuelDuMois - primesFixesAnnuel;
+            if (state.accordActif && state.nbMois === 13 && estNovembre) {
                 salaireMensuelDu = (baseAnnuellePourRepartition / 13) * 2;
-            } else if (state.accordKuhn && state.nbMois === 13) {
+            } else if (state.accordActif && state.nbMois === 13) {
                 salaireMensuelDu = baseAnnuellePourRepartition / 13;
             } else {
                 salaireMensuelDu = baseAnnuellePourRepartition / 12;
             }
-            if (estJuillet && primeVacancesMontant > 0) {
-                salaireMensuelDu += primeVacancesMontant;
-            }
+            const primesCeMois = (typeof window.getMontantPrimesVerseesCeMoisFromModules === 'function')
+                ? window.getMontantPrimesVerseesCeMoisFromModules(stateMois, mois) : 0;
+            if (primesCeMois > 0) salaireMensuelDu += primesCeMois;
         }
-        
+
         periodsData.push({
             index: index++,
             key: periodKey,
@@ -2419,25 +2543,25 @@ function initTimeline() {
 }
 
 /**
- * Calculer le salaire dû pour un mois donné avec tous les paramètres
- * Prend en compte les versements mensuels spécifiques de l'accord Kuhn :
- * - Prime de vacances : seulement en juillet
- * - 13e mois : seulement en novembre
+ * Calculer le salaire dû pour un mois donné avec tous les paramètres.
+ * Si statePourMois est fourni (ancienneté/expérience à cette date), il est utilisé pour cohérence avec la courbe d'évolution.
+ * Prend en compte les versements mensuels spécifiques de l'accord actif (prime vacances, 13e mois).
+ * @param {Date} dateMois - Date du mois
+ * @param {Date} dateEmbauche - Date d'embauche
+ * @param {Object} [statePourMois] - State avec anciennete/experiencePro pour ce mois (optionnel)
  */
-function calculateSalaireDuPourMois(dateMois, dateEmbauche) {
-    // Utiliser le nouveau module (toujours disponible via expose-to-app.js)
+function calculateSalaireDuPourMois(dateMois, dateEmbauche, statePourMois) {
+    const stateToUse = statePourMois || state;
     if (typeof window.calculateSalaireDuPourMoisFromModules === 'function') {
         const agreement = window.AgreementLoader?.getActiveAgreement?.() || null;
         return window.calculateSalaireDuPourMoisFromModules(
             dateMois,
             dateEmbauche,
-            state,
+            stateToUse,
             agreement,
-            state.arretesSurSMHSeul
+            stateToUse.arretesSurSMHSeul
         );
     }
-    
-    // Fallback minimal : retourner 0 si le module n'est pas disponible
     console.warn('calculateSalaireDuPourMoisFromModules non disponible, retour de 0');
     return 0;
 }
@@ -3015,33 +3139,30 @@ function calculerArreteesFinal() {
             const estJuillet = mois === 7;
             const estNovembre = mois === 11;
             if (state.arretesSurSMHSeul) {
-                // SMH seul (assiette SMH) : base + forfait, 13e mois inclus ; exclut primes, pénibilité, nuit/dim/équipe
-                if (state.accordKuhn && state.nbMois === 13 && estNovembre) {
+                // SMH seul (assiette SMH) : base + forfait, 13e mois inclus si accord avec nbMois 13
+                if (state.accordActif && state.nbMois === 13 && estNovembre) {
                     salaireMensuelDu = (salaireAnnuelDuMois / 13) * 2;
-                } else if (state.accordKuhn && state.nbMois === 13) {
+                } else if (state.accordActif && state.nbMois === 13) {
                     salaireMensuelDu = salaireAnnuelDuMois / 13;
                 } else {
                     salaireMensuelDu = salaireAnnuelDuMois / 12;
                 }
             } else {
-                const primeVacancesMontant = (state.accordKuhn && state.primeVacances && typeof CONFIG !== 'undefined' && CONFIG.ACCORD_ENTREPRISE?.primeVacances?.montant) 
-                    ? CONFIG.ACCORD_ENTREPRISE.primeVacances.montant 
-                    : 0;
-                const baseAnnuellePourRepartition = (estJuillet && primeVacancesMontant > 0) 
-                    ? salaireAnnuelDuMois - primeVacancesMontant 
-                    : salaireAnnuelDuMois;
-                if (state.accordKuhn && state.nbMois === 13 && estNovembre) {
+                const primesFixesAnnuel = (typeof window.getMontantPrimesFixesAnnuelFromModules === 'function')
+                    ? window.getMontantPrimesFixesAnnuelFromModules(state) : 0;
+                const baseAnnuellePourRepartition = salaireAnnuelDuMois - primesFixesAnnuel;
+                if (state.accordActif && state.nbMois === 13 && estNovembre) {
                     salaireMensuelDu = (baseAnnuellePourRepartition / 13) * 2;
-                } else if (state.accordKuhn && state.nbMois === 13) {
+                } else if (state.accordActif && state.nbMois === 13) {
                     salaireMensuelDu = baseAnnuellePourRepartition / 13;
                 } else {
                     salaireMensuelDu = baseAnnuellePourRepartition / 12;
                 }
-                if (estJuillet && primeVacancesMontant > 0) {
-                    salaireMensuelDu += primeVacancesMontant;
-                }
+                const primesCeMois = (typeof window.getMontantPrimesVerseesCeMoisFromModules === 'function')
+                    ? window.getMontantPrimesVerseesCeMoisFromModules(state, mois) : 0;
+                if (primesCeMois > 0) salaireMensuelDu += primesCeMois;
             }
-            
+
             // Le salaire réel saisi est maintenant en mensuel brut (pas besoin de diviser par 12)
             const salaireMensuelReel = salaireReel;
             const difference = salaireMensuelDu - salaireMensuelReel;
@@ -3298,11 +3419,18 @@ function getArreteesDataForPdf() {
 /**
  * Ouvrir le modal des infos personnelles avant génération du PDF.
  * Stocke les données déjà validées sur l’overlay pour que la génération ne dépende pas de window.arreteesDataFinal au moment du clic.
+ * Conformément à la CCN, les arriérés doivent être calculés sur le SMH : la génération est bloquée si « SMH seul » n'est pas coché.
  */
 function openPdfInfosModal() {
-    const savedSmh = state.arretesSurSMHSeul;
-    state.arretesSurSMHSeul = true;
-    calculerArreteesFinal();
+    if (!state.arretesSurSMHSeul) {
+        showToast(
+            'Le rapport PDF ne peut être généré qu\'en mode « SMH seul ». Cochez l\'option « Calculer les arriérés sur le SMH seul » et saisissez les salaires bruts hors primes (assiette SMH), puis recalculez les arriérés.',
+            'warning',
+            6000
+        );
+        return;
+    }
+
     let result = getArreteesDataForPdf();
     if (!result.valid) {
         const step4 = document.getElementById('step-4');
@@ -3312,14 +3440,10 @@ function openPdfInfosModal() {
             result = getArreteesDataForPdf();
         }
         if (!result.valid) {
-            state.arretesSurSMHSeul = savedSmh;
-            calculerArreteesFinal();
             showToast('⚠️ ' + result.error, 'warning', 3000);
             return;
         }
     }
-    state.arretesSurSMHSeul = savedSmh;
-    calculerArreteesFinal();
 
     let overlay = document.getElementById('pdf-infos-modal-overlay');
     if (!overlay) {
@@ -3330,7 +3454,7 @@ function openPdfInfosModal() {
             <div class="modal pdf-infos-modal" onclick="event.stopPropagation()">
                 <h3>Informations pour le dossier</h3>
                 <p class="modal-subtitle">Ces informations seront incluses dans le rapport PDF. Tous les champs sont facultatifs.</p>
-                <p class="pdf-smh-only-notice"><strong>Le rapport PDF est établi uniquement sur la base du SMH</strong> (assiette conventionnelle hors primes). L'option « SMH seul » est appliquée automatiquement pour la génération.</p>
+                <p class="pdf-smh-only-notice"><strong>Le rapport PDF est établi sur la base du SMH</strong> (assiette conventionnelle hors primes). Assurez-vous d'avoir coché « SMH seul » et saisi les salaires bruts hors primes.</p>
                 <div class="form-group">
                     <label for="pdf-infos-nom">Nom et prénom</label>
                     <input type="text" id="pdf-infos-nom" class="book-input" placeholder="Ex. Dupont Jean">
@@ -3383,7 +3507,6 @@ function openPdfInfosModal() {
         });
     }
     overlay._pdfData = result.data;
-    showToast('Le rapport PDF est établi uniquement sur la base du SMH (assiette hors primes).', 'info', 4000);
     overlay.classList.add('visible');
 }
 

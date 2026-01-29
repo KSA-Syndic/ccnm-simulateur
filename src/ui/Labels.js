@@ -15,7 +15,7 @@ export const LABELS = {
     // Header
     headerTitle: 'Simulateur Métallurgie 2024',
     headerSubtitle: 'Classification et Rémunération',
-    headerInfoTooltip: 'Estimez votre classification et vérifiez vos minima salariaux selon la Convention Collective Nationale de la Métallurgie (CCNM) 2024.',
+    headerInfoTooltip: 'Ce simulateur vous aide à estimer votre niveau de classification et à vérifier que votre salaire respecte au minimum les barèmes de la convention collective de la métallurgie.',
     
     // Steps
     step1Title: 'Classification',

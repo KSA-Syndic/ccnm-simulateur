@@ -46,7 +46,8 @@ export function updateRemunerationDisplay(remuneration, nbMois = 12) {
 }
 
 const HEADER_SUBTITLE_BASE = 'Classification et Rémunération';
-const HEADER_INFO_BASE_TOOLTIP = "Convention Collective Nationale de la Métallurgie (CCNM) 2024.<br>📋 <a href='https://uimm.lafabriquedelavenir.fr/textes-conventionnels-metallurgie/' target='_blank' rel='noopener'>Textes conventionnels</a>";
+/** Tooltip du header : phrase simple et accessible (sans jargon technique). */
+const HEADER_INFO_BASE_TOOLTIP = "Ce simulateur vous aide à estimer votre niveau de classification et à vérifier que votre salaire respecte au minimum les barèmes de la convention collective de la métallurgie.<br><br>📋 <a href='https://uimm.lafabriquedelavenir.fr/textes-conventionnels-metallurgie/' target='_blank' rel='noopener'>Voir les textes de la convention</a>";
 
 /**
  * Met à jour le header : sous-titre (avec accord éventuel) et un seul tooltip sur l’icône ?.
@@ -65,10 +66,13 @@ export function updateHeaderAgreement(agreement) {
         let tooltipContent = HEADER_INFO_BASE_TOOLTIP;
         if (agreement) {
             const nom = agreement.nomCourt || agreement.nom;
-            const desc = (agreement.labels && agreement.labels.description) || (agreement.labels && agreement.labels.tooltip) || '';
-            tooltipContent += `<br><br>🏢 <strong>${escapeHtml(nom)}</strong>`;
-            if (desc) tooltipContent += `<br>${escapeHtml(desc)}`;
-            if (agreement.url) tooltipContent += `<br>📋 <a href="${escapeAttr(agreement.url)}" target="_blank" rel="noopener">Voir le texte de l'accord</a>`;
+            const labels = agreement.labels || {};
+            const tooltipAccord = labels.description || labels.tooltipHeader || labels.tooltip || '';
+            const descAccord = tooltipAccord
+                ? escapeHtml(tooltipAccord)
+                : `Si votre entreprise applique l'accord ${nom}, cochez l'option en page Résultat pour inclure ses règles dans le calcul.`;
+            tooltipContent += `<br><br>🏢 <strong>${escapeHtml(nom)}</strong><br>${descAccord}`;
+            if (agreement.url) tooltipContent += `<br><br>📋 <a href="${escapeAttr(agreement.url)}" target="_blank" rel="noopener">Voir le texte de l'accord</a>`;
         }
         headerInfoIcon.setAttribute('data-tippy-content', tooltipContent);
         if (headerInfoIcon._tippy) headerInfoIcon._tippy.setContent(tooltipContent);

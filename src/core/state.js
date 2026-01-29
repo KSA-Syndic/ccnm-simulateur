@@ -40,13 +40,12 @@ export const state = {
     heuresNuit: 0,               // Heures de nuit mensuelles
     travailDimanche: false,      // Travail le dimanche
     heuresDimanche: 0,           // Heures dimanche mensuelles
-    travailEquipe: false,        // Travail en équipes postées
-    heuresEquipe: 151.67,        // Heures mensuelles en équipe
     
-    // === ACCORD ENTREPRISE ===
-    accordActif: false,          // Accord d'entreprise activé (générique, remplace accordKuhn)
+    // === ACCORD ENTREPRISE (générique, listable) ===
+    accordActif: false,          // Accord d'entreprise activé
     accordId: null,              // ID de l'accord actif (ex: 'kuhn')
-    primeVacances: true,         // Prime de vacances (si accord le prévoit)
+    /** Entrées utilisateur par élément d'accord. Clés fournies par l'accord (stateKeyActif, stateKeyHeures). Vide au démarrage ; hydraté par hydrateAccordInputs(agreement, state) quand un accord est chargé/activé. */
+    accordInputs: {},
     
     // === AFFICHAGE ===
     nbMois: 12                   // Répartition mensuelle (12 ou 13 mois)

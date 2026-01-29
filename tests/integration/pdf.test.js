@@ -132,7 +132,7 @@ describe('PDF - Génération', () => {
             expect(mockDoc.splitTextToSize).toHaveBeenCalled();
         });
 
-        it('devrait forcer le mode SMH seul pour le PDF', () => {
+        it('devrait générer le PDF lorsque le mode SMH seul est activé', () => {
             const mockDoc = {
                 internal: {
                     pageSize: { getWidth: () => 210, getHeight: () => 297 },
@@ -149,13 +149,13 @@ describe('PDF - Génération', () => {
                 setDrawColor: vi.fn().mockReturnThis(),
                 setPage: vi.fn().mockReturnThis()
             };
-            
+
             global.jsPDF = vi.fn(() => mockDoc);
-            global.window = { 
+            global.window = {
                 jsPDF: global.jsPDF,
                 jspdf: { jsPDF: global.jsPDF }
             };
-            
+
             const data = {
                 dateDebut: new Date('2024-01-01'),
                 dateFin: new Date('2024-12-31'),
@@ -168,10 +168,41 @@ describe('PDF - Génération', () => {
                 accordEcrit: false
             };
 
-            // Le PDF devrait toujours utiliser le SMH seul
             expect(() => {
                 genererPDFArretees(data, {}, false);
             }).not.toThrow();
+            expect(global.jsPDF).toHaveBeenCalled();
+        });
+
+        it('devrait rejeter la génération si le mode SMH seul n\'est pas activé', () => {
+            const stateSansSMHSeul = {
+                arretesSurSMHSeul: false,
+                modeManuel: false,
+                groupeManuel: 'A',
+                classeManuel: 5,
+                scores: [1, 1, 1, 1, 1, 1],
+                anciennete: 0,
+                pointTerritorial: 5.90,
+                forfait: '35h',
+                experiencePro: 0,
+                accordActif: false,
+                nbMois: 12
+            };
+            const data = {
+                dateDebut: new Date('2024-01-01'),
+                dateFin: new Date('2024-12-31'),
+                dateEmbauche: '2020-01-01',
+                salaireDu: CONFIG.SMH[5],
+                totalArretees: 1000,
+                detailsArretees: [],
+                detailsTousMois: [],
+                ruptureContrat: false,
+                accordEcrit: false
+            };
+
+            expect(() => {
+                genererPDFArretees(data, {}, false, stateSansSMHSeul);
+            }).toThrow(/SMH seul/);
         });
 
         it('devrait utiliser le barème débutants pour F11 avec 4 ans d\'expérience et forfait jours', () => {

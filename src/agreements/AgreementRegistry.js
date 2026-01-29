@@ -7,7 +7,7 @@
  * Permet de charger et gérer les accords de manière générique.
  */
 
-import { KuhnAgreement } from './KuhnAgreement.js';
+import { KuhnAgreement } from '../../accords/KuhnAgreement.js';
 import { validateAgreement } from './AgreementInterface.js';
 
 /**

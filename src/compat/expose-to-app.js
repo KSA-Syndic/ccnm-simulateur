@@ -9,9 +9,10 @@
 
 import { getMontantAnnuelSMHSeul } from '../remuneration/RemunerationCalculator.js';
 import { calculateAnnualRemuneration } from '../remuneration/RemunerationCalculator.js';
+import { getMontantPrimesFixesAnnuel, getMontantPrimesVerseesCeMois } from '../remuneration/PrimesFixesHelper.js';
 import { calculateSalaireDuPourMois } from '../arretees/ArreteesCalculator.js';
 import { genererPDFArretees } from '../arretees/PDFGenerator.js';
-import { getActiveAgreement, loadAgreement } from '../agreements/AgreementLoader.js';
+import { getActiveAgreement } from '../agreements/AgreementLoader.js';
 import { state as moduleState } from '../core/state.js';
 
 /**
@@ -41,20 +42,22 @@ function syncStateToModules(appState) {
     moduleState.heuresNuit = appState.heuresNuit !== undefined ? appState.heuresNuit : moduleState.heuresNuit;
     moduleState.travailDimanche = appState.travailDimanche !== undefined ? appState.travailDimanche : moduleState.travailDimanche;
     moduleState.heuresDimanche = appState.heuresDimanche !== undefined ? appState.heuresDimanche : moduleState.heuresDimanche;
-    moduleState.travailEquipe = appState.travailEquipe !== undefined ? appState.travailEquipe : moduleState.travailEquipe;
-    moduleState.heuresEquipe = appState.heuresEquipe !== undefined ? appState.heuresEquipe : moduleState.heuresEquipe;
-    // Synchroniser accordKuhn (app.js) vers accordActif/accordId (modules)
-    if (appState.accordKuhn !== undefined) {
-        moduleState.accordActif = appState.accordKuhn;
-        // Si accordKuhn est activé mais aucun accordId n'est défini, charger 'kuhn' par défaut
-        if (appState.accordKuhn && !moduleState.accordId) {
-            moduleState.accordId = 'kuhn';
-            loadAgreement('kuhn');
-        } else if (!appState.accordKuhn) {
+    if (appState.accordInputs && typeof appState.accordInputs === 'object') {
+        moduleState.accordInputs = { ...(moduleState.accordInputs || {}), ...appState.accordInputs };
+    }
+    // Synchroniser accordActif (app.js) vers accordActif/accordId (modules) ; compat. ancienne clé accordKuhn
+    const accordActif = appState.accordActif ?? appState.accordKuhn;
+    if (accordActif !== undefined) {
+        moduleState.accordActif = !!accordActif;
+        if (!accordActif) {
             moduleState.accordId = null;
+        } else if (!moduleState.accordId) {
+            // Accord actif : déduire accordId depuis l'accord déjà chargé (URL ou registre), pas d'ID hardcodé
+            const agreement = getActiveAgreement();
+            if (agreement) moduleState.accordId = agreement.id;
         }
     }
-    moduleState.primeVacances = appState.primeVacances !== undefined ? appState.primeVacances : moduleState.primeVacances;
+    // accordInputs : clés fournies par l'accord (stateKeyActif, stateKeyHeures), hydraté par hydrateAccordInputs
     moduleState.nbMois = appState.nbMois !== undefined ? appState.nbMois : moduleState.nbMois;
 }
 
@@ -81,13 +84,21 @@ window.calculateRemunerationFromModules = function(appState) {
  */
 window.calculateSalaireDuPourMoisFromModules = function(dateMois, dateEmbauche, appState, agreement, smhSeul) {
     syncStateToModules(appState);
-    // Créer un snapshot du state pour ce mois spécifique
+    // Créer un snapshot du state pour ce mois spécifique (cohérent avec courbe évolution vs inflation)
     const stateSnapshot = { ...moduleState };
-    
-    // Calculer l'ancienneté pour ce mois
-    const moisDepuisEmbauche = (dateMois - dateEmbauche) / (365.25 * 24 * 60 * 60 * 1000 / 12);
+
+    // Ancienneté à la date du mois (années révolues depuis embauche)
+    const dateMoisTime = dateMois instanceof Date ? dateMois.getTime() : new Date(dateMois).getTime();
+    const dateEmbaucheTime = dateEmbauche instanceof Date ? dateEmbauche.getTime() : new Date(dateEmbauche).getTime();
+    const moisDepuisEmbauche = (dateMoisTime - dateEmbaucheTime) / (365.25 * 24 * 60 * 60 * 1000 / 12);
     const ancienneteMois = Math.floor(moisDepuisEmbauche / 12);
     stateSnapshot.anciennete = ancienneteMois;
+
+    // Expérience pro à la date du mois (barème débutants F11/F12). Si le caller a déjà fourni un state pour ce mois (experiencePro < actuel), on le garde.
+    const yearsFromMoisToNow = (Date.now() - dateMoisTime) / (365.25 * 24 * 60 * 60 * 1000);
+    const experienceProAtMois = Math.max(0, Math.floor((appState.experiencePro ?? 0) - yearsFromMoisToNow));
+    const callerProvidedStateForMonth = appState.experiencePro !== undefined && appState.experiencePro <= experienceProAtMois + 1 && appState.anciennete !== undefined;
+    stateSnapshot.experiencePro = callerProvidedStateForMonth ? appState.experiencePro : experienceProAtMois;
     
     // Si agreement n'est pas fourni, essayer de le récupérer
     let activeAgreement = agreement;
@@ -105,4 +116,33 @@ window.genererPDFArreteesFromModules = function(data, infosPersonnelles, appStat
     syncStateToModules(appState);
     // Passer le state synchronisé au générateur PDF
     return genererPDFArretees(data, infosPersonnelles, false, moduleState);
+};
+
+/**
+ * Montant annuel des primes à versement unique (type montant) de l'accord actif.
+ * Utilisé pour l'évolution salariale (ne pas appliquer l'inflation sur cette part).
+ * @param {Object} appState - State de app.js
+ * @returns {number}
+ */
+window.getMontantPrimesFixesAnnuelFromModules = function(appState) {
+    syncStateToModules(appState);
+    const agreement = getActiveAgreement();
+    const accordActif = appState.accordActif ?? appState.accordKuhn;
+    if (!agreement || !accordActif) return 0;
+    return getMontantPrimesFixesAnnuel(moduleState, agreement);
+};
+
+/**
+ * Montant des primes à versement unique versées un mois donné (mois 1-12).
+ * Utilisé pour la répartition mensuelle (courbe, arriérés).
+ * @param {Object} appState - State de app.js
+ * @param {number} mois - Mois (1-12)
+ * @returns {number}
+ */
+window.getMontantPrimesVerseesCeMoisFromModules = function(appState, mois) {
+    syncStateToModules(appState);
+    const agreement = getActiveAgreement();
+    const accordActif = appState.accordActif ?? appState.accordKuhn;
+    if (!agreement || !accordActif || !mois || mois < 1 || mois > 12) return 0;
+    return getMontantPrimesVerseesCeMois(moduleState, agreement, mois);
 };

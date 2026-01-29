@@ -2,7 +2,7 @@
  * Tests unitaires pour AgreementLoader
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
     loadAgreement,
     getActiveAgreement,
@@ -26,8 +26,10 @@ describe('AgreementLoader', () => {
         });
 
         it('devrait retourner null pour un ID inexistant', () => {
+            const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
             const agreement = loadAgreement('inexistant');
             expect(agreement).toBeNull();
+            spy.mockRestore();
         });
 
         it('devrait définir l\'accord comme actif après chargement', () => {

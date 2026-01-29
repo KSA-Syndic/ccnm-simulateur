@@ -1,72 +1,114 @@
 /**
  * ============================================
- * MAJORATION CALCULATOR - Calcul des Majorations
+ * MAJORATION CALCULATOR - Calcul unifié des majorations
  * ============================================
- * 
- * Calcul des majorations pour conditions de travail (nuit, dimanche).
+ *
+ * API générique : computeMajoration(def, context).
+ * Convention (CCN) et accord utilisent la même entrée (ElementDef) et le même contexte.
  */
 
 import { CONFIG } from '../core/config.js';
+import { SEMANTIC_ID, SOURCE_CONVENTION, SOURCE_ACCORD } from '../core/RemunerationTypes.js';
 
 /**
- * Calculer les majorations nuit (taux automatique selon accord)
- * @param {string} typeNuit - Type de nuit ('aucun', 'poste-nuit', 'poste-matin')
- * @param {number} heuresNuit - Heures de nuit mensuelles
- * @param {number} tauxHoraire - Taux horaire de base
- * @param {Object|null} agreement - Accord d'entreprise ou null pour CCN
- * @returns {Object} { montantMensuel, montantAnnuel, taux, source }
+ * Calcule le montant annuel d'une majoration à partir de sa définition (convention ou accord).
+ * @param {import('../core/RemunerationTypes.js').ElementDef} def - Définition de la majoration
+ * @param {import('../core/RemunerationTypes.js').ComputeContext} context - Contexte (state, tauxHoraire, agreement)
+ * @returns {import('../core/RemunerationTypes.js').ElementResult & { meta?: { taux: number, montantMensuel: number } }}
  */
-export function calculateMajorationNuit(typeNuit, heuresNuit, tauxHoraire, agreement) {
-    if (typeNuit === 'aucun' || heuresNuit === 0) {
-        return { montantMensuel: 0, montantAnnuel: 0, taux: 0, source: '' };
+export function computeMajoration(def, context) {
+    if (!def || def.kind !== 'majoration') {
+        return { amount: 0, label: '', source: def?.source ?? '' };
     }
-    
-    let taux = 0;
-    let source = '';
-    
-    if (agreement && agreement.majorations && agreement.majorations.nuit) {
-        // Taux accord d'entreprise
-        taux = typeNuit === 'poste-nuit' 
-            ? agreement.majorations.nuit.posteNuit  // ex: 20%
-            : agreement.majorations.nuit.posteMatin; // ex: 15%
-        source = agreement.nomCourt || 'Accord';
-    } else {
-        // Taux CCN (toujours 15%)
-        taux = CONFIG.MAJORATIONS_CCN.nuit;
-        source = 'CCN';
+    const state = context?.state ?? {};
+    if (def.source === SOURCE_CONVENTION) {
+        return computeMajorationConvention(def, context);
     }
-    
-    const montantMensuel = Math.round(heuresNuit * tauxHoraire * taux * 100) / 100;
-    const montantAnnuel = Math.round(montantMensuel * 12);
-    
-    return { montantMensuel, montantAnnuel, taux: Math.round(taux * 100), source };
+    if (def.source === SOURCE_ACCORD) {
+        return computeMajorationAccord(def, context);
+    }
+    return { amount: 0, label: '', source: def.source };
 }
 
 /**
- * Calculer les majorations dimanche (taux automatique selon accord)
- * @param {number} heuresDimanche - Heures dimanche mensuelles
- * @param {number} tauxHoraire - Taux horaire de base
- * @param {Object|null} agreement - Accord d'entreprise ou null pour CCN
- * @returns {Object} { montantMensuel, montantAnnuel, taux, source }
+ * Majoration convention (CCN) : nuit (15%), dimanche (100%).
+ * @private
  */
-export function calculateMajorationDimanche(heuresDimanche, tauxHoraire, agreement) {
-    if (heuresDimanche === 0) {
-        return { montantMensuel: 0, montantAnnuel: 0, taux: 0, source: '' };
-    }
-    
+function computeMajorationConvention(def, context) {
+    const state = context?.state ?? {};
+    const tauxHoraire = context.tauxHoraire ?? 0;
+    const cfg = def.config || {};
+    let heures = 0;
     let taux = 0;
-    let source = '';
-    
-    if (agreement && agreement.majorations) {
-        taux = agreement.majorations.dimanche || CONFIG.MAJORATIONS_CCN.dimanche;
-        source = agreement.nomCourt || 'Accord';
+
+    if (def.semanticId === SEMANTIC_ID.MAJORATION_NUIT) {
+        if (state.typeNuit === 'aucun') {
+            return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
+        }
+        heures = state.heuresNuit ?? 0;
+        taux = cfg.taux ?? CONFIG.MAJORATIONS_CCN.nuit;
+    } else if (def.semanticId === SEMANTIC_ID.MAJORATION_DIMANCHE) {
+        heures = state.heuresDimanche ?? 0;
+        taux = cfg.taux ?? CONFIG.MAJORATIONS_CCN.dimanche;
     } else {
-        taux = CONFIG.MAJORATIONS_CCN.dimanche;
-        source = 'CCN';
+        return { amount: 0, label: def.label, source: SOURCE_CONVENTION };
     }
-    
-    const montantMensuel = Math.round(heuresDimanche * tauxHoraire * taux * 100) / 100;
-    const montantAnnuel = Math.round(montantMensuel * 12);
-    
-    return { montantMensuel, montantAnnuel, taux: Math.round(taux * 100), source };
+
+    if (heures === 0) {
+        return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
+    }
+    const montantMensuel = Math.round(heures * tauxHoraire * taux * 100) / 100;
+    const amount = Math.round(montantMensuel * 12);
+
+    return {
+        amount,
+        label: def.label,
+        source: SOURCE_CONVENTION,
+        semanticId: def.semanticId,
+        meta: { taux: Math.round(taux * 100), montantMensuel }
+    };
 }
+
+/**
+ * Majoration accord : nuit (posteNuit / posteMatin), dimanche (taux accord).
+ * @private
+ */
+function computeMajorationAccord(def, context) {
+    const agreement = context?.agreement;
+    const state = context?.state ?? {};
+    const tauxHoraire = context.tauxHoraire ?? 0;
+
+    let heures = 0;
+    let taux = 0;
+
+    if (def.semanticId === SEMANTIC_ID.MAJORATION_NUIT) {
+        if (state.typeNuit === 'aucun') {
+            return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
+        }
+        heures = state.heuresNuit ?? 0;
+        const nuit = agreement?.majorations?.nuit;
+        taux = nuit
+            ? (state.typeNuit === 'poste-nuit' ? nuit.posteNuit : nuit.posteMatin)
+            : (CONFIG.MAJORATIONS_CCN.nuit);
+    } else if (def.semanticId === SEMANTIC_ID.MAJORATION_DIMANCHE) {
+        heures = state.heuresDimanche ?? 0;
+        taux = agreement?.majorations?.dimanche ?? CONFIG.MAJORATIONS_CCN.dimanche;
+    } else {
+        return { amount: 0, label: def.label, source: SOURCE_ACCORD };
+    }
+
+    if (heures === 0) {
+        return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
+    }
+    const montantMensuel = Math.round(heures * tauxHoraire * taux * 100) / 100;
+    const amount = Math.round(montantMensuel * 12);
+
+    return {
+        amount,
+        label: def.label,
+        source: SOURCE_ACCORD,
+        semanticId: def.semanticId,
+        meta: { taux: Math.round(taux * 100), montantMensuel }
+    };
+}
+

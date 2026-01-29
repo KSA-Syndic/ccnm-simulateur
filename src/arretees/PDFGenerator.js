@@ -11,12 +11,14 @@ import { getMontantAnnuelSMHSeul } from '../remuneration/RemunerationCalculator.
 import { formatMoneyPDF } from '../utils/formatters.js';
 import { getActiveClassification } from '../classification/ClassificationEngine.js';
 import { state as defaultState } from '../core/state.js';
+import { getActiveAgreement } from '../agreements/AgreementLoader.js';
+import { getPrimes } from '../agreements/AgreementInterface.js';
 
 /**
  * Générer le PDF des arriérés
  * @param {Object} data - Données des arriérés
  * @param {Object} infosPersonnelles - Informations personnelles (optionnel)
- * @param {boolean} forceSmhSeul - Forcer le mode SMH seul
+ * @param {boolean} [forceSmhSeul] - Ignoré ; le mode SMH seul est exigé via state.arretesSurSMHSeul
  * @param {Object} stateParam - State à utiliser (optionnel, utilise defaultState si non fourni)
  */
 export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = false, stateParam = null) {
@@ -30,15 +32,14 @@ export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = 
     // Utiliser le state fourni ou le state par défaut
     const state = stateParam || defaultState;
     const hasAccord = !!(state.accordActif || state.accordId);
-    
-    // CORRECTION BUG : Forcer le mode SMH seul pour le PDF
-    // Créer un snapshot du state pour ne pas modifier l'original
-    const stateSnapshot = { ...state };
-    stateSnapshot.arretesSurSMHSeul = true;
-    
-    // CORRECTION BUG : Utiliser le SMH seul pour le PDF avec le state synchronisé
-    // Le state doit contenir experiencePro et forfait pour calculer correctement le SMH débutant
-    const salaireDu = getMontantAnnuelSMHSeul(stateSnapshot);
+
+    // Conformité CCN : le rapport PDF ne peut être généré qu'en mode « SMH seul »
+    if (!state.arretesSurSMHSeul) {
+        throw new Error('Le rapport PDF ne peut être généré qu\'en mode « SMH seul ». Cochez l\'option et recalculez les arriérés.');
+    }
+
+    // Utiliser le state tel quel (salaire dû = assiette SMH)
+    const salaireDu = getMontantAnnuelSMHSeul(state);
     
     const doc = new jsPDF();
     const dateDebutObj = data.dateDebut instanceof Date ? data.dateDebut : new Date(data.dateDebut);
@@ -77,7 +78,7 @@ export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = 
     doc.text('Objet : Calcul d\'arriérés de salaire au titre du SMH', margin, yPos);
     yPos += 8;
     doc.setFont(undefined, 'normal');
-    const classificationInfo = getActiveClassification(stateSnapshot);
+    const classificationInfo = getActiveClassification(state);
     doc.text(`Classification : ${classificationInfo.groupe}${classificationInfo.classe}`, margin, yPos);
     yPos += 10;
     
@@ -202,11 +203,11 @@ export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = 
     yPos += 6;
     
     // CORRECTION BUG : Utiliser le SMH seul calculé ci-dessus avec le state synchronisé
-    const smhMensuel = salaireDu / (stateSnapshot.nbMois || 12);
+    const smhMensuel = salaireDu / (state.nbMois || 12);
     
     // Afficher le SMH avec détail si cadre débutant
-    const classificationInfoForSMH = getActiveClassification(stateSnapshot);
-    const isCadreDebutant = (classificationInfoForSMH.classe === 11 || classificationInfoForSMH.classe === 12) && stateSnapshot.experiencePro < 6;
+    const classificationInfoForSMH = getActiveClassification(state);
+    const isCadreDebutant = (classificationInfoForSMH.classe === 11 || classificationInfoForSMH.classe === 12) && state.experiencePro < 6;
     
     doc.text(`SMH mensuel brut : ${formatMoneyPDF(smhMensuel)}`, margin + 5, yPos);
     yPos += 6;
@@ -215,8 +216,8 @@ export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = 
     let smhAnnuelLabel = 'SMH annuel brut';
     if (isCadreDebutant) {
         let trancheLabel = '< 2 ans';
-        if (stateSnapshot.experiencePro >= 4) trancheLabel = '4 à 6 ans';
-        else if (stateSnapshot.experiencePro >= 2) trancheLabel = '2 à 4 ans';
+        if (state.experiencePro >= 4) trancheLabel = '4 à 6 ans';
+        else if (state.experiencePro >= 2) trancheLabel = '2 à 4 ans';
         smhAnnuelLabel = `SMH annuel brut (barème débutants ${trancheLabel})`;
     }
     
@@ -318,7 +319,68 @@ export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = 
     
     yPos += 10;
     checkPageBreak(60);
-    
+
+    // Section 4b (si accord) : Conditions de l'accord d'entreprise
+    if (hasAccord) {
+        const agreement = getActiveAgreement();
+        if (agreement) {
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text(`Conditions de l'accord d'entreprise (${agreement.nomCourt})`, margin, yPos);
+            yPos += 8;
+            doc.setFontSize(9);
+            doc.setFont(undefined, 'normal');
+            const primes = getPrimes(agreement);
+            if (primes && primes.length > 0) {
+                doc.setFont(undefined, 'bold');
+                const primesTitleLines = doc.splitTextToSize('Primes :', pageWidth - margin * 2 - 10);
+                primesTitleLines.forEach(line => {
+                    doc.text(line, margin + 5, yPos);
+                    yPos += 5;
+                });
+                doc.setFont(undefined, 'normal');
+                primes.forEach(p => {
+                    const desc = p.label + (p.valeurAccord != null ? ` (${p.valeurAccord} ${p.unit})` : '');
+                    const lines = doc.splitTextToSize('• ' + desc, pageWidth - margin * 2 - 15);
+                    lines.forEach(line => {
+                        doc.text(line, margin + 5, yPos);
+                        yPos += 5;
+                    });
+                });
+                yPos += 3;
+            }
+            if (agreement.majorations) {
+                doc.setFont(undefined, 'bold');
+                const majTitleLines = doc.splitTextToSize('Majorations (nuit, dimanche, etc.) :', pageWidth - margin * 2 - 10);
+                majTitleLines.forEach(line => {
+                    doc.text(line, margin + 5, yPos);
+                    yPos += 5;
+                });
+                doc.setFont(undefined, 'normal');
+                const majLines = doc.splitTextToSize(
+                    (agreement.majorations.nuit ? 'Nuit selon type de poste ; ' : '') +
+                    (agreement.majorations.dimanche != null ? 'Dimanche selon accord.' : ''),
+                    pageWidth - margin * 2 - 10
+                );
+                majLines.forEach(line => {
+                    doc.text(line, margin + 5, yPos);
+                    yPos += 5;
+                });
+                yPos += 3;
+            }
+            if (agreement.anciennete) {
+                const ancText = `Ancienneté : seuil ${agreement.anciennete.seuil ?? '—'} ans ; barème selon accord.`;
+                const ancLines = doc.splitTextToSize(ancText, pageWidth - margin * 2 - 10);
+                ancLines.forEach(line => {
+                    doc.text(line, margin + 5, yPos);
+                    yPos += 5;
+                });
+            }
+            yPos += 8;
+            checkPageBreak(30);
+        }
+    }
+
     // Section 5 : Méthodologie de calcul
     doc.setFontSize(12);
     doc.setFont(undefined, 'bold');
@@ -330,12 +392,12 @@ export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = 
     
     const methodologyText = hasAccord
         ? [
-            'Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, le rapport PDF est toujours établi sur la base du SMH (option « SMH seul » forcée).',
+            'Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, le rapport PDF est établi uniquement sur la base du SMH (option « SMH seul » obligatoire).',
             'SMH de base, majoration forfait, répartition 12/13 mois (13e mois en novembre si accord d\'entreprise). Accord d\'entreprise : prime ancienneté, prime vacances, 13e mois — mentionnés pour contexte, mais le salaire dû retenu dans le PDF = assiette SMH uniquement (base + forfait, hors primes). L\'ancienneté n\'affecte pas l\'assiette SMH.',
             'Calcul rétrospectif mois par mois : pour chaque mois, le salaire dû = assiette SMH ; comparé au salaire perçu (hors primes). Sources et références : CCN Métallurgie (IDCC 3248), SMH et assiette ; Code du travail art. L.3245-1 ; accord d\'entreprise si pertinent.'
           ]
         : [
-            'Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, le rapport PDF est toujours établi sur la base du SMH (option « SMH seul » forcée).',
+            'Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, le rapport PDF est établi uniquement sur la base du SMH (option « SMH seul » obligatoire).',
             'SMH de base, majoration forfait, répartition 12 mois. Le salaire dû retenu dans le PDF = assiette SMH uniquement (base + forfait, hors primes). L\'ancienneté n\'affecte pas l\'assiette SMH.',
             'Calcul rétrospectif mois par mois : pour chaque mois, le salaire dû = assiette SMH ; comparé au salaire perçu (hors primes). Sources et références : CCN Métallurgie (IDCC 3248), SMH et assiette ; Code du travail art. L.3245-1.'
           ];

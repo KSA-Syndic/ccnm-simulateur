@@ -2,7 +2,7 @@
  * Tests unitaires pour AgreementRegistry
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
     registerAgreement,
     getAgreement,
@@ -10,7 +10,7 @@ import {
     hasAgreement,
     getAgreementIds
 } from '../../src/agreements/AgreementRegistry.js';
-import { KuhnAgreement } from '../../src/agreements/KuhnAgreement.js';
+import { KuhnAgreement } from '../../accords/KuhnAgreement.js';
 
 describe('AgreementRegistry', () => {
     beforeEach(() => {
@@ -87,11 +87,7 @@ describe('AgreementRegistry', () => {
                     },
                     dimanche: 1.00
                 },
-                primes: {
-                    equipe: null,
-                    vacances: null,
-                    autres: []
-                },
+                primes: [],
                 repartition13Mois: {
                     actif: false,
                     moisVersement: 12,
@@ -115,6 +111,8 @@ describe('AgreementRegistry', () => {
         });
 
         it('devrait refuser un accord invalide', () => {
+            const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+            const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
             const accordInvalide = {
                 id: 'invalide'
                 // Manque des champs requis
@@ -122,6 +120,8 @@ describe('AgreementRegistry', () => {
 
             const success = registerAgreement(accordInvalide);
             expect(success).toBe(false);
+            warnSpy.mockRestore();
+            errorSpy.mockRestore();
         });
     });
 });

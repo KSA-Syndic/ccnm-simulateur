@@ -59,7 +59,7 @@ L'outil supporte les **accords d'entreprise** qui peuvent améliorer votre rému
 - ✅ **Primes spécifiques** (équipe, vacances, etc.)
 - ✅ **Répartition sur 13 mois** au lieu de 12
 
-**Exemple : Accord Kuhn** (UES KUHN SAS/KUHN MGM SAS)
+**Exemple : accord d'entreprise** (défini dans le dossier `accords/`, ex. Kuhn)
 - Ancienneté dès 2 ans (au lieu de 3 ans)
 - Plafond à 25 ans (au lieu de 15 ans)
 - Majoration nuit +20% (au lieu de +15%)
@@ -69,7 +69,7 @@ L'outil supporte les **accords d'entreprise** qui peuvent améliorer votre rému
 
 ### Comment utiliser un accord ?
 
-1. **Via l'URL** : Ajoutez `?accord=kuhn` dans l'adresse (ex: pour intégrer dans un site)
+1. **Via l'URL** : Ajoutez `?accord=<id>` dans l'adresse (ex. `?accord=kuhn` si un accord avec cet id est chargé)
 2. **Dans l'application** : Cochez "Appliquer l'accord d'entreprise" dans l'étape 3
 3. **Comparaison** : Décochez pour comparer avec/sans accord
 
@@ -84,6 +84,7 @@ L'outil supporte les **accords d'entreprise** qui peuvent améliorer votre rému
 
 - **[Documentation technique](README_TECHNIQUE.md)** : Architecture, modules, flux de données
 - **[Guide technique pour ajouter un accord](docs/AJOUTER_ACCORD.md)** : Instructions détaillées pour développeurs
+- **[Intégrer un accord via texte complet + prompt IA](docs/INTEGRER_ACCORD_TEXTE_ET_IA.md)** : Fournir le texte de l'accord et un prompt pour générer le fichier JS avec un assistant IA
 - **[PRD (Product Requirements Document)](PRD.md)** : Spécifications complètes de l'application
 
 ## 🔧 Installation (pour développeurs)
@@ -139,7 +140,7 @@ L'outil peut être intégré dans n'importe quel site via **iframe** :
 
 ```html
 <iframe 
-    src="https://simulateur.cfdt-kuhn.com?accord=kuhn&iframe=true&bgcolor=#ffffff" 
+    src="https://votre-domaine.com/simulateur?accord=kuhn&iframe=true&bgcolor=#ffffff" 
     width="100%" 
     height="800px"
     frameborder="0">
@@ -147,7 +148,7 @@ L'outil peut être intégré dans n'importe quel site via **iframe** :
 ```
 
 **Paramètres URL disponibles :**
-- `?accord=kuhn` : Sélectionner un accord d'entreprise
+- `?accord=<id>` : Sélectionner un accord d'entreprise (id défini dans le fichier d'accord, ex. kuhn)
 - `?bgcolor=#ffffff` : Couleur de fond autour du simulateur
 - `?iframe=true` : Mode iframe (détection automatique)
 

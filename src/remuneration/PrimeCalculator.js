@@ -1,141 +1,171 @@
 /**
  * ============================================
- * PRIME CALCULATOR - Calcul des Primes
+ * PRIME CALCULATOR - Calcul unifié des primes
  * ============================================
- * 
- * Calcul des primes d'ancienneté, prime d'équipe, prime de vacances.
- * 
- * Conformité Juridique :
- * - Prime d'ancienneté CCN : CCNM Art. 142, Annexe 7 (formule Point × Taux × Années)
- * - Prime d'ancienneté Accord : Selon barème accord d'entreprise
- * - Principe de Faveur : Le système compare CCN et Accord, applique la plus avantageuse
- * - Prime de vacances : Vérifie les conditions d'éligibilité (ex: ancienneté ≥ 1 an au 1er juin)
+ *
+ * API générique : computePrime(def, context).
+ * Convention (CCN) et accord utilisent la même entrée (ElementDef) et le même contexte.
+ * Aucun nom spécifique à une prime (plus de getPrimeVacances, calculatePrimeEquipe, etc.).
  */
 
 import { CONFIG } from '../core/config.js';
+import { getPrimeValue, getAccordInput } from '../agreements/AgreementInterface.js';
+import { SEMANTIC_ID, SOURCE_CONVENTION, SOURCE_ACCORD } from '../core/RemunerationTypes.js';
 
 /**
- * Calculer la prime d'ancienneté selon l'accord d'entreprise (base salaire)
- * @param {Object} agreement - Accord d'entreprise
- * @param {number} salaireBase - Salaire de base annuel
- * @param {number} anciennete - Années d'ancienneté
- * @returns {Object} { montant, taux, annees }
+ * Calcule le montant annuel d'une prime à partir de sa définition (convention ou accord).
+ * @param {import('../core/RemunerationTypes.js').ElementDef} def - Définition de la prime (convention ou accord)
+ * @param {import('../core/RemunerationTypes.js').ComputeContext} context - Contexte (state, baseSMH, pointTerritorial, classe, agreement)
+ * @returns {import('../core/RemunerationTypes.js').ElementResult} Montant annuel + métadonnées
  */
-export function calculatePrimeAncienneteAccord(agreement, salaireBase, anciennete) {
-    if (!agreement || !agreement.anciennete) {
-        return { montant: 0, taux: 0, annees: 0 };
+export function computePrime(def, context) {
+    if (!def || def.kind !== 'prime') {
+        return { amount: 0, label: '', source: def?.source ?? '' };
     }
-    
-    const { seuil, plafond, barème } = agreement.anciennete;
-    
-    if (anciennete < seuil) {
-        return { montant: 0, taux: 0, annees: 0 };
+    const state = context?.state ?? {};
+    if (def.source === SOURCE_CONVENTION) {
+        return computePrimeConvention(def, context);
     }
-    
-    const anneesPrime = Math.min(anciennete, plafond);
-    
-    // Trouver le taux dans le barème
-    let taux = 0;
-    if (typeof barème === 'function') {
-        taux = barème(anneesPrime);
-    } else if (typeof barème === 'object') {
-        // Chercher le taux pour cette ancienneté
-        // Si exact, utiliser ce taux, sinon prendre le taux le plus proche inférieur
-        if (barème[anneesPrime] !== undefined) {
-            taux = barème[anneesPrime];
-        } else {
-            // Trouver le taux le plus proche inférieur
-            const annees = Object.keys(barème).map(Number).sort((a, b) => b - a);
-            for (const annee of annees) {
-                if (annee <= anneesPrime) {
-                    taux = barème[annee];
-                    break;
+    if (def.source === SOURCE_ACCORD) {
+        return computePrimeAccord(def, context);
+    }
+    return { amount: 0, label: '', source: def.source };
+}
+
+/**
+ * Prime convention (CCN) : actuellement uniquement prime d'ancienneté (point × taux × années).
+ * @private
+ */
+function computePrimeConvention(def, context) {
+    if (def.semanticId !== SEMANTIC_ID.PRIME_ANCIENNETE) {
+        return { amount: 0, label: def.label, source: SOURCE_CONVENTION };
+    }
+    const { seuil, plafond, tauxParClasse } = def.config || {};
+    const pointTerritorial = context.pointTerritorial ?? 0;
+    const classe = context.classe ?? 0;
+    const anciennete = (context.state && context.state.anciennete) ?? 0;
+
+    if (anciennete < (seuil ?? CONFIG.ANCIENNETE.seuil)) {
+        return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
+    }
+    const anneesPrime = Math.min(anciennete, plafond ?? CONFIG.ANCIENNETE.plafond);
+    const tauxClasse = (tauxParClasse && tauxParClasse[classe]) ?? CONFIG.TAUX_ANCIENNETE[classe] ?? 0;
+    const montantMensuel = pointTerritorial * tauxClasse * anneesPrime;
+    const montant = Math.round(montantMensuel * 12);
+
+    return {
+        amount: montant,
+        label: def.label,
+        source: SOURCE_CONVENTION,
+        semanticId: def.semanticId,
+        meta: { taux: tauxClasse, annees: anneesPrime }
+    };
+}
+
+/**
+ * Prime accord : ancienneté (barème × salaire), horaire (heures × taux), montant fixe.
+ * @private
+ */
+function computePrimeAccord(def, context) {
+    const agreement = context?.agreement;
+    const state = context?.state ?? {};
+    const cfg = def.config || {};
+
+    if (def.semanticId === SEMANTIC_ID.PRIME_ANCIENNETE && cfg.barème != null) {
+        const salaireBase = context.salaireBase ?? context.baseSMH ?? 0;
+        const anciennete = state.anciennete ?? 0;
+        const seuil = (agreement && agreement.anciennete && agreement.anciennete.seuil) ?? 0;
+        const plafond = (agreement && agreement.anciennete && agreement.anciennete.plafond) ?? 0;
+        if (anciennete < seuil) {
+            return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
+        }
+        const anneesPrime = Math.min(anciennete, plafond);
+        let taux = 0;
+        const barème = cfg.barème ?? agreement?.anciennete?.barème;
+        if (typeof barème === 'function') {
+            taux = barème(anneesPrime);
+        } else if (typeof barème === 'object' && barème != null) {
+            if (barème[anneesPrime] !== undefined) {
+                taux = barème[anneesPrime];
+            } else {
+                const annees = Object.keys(barème).map(Number).sort((a, b) => b - a);
+                for (const annee of annees) {
+                    if (annee <= anneesPrime) {
+                        taux = barème[annee];
+                        break;
+                    }
                 }
             }
         }
-    }
-    
-    const montant = Math.round(salaireBase * taux);
-    
-    return {
-        montant,
-        taux: Math.round(taux * 10000) / 100, // Pourcentage avec 2 décimales
-        annees: anneesPrime
-    };
-}
-
-/**
- * Calculer la prime d'ancienneté selon la CCN (base point territorial)
- * @param {number} pointTerritorial - Valeur du point territorial
- * @param {number} classe - Numéro de classe (1-10)
- * @param {number} anciennete - Années d'ancienneté
- * @returns {Object} { montant, taux, annees }
- */
-export function calculatePrimeAncienneteCCN(pointTerritorial, classe, anciennete) {
-    if (anciennete < CONFIG.ANCIENNETE.seuil) {
-        return { montant: 0, taux: 0, annees: 0 };
-    }
-    
-    const anneesPrime = Math.min(anciennete, CONFIG.ANCIENNETE.plafond);
-    const tauxClasse = CONFIG.TAUX_ANCIENNETE[classe] || 0;
-    
-    // Formule : Point × Taux × Années (mensuel), puis × 12 pour annuel
-    const montantMensuel = pointTerritorial * tauxClasse * anneesPrime;
-    const montant = Math.round(montantMensuel * 12);
-    
-    return {
-        montant,
-        taux: tauxClasse,
-        annees: anneesPrime
-    };
-}
-
-/**
- * Calculer la prime d'équipe
- * @param {Object} agreement - Accord d'entreprise
- * @param {number} heuresEquipe - Heures mensuelles en équipe
- * @returns {Object} { montantAnnuel, montantMensuel, tauxHoraire }
- */
-export function calculatePrimeEquipe(agreement, heuresEquipe) {
-    if (!agreement || !agreement.primes || !agreement.primes.equipe) {
-        return { montantAnnuel: 0, montantMensuel: 0, tauxHoraire: 0 };
-    }
-    
-    const { montantHoraire, calculMensuel } = agreement.primes.equipe;
-    
-    if (calculMensuel) {
-        const montantMensuel = Math.round(heuresEquipe * montantHoraire * 100) / 100;
-        const montantAnnuel = Math.round(montantMensuel * 12);
-        return { montantAnnuel, montantMensuel, tauxHoraire: montantHoraire };
-    } else {
-        const montantAnnuel = Math.round(heuresEquipe * montantHoraire * 12 * 100) / 100;
-        const montantMensuel = Math.round(montantAnnuel / 12);
-        return { montantAnnuel, montantMensuel, tauxHoraire: montantHoraire };
-    }
-}
-
-/**
- * Obtenir le montant de la prime de vacances si applicable
- * @param {Object} agreement - Accord d'entreprise
- * @param {boolean} active - Prime de vacances activée
- * @param {number} anciennete - Ancienneté en années (pour vérifier les conditions)
- * @param {Date} dateReference - Date de référence pour vérifier l'ancienneté au 1er juin (optionnel)
- * @returns {number} Montant de la prime (0 si non applicable)
- */
-export function getPrimeVacances(agreement, active, anciennete = 0, dateReference = null) {
-    if (!agreement || !agreement.primes || !agreement.primes.vacances || !active) {
-        return 0;
-    }
-    
-    // Vérifier les conditions d'éligibilité si spécifiées dans l'accord
-    const conditions = agreement.primes.vacances.conditions;
-    if (conditions && conditions.length > 0) {
-        // Condition : Ancienneté ≥ 1 an au 1er juin (pour accord Kuhn)
-        const conditionAnciennete = conditions.find(c => c.includes('Ancienneté') && c.includes('1 an'));
-        if (conditionAnciennete && anciennete < 1) {
-            return 0; // Pas éligible si ancienneté < 1 an
+        let montant = Math.round(salaireBase * taux);
+        // CCNM Art. 139 : majoration forfait jours (+30 %) sur le montant de la prime (accord Kuhn et assimilés)
+        const majorationForfait = agreement?.anciennete?.majorationForfaitJours;
+        const forfaitJours = (state.forfait === 'jours');
+        if (majorationForfait != null && majorationForfait > 0 && forfaitJours) {
+            montant = Math.round(montant * (1 + majorationForfait));
         }
+        const meta = {
+            taux: Math.round(taux * 10000) / 100,
+            annees: anneesPrime
+        };
+        if (forfaitJours && majorationForfait != null) {
+            meta.majorationForfaitJours = true;
+        }
+        return {
+            amount: montant,
+            label: def.label,
+            source: SOURCE_ACCORD,
+            semanticId: def.semanticId,
+            meta
+        };
     }
-    
-    return agreement.primes.vacances.montant || 0;
+
+    if (def.valueKind === 'horaire') {
+        const actif = (cfg.stateKeyActif && (getAccordInput(state, cfg.stateKeyActif) === true || state[cfg.stateKeyActif] === true));
+        if (!actif) {
+            return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
+        }
+        const valeur = getPrimeValue(agreement, def.id, state);
+        const heuresRaw = cfg.stateKeyHeures ? (getAccordInput(state, cfg.stateKeyHeures) ?? state[cfg.stateKeyHeures]) : 0;
+        const heures = Number(heuresRaw) || 0;
+        if (!valeur || !heures) {
+            return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
+        }
+        // valueType 'horaire' ⇒ période mensuelle : heures/mois × taux, puis × 12 (calculMensuel conservé pour rétrocompat / cas particulier)
+        const calculMensuel = (def.valueKind === 'horaire') || (cfg.calculMensuel !== false);
+        const montantMensuel = calculMensuel
+            ? Math.round(heures * valeur * 100) / 100
+            : Math.round(heures * valeur * 12 * 100) / 100 / 12;
+        const montantAnnuel = Math.round(montantMensuel * 12);
+        return {
+            amount: montantAnnuel,
+            label: def.label,
+            source: SOURCE_ACCORD,
+            semanticId: def.semanticId,
+            meta: { tauxHoraire: valeur, heures }
+        };
+    }
+
+    if (def.valueKind === 'montant') {
+        const actif = (cfg.stateKeyActif && (getAccordInput(state, cfg.stateKeyActif) === true || state[cfg.stateKeyActif] === true));
+        if (!actif) {
+            return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
+        }
+        const anciennete = state.anciennete ?? 0;
+        const condAnc = cfg.conditionAnciennete;
+        if (condAnc && condAnc.type === 'annees_revolues' && typeof condAnc.annees === 'number' && anciennete < condAnc.annees) {
+            return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
+        }
+        const valeur = getPrimeValue(agreement, def.id, state);
+        return {
+            amount: valeur,
+            label: def.label,
+            source: SOURCE_ACCORD,
+            semanticId: def.semanticId,
+            meta: { moisVersement: cfg.moisVersement }
+        };
+    }
+
+    return { amount: 0, label: def.label, source: SOURCE_ACCORD };
 }
+

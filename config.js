@@ -7,9 +7,9 @@
  * la maintenance annuelle (mise à jour des SMH).
  * 
  * STRUCTURE :
- * - CCN : Données Convention Collective Nationale Métallurgie 2024
- * - ACCORD_ENTREPRISE : Données spécifiques Accord Kuhn
- * 
+ * - CCN : Données Convention Collective Nationale Métallurgie 2024 (SMH, barèmes, taux, forfaits, majorations)
+ * - Accords d'entreprise : définis dans le dossier accords/ et chargés à l'exécution (AgreementLoader/AgreementRegistry)
+ *
  * RÈGLES MÉTIER - ASSIETTE SMH (pour arriérés « SMH seul » et référence générale)
  * -------------------------------------------------------------------------------
  * INCLUS dans l'assiette SMH :
@@ -18,14 +18,14 @@
  * - Majorations heures supplémentaires : incluses dans l'assiette SMH
  * - 13e mois : fait partie du SMH (modalité de versement, répartition 12/13)
  * EXCLUS de l'assiette SMH :
- * - Primes d'ancienneté (CCN ou Kuhn)
+ * - Primes d'ancienneté (CCN ou accord)
  * - Prime de vacances
  * - Majorations pénibilité
  * - Majorations nuit / dimanche / prime d'équipe
  *
  * Option « SMH seul » (arretesSurSMHSeul) : salaire dû = assiette SMH ci-dessus (base + forfait,
  * sans prime vacances, prime ancienneté, majorations nuit/dimanche/équipe, majorations pénibilité).
- * Répartition 12 ou 13 mois (accord Kuhn) s'applique. Saisie utilisateur = brut hors primes.
+ * Répartition 12 ou 13 mois selon l'accord. Saisie utilisateur = brut hors primes.
  */
 
 const CONFIG = {
@@ -159,105 +159,7 @@ const CONFIG = {
         heuresSup50: 0.50   // +50% (HS suivantes) – inclus assiette SMH
     },
 
-    // ╔════════════════════════════════════════════════════════════════╗
-    // ║              ACCORD D'ENTREPRISE KUHN (2024)                   ║
-    // ║  Se substitue aux articles 142, 143, 144, 145, 146, 153-1 CCN  ║
-    // ╚════════════════════════════════════════════════════════════════╝
-    
-    ACCORD_ENTREPRISE: {
-        nom: 'Kuhn (UES KUHN SAS/KUHN MGM SAS)',
-        dateEffet: '2024-01-01',
-        
-        // ─────────────────────────────────────────────────────────────
-        // PRIME D'ANCIENNETÉ (Art. 2.1 Accord)
-        // Remplace articles 142, 143, 153-1 de la CCN
-        // ─────────────────────────────────────────────────────────────
-        anciennete: {
-            seuil: 2,           // Dès 2 ans (CCN: 3 ans)
-            plafond: 25,        // Plafonné à 25 ans (CCN: 15 ans)
-            tousStatuts: true,  // Cadres ET Non-Cadres (CCN: Non-Cadres seuls)
-            // Base de calcul = Rémunération de base
-            // (+ heures nuit/sup/dimanche/prime équipe si applicable)
-            barème: {
-                2: 0.02, 3: 0.03, 4: 0.04, 5: 0.05, 6: 0.06,
-                7: 0.07, 8: 0.08, 9: 0.09, 10: 0.10, 11: 0.11,
-                12: 0.12, 13: 0.13, 14: 0.14, 15: 0.15,
-                // 16 à 24 ans : reste à 15%
-                25: 0.16  // 16% à partir de 25 ans
-            }
-        },
-
-        // ─────────────────────────────────────────────────────────────
-        // PRIME D'ÉQUIPE (Art. 2.2 Accord)
-        // Remplace article 144 de la CCN
-        // ─────────────────────────────────────────────────────────────
-        primeEquipe: {
-            montantHoraire: 0.82,   // €/heure (01/01/2024)
-            conditions: [
-                'Horaire avec pause 20 min',
-                'Durée effective ≥ 6h/poste',
-                'Horaire collectif posté (équipes successives)'
-            ],
-            champApplication: 'Non-cadres à l\'horaire collectif'
-        },
-
-        // ─────────────────────────────────────────────────────────────
-        // MAJORATIONS TRAVAIL DE NUIT (Art. 2.4 Accord)
-        // Remplace articles 145, 146 de la CCN
-        // Plage horaire : 20h00 - 6h00
-        // ─────────────────────────────────────────────────────────────
-        majorationsNuit: {
-            posteNuit: 0.20,        // +20% si poste de nuit (≥2h entre 20h-6h)
-            posteMatin: 0.15,       // +15% heures entre 20h-6h (poste matin/AM)
-            plageDebut: 20,         // 20h00
-            plageFin: 6,            // 6h00
-            seuilHeuresPosteNuit: 2 // Min 2h dans la plage pour être "poste nuit"
-        },
-
-        // ─────────────────────────────────────────────────────────────
-        // MAJORATION DIMANCHE (Art. 2.3 Accord)
-        // Remplace article 146 de la CCN
-        // ─────────────────────────────────────────────────────────────
-        majorationDimanche: 0.50,   // +50% (CCN: +100%)
-
-        // ─────────────────────────────────────────────────────────────
-        // PRIME DE VACANCES (Art. 2.5 Accord)
-        // Spécifique Kuhn (non prévu CCN)
-        // ─────────────────────────────────────────────────────────────
-        primeVacances: {
-            montant: 525,           // € bruts, versé en juillet uniquement (pas étalé). Utilisé pour la répartition mensuelle des arriérés (juillet = base/12 + montant). Exclu du mode « SMH seul » (voir règles en en-tête).
-            conditions: [
-                'Ancienneté ≥ 1 an au 1er juin',
-                'Contrat ≥ 50% temps légal',
-                'Contrat non suspendu sur période de référence'
-            ]
-        },
-
-        // ─────────────────────────────────────────────────────────────
-        // HEURES SUPPLÉMENTAIRES (Art. 5.1 Accord)
-        // Conforme à la CCN (Art. 99.2)
-        // ─────────────────────────────────────────────────────────────
-        heuresSupplementaires: {
-            contingent: 370,        // heures/an
-            majoration25: 0.25,     // 8 premières heures
-            majoration50: 0.50      // heures suivantes
-        },
-
-        // ─────────────────────────────────────────────────────────────
-        // CONGÉS D'ANCIENNETÉ (Art. 3.1 Accord) - Pour information
-        // ─────────────────────────────────────────────────────────────
-        congesAnciennete: {
-            nonCadres: [
-                { anciennete: 5, jours: 1 },
-                { anciennete: 14, jours: 2 },
-                { anciennete: 19, jours: 3 }
-            ],
-            cadres: [
-                { age: 30, anciennete: 1, jours: 2 },
-                { age: 35, anciennete: 2, jours: 3 }
-            ]
-        }
-    },
+    // Accords d'entreprise : définis dans le dossier accords/ et chargés via AgreementLoader/AgreementRegistry
 
     // Définitions des 6 critères classants
     CRITERES: [

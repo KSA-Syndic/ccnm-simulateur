@@ -1447,7 +1447,8 @@ body.iframe-mode .simulator-container.iframe-container {
     margin-bottom: 8px;
 }
 
-/* Badge Kuhn dans les détails */
+/* Badge accord dans les détails (générique) */
+.accord-badge,
 .kuhn-badge {
     display: inline-block;
     white-space: nowrap;
@@ -3023,12 +3024,13 @@ body.iframe-mode .simulator-container.iframe-container {
     font-weight: 500;
 }
 
+.taux-applique.accord,
 .taux-applique.kuhn {
     color: #2e7d32;
 }
 
 /* ============================================
-   Accord d'Entreprise (Checkbox Kuhn)
+   Accord d'Entreprise (checkbox générique)
    ============================================ */
 
 .accord-entreprise {
@@ -3059,13 +3061,15 @@ body.iframe-mode .simulator-container.iframe-container {
     margin-left: 5px;
 }
 
-.accord-kuhn-anciennete {
+.accord-kuhn-anciennete,
+.accord-anciennete {
     margin-top: 15px;
     padding-top: 15px;
     border-top: 1px solid var(--gray-300);
 }
 
-.accord-kuhn-anciennete.hidden {
+.accord-kuhn-anciennete.hidden,
+.accord-anciennete.hidden {
     display: none;
 }
 

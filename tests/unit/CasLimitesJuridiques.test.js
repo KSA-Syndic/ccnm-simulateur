@@ -21,10 +21,8 @@ describe('Cas Limites Juridiques - CCNM 2024', () => {
         heuresNuit: 0,
         travailDimanche: false,
         heuresDimanche: 0,
-        travailEquipe: false,
-        heuresEquipe: 151.67,
-        accordActif: false,
-        primeVacances: false
+        accordInputs: { primeVacances: false, travailEquipe: false, heuresEquipe: 151.67 },
+        accordActif: false
     };
 
     describe('Cadre Débutant - Calcul avec Alternance', () => {
@@ -51,22 +49,22 @@ describe('Cas Limites Juridiques - CCNM 2024', () => {
     describe('Principe de Faveur - Prime d\'Ancienneté', () => {
         const accordKuhn = {
             id: 'kuhn',
+            nom: 'Kuhn (UES)',
             nomCourt: 'Kuhn',
+            url: 'https://example.com/kuhn',
+            dateEffet: '2024-01-01',
             anciennete: {
                 seuil: 2,
                 plafond: 25,
                 tousStatuts: true,
                 baseCalcul: 'salaire',
-                barème: {
-                    2: 0.02,
-                    5: 0.05,
-                    15: 0.15
-                }
+                barème: { 2: 0.02, 5: 0.05, 15: 0.15 }
             },
-            primes: {
-                equipe: null,
-                vacances: null
-            }
+            majorations: { nuit: { posteNuit: 0.20, posteMatin: 0.15 }, dimanche: 0.50 },
+            primes: [],
+            repartition13Mois: { actif: true, moisVersement: 11, inclusDansSMH: true },
+            labels: { nomCourt: 'Kuhn', tooltip: '', description: '', badge: '🏢' },
+            metadata: { version: '1.0', articlesSubstitues: [], territoire: '', entreprise: '' }
         };
 
         it('devrait appliquer la règle la plus avantageuse entre CCN et Accord', () => {
@@ -178,28 +176,41 @@ describe('Cas Limites Juridiques - CCNM 2024', () => {
     });
 
     describe('Prime de Vacances - Condition d\'Ancienneté', () => {
-        const accordKuhn = {
+        const accordVacances = {
             id: 'kuhn',
+            nom: 'Kuhn',
             nomCourt: 'Kuhn',
-            primes: {
-                vacances: {
-                    montant: 525,
+            url: 'https://example.com',
+            dateEffet: '2024-01-01',
+            anciennete: { seuil: 3, plafond: 15, tousStatuts: false, baseCalcul: 'salaire', barème: {} },
+            majorations: { nuit: null, dimanche: null },
+            primes: [
+                {
+                    id: 'primeVacances',
+                    label: 'Prime de vacances',
+                    sourceValeur: 'accord',
+                    valueType: 'montant',
+                    unit: '€',
+                    valeurAccord: 525,
                     moisVersement: 7,
-                    conditions: ['Ancienneté ≥ 1 an au 1er juin']
+                    conditionAnciennete: { type: 'annees_revolues', annees: 1 },
+                    stateKeyActif: 'primeVacances'
                 }
-            }
+            ],
+            repartition13Mois: { actif: false, moisVersement: 11, inclusDansSMH: true },
+            labels: { nomCourt: 'Kuhn', tooltip: '', description: '', badge: '🏢' },
+            metadata: { version: '1.0', articlesSubstitues: [], territoire: '', entreprise: '' }
         };
 
         it('devrait exclure la prime de vacances si ancienneté < 1 an', () => {
             const state = {
                 ...stateBase,
                 scores: [3, 3, 3, 3, 3, 3],
-                primeVacances: true,
+                accordInputs: { ...stateBase.accordInputs, primeVacances: true },
                 accordActif: true,
                 anciennete: 0.8 // < 1 an
             };
-            
-            const result = calculateAnnualRemuneration(state, accordKuhn, { mode: 'full' });
+            const result = calculateAnnualRemuneration(state, accordVacances, { mode: 'full' });
             const primeVacances = result.details.find(d => d.label.includes('vacances'));
             expect(primeVacances).toBeUndefined();
         });
@@ -208,12 +219,11 @@ describe('Cas Limites Juridiques - CCNM 2024', () => {
             const state = {
                 ...stateBase,
                 scores: [3, 3, 3, 3, 3, 3],
-                primeVacances: true,
+                accordInputs: { ...stateBase.accordInputs, primeVacances: true },
                 accordActif: true,
                 anciennete: 1.2 // ≥ 1 an
             };
-            
-            const result = calculateAnnualRemuneration(state, accordKuhn, { mode: 'full' });
+            const result = calculateAnnualRemuneration(state, accordVacances, { mode: 'full' });
             const primeVacances = result.details.find(d => d.label.includes('vacances'));
             expect(primeVacances).toBeDefined();
             expect(primeVacances.value).toBe(525);

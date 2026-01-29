@@ -1,16 +1,20 @@
 /**
  * Tests unitaires pour MajorationCalculator
- * Vérification juridique conforme CCNM 2024
+ * Vérification juridique conforme CCNM 2024 - API générique computeMajoration(def, context)
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-    calculateMajorationNuit,
-    calculateMajorationDimanche
-} from '../../src/remuneration/MajorationCalculator.js';
+import { computeMajoration } from '../../src/remuneration/MajorationCalculator.js';
+import { getConventionMajorationDefs } from '../../src/convention/ConventionCatalog.js';
+import { SEMANTIC_ID, SOURCE_ACCORD, SOURCE_CONVENTION } from '../../src/core/RemunerationTypes.js';
+
+function sourceLabel(r, agreement) {
+    if (r.source === SOURCE_ACCORD) return agreement?.nomCourt ?? 'Accord';
+    return 'CCN';
+}
 
 describe('MajorationCalculator', () => {
-    describe('calculateMajorationNuit', () => {
+    describe('computeMajoration - nuit', () => {
         const accordKuhn = {
             id: 'kuhn',
             nomCourt: 'Kuhn',
@@ -22,38 +26,42 @@ describe('MajorationCalculator', () => {
             }
         };
 
+        const defNuitCCN = getConventionMajorationDefs().find(d => d.semanticId === SEMANTIC_ID.MAJORATION_NUIT);
+        const defNuitAccord = {
+            semanticId: SEMANTIC_ID.MAJORATION_NUIT,
+            kind: 'majoration',
+            source: SOURCE_ACCORD,
+            label: 'Majoration nuit',
+            config: {}
+        };
+
         it('devrait retourner 0 si aucun travail de nuit', () => {
-            const result = calculateMajorationNuit('aucun', 0, 20, null);
-            expect(result.montantAnnuel).toBe(0);
+            const r = computeMajoration(defNuitCCN, { state: { typeNuit: 'aucun', heuresNuit: 0 }, tauxHoraire: 20, agreement: null });
+            expect(r.amount).toBe(0);
         });
 
         it('devrait calculer la majoration nuit CCN (15%)', () => {
-            // Taux horaire : 20€/h, 10h de nuit/mois
-            // 10h × 20€ × 0.15 × 12 = 360€/an
-            const result = calculateMajorationNuit('poste-matin', 10, 20, null);
-            expect(result.montantAnnuel).toBeCloseTo(360, 0);
-            expect(result.taux).toBe(15);
-            expect(result.source).toBe('CCN');
+            const r = computeMajoration(defNuitCCN, { state: { typeNuit: 'poste-matin', heuresNuit: 10 }, tauxHoraire: 20, agreement: null });
+            expect(r.amount).toBeCloseTo(360, 0);
+            expect(r.meta?.taux).toBe(15);
+            expect(sourceLabel(r, null)).toBe('CCN');
         });
 
         it('devrait calculer la majoration nuit accord Kuhn (20%)', () => {
-            // Taux horaire : 20€/h, 10h de nuit/mois
-            // 10h × 20€ × 0.20 × 12 = 480€/an
-            const result = calculateMajorationNuit('poste-nuit', 10, 20, accordKuhn);
-            expect(result.montantAnnuel).toBeCloseTo(480, 0);
-            expect(result.taux).toBe(20);
-            // Note : Le source peut être 'Kuhn' ou 'Accord' selon l'implémentation
-            expect(['Kuhn', 'Accord']).toContain(result.source);
+            const r = computeMajoration(defNuitAccord, { state: { typeNuit: 'poste-nuit', heuresNuit: 10 }, tauxHoraire: 20, agreement: accordKuhn });
+            expect(r.amount).toBeCloseTo(480, 0);
+            expect(r.meta?.taux).toBe(20);
+            expect(['Kuhn', 'Accord']).toContain(sourceLabel(r, accordKuhn));
         });
 
         it('devrait calculer la majoration poste matin Kuhn (15%)', () => {
-            const result = calculateMajorationNuit('poste-matin', 10, 20, accordKuhn);
-            expect(result.montantAnnuel).toBeCloseTo(360, 0);
-            expect(result.taux).toBe(15);
+            const r = computeMajoration(defNuitAccord, { state: { typeNuit: 'poste-matin', heuresNuit: 10 }, tauxHoraire: 20, agreement: accordKuhn });
+            expect(r.amount).toBeCloseTo(360, 0);
+            expect(r.meta?.taux).toBe(15);
         });
     });
 
-    describe('calculateMajorationDimanche', () => {
+    describe('computeMajoration - dimanche', () => {
         const accordKuhn = {
             id: 'kuhn',
             nomCourt: 'Kuhn',
@@ -62,28 +70,32 @@ describe('MajorationCalculator', () => {
             }
         };
 
+        const defDimCCN = getConventionMajorationDefs().find(d => d.semanticId === SEMANTIC_ID.MAJORATION_DIMANCHE);
+        const defDimAccord = {
+            semanticId: SEMANTIC_ID.MAJORATION_DIMANCHE,
+            kind: 'majoration',
+            source: SOURCE_ACCORD,
+            label: 'Majoration dimanche',
+            config: {}
+        };
+
         it('devrait retourner 0 si pas de travail dimanche', () => {
-            const result = calculateMajorationDimanche(0, 20, null);
-            expect(result.montantAnnuel).toBe(0);
+            const r = computeMajoration(defDimCCN, { state: { heuresDimanche: 0 }, tauxHoraire: 20, agreement: null });
+            expect(r.amount).toBe(0);
         });
 
         it('devrait calculer la majoration dimanche CCN (100%)', () => {
-            // Taux horaire : 20€/h, 8h dimanche/mois
-            // 8h × 20€ × 1.00 × 12 = 1920€/an
-            const result = calculateMajorationDimanche(8, 20, null);
-            expect(result.montantAnnuel).toBeCloseTo(1920, 0);
-            expect(result.taux).toBe(100);
-            expect(result.source).toBe('CCN');
+            const r = computeMajoration(defDimCCN, { state: { heuresDimanche: 8 }, tauxHoraire: 20, agreement: null });
+            expect(r.amount).toBeCloseTo(1920, 0);
+            expect(r.meta?.taux).toBe(100);
+            expect(sourceLabel(r, null)).toBe('CCN');
         });
 
         it('devrait calculer la majoration dimanche accord Kuhn (50%)', () => {
-            // Taux horaire : 20€/h, 8h dimanche/mois
-            // 8h × 20€ × 0.50 × 12 = 960€/an
-            const result = calculateMajorationDimanche(8, 20, accordKuhn);
-            expect(result.montantAnnuel).toBeCloseTo(960, 0);
-            expect(result.taux).toBe(50);
-            // Note : Le source peut être 'Kuhn' ou 'Accord' selon l'implémentation
-            expect(['Kuhn', 'Accord']).toContain(result.source);
+            const r = computeMajoration(defDimAccord, { state: { heuresDimanche: 8 }, tauxHoraire: 20, agreement: accordKuhn });
+            expect(r.amount).toBeCloseTo(960, 0);
+            expect(r.meta?.taux).toBe(50);
+            expect(['Kuhn', 'Accord']).toContain(sourceLabel(r, accordKuhn));
         });
     });
 });

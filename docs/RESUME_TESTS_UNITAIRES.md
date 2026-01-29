@@ -94,24 +94,24 @@ Ce document présente l'ensemble des tests unitaires du simulateur de classifica
    - Vérifie l'ajout de la prime d'ancienneté CCN
    - **Règle CCNM** : Prime d'ancienneté non-cadres à partir de 3 ans, plafonnée à 15 ans
 
-### 2.3 Mode Full - Avec Accord d'Entreprise Kuhn
+### 2.3 Mode Full - Avec accord d'entreprise
 
 **Tests effectués** :
 
-1. **Prime d'ancienneté accord Kuhn (≥ 2 ans)**
-   - Classe C5, 5 ans ancienneté, accord Kuhn actif
-   - Barème Kuhn : 2 ans = 2%, 5 ans = 5%, 15 ans = 15%, 25 ans = 16%
+1. **Prime d'ancienneté accord (≥ 2 ans selon accord)**
+   - Classe C5, 5 ans ancienneté, accord actif (ex. Kuhn)
+   - Barème selon accord : ex. 2 ans = 2%, 5 ans = 5%, 15 ans = 15%, 25 ans = 16%
    - Calcul : SMH × taux selon barème
-   - **Règle Accord Kuhn** : Seuil à 2 ans (vs 3 ans CCN), plafond à 25 ans (vs 15 ans CCN), tous statuts
+   - **Règle accord** : Seuil/plafond selon accord (ex. 2 ans / 25 ans, tous statuts)
 
-2. **Prime d'équipe Kuhn**
+2. **Prime d'équipe (accord)**
    - Non-cadre, travail en équipe, 151.67h/mois
    - Calcul : 151.67h × 0.82€/h × 12 mois = 1 492.44 €/an
-   - **Règle Accord Kuhn** : Prime équipe uniquement pour non-cadres
+   - **Règle accord** : Prime équipe selon accord (ex. non-cadres uniquement)
 
-3. **Prime de vacances Kuhn**
-   - Montant fixe : 525 € versé en juillet
-   - **Règle Accord Kuhn** : Prime de vacances annuelle
+3. **Prime de vacances (accord)**
+   - Montant fixe selon accord (ex. 525 € versé en juillet)
+   - **Règle accord** : Prime de vacances annuelle selon accord
 
 ### 2.4 Cadres Débutants (Barème Spécial)
 
@@ -136,23 +136,23 @@ Ce document présente l'ensemble des tests unitaires du simulateur de classifica
 
 ### 3.1 Prime d'Ancienneté - Accord d'Entreprise
 
-**Objectif** : Vérifier le calcul de la prime d'ancienneté selon les règles spécifiques de l'accord Kuhn.
+**Objectif** : Vérifier le calcul de la prime d'ancienneté selon les règles de l'accord (ex. Kuhn).
 
 **Tests effectués** :
 
 1. **Ancienneté < seuil (2 ans)**
    - Résultat : 0 €
-   - **Règle Accord Kuhn** : Pas de prime avant 2 ans
+   - **Règle accord** : Pas de prime avant le seuil (ex. 2 ans)
 
 2. **Ancienneté = 5 ans**
    - Salaire de base : 30 000 €
    - Calcul : 30 000 × 5% = 1 500 €
-   - **Règle Accord Kuhn** : Barème progressif (2% à 2 ans, 5% à 5 ans, 15% à 15 ans, 16% à 25 ans)
+   - **Règle accord** : Barème progressif selon accord (ex. 2% à 2 ans, 5% à 5 ans, 16% à 25 ans)
 
 3. **Plafonnement à 25 ans**
    - Ancienneté réelle : 30 ans
    - Calcul : 30 000 × 16% = 4 800 € (plafonné à 25 ans)
-   - **Règle Accord Kuhn** : Plafond à 25 ans d'ancienneté
+   - **Règle accord** : Plafond selon accord (ex. 25 ans)
 
 4. **Accord invalide**
    - Retourne 0 si pas d'accord
@@ -185,10 +185,10 @@ Ce document présente l'ensemble des tests unitaires du simulateur de classifica
 
 - **Calcul mensuel puis annuel**
   - Heures équipe : 151.67h/mois (temps plein)
-  - Taux horaire Kuhn : 0.82 €/h
+  - Taux horaire selon accord (ex. 0.82 €/h)
   - Mensuel : 151.67 × 0.82 = 124.37 €
   - Annuel : 124.37 × 12 = 1 492.44 €
-  - **Règle Accord Kuhn** : Prime équipe uniquement pour non-cadres, calcul mensuel
+  - **Règle accord** : Prime équipe selon accord (ex. non-cadres, calcul mensuel)
 
 ### 3.4 Prime de Vacances
 
@@ -196,7 +196,7 @@ Ce document présente l'ensemble des tests unitaires du simulateur de classifica
 
 - **Montant fixe** : 525 € si active
 - **Inactive** : 0 €
-- **Règle Accord Kuhn** : Prime de vacances annuelle, versée en juillet
+- **Règle accord** : Prime de vacances selon accord (ex. annuelle, versée en juillet)
 
 ---
 
@@ -219,16 +219,16 @@ Ce document présente l'ensemble des tests unitaires du simulateur de classifica
    - Calcul : 10h × 20€ × 15% × 12 mois = 360 €/an
    - **Règle CCNM** : Majoration nuit = +15% (Art. 145 CCNM)
 
-3. **Majoration Accord Kuhn - Poste Nuit (20%)**
+3. **Majoration accord - Poste Nuit (ex. 20%)**
    - Type : Poste nuit complet
    - Heures : 10h/mois
    - Taux horaire : 20 €/h
    - Calcul : 10h × 20€ × 20% × 12 mois = 480 €/an
-   - **Règle Accord Kuhn** : Poste nuit = +20% (plus favorable que CCN)
+   - **Règle accord** : Poste nuit selon accord (ex. +20%)
 
-4. **Majoration Accord Kuhn - Poste Matin (15%)**
+4. **Majoration accord - Poste Matin (ex. 15%)**
    - Même calcul que CCN : 360 €/an
-   - **Règle Accord Kuhn** : Poste matin = +15% (identique à CCN)
+   - **Règle accord** : Poste matin selon accord
 
 ### 4.2 Majoration Travail du Dimanche
 
@@ -243,11 +243,11 @@ Ce document présente l'ensemble des tests unitaires du simulateur de classifica
    - Calcul : 8h × 20€ × 100% × 12 mois = 1 920 €/an
    - **Règle CCNM** : Majoration dimanche = +100% (Art. 146 CCNM)
 
-3. **Majoration Accord Kuhn (50%)**
+3. **Majoration accord dimanche (ex. 50%)**
    - Heures : 8h/mois
    - Taux horaire : 20 €/h
    - Calcul : 8h × 20€ × 50% × 12 mois = 960 €/an
-   - **Règle Accord Kuhn** : Majoration dimanche = +50% (moins favorable que CCN, mais peut être compensée par d'autres avantages)
+   - **Règle accord** : Majoration dimanche selon accord (ex. +50%)
 
 ---
 
@@ -257,7 +257,7 @@ Ce document présente l'ensemble des tests unitaires du simulateur de classifica
 
 **Tests effectués** :
 
-- **Récupération par ID** : Vérifie que l'accord Kuhn est accessible par son ID 'kuhn'
+- **Récupération par ID** : Vérifie qu'un accord est accessible par son id (ex. 'kuhn')
 - **ID inexistant** : Retourne `null`
 - **ID null** : Retourne `null` (gestion des erreurs)
 
@@ -265,14 +265,14 @@ Ce document présente l'ensemble des tests unitaires du simulateur de classifica
 
 **Tests effectués** :
 
-- **Accord existant** : Retourne `true` pour 'kuhn'
+- **Accord existant** : Retourne `true` pour un id chargé (ex. 'kuhn')
 - **Accord inexistant** : Retourne `false`
 
 ### 5.3 Liste des Accords
 
 **Tests effectués** :
 
-- **Tous les accords** : Retourne au moins l'accord Kuhn
+- **Tous les accords** : Retourne la liste des accords enregistrés (ex. Kuhn)
 - **IDs des accords** : Retourne la liste des IDs disponibles
 
 ### 5.4 Enregistrement d'Accord
@@ -295,7 +295,7 @@ Ce document présente l'ensemble des tests unitaires du simulateur de classifica
 
 **Tests effectués** :
 
-- **Chargement par ID** : Charge l'accord Kuhn depuis le registre
+- **Chargement par ID** : Charge l'accord depuis le registre (ex. par id 'kuhn')
 - **ID inexistant** : Retourne `null`
 - **Définition comme actif** : L'accord chargé devient l'accord actif
 
@@ -399,14 +399,14 @@ Ce document présente l'ensemble des tests unitaires du simulateur de classifica
    - Dimanche : +100%
 5. ✅ **Barème débutants F11/F12** : Vérifier les montants selon tranches d'expérience (< 2 ans, 2-4 ans, 4-6 ans)
 
-### B. Conformité Accord d'Entreprise Kuhn
+### B. Conformité accord d'entreprise
 
-1. ✅ **Prime d'ancienneté Kuhn** :
+1. ✅ **Prime d'ancienneté accord** :
    - Seuil à 2 ans (vs 3 ans CCN)
    - Plafond à 25 ans (vs 15 ans CCN)
    - Tous statuts (vs non-cadres uniquement pour CCN)
    - Barème progressif : 2%, 5%, 15%, 16%
-2. ✅ **Majorations Kuhn** :
+2. ✅ **Majorations accord** :
    - Poste nuit : +20% (vs +15% CCN)
    - Poste matin : +15% (identique CCN)
    - Dimanche : +50% (vs +100% CCN)
@@ -452,7 +452,7 @@ Les tests unitaires couvrent :
 
 1. **Valeurs de référence** : Les SMH et barèmes utilisés dans les tests correspondent à la CCNM 2024. Vérifier leur exactitude avec les textes officiels.
 
-2. **Accord Kuhn** : Les valeurs de l'accord Kuhn (primes, majorations) sont extraites de l'accord réel. Vérifier leur conformité avec le texte de l'accord.
+2. **Accord d'entreprise** : Les valeurs (primes, majorations) sont extraites des définitions dans `accords/`. Vérifier leur conformité avec le texte de l'accord concerné.
 
 3. **Calculs** : Tous les calculs utilisent des formules mathématiques simples (multiplication, pourcentages). Vérifier que les formules correspondent aux textes conventionnels.
 

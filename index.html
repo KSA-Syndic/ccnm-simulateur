@@ -173,7 +173,7 @@
                 <div class="form-group">
                     <label for="anciennete">
                         Ancienneté dans l'entreprise
-                        <span class="tooltip-trigger" data-tippy-content="Prime d'ancienneté : CCN dès 3 ans (non-cadres). Si un accord d'entreprise est appliqué, le seuil peut être différent.">?</span>
+                        <span class="tooltip-trigger" data-tippy-content="Prime d'ancienneté : CCN dès 3 ans (non-cadres). Avec un accord d'entreprise, le seuil de cette prime et les conditions d'ancienneté d'autres primes (ex. prime vacances) peuvent différer.">?</span>
                     </label>
                     <div class="input-with-unit">
                         <input type="number" id="anciennete" class="book-input" min="0" max="50" value="0">
@@ -257,17 +257,8 @@
                             </div>
                         </div>
 
-                        <!-- Prime d'équipe Kuhn -->
-                        <div class="form-group hidden" id="prime-equipe-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="travail-equipe" class="book-checkbox">
-                                <span>Travail en équipes postées (accord d'entreprise)</span>
-                            </label>
-                            <div class="sub-field hidden" id="heures-equipe-field">
-                                <label for="heures-equipe">Heures équipe/mois</label>
-                                <input type="number" id="heures-equipe" class="book-input" min="0" max="200" value="151.67" step="0.01">
-                            </div>
-                        </div>
+                        <!-- Primes horaires accord (rempli dynamiquement) -->
+                        <div id="accord-primes-horaires-container" class="accord-primes-horaires"></div>
                     </div>
                 </details>
 
@@ -295,11 +286,11 @@
                     <!-- Accord d'entreprise -->
                     <div class="option-group">
                         <label class="checkbox-label checkbox-highlight">
-                            <input type="checkbox" id="accord-kuhn" class="book-checkbox">
-                            <span>Appliquer l'accord d'entreprise Kuhn</span>
-                            <span class="tooltip-trigger" data-tippy-content="Selon l'accord : seuil d'ancienneté, taux (nuit, dimanche), prime équipe, prime vacances. Les montants et seuils dépendent de l'accord sélectionné.">?</span>
+                            <input type="checkbox" id="accord-actif" class="book-checkbox">
+                            <span>Appliquer l'accord d'entreprise</span>
+                            <span class="tooltip-trigger" id="accord-actif-tooltip" data-tippy-content="Si votre entreprise applique un accord d'entreprise, cochez cette case pour inclure ses règles dans le calcul (primes, ancienneté, majorations).">?</span>
                         </label>
-                        <!-- Options Kuhn -->
+                        <!-- Options accord (primes, etc.) -->
                         <div class="sub-options hidden" id="accord-options">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="prime-vacances" class="book-checkbox" checked>

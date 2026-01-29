@@ -21,10 +21,12 @@ describe('RemunerationCalculator', () => {
         heuresNuit: 0,
         travailDimanche: false,
         heuresDimanche: 0,
-        travailEquipe: false,
-        heuresEquipe: 151.67,
-        accordActif: false,
-        primeVacances: false
+        accordInputs: {
+            primeVacances: false,
+            travailEquipe: false,
+            heuresEquipe: 151.67
+        },
+        accordActif: false
     };
 
     describe('calculateAnnualRemuneration - Mode SMH seul', () => {
@@ -69,41 +71,47 @@ describe('RemunerationCalculator', () => {
     describe('calculateAnnualRemuneration - Principe de Faveur (Art. L2254-2 Code du Travail)', () => {
         const accordKuhn = {
             id: 'kuhn',
+            nom: 'Kuhn (UES)',
             nomCourt: 'Kuhn',
+            url: 'https://example.com/kuhn',
+            dateEffet: '2024-01-01',
             anciennete: {
                 seuil: 2,
                 plafond: 25,
                 tousStatuts: true,
                 baseCalcul: 'salaire',
-                barème: {
-                    2: 0.02,
-                    5: 0.05,
-                    15: 0.15
-                }
+                barème: { 2: 0.02, 5: 0.05, 15: 0.15 }
             },
             majorations: {
-                nuit: {
-                    posteNuit: 0.20,
-                    posteMatin: 0.15
-                },
+                nuit: { posteNuit: 0.20, posteMatin: 0.15 },
                 dimanche: 0.50
             },
-            primes: {
-                equipe: {
-                    montantHoraire: 0.82,
-                    calculMensuel: true
+            primes: [
+                {
+                    id: 'primeEquipe',
+                    label: 'Prime d\'équipe',
+                    sourceValeur: 'accord',
+                    valueType: 'horaire',
+                    unit: '€/h',
+                    valeurAccord: 0.82,
+                    stateKeyActif: 'travailEquipe',
+                    stateKeyHeures: 'heuresEquipe'
                 },
-                vacances: {
-                    montant: 525,
+                {
+                    id: 'primeVacances',
+                    label: 'Prime de vacances',
+                    sourceValeur: 'accord',
+                    valueType: 'montant',
+                    unit: '€',
+                    valeurAccord: 525,
                     moisVersement: 7,
-                    conditions: ['Ancienneté ≥ 1 an au 1er juin']
+                    conditionAnciennete: { type: 'annees_revolues', annees: 1 },
+                    stateKeyActif: 'primeVacances'
                 }
-            },
-            repartition13Mois: {
-                actif: true,
-                moisVersement: 11,
-                inclusDansSMH: true
-            }
+            ],
+            repartition13Mois: { actif: true, moisVersement: 11, inclusDansSMH: true },
+            labels: { nomCourt: 'Kuhn', tooltip: '', description: '', badge: '🏢' },
+            metadata: { version: '1.0', articlesSubstitues: [], territoire: '', entreprise: '' }
         };
 
         it('devrait appliquer la prime CCN si plus avantageuse que l\'accord (cas limite)', () => {
@@ -146,8 +154,7 @@ describe('RemunerationCalculator', () => {
             const state = {
                 ...stateBase,
                 scores: [3, 3, 3, 3, 3, 3],
-                travailEquipe: true,
-                heuresEquipe: 151.67,
+                accordInputs: { ...stateBase.accordInputs, travailEquipe: true, heuresEquipe: 151.67 },
                 accordActif: true
             };
             const result = calculateAnnualRemuneration(state, accordKuhn, { mode: 'full' });
@@ -157,10 +164,10 @@ describe('RemunerationCalculator', () => {
         });
 
         it('devrait inclure la prime de vacances si ancienneté >= 1 an', () => {
-            const state = { 
-                ...stateBase, 
-                scores: [3, 3, 3, 3, 3, 3], 
-                primeVacances: true, 
+            const state = {
+                ...stateBase,
+                scores: [3, 3, 3, 3, 3, 3],
+                accordInputs: { ...stateBase.accordInputs, primeVacances: true },
                 accordActif: true,
                 anciennete: 1.5 // ≥ 1 an requis
             };
@@ -171,10 +178,10 @@ describe('RemunerationCalculator', () => {
         });
 
         it('ne devrait PAS inclure la prime de vacances si ancienneté < 1 an', () => {
-            const state = { 
-                ...stateBase, 
-                scores: [3, 3, 3, 3, 3, 3], 
-                primeVacances: true, 
+            const state = {
+                ...stateBase,
+                scores: [3, 3, 3, 3, 3, 3],
+                accordInputs: { ...stateBase.accordInputs, primeVacances: true },
                 accordActif: true,
                 anciennete: 0.5 // < 1 an
             };

@@ -2,7 +2,7 @@
  * Tests unitaires pour ClassificationEngine
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { calculateClassification, getActiveClassification, isCadre, getClassesForGroupe } from '../../src/classification/ClassificationEngine.js';
 
 describe('ClassificationEngine', () => {
@@ -48,9 +48,11 @@ describe('ClassificationEngine', () => {
         });
 
         it('devrait gérer les scores invalides', () => {
+            const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
             const result = calculateClassification([1, 2, 3]); // Pas assez de scores
             expect(result.groupe).toBe('A');
             expect(result.classe).toBe(1);
+            spy.mockRestore();
         });
     });
 

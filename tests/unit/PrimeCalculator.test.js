@@ -1,18 +1,15 @@
 /**
  * Tests unitaires pour PrimeCalculator
- * Vérification juridique conforme CCNM 2024
+ * Vérification juridique conforme CCNM 2024 - API générique computePrime(def, context)
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-    calculatePrimeAncienneteAccord,
-    calculatePrimeAncienneteCCN,
-    calculatePrimeEquipe,
-    getPrimeVacances
-} from '../../src/remuneration/PrimeCalculator.js';
+import { computePrime } from '../../src/remuneration/PrimeCalculator.js';
+import { getConventionPrimeDefs } from '../../src/convention/ConventionCatalog.js';
+import { SEMANTIC_ID, SOURCE_ACCORD, SOURCE_CONVENTION } from '../../src/core/RemunerationTypes.js';
 
 describe('PrimeCalculator', () => {
-    describe('calculatePrimeAncienneteAccord', () => {
+    describe('computePrime - prime ancienneté accord', () => {
         const accordKuhn = {
             id: 'kuhn',
             nom: 'Kuhn',
@@ -29,105 +26,189 @@ describe('PrimeCalculator', () => {
             }
         };
 
+        const defAccordAnciennete = {
+            id: 'primeAnciennete',
+            semanticId: SEMANTIC_ID.PRIME_ANCIENNETE,
+            kind: 'prime',
+            source: SOURCE_ACCORD,
+            valueKind: 'pourcentage',
+            label: 'Prime ancienneté',
+            config: { barème: accordKuhn.anciennete.barème }
+        };
+
         it('devrait retourner 0 si ancienneté < seuil', () => {
-            const result = calculatePrimeAncienneteAccord(accordKuhn, 30000, 1);
-            expect(result.montant).toBe(0);
+            const r = computePrime(defAccordAnciennete, { state: { anciennete: 1 }, salaireBase: 30000, agreement: accordKuhn });
+            expect(r.amount).toBe(0);
         });
 
         it('devrait calculer la prime pour 5 ans d\'ancienneté', () => {
-            const result = calculatePrimeAncienneteAccord(accordKuhn, 30000, 5);
-            expect(result.montant).toBe(1500); // 30000 * 0.05
-            expect(result.taux).toBe(5);
-            expect(result.annees).toBe(5);
+            const r = computePrime(defAccordAnciennete, { state: { anciennete: 5 }, salaireBase: 30000, agreement: accordKuhn });
+            expect(r.amount).toBe(1500); // 30000 * 0.05
+            expect(r.meta?.taux).toBe(5);
+            expect(r.meta?.annees).toBe(5);
         });
 
         it('devrait plafonner à 25 ans', () => {
-            const result = calculatePrimeAncienneteAccord(accordKuhn, 30000, 30);
-            expect(result.montant).toBe(4800); // 30000 * 0.16
-            expect(result.annees).toBe(25);
+            const r = computePrime(defAccordAnciennete, { state: { anciennete: 30 }, salaireBase: 30000, agreement: accordKuhn });
+            expect(r.amount).toBe(4800); // 30000 * 0.16
+            expect(r.meta?.annees).toBe(25);
+        });
+
+        it('devrait appliquer la majoration forfait jours (+30 %) pour F11 forfait jours, 4 ans', () => {
+            const accordAvecForfait = {
+                ...accordKuhn,
+                anciennete: { ...accordKuhn.anciennete, majorationForfaitJours: 0.30 }
+            };
+            // Salaire de base annuel 42 000 € (ex. 3 500 € × 12), taux 4 % pour 4 ans
+            const r = computePrime(defAccordAnciennete, {
+                state: { anciennete: 4, forfait: 'jours' },
+                salaireBase: 42000,
+                agreement: accordAvecForfait
+            });
+            expect(r.amount).toBe(2184); // (42000 * 0.04) * 1.30 = 1680 * 1.30 = 2184
+            expect(r.meta?.taux).toBe(4);
+            expect(r.meta?.annees).toBe(4);
+            expect(r.meta?.majorationForfaitJours).toBe(true);
+        });
+
+        it('devrait ne pas appliquer la majoration forfait jours si forfait 35h', () => {
+            const accordAvecForfait = {
+                ...accordKuhn,
+                anciennete: { ...accordKuhn.anciennete, majorationForfaitJours: 0.30 }
+            };
+            const r = computePrime(defAccordAnciennete, {
+                state: { anciennete: 4, forfait: '35h' },
+                salaireBase: 42000,
+                agreement: accordAvecForfait
+            });
+            expect(r.amount).toBe(1680); // 42000 * 0.04, pas de × 1.30
+            expect(r.meta?.majorationForfaitJours).toBeFalsy();
         });
 
         it('devrait retourner 0 si accord invalide', () => {
-            const result = calculatePrimeAncienneteAccord(null, 30000, 5);
-            expect(result.montant).toBe(0);
+            const r = computePrime(defAccordAnciennete, { state: { anciennete: 5 }, salaireBase: 30000, agreement: null });
+            expect(r.amount).toBe(0);
         });
     });
 
-    describe('calculatePrimeAncienneteCCN', () => {
+    describe('computePrime - prime ancienneté CCN', () => {
+        const defCCN = getConventionPrimeDefs().find(d => d.semanticId === SEMANTIC_ID.PRIME_ANCIENNETE) || {
+            semanticId: SEMANTIC_ID.PRIME_ANCIENNETE,
+            kind: 'prime',
+            source: SOURCE_CONVENTION,
+            label: 'Prime ancienneté CCN',
+            config: {}
+        };
+
         it('devrait retourner 0 si ancienneté < seuil (3 ans)', () => {
-            const result = calculatePrimeAncienneteCCN(5.90, 5, 2);
-            expect(result.montant).toBe(0);
+            const r = computePrime(defCCN, { state: { anciennete: 2 }, pointTerritorial: 5.90, classe: 5 });
+            expect(r.amount).toBe(0);
         });
 
         it('devrait calculer la prime CCN pour classe C5, 10 ans', () => {
-            // Formule : Point × Taux × Années × 12
-            // 5.90 × 2.20 × 10 × 12 = 1557.6 ≈ 1558
-            const result = calculatePrimeAncienneteCCN(5.90, 5, 10);
-            expect(result.montant).toBeGreaterThan(1500);
-            expect(result.montant).toBeLessThan(1600);
-            expect(result.annees).toBe(10);
+            const r = computePrime(defCCN, { state: { anciennete: 10 }, pointTerritorial: 5.90, classe: 5 });
+            expect(r.amount).toBeGreaterThan(1500);
+            expect(r.amount).toBeLessThan(1600);
+            expect(r.meta?.annees).toBe(10);
         });
 
         it('devrait plafonner à 15 ans pour la CCN', () => {
-            const result = calculatePrimeAncienneteCCN(5.90, 5, 20);
-            expect(result.annees).toBe(15);
+            const r = computePrime(defCCN, { state: { anciennete: 20 }, pointTerritorial: 5.90, classe: 5 });
+            expect(r.meta?.annees).toBe(15);
         });
     });
 
-    describe('calculatePrimeEquipe', () => {
+    describe('computePrime - prime équipe (horaire)', () => {
         const accordKuhn = {
             id: 'kuhn',
-            primes: {
-                equipe: {
-                    montantHoraire: 0.82,
-                    calculMensuel: true
+            primes: [
+                {
+                    id: 'primeEquipe',
+                    sourceValeur: 'accord',
+                    valueType: 'horaire',
+                    valeurAccord: 0.82,
+                    stateKeyActif: 'travailEquipe',
+                    stateKeyHeures: 'heuresEquipe'
                 }
-            }
+            ]
+        };
+
+        const defEquipe = {
+            id: 'primeEquipe',
+            kind: 'prime',
+            source: SOURCE_ACCORD,
+            valueKind: 'horaire',
+            label: 'Prime équipe',
+            config: { stateKeyActif: 'travailEquipe', stateKeyHeures: 'heuresEquipe' }
         };
 
         it('devrait calculer la prime d\'équipe mensuelle', () => {
-            const result = calculatePrimeEquipe(accordKuhn, 151.67);
-            expect(result.montantMensuel).toBeCloseTo(124.37, 1);
-            // Arrondi annuel : 124.37 * 12 = 1492.44, arrondi = 1492
-            expect(result.montantAnnuel).toBe(1492);
-            expect(result.tauxHoraire).toBe(0.82);
+            const r = computePrime(defEquipe, { state: { travailEquipe: true, heuresEquipe: 151.67 }, agreement: accordKuhn });
+            expect(Math.round(r.amount / 12)).toBeCloseTo(124, 0);
+            expect(r.amount).toBe(1492);
+            expect(r.meta?.tauxHoraire).toBe(0.82);
         });
 
         it('devrait retourner 0 si pas d\'accord', () => {
-            const result = calculatePrimeEquipe(null, 151.67);
-            expect(result.montantAnnuel).toBe(0);
+            const r = computePrime(defEquipe, { state: { heuresEquipe: 151.67 }, agreement: null });
+            expect(r.amount).toBe(0);
         });
     });
 
-    describe('getPrimeVacances', () => {
+    describe('computePrime - prime vacances (montant)', () => {
         const accordKuhn = {
             id: 'kuhn',
-            primes: {
-                vacances: {
-                    montant: 525,
-                    conditions: ['Ancienneté ≥ 1 an au 1er juin']
+            primes: [
+                {
+                    id: 'primeVacances',
+                    sourceValeur: 'accord',
+                    valueType: 'montant',
+                    valeurAccord: 525,
+                    conditions: ['Ancienneté ≥ 1 an au 1er juin'],
+                    stateKeyActif: 'primeVacances'
                 }
-            }
+            ]
+        };
+
+        const defVacances = {
+            id: 'primeVacances',
+            kind: 'prime',
+            source: SOURCE_ACCORD,
+            valueKind: 'montant',
+            label: 'Prime vacances',
+            config: { stateKeyActif: 'primeVacances', conditionAnciennete: { type: 'annees_revolues', annees: 1 } }
         };
 
         it('devrait retourner le montant si active et ancienneté >= 1 an', () => {
-            const result = getPrimeVacances(accordKuhn, true, 1.5);
-            expect(result).toBe(525);
+            const r = computePrime(defVacances, {
+                state: { accordInputs: { primeVacances: true }, anciennete: 1.5 },
+                agreement: accordKuhn
+            });
+            expect(r.amount).toBe(525);
         });
 
         it('devrait retourner 0 si ancienneté < 1 an', () => {
-            const result = getPrimeVacances(accordKuhn, true, 0.5);
-            expect(result).toBe(0);
+            const r = computePrime(defVacances, {
+                state: { accordInputs: { primeVacances: true }, anciennete: 0.5 },
+                agreement: accordKuhn
+            });
+            expect(r.amount).toBe(0);
         });
 
         it('devrait retourner 0 si inactive', () => {
-            const result = getPrimeVacances(accordKuhn, false, 2);
-            expect(result).toBe(0);
+            const r = computePrime(defVacances, {
+                state: { accordInputs: { primeVacances: false }, anciennete: 2 },
+                agreement: accordKuhn
+            });
+            expect(r.amount).toBe(0);
         });
 
         it('devrait retourner 0 si pas d\'accord', () => {
-            const result = getPrimeVacances(null, true, 2);
-            expect(result).toBe(0);
+            const r = computePrime(defVacances, {
+                state: { accordInputs: { primeVacances: true }, anciennete: 2 },
+                agreement: null
+            });
+            expect(r.amount).toBe(0);
         });
     });
 });
