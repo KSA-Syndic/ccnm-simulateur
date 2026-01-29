@@ -6,8 +6,14 @@
 
 * **Objectif Principal :** Fournir aux salariés de la métallurgie un outil autonome, simple et juridiquement fiable pour déterminer leur classification (Groupe/Classe) et leur salaire minimum conventionnel.
 * **Contexte :** La nouvelle Convention Collective Nationale de la Métallurgie (CCNM), entrée en vigueur au 01/01/2024, introduit un système de cotation par critères classants complexe. L'outil doit vulgariser cette complexité sans perdre en rigueur.
-* **Cible Technique :** Module web intégrable nativement dans un site de documentation statique (Hugo avec thème "Book").
+* **Sources Juridiques :**
+  * **CCNM 2024 :** Convention Collective Nationale de la Métallurgie (IDCC 3248) - Entrée en vigueur 01/01/2024
+  * **Code du Travail :** Art. L2254-2 (Principe de faveur)
+  * **Accord Kuhn :** Accord d'entreprise du 6 mars 2024, UES KUHN SAS/KUHN MGM SAS
+* **Cible Technique :** Module web intégrable nativement dans un site de documentation statique (Hugo avec thème "Book") ou via iframe.
 * **Territoire cible :** Bas-Rhin (67) - valeur du point territorial configurée en conséquence.
+* **Extensibilité :** L'application supporte désormais un système générique d'accords d'entreprise, permettant d'ajouter facilement de nouveaux accords sans modifier le code de base.
+* **Conformité Juridique :** Le système applique systématiquement le principe de faveur (Art. L2254-2 Code du Travail) en comparant les règles CCN et Accord et en choisissant la plus avantageuse pour le salarié.
 
 ---
 
@@ -31,9 +37,11 @@ Le simulateur utilise une interface de type **wizard** (assistant pas à pas) po
 - Conditions de travail particulières (panneau dépliable)
 
 #### Étape 3 : Résultat
-- Options de calcul (Accord Kuhn, 13e mois)
+- Options de calcul (Accord d'entreprise si disponible, 13e mois)
+- **Comparaison avec/sans accord** : Checkbox pour activer/désactiver l'accord d'entreprise et comparer les résultats
+- Badge visuel indiquant si l'accord est appliqué dans le calcul
 - Affichage du SMH annuel et mensuel
-- Détail du calcul (panneau dépliable)
+- Détail du calcul (panneau dépliable) avec indication de l'origine (CCN ou Accord)
 - **Hints contextuels multiples** (voir 3.6)
 - Graphique d'évolution vs inflation (panneau dépliable)
 - **Bouton "Vérifier mes arriérés de salaire"** : Apparaît si le salaire actuel est potentiellement inférieur au SMH
@@ -79,20 +87,24 @@ Le simulateur doit gérer **3 profils distincts** avec des règles de paie radic
   * *Formule 2024 :* `[[Point × Taux%] × 100] × Années` = montant **mensuel**. Annuel = mensuel × 12.
   * *Exemple :* `[[5,90 × 2,20%] × 100] × 10 = 129,80 €/mois` soit `1 558 €/an`.
   * *Plafond :* 15 ans.
+  * *Source :* CCNM Art. 142, Annexe 7
   * *Contrainte UX :* Le simulateur doit demander la **"Valeur du Point (Territorial)"** (ex: 5.90€).
+  * *Principe de Faveur :* Si un accord d'entreprise prévoit une prime d'ancienneté, le système compare CCN et Accord et applique la règle la plus avantageuse (Art. L2254-2 Code du Travail).
 
 * **Majorations Conditions de Travail :**
-  * **Travail de nuit (21h-6h) :** +15% (Art. 145 CCN)
-  * **Travail du dimanche :** +100% (Art. 146 CCN)
+  * **Travail de nuit (21h-6h) :** +15% (CCNM Art. 145)
+  * **Travail du dimanche :** +100% (CCNM Art. 146)
+  * *Principe de Faveur :* Si un accord prévoit des taux différents, le système applique la règle la plus avantageuse pour le salarié.
   * Ces majorations sont calculables dans le simulateur si l'utilisateur renseigne ses heures.
 
 ##### PROFIL B : CADRES CONFIRMÉS (Cl. 11 à 18, hors débutants)
 
 * **Salaire Base :** SMH de la classe.
-* **Prime d'Ancienneté :** 0€ (Incluse dans le salaire de base des cadres).
-* **Majorations Forfaits (Art. 102 & 103) :**
-  * Forfait Heures (Annuel) : Majoration **+15%**.
-  * Forfait Jours : Majoration **+30%**.
+* **Prime d'Ancienneté :** 0€ (Incluse dans le salaire de base des cadres - CCNM Art. 142).
+* **Majorations Forfaits (CCNM Art. 139) :**
+  * Forfait Heures (Annuel) : Majoration **+15%** (inclus dans l'assiette SMH).
+  * Forfait Jours : Majoration **+30%** (inclus dans l'assiette SMH).
+* **Source :** CCNM Art. 139 - Les majorations forfaits sont incluses dans l'assiette SMH.
 
 * **Contrôle RAG :** Vérifier que le total est supérieur au SMH + Majoration.
 
@@ -100,18 +112,33 @@ Le simulateur doit gérer **3 profils distincts** avec des règles de paie radic
 
 * **Déclencheur :** Si Classe = 11 ou 12, demander "Expérience professionnelle".
 * **Logique :** Si expérience < 6 ans, le SMH n'est PAS le standard mais suit une grille progressive (Voir Annexe).
+* **Source :** CCNM Art. 139, Annexe 6 - Barème salariés débutants
+* **Calcul de l'expérience :** 
+  * L'alternance/apprentissage compte pour moitié (2 ans alternance = 1 an expérience)
+  * Exemple : 2 ans alternance + 3 ans CDI = 4 ans d'expérience totale
+* **Tranches d'expérience :**
+  * < 2 ans : Barème spécifique
+  * 2 à < 4 ans : Barème spécifique
+  * 4 à 6 ans : Barème spécifique
+  * ≥ 6 ans : SMH standard de la classe
 * **Note :** Le barème inclut les majorations de 5% (2 ans) ou 8% (4 ans) prévues par l'Article 139.
 
 #### 3.3. Accord d'Entreprise Kuhn (UES KUHN SAS/KUHN MGM SAS)
 
 *Source : Accord du 6 mars 2024 - Se substitue aux articles 142, 143, 144, 145, 146, 153-1 de la CCN*
 
+**Référence juridique :** Accord d'entreprise du 6 mars 2024, UES KUHN SAS/KUHN MGM SAS
+
 L'utilisateur peut activer l'accord d'entreprise Kuhn via une **checkbox**. Une fois activé, des options supplémentaires apparaissent pour configurer les différents éléments de rémunération.
 
-##### 3.3.1. Prime d'Ancienneté (Art. 2.1)
+**Principe de Faveur (Art. L2254-2 Code du Travail) :** Le système compare systématiquement les règles CCN et Accord et applique la règle la plus avantageuse pour le salarié.
 
-| Règle | Convention Collective | Accord Kuhn |
-| --- | --- | --- |
+##### 3.3.1. Prime d'Ancienneté (Art. 2.1 Accord)
+
+**Source :** Accord Kuhn Art. 2.1 - Remplace CCNM Art. 142, 143, 153-1
+
+| Règle | Convention Collective | Accord Kuhn | Principe de Faveur |
+| --- | --- | --- | --- |
 | **Seuil** | 3 ans | 2 ans |
 | **Classes éligibles** | Non-Cadres (A-E) | Toutes (A-I) |
 | **Base de calcul** | Point × Taux × 100 × Années | % du Salaire Brut |
@@ -150,11 +177,17 @@ L'utilisateur peut activer l'accord d'entreprise Kuhn via une **checkbox**. Une 
 * **Taux :** **+50%** (CCN: +100%)
 * Personnel en forfait jour : contrepartie en repos
 
-##### 3.3.5. Prime de Vacances (Art. 2.5)
+##### 3.3.5. Prime de Vacances (Art. 2.5 Accord)
+
+**Source :** Accord Kuhn Art. 2.5
 
 * **Montant :** 525 € bruts
 * **Versement :** En juillet uniquement (accord Kuhn)
-* **Conditions :** Ancienneté ≥ 1 an au 1er juin, contrat ≥ 50% temps légal
+* **Conditions d'éligibilité :**
+  * Ancienneté ≥ 1 an au 1er juin (condition stricte)
+  * Contrat ≥ 50% temps légal
+  * Contrat non suspendu sur période de référence
+* **Note juridique :** Le système vérifie automatiquement l'ancienneté et exclut la prime si < 1 an
 
 ##### UX Simulateur
 
@@ -360,17 +393,17 @@ Le formulaire demande :
 * **Date de fin** : Date de rupture du contrat ou date du jour
 
 **Affichage :**
-* Chaque période (mois) est représentée par une carte cliquable
-* **État "À saisir"** : Carte orange, période non renseignée
-* **État "Saisi"** : Carte verte avec le salaire affiché
-* **Interaction** : Clic sur une carte → Intéraction pour saisir le salaire mensuel brut
+* Graphique de l’évolution du salaire dû, chaque mois étant un point sur la courbe.
+* Saisie guidée : l’utilisateur complète chaque salaire mensuel via une carte interactive animée apparaissant successivement au centre du graphique ; la carte se transforme en point après validation.
+* Saisie rapide : le champ du mois à remplir est sélectionné automatiquement ; validation possible au clavier (Entrée), puis passage immédiat au mois suivant.
+* Fin : lorsque le dernier champ est rempli, rajouter le point sur la courbe et ne plus afficher de carte intéractive, laisser l'utilisateur voir le graphique voir modifier certains points par après. 
+* **Label avec tooltip** pour indiquer où trouver l’information sur la fiche de paie.
 
 **Mode de saisie :**
 * Affichage de la période concernée
 * Champ numérique pour le salaire mensuel brut
 * Valider avec la touche "Entrée" ou via un bouton "Valider"
 * Validation : Montant > 0 requis
-* **Modification après complétion** : Une fois tous les salaires saisis, le bloc de saisie reste affiché au centre. L'utilisateur peut **cliquer sur un point** du graphique pour rouvrir le popup sur le mois concerné et modifier le salaire. Le popup ne disparaît plus définitivement après la dernière saisie.
 
 ##### 3.9.4. Calcul des Arriérés (Mois par Mois avec Paramètres Complets)
 

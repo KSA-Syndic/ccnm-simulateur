@@ -1,0 +1,19 @@
+{
+  "name": "simulateur-metallurgie",
+  "version": "1.0.0",
+  "description": "Simulateur de Classification et Rémunération - Métallurgie 2024",
+  "type": "module",
+  "scripts": {
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^9.3.3",
+    "@testing-library/jest-dom": "^6.1.5",
+    "@vitest/ui": "^1.0.4",
+    "jsdom": "^23.0.1",
+    "vitest": "^1.0.4"
+  },
+  "dependencies": {}
+}

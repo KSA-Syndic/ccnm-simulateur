@@ -1075,10 +1075,10 @@ function updateTauxInfo() {
 }
 
 /**
- * Mettre à jour l'affichage du mode (auto/manuel) - Legacy
+ * Mettre à jour l'affichage du mode (auto/manuel).
+ * Utilisée si les boutons de bascule mode manuel/auto sont présents dans le DOM.
  */
 function updateModeDisplay() {
-    // Fonction conservée pour compatibilité mais plus utilisée dans le wizard
     const btnManuel = document.getElementById('btn-mode-manuel');
     const btnAuto = document.getElementById('btn-mode-auto');
     const sectionManuel = document.getElementById('classification-manual');
@@ -1161,349 +1161,28 @@ function getActiveClassification() {
  * ============================================
  * MOTEUR DE RÉMUNÉRATION
  * ============================================
+ * 
+ * Les calculs de primes et majorations sont maintenant gérés par les modules :
+ * - src/remuneration/PrimeCalculator.js
+ * - src/remuneration/MajorationCalculator.js
  */
-
-/**
- * ═══════════════════════════════════════════════════════════════
- * CALCULS ACCORD ENTREPRISE KUHN
- * ═══════════════════════════════════════════════════════════════
- */
-
-/**
- * Calculer la prime d'ancienneté selon l'accord Kuhn (Art. 2.1)
- * @param {number} salaireBase - SMH de base annuel
- * @param {number} anciennete - Années d'ancienneté
- * @returns {object} { montant, taux, annees }
- */
-function calculatePrimeKuhn(salaireBase, anciennete) {
-    const accord = CONFIG.ACCORD_ENTREPRISE.anciennete;
-    
-    // Pas de prime si ancienneté < seuil (2 ans)
-    if (anciennete < accord.seuil) {
-        return { montant: 0, taux: 0, annees: 0 };
-    }
-    
-    // Plafonner l'ancienneté
-    const anneesPrime = Math.min(anciennete, accord.plafond);
-    
-    // Déterminer le taux selon le barème Kuhn
-    let taux = 0;
-    if (anneesPrime >= 25) {
-        taux = accord.barème[25]; // 16%
-    } else if (anneesPrime >= 15) {
-        taux = accord.barème[15]; // 15%
-    } else {
-        taux = accord.barème[anneesPrime] || 0;
-    }
-    
-    const montant = Math.round(salaireBase * taux);
-    const tauxPourcent = Math.round(taux * 100);
-    
-    return { montant, taux: tauxPourcent, annees: anneesPrime };
-}
-
-/**
- * Calculer la prime d'équipe selon l'accord Kuhn (Art. 2.2)
- * @param {number} heuresMensuelles - Heures travaillées en équipe par mois
- * @returns {object} { montantMensuel, montantAnnuel }
- */
-function calculatePrimeEquipe(heuresMensuelles) {
-    const tauxHoraire = CONFIG.ACCORD_ENTREPRISE.primeEquipe.montantHoraire;
-    const montantMensuel = Math.round(heuresMensuelles * tauxHoraire * 100) / 100;
-    const montantAnnuel = Math.round(montantMensuel * 12);
-    return { montantMensuel, montantAnnuel, tauxHoraire };
-}
-
-/**
- * Calculer les majorations de nuit (taux automatique selon accord Kuhn)
- * @param {string} typeNuit - 'aucun', 'poste-nuit', 'poste-matin'
- * @param {number} heuresNuit - Heures de nuit mensuelles
- * @param {number} tauxHoraire - Taux horaire de base
- * @param {boolean} accordKuhn - Accord Kuhn actif
- * @returns {object} { montantMensuel, montantAnnuel, taux, source }
- */
-function calculateMajorationNuit(typeNuit, heuresNuit, tauxHoraire, accordKuhn) {
-    if (typeNuit === 'aucun' || heuresNuit === 0) {
-        return { montantMensuel: 0, montantAnnuel: 0, taux: 0, source: '' };
-    }
-    
-    let taux = 0;
-    let source = '';
-    
-    if (accordKuhn) {
-        // Taux Kuhn
-        taux = typeNuit === 'poste-nuit' 
-            ? CONFIG.ACCORD_ENTREPRISE.majorationsNuit.posteNuit  // 20%
-            : CONFIG.ACCORD_ENTREPRISE.majorationsNuit.posteMatin; // 15%
-        source = 'Kuhn';
-    } else {
-        // Taux CCN (toujours 15%)
-        taux = CONFIG.MAJORATIONS_CCN.nuit;
-        source = 'CCN';
-    }
-    
-    const montantMensuel = Math.round(heuresNuit * tauxHoraire * taux * 100) / 100;
-    const montantAnnuel = Math.round(montantMensuel * 12);
-    
-    return { montantMensuel, montantAnnuel, taux: Math.round(taux * 100), source };
-}
-
-/**
- * Calculer les majorations dimanche (taux automatique selon accord Kuhn)
- * @param {number} heuresDimanche - Heures dimanche mensuelles
- * @param {number} tauxHoraire - Taux horaire de base
- * @param {boolean} accordKuhn - Accord Kuhn actif
- * @returns {object} { montantMensuel, montantAnnuel, taux, source }
- */
-function calculateMajorationDimanche(heuresDimanche, tauxHoraire, accordKuhn) {
-    if (heuresDimanche === 0) {
-        return { montantMensuel: 0, montantAnnuel: 0, taux: 0, source: '' };
-    }
-    
-    let taux = 0;
-    let source = '';
-    
-    if (accordKuhn) {
-        taux = CONFIG.ACCORD_ENTREPRISE.majorationDimanche; // 50%
-        source = 'Kuhn';
-    } else {
-        taux = CONFIG.MAJORATIONS_CCN.dimanche; // 100%
-        source = 'CCN';
-    }
-    
-    const montantMensuel = Math.round(heuresDimanche * tauxHoraire * taux * 100) / 100;
-    const montantAnnuel = Math.round(montantMensuel * 12);
-    
-    return { montantMensuel, montantAnnuel, taux: Math.round(taux * 100), source };
-}
 
 function calculateRemuneration() {
-    const { groupe, classe } = getActiveClassification();
-    const isCadre = classe >= CONFIG.SEUIL_CADRE;
-    const isGroupeF = classe === 11 || classe === 12;
-    
-    let baseSMH = CONFIG.SMH[classe];
-    let details = [];
-    let total = baseSMH;
-    let scenario = '';
-
-    if (!isCadre) {
-        // SCÉNARIO 1 : Non-Cadres (Classes 1 à 10)
-        scenario = 'non-cadre';
-        details.push({
-            label: `SMH Base (${groupe}${classe})`,
-            value: baseSMH,
-            isBase: true
-        });
-
-        // Prime d'ancienneté
-        if (state.accordKuhn) {
-            // ACCORD KUHN : Prime = SMH × Taux%
-            const primeKuhn = calculatePrimeKuhn(baseSMH, state.anciennete);
-            if (primeKuhn.montant > 0) {
-                details.push({
-                    label: `Prime ancienneté Kuhn (${formatMoney(baseSMH)} × ${primeKuhn.taux}%)`,
-                    value: primeKuhn.montant,
-                    isPositive: true,
-                    isKuhn: true
-                });
-                total += primeKuhn.montant;
-            }
-        } else {
-            // Convention Collective : Formule [[Point × Taux%] × 100] × Années (résultat mensuel)
-            // Taux stocké comme 1.45 = 1,45%, donc Taux% = Taux/100
-            // Simplifié : Point × Taux × Années (mensuel), puis × 12 pour annuel
-            if (state.anciennete >= CONFIG.ANCIENNETE.seuil) {
-                const anneesPrime = Math.min(state.anciennete, CONFIG.ANCIENNETE.plafond); // Plafond 15 ans
-                const tauxClasse = CONFIG.TAUX_ANCIENNETE[classe] || 0;
-                const montantMensuel = state.pointTerritorial * tauxClasse * anneesPrime;
-                const montantPrime = Math.round(montantMensuel * 12);
-                
-                details.push({
-                    label: `Prime ancienneté CCN (${state.pointTerritorial}€ × ${tauxClasse}% × ${anneesPrime} ans × 12)`,
-                    value: montantPrime,
-                    isPositive: true
-                });
-                
-                total += montantPrime;
-            }
-        }
-
-    } else if ((classe === 11 || classe === 12) && state.experiencePro < 6) {
-        // SCÉNARIO 3 : Cadres Débutants (F11/F12 avec expérience < 6 ans)
-        scenario = 'cadre-debutant';
-        
-        // Déterminer la tranche d'expérience (0, 2, 4, 6)
-        let tranche = 0;
-        if (state.experiencePro >= 4) tranche = 4;
-        else if (state.experiencePro >= 2) tranche = 2;
-        
-        // Récupérer le SMH du barème débutants
-        const bareme = CONFIG.BAREME_DEBUTANTS[classe];
-        baseSMH = bareme[tranche];
-        
-        // Label de la tranche
-        let labelTranche = '< 2 ans';
-        if (tranche === 2) labelTranche = '2 à 4 ans';
-        else if (tranche === 4) labelTranche = '4 à 6 ans';
-        
-        details.push({
-            label: `Barème débutants ${groupe}${classe} (${labelTranche})`,
-            value: baseSMH,
-            isBase: true
-        });
-
-        // Majoration forfait
-        const tauxForfait = CONFIG.FORFAITS[state.forfait];
-        if (tauxForfait > 0) {
-            const montantForfait = Math.round(baseSMH * tauxForfait);
-            const labelForfait = state.forfait === 'heures' ? 'Forfait Heures (+15%)' : 'Forfait Jours (+30%)';
-            
-            details.push({
-                label: labelForfait,
-                value: montantForfait,
-                isPositive: true
-            });
-            
-            total = baseSMH + montantForfait;
-        } else {
-            total = baseSMH;
-        }
-
-        // Prime ancienneté Kuhn (applicable aussi aux cadres débutants)
-        if (state.accordKuhn) {
-            const primeKuhn = calculatePrimeKuhn(baseSMH, state.anciennete);
-            if (primeKuhn.montant > 0) {
-                details.push({
-                    label: `Prime ancienneté Kuhn (${formatMoney(baseSMH)} × ${primeKuhn.taux}%)`,
-                    value: primeKuhn.montant,
-                    isPositive: true,
-                    isKuhn: true
-                });
-                total += primeKuhn.montant;
-            }
-        }
-
-    } else {
-        // SCÉNARIO 2 : Cadres Confirmés (Classes 11 à 18)
-        scenario = 'cadre';
-        details.push({
-            label: `SMH Base (${groupe}${classe})`,
-            value: baseSMH,
-            isBase: true
-        });
-
-        // Majoration forfait
-        const tauxForfait = CONFIG.FORFAITS[state.forfait];
-        if (tauxForfait > 0) {
-            const montantForfait = Math.round(baseSMH * tauxForfait);
-            const labelForfait = state.forfait === 'heures' ? 'Forfait Heures (+15%)' : 'Forfait Jours (+30%)';
-            
-            details.push({
-                label: labelForfait,
-                value: montantForfait,
-                isPositive: true
-            });
-            
-            total += montantForfait;
-        }
-
-        // Prime ancienneté Kuhn (applicable aussi aux cadres confirmés)
-        if (state.accordKuhn) {
-            const primeKuhn = calculatePrimeKuhn(baseSMH, state.anciennete);
-            if (primeKuhn.montant > 0) {
-                details.push({
-                    label: `Prime ancienneté Kuhn (${formatMoney(baseSMH)} × ${primeKuhn.taux}%)`,
-                    value: primeKuhn.montant,
-                    isPositive: true,
-                    isKuhn: true
-                });
-                total += primeKuhn.montant;
-            }
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // MAJORATIONS CONDITIONS DE TRAVAIL
-    // Non-Cadres : toujours | Cadres : sauf forfait jours (repos)
-    // ═══════════════════════════════════════════════════════════════
-    
-    const isForfaitJours = isCadre && state.forfait === 'jours';
-    
-    if (!isForfaitJours) {
-        // Calculer le taux horaire de base (pour les majorations)
-        const tauxHoraire = baseSMH / 12 / 151.67;
-        
-        // Majoration nuit (taux automatique selon accord)
-        if (state.typeNuit !== 'aucun' && state.heuresNuit > 0) {
-            const majNuit = calculateMajorationNuit(state.typeNuit, state.heuresNuit, tauxHoraire, state.accordKuhn);
-            const typePoste = state.typeNuit === 'poste-nuit' ? 'poste nuit' : 'poste matin/AM';
-            const labelNuit = state.accordKuhn 
-                ? `Majoration nuit ${typePoste} (+${majNuit.taux}% Kuhn)`
-                : `Majoration nuit (+${majNuit.taux}% CCN)`;
-            details.push({
-                label: `${labelNuit} (${state.heuresNuit}h/mois)`,
-                value: majNuit.montantAnnuel,
-                isPositive: true,
-                isKuhn: majNuit.source === 'Kuhn'
-            });
-            total += majNuit.montantAnnuel;
-        }
-        
-        // Majoration dimanche (taux automatique selon accord)
-        if (state.travailDimanche && state.heuresDimanche > 0) {
-            const majDim = calculateMajorationDimanche(state.heuresDimanche, tauxHoraire, state.accordKuhn);
-            const labelDim = state.accordKuhn 
-                ? `Majoration dimanche (+${majDim.taux}% Kuhn)` 
-                : `Majoration dimanche (+${majDim.taux}% CCN)`;
-            details.push({
-                label: `${labelDim} (${state.heuresDimanche}h/mois)`,
-                value: majDim.montantAnnuel,
-                isPositive: true,
-                isKuhn: majDim.source === 'Kuhn'
-            });
-            total += majDim.montantAnnuel;
-        }
-        
-        // Prime d'équipe (Kuhn, non-cadres uniquement)
-        if (state.accordKuhn && !isCadre && state.travailEquipe && state.heuresEquipe > 0) {
-            const primeEquipe = calculatePrimeEquipe(state.heuresEquipe);
-            details.push({
-                label: `Prime équipe (${state.heuresEquipe}h × ${primeEquipe.tauxHoraire}€ Kuhn)`,
-                value: primeEquipe.montantAnnuel,
-                isPositive: true,
-                isKuhn: true
-            });
-            total += primeEquipe.montantAnnuel;
-        }
+    // Utiliser le nouveau module si disponible
+    if (typeof window.calculateRemunerationFromModules === 'function') {
+        return window.calculateRemunerationFromModules(state);
     }
     
-    // ═══════════════════════════════════════════════════════════════
-    // PRIMES SPÉCIFIQUES ACCORD KUHN
-    // ═══════════════════════════════════════════════════════════════
-    
-    if (state.accordKuhn) {
-        // Prime de vacances
-        if (state.primeVacances) {
-            const montantVacances = CONFIG.ACCORD_ENTREPRISE.primeVacances.montant;
-            details.push({
-                label: 'Prime de vacances Kuhn (juillet)',
-                value: montantVacances,
-                isPositive: true,
-                isKuhn: true
-            });
-            total += montantVacances;
-        }
-    }
-    
+    // Fallback minimal : retourner une structure vide si le module n'est pas disponible
+    console.warn('calculateRemunerationFromModules non disponible, retour d\'une structure vide');
     return {
-        scenario,
-        baseSMH,
-        total,
-        details,
-        isCadre,
-        groupe,
-        classe
+        scenario: '',
+        baseSMH: 0,
+        total: 0,
+        details: [],
+        isCadre: false,
+        groupe: '',
+        classe: 0
     };
 }
 
@@ -1516,19 +1195,14 @@ function calculateRemuneration() {
  * majorations pénibilité, majorations nuit/dimanche, prime d'équipe.
  */
 function getMontantAnnuelSMHSeul() {
-    const { groupe, classe } = getActiveClassification();
-    const isCadre = classe >= CONFIG.SEUIL_CADRE;
-    let baseSMH = CONFIG.SMH[classe];
-    if ((classe === 11 || classe === 12) && state.experiencePro < 6) {
-        let tranche = 0;
-        if (state.experiencePro >= 4) tranche = 4;
-        else if (state.experiencePro >= 2) tranche = 2;
-        const bareme = CONFIG.BAREME_DEBUTANTS[classe];
-        baseSMH = bareme[tranche];
+    // Utiliser le nouveau module si disponible
+    if (typeof window.getMontantAnnuelSMHSeulFromModules === 'function') {
+        return window.getMontantAnnuelSMHSeulFromModules(state);
     }
-    const tauxForfait = isCadre && state.forfait && CONFIG.FORFAITS[state.forfait];
-    const forfaitMontant = (tauxForfait && tauxForfait > 0) ? Math.round(baseSMH * tauxForfait) : 0;
-    return baseSMH + forfaitMontant;
+    
+    // Fallback minimal : retourner 0 si le module n'est pas disponible
+    console.warn('getMontantAnnuelSMHSeulFromModules non disponible, retour de 0');
+    return 0;
 }
 
 /**
@@ -2726,73 +2400,21 @@ function initTimeline() {
  * - 13e mois : seulement en novembre
  */
 function calculateSalaireDuPourMois(dateMois, dateEmbauche) {
-    // Option « SMH seul » : salaire dû = assiette SMH (base + forfait ; exclut primes, pénibilité, nuit/dim/équipe)
-    if (state.arretesSurSMHSeul) {
-        return getMontantAnnuelSMHSeul();
-    }
-
-    // Sauvegarder l'état actuel
-    const ancienneteOriginale = state.anciennete;
-    const experienceProOriginale = state.experiencePro;
-    const forfaitOriginal = state.forfait;
-    const accordKuhnOriginal = state.accordKuhn;
-    const typeNuitOriginal = state.typeNuit;
-    const heuresNuitOriginales = state.heuresNuit;
-    const travailDimancheOriginal = state.travailDimanche;
-    const heuresDimancheOriginales = state.heuresDimanche;
-    const travailEquipeOriginal = state.travailEquipe;
-    const heuresEquipeOriginales = state.heuresEquipe;
-    const primeVacancesOriginale = state.primeVacances;
-    const nbMoisOriginal = state.nbMois;
-    
-    // Déterminer le mois (1-12) pour vérifier les versements spécifiques
-    const mois = dateMois.getMonth() + 1; // getMonth() retourne 0-11, donc +1 pour avoir 1-12
-    const estJuillet = mois === 7;
-    const estNovembre = mois === 11;
-    
-    // Calculer l'ancienneté pour ce mois
-    const moisDepuisEmbauche = (dateMois - dateEmbauche) / (365.25 * 24 * 60 * 60 * 1000 / 12);
-    const ancienneteMois = Math.floor(moisDepuisEmbauche / 12);
-    
-    // Mettre à jour temporairement l'état pour ce mois
-    state.anciennete = ancienneteMois;
-    // L'expérience professionnelle est déjà remplie à l'étape 2, on l'utilise telle quelle
-    // (pas de synchronisation automatique nécessaire)
-    
-    // Pour la rétrospective, on assume que les conditions de travail sont similaires
-    // (l'utilisateur peut les ajuster si nécessaire)
-    // On garde les valeurs actuelles mais on pourrait les faire varier
-    
-    // Ajuster les primes selon le mois pour l'accord Kuhn
-    // Prime de vacances : seulement en juillet
-    if (state.accordKuhn && state.primeVacances && !estJuillet) {
-        state.primeVacances = false; // Désactiver temporairement pour ce mois
+    // Utiliser le nouveau module (toujours disponible via expose-to-app.js)
+    if (typeof window.calculateSalaireDuPourMoisFromModules === 'function') {
+        const agreement = window.AgreementLoader?.getActiveAgreement?.() || null;
+        return window.calculateSalaireDuPourMoisFromModules(
+            dateMois,
+            dateEmbauche,
+            state,
+            agreement,
+            state.arretesSurSMHSeul
+        );
     }
     
-    // Calculer la rémunération due avec cette ancienneté
-    // Note : calculateRemuneration() retourne toujours le salaire annuel brut total
-    // Le 13e mois n'affecte pas le total annuel, seulement la répartition mensuelle
-    const remunerationMois = calculateRemuneration();
-    const salaireAnnuelDuMois = remunerationMois.total;
-    
-    // Le 13e mois est géré dans le calcul mensuel (voir calculerArreteesFinal)
-    // Ici on retourne le salaire annuel brut total
-    
-    // Restaurer l'état original
-    state.anciennete = ancienneteOriginale;
-    state.experiencePro = experienceProOriginale;
-    state.forfait = forfaitOriginal;
-    state.accordKuhn = accordKuhnOriginal;
-    state.typeNuit = typeNuitOriginal;
-    state.heuresNuit = heuresNuitOriginales;
-    state.travailDimanche = travailDimancheOriginal;
-    state.heuresDimanche = heuresDimancheOriginales;
-    state.travailEquipe = travailEquipeOriginal;
-    state.heuresEquipe = heuresEquipeOriginales;
-    state.primeVacances = primeVacancesOriginale;
-    state.nbMois = nbMoisOriginal;
-    
-    return salaireAnnuelDuMois;
+    // Fallback minimal : retourner 0 si le module n'est pas disponible
+    console.warn('calculateSalaireDuPourMoisFromModules non disponible, retour de 0');
+    return 0;
 }
 
 /**
@@ -3360,6 +2982,7 @@ function calculerArreteesFinal() {
         const salaireReel = state.salairesParMois[periodKey];
         
         if (salaireReel !== undefined) {
+            // Calculer le salaire dû pour ce mois (SMH seul ou rémunération complète)
             const salaireAnnuelDuMois = calculateSalaireDuPourMois(currentDate, dateEmbaucheObj);
             
             let salaireMensuelDu;
@@ -3740,13 +3363,12 @@ function openPdfInfosModal() {
 }
 
 /**
- * Générer le PDF final (nouvelle version - professionnel et courtois)
+ * Générer le PDF final (utilise le module PDFGenerator.js)
  * @param {Object} [infosPersonnelles] - Nom, poste, employeur, etc. saisis dans le modal (optionnel)
  * @param {Object} [dataPrevalide] - Données arriérés déjà validées (passées par le modal). Si absent, lit window.arreteesDataFinal.
  */
 function genererPDFArreteesFinal(infosPersonnelles, dataPrevalide) {
     let data = dataPrevalide;
-    const forceSmhSeul = !!dataPrevalide;
     if (!data) {
         const result = getArreteesDataForPdf();
         if (!result.valid) {
@@ -3756,424 +3378,16 @@ function genererPDFArreteesFinal(infosPersonnelles, dataPrevalide) {
         data = result.data;
     }
 
-    const jsPDF = (typeof window !== 'undefined' && window.jsPDF) ||
-        (window.jspdf && (window.jspdf.jsPDF || window.jspdf.default?.jsPDF));
-    if (!jsPDF) {
-        showToast('⚠️ Bibliothèque PDF non chargée. Rechargez la page.', 'warning', 3000);
-        return;
-    }
-
-    try {
-        const doc = new jsPDF();
-        const dateDebutObj = data.dateDebut instanceof Date ? data.dateDebut : new Date(data.dateDebut);
-        const dateFinObj = data.dateFin instanceof Date ? data.dateFin : new Date(data.dateFin);
-
-        const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
-    const marginRight = pageWidth - margin;
-    let yPos = margin;
-
-    const checkPageBreak = (requiredSpace = 20) => {
-        if (yPos + requiredSpace > pageHeight - 25) {
-            doc.addPage();
-            yPos = margin;
-        }
-    };
-
-    // En-tête type lettre juridique
-    doc.setFontSize(14);
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(30, 30, 30);
-    doc.text('Rapport de calcul d\'arriérés de salaire', pageWidth / 2, yPos, { align: 'center' });
-    yPos += 7;
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    doc.setTextColor(80, 80, 80);
-    doc.text('Convention collective nationale de la métallurgie 2024', pageWidth / 2, yPos, { align: 'center' });
-    yPos += 8;
-    doc.setFontSize(9);
-    doc.setTextColor(0, 0, 0);
-    const todayStr = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-    doc.text(`Document établi le ${todayStr}`, margin, yPos);
-    yPos += 6;
-    doc.setFont(undefined, 'bold');
-    doc.text('Objet : Calcul d\'arriérés de salaire au titre du SMH', margin, yPos);
-    yPos += 8;
-    doc.setFont(undefined, 'normal');
-    const classificationInfo = getActiveClassification();
-    doc.text(`Classification : ${classificationInfo.groupe}${classificationInfo.classe}`, margin, yPos);
-    yPos += 10;
-
-    doc.setDrawColor(200, 200, 200);
-    doc.line(margin, yPos, marginRight, yPos);
-    yPos += 10;
-
-    checkPageBreak(30);
-
-    // Section 1 : Informations du contrat
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text('1. Informations du contrat', margin, yPos);
-    yPos += 8;
-
-    doc.setFontSize(9);
-    doc.setFont(undefined, 'normal');
-
-    // Infos personnelles du salarié (si renseignées dans le modal)
-    const infos = infosPersonnelles || {};
-    const hasInfos = !!(infos.nomPrenom || infos.poste || infos.employeur || infos.matricule || infos.observations);
-    if (hasInfos) {
-        if (infos.nomPrenom) {
-            doc.text(`Salarié : ${infos.nomPrenom}`, margin + 5, yPos);
-            yPos += 6;
-        }
-        if (infos.poste) {
-            doc.text(`Poste / intitulé : ${infos.poste}`, margin + 5, yPos);
-            yPos += 6;
-        }
-        if (infos.employeur) {
-            doc.text(`Employeur / raison sociale : ${infos.employeur}`, margin + 5, yPos);
-            yPos += 6;
-        }
-        if (infos.matricule) {
-            doc.text(`Matricule ou N° interne : ${infos.matricule}`, margin + 5, yPos);
-            yPos += 6;
-        }
-        if (infos.observations) {
-            const obsLines = doc.splitTextToSize(infos.observations, pageWidth - margin - margin - 10);
-            doc.text('Observations :', margin + 5, yPos);
-            yPos += 5;
-            obsLines.forEach(line => {
-                doc.text(line, margin + 5, yPos);
-                yPos += 5;
-            });
-            yPos += 4;
-        }
-        yPos += 4;
-    }
-
-    const dateEmbaucheInput = data.dateEmbauche || document.getElementById('date-embauche-arretees')?.value;
-    const dateChangementInput = data.dateChangementClassification || document.getElementById('date-changement-classification-arretees')?.value;
-    const dateRuptureInput = data.dateRuptureInput || document.getElementById('date-rupture-arretees')?.value;
-
-    if (dateEmbaucheInput) {
-        const dateEmbaucheFormatted = new Date(dateEmbaucheInput).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-        doc.text(`Date d'embauche : ${dateEmbaucheFormatted}`, margin + 5, yPos);
-        yPos += 6;
-    }
-    if (dateChangementInput) {
-        const dateChangementFormatted = new Date(dateChangementInput).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-        doc.text(`Date de changement de classification : ${dateChangementFormatted}`, margin + 5, yPos);
-        yPos += 6;
-    }
-    if (data.ruptureContrat && dateRuptureInput) {
-        const dateRuptureFormatted = new Date(dateRuptureInput).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-        doc.text(`Date de rupture du contrat : ${dateRuptureFormatted}`, margin + 5, yPos);
-        yPos += 6;
-    } else if (!data.ruptureContrat) {
-        doc.text('Statut du contrat : En cours', margin + 5, yPos);
-        yPos += 6;
-    }
-    if (data.accordEcrit) {
-        doc.text('Accord écrit avec l\'employeur : Oui', margin + 5, yPos);
-        yPos += 6;
-    }
-    
-    yPos += 5;
-    checkPageBreak(30);
-
-    // Section 2 : Résumé du calcul
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text('2. Résumé du calcul', margin, yPos);
-    yPos += 8;
-
-    doc.setFontSize(9);
-    doc.setFont(undefined, 'normal');
-        const dateDebutStr = dateDebutObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-        const dateFinStr = dateFinObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-    
-    doc.text(`Période concernée : ${dateDebutStr} au ${dateFinStr}`, margin + 5, yPos);
-    yPos += 6;
-    doc.text(`Nombre de mois avec arriérés : ${data.detailsArretees.length}`, margin + 5, yPos);
-    yPos += 6;
-    const smhMensuel = data.salaireDu / (state.nbMois || 12);
-    doc.text(`SMH mensuel brut : ${formatMoneyPDF(smhMensuel)}`, margin + 5, yPos);
-    yPos += 6;
-    doc.text(`SMH annuel brut : ${formatMoneyPDF(data.salaireDu)}`, margin + 5, yPos);
-    yPos += 6;
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(9, 105, 218);
-    doc.text(`Total des arriérés (mensuels cumulés) : ${formatMoneyPDF(data.totalArretees)}`, margin + 5, yPos);
-    doc.setTextColor(0, 0, 0);
-    doc.setFont(undefined, 'normal');
-    yPos += 10;
-
-    checkPageBreak(40);
-
-    // Détail PDF : uniquement les mois avec arriérés (difference > 0)
-    const detailsPourPdf = (data.detailsArretees || []).filter(d => d.difference > 0);
-    if (detailsPourPdf.length > 0) {
-        doc.setFontSize(12);
-        doc.setFont(undefined, 'bold');
-        doc.text('3. Détail des arriérés par période', margin, yPos);
-        yPos += 8;
-
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'normal');
-        doc.setFont(undefined, 'bold');
-        doc.text('Période', margin + 5, yPos);
-        doc.text('Salaire brut perçu', margin + 55, yPos);
-        doc.text('SMH mensuel dû', margin + 105, yPos);
-        doc.text('Arriérés', margin + 155, yPos);
-        yPos += 5;
-        doc.setDrawColor(200, 200, 200);
-        doc.line(margin + 5, yPos, marginRight - 5, yPos);
-        yPos += 6;
-        doc.setFont(undefined, 'normal');
-
-        detailsPourPdf.forEach((detail) => {
-            checkPageBreak(12);
-            const periodeShort = detail.periode.substring(0, 15);
-            doc.text(periodeShort, margin + 5, yPos);
-            doc.text(formatMoneyPDF(detail.salaireMensuelReel), margin + 55, yPos);
-            doc.text(formatMoneyPDF(detail.salaireMensuelDu), margin + 105, yPos);
-            doc.setTextColor(9, 105, 218);
-            doc.setFont(undefined, 'bold');
-            doc.text(formatMoneyPDF(detail.difference), margin + 155, yPos);
-            doc.setTextColor(0, 0, 0);
-            doc.setFont(undefined, 'normal');
-            yPos += 6;
-        });
-
-        yPos += 5;
-    }
-
-    checkPageBreak(40);
-
-    // Section 4 : Points d'attention juridiques
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text('4. Points d\'attention juridiques', margin, yPos);
-    yPos += 8;
-
-    doc.setFontSize(9);
-    doc.setFont(undefined, 'normal');
-    doc.text('• Prescription : Conformément à l\'article L.3245-1 du Code du travail,', margin + 5, yPos);
-    yPos += 6;
-    doc.text('  l\'action en paiement de salaire se prescrit par 3 ans à compter de chaque', margin + 5, yPos);
-    yPos += 6;
-    doc.text('  échéance de paiement (chaque mois constitue une échéance distincte).', margin + 5, yPos);
-    yPos += 8;
-    doc.text('• Convention Collective : La Convention Collective Nationale de la', margin + 5, yPos);
-    yPos += 6;
-    doc.text('  Métallurgie 2024 est entrée en vigueur le 1er janvier 2024. Les arriérés', margin + 5, yPos);
-    yPos += 6;
-    doc.text('  antérieurs à cette date ne sont pas réclamables au titre de cette convention.', margin + 5, yPos);
-    yPos += 8;
-    
-    if (data.accordEcrit) {
-        doc.setTextColor(46, 125, 50);
-        doc.text('• Point favorable : Un accord écrit existe avec l\'employeur concernant', margin + 5, yPos);
-        yPos += 6;
-        doc.text('  la classification, ce qui renforce votre position juridique.', margin + 5, yPos);
-        doc.setTextColor(0, 0, 0);
-        yPos += 8;
-    }
-
-    checkPageBreak(80);
-
-    // Section 5 : Méthodologie de calcul
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text('5. Méthodologie de calcul', margin, yPos);
-    yPos += 8;
-
-    doc.setFontSize(9);
-    doc.setFont(undefined, 'normal');
-    
-    const classificationMethode = getActiveClassification();
-    const isCadre = classificationMethode.classe >= CONFIG.SEUIL_CADRE;
-    
-    doc.text('Ce calcul est basé sur la Convention Collective Nationale de la Métallurgie 2024', margin + 5, yPos);
-    yPos += 6;
-    doc.text(`et prend en compte les éléments suivants pour la classification ${classificationMethode.groupe}${classificationMethode.classe} :`, margin + 5, yPos);
-    yPos += 8;
-    
-    doc.setFont(undefined, 'bold');
-    doc.text('1. Salaire Minimum Hiérarchique (SMH) de base', margin + 5, yPos);
-    yPos += 6;
-    doc.setFont(undefined, 'normal');
-    doc.text(`   SMH base : ${formatMoneyPDF(CONFIG.SMH[classificationMethode.classe])} (annuel brut)`, margin + 5, yPos);
-    yPos += 8;
-    
-    // Ce rapport est toujours établi sur la base du SMH seul : ne pas afficher « Accord Kuhn » (primes, etc.) comme partie du salaire dû
-    doc.setFont(undefined, 'bold');
-    doc.text('2. Base de calcul du présent rapport : assiette SMH uniquement', margin + 5, yPos);
-    yPos += 6;
-    doc.setFont(undefined, 'normal');
-    const lignesS5Base = doc.splitTextToSize('   Conformément à la CCN Métallurgie (IDCC 3248), seul l\'assiette SMH (base + forfait cadres le cas échéant) est retenue comme salaire dû. Les primes (ancienneté, vacances, etc.) et les majorations pénibilité/nuit/dimanche/équipe ne font pas partie du salaire dû du présent rapport.', pageWidth - margin - margin - 10);
-    lignesS5Base.forEach(l => { doc.text(l, margin + 5, yPos); yPos += 5; });
-    yPos += 4;
-    
-    if (isCadre && state.forfait !== 'aucun') {
-        doc.setFont(undefined, 'bold');
-        doc.text('3. Majoration forfait', margin + 5, yPos);
-        yPos += 6;
-        doc.setFont(undefined, 'normal');
-        const tauxForfait = CONFIG.FORFAITS[state.forfait];
-        doc.text(`   Majoration ${state.forfait === 'heures' ? 'heures' : 'jours'} : +${Math.round(tauxForfait * 100)}%`, margin + 5, yPos);
-        yPos += 8;
-    }
-    
-    doc.setFont(undefined, 'bold');
-    doc.text('4. Calcul rétrospectif mois par mois', margin + 5, yPos);
-    yPos += 6;
-    doc.setFont(undefined, 'normal');
-    const largeurS5 = pageWidth - margin - margin - 10;
-    const lignesS5CCN = doc.splitTextToSize('   Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, ce rapport est établi uniquement sur la base du SMH (assiette hors primes).', largeurS5);
-    lignesS5CCN.forEach(l => { doc.text(l, margin + 5, yPos); yPos += 5; });
-    yPos += 2;
-    doc.text('   Pour chaque mois de la période concernée :', margin + 5, yPos);
-    yPos += 6;
-    doc.text('   • Le salaire dû = assiette SMH (base + majorations forfait) ; l\'ancienneté n\'affecte pas le SMH', margin + 5, yPos);
-    yPos += 6;
-    doc.text('   • Le salaire mensuel dû est comparé au salaire mensuel réel perçu (hors primes)', margin + 5, yPos);
-    yPos += 6;
-    doc.text('   • La différence positive constitue les arriérés pour ce mois', margin + 5, yPos);
-    yPos += 8;
-    
-    doc.setFont(undefined, 'bold');
-    doc.text('5. Sources et références', margin + 5, yPos);
-    yPos += 6;
-    doc.setFont(undefined, 'normal');
-    doc.text('   • Convention collective nationale de la métallurgie (IDCC 3248), SMH et assiette', margin + 5, yPos);
-    yPos += 6;
-    doc.text('   • Code du travail français (Art. L.3245-1 pour la prescription)', margin + 5, yPos);
-    yPos += 6;
-    if (state.accordKuhn) {
-        doc.text('   • Accord d\'entreprise Kuhn (spécificités)', margin + 5, yPos);
-        yPos += 6;
-    }
-    doc.text('   • Valeur du point territorial : Bas-Rhin (5,90 €)', margin + 5, yPos);
-    yPos += 12;
-
-    checkPageBreak(120);
-
-    // Section 6 : Méthodes de calcul détaillées
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text('6. Méthodes de calcul détaillées', margin, yPos);
-    yPos += 8;
-
-    doc.setFontSize(9);
-    doc.setFont(undefined, 'normal');
-    const margeTexte = margin + 5;
-    const largeurTexte = pageWidth - margin - margin - 10;
-
-    const lignesPrincipe = doc.splitTextToSize(
-        'Conformément à la convention collective nationale de la métallurgie (IDCC 3248), dispositions relatives aux salaires minima hiérarchiques et à leur assiette, ce rapport est établi uniquement sur la base du SMH (assiette conventionnelle hors primes). Pour chaque mois, le salaire dû = assiette SMH (base + majorations forfait), comparé au salaire perçu (hors primes). La différence positive constitue les arriérés du mois ; le total est la somme sur tous les mois. L\'assiette SMH ne dépend pas de l\'ancienneté.',
-        largeurTexte
-    );
-    lignesPrincipe.forEach(l => { doc.text(l, margeTexte, yPos); yPos += 5; });
-    yPos += 4;
-
-    doc.setFont(undefined, 'bold');
-    doc.text('Période prise en compte', margeTexte, yPos);
-    yPos += 6;
-    doc.setFont(undefined, 'normal');
-    const lignesPeriode = doc.splitTextToSize(
-        '• Date de début = le plus récent parmi : date d\'embauche, date de changement de classification, 1er janvier 2024 (entrée en vigueur CCN Métallurgie 2024), date de prescription (3 ans avant aujourd\'hui, art. L.3245-1 Code du travail).',
-        largeurTexte
-    );
-    lignesPeriode.forEach(l => { doc.text(l, margeTexte, yPos); yPos += 5; });
-    doc.text('• Date de fin = date de rupture du contrat ou date du jour si le contrat est en cours.', margeTexte, yPos);
-    yPos += 8;
-
-    doc.setFont(undefined, 'bold');
-    doc.text('Calcul du salaire mensuel dû (par mois)', margeTexte, yPos);
-    yPos += 6;
-    doc.setFont(undefined, 'normal');
-    const lignesAssiette = doc.splitTextToSize(
-        'Le salaire dû retenu dans ce rapport est l\'assiette SMH uniquement : base + majorations forfait (heures +15 %, jours +30 % si cadre). L\'ancienneté n\'affecte pas l\'assiette SMH. Il est déterminé selon la classification, le barème débutants (F11/F12 si applicable), puis converti en mensuel :',
-        largeurTexte
-    );
-    lignesAssiette.forEach(l => { doc.text(l, margeTexte, yPos); yPos += 5; });
-    yPos += 6;
-    if (state.nbMois === 13 && state.accordKuhn) {
-        doc.text('• Répartition sur 13 mois (accord Kuhn) : SMH annuel / 13 ; mois de novembre : (SMH annuel / 13) × 2.', margeTexte, yPos);
-        yPos += 5;
-        if (!forceSmhSeul && state.primeVacances) {
-            doc.text('• Prime de vacances (525 €) ajoutée au mois de juillet si accord Kuhn + prime vacances cochés.', margeTexte, yPos);
-            yPos += 5;
+    // Utiliser le nouveau module (toujours disponible via expose-to-app.js)
+    if (typeof window.genererPDFArreteesFromModules === 'function') {
+        try {
+            window.genererPDFArreteesFromModules(data, infosPersonnelles || {}, state);
+        } catch (error) {
+            console.error('Erreur lors de la génération du PDF:', error);
+            showToast('⚠️ Erreur lors de la génération du PDF. Veuillez recharger la page.', 'error', 5000);
         }
     } else {
-        doc.text('• Répartition sur 12 mois : SMH annuel / 12.', margeTexte, yPos);
-        yPos += 5;
-    }
-    yPos += 4;
-
-    doc.setFont(undefined, 'bold');
-    doc.text('Formule des arriérés (par mois)', margeTexte, yPos);
-    yPos += 6;
-    doc.setFont(undefined, 'normal');
-    const formuleArretees = 'Arriérés(mois) = max(0 ; Salaire mensuel dû(mois) − Salaire mensuel perçu(mois))';
-    const lignesFormule = doc.splitTextToSize(formuleArretees, largeurTexte);
-    lignesFormule.forEach(l => { doc.text(l, margeTexte, yPos); yPos += 5; });
-    const lignesTotal = doc.splitTextToSize('Total des arriérés = somme des Arriérés(mois) pour tous les mois de la période.', largeurTexte);
-    lignesTotal.forEach(l => { doc.text(l, margeTexte, yPos); yPos += 5; });
-    yPos += 4;
-
-    const smhSeul = forceSmhSeul || state.arretesSurSMHSeul === true || (typeof state.arretesSurSMHSeul !== 'undefined' && state.arretesSurSMHSeul);
-    if (smhSeul) {
-        doc.setFont(undefined, 'bold');
-        doc.text('Base de calcul du rapport : assiette SMH', margeTexte, yPos);
-        yPos += 6;
-        doc.setFont(undefined, 'normal');
-        const lignesSMH = doc.splitTextToSize(
-            'Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives à l\'assiette SMH (inclus : base, forfaits cadres, 13e mois ; exclus : primes ancienneté, prime vacances, majorations pénibilité/nuit/dimanche/équipe), ce rapport retient uniquement l\'assiette SMH comme salaire dû : base + majorations forfait (heures/jours). Les salaires saisis pour la comparaison sont les salaires mensuels bruts hors primes.',
-            largeurTexte
-        );
-        lignesSMH.forEach(l => { doc.text(l, margeTexte, yPos); yPos += 5; });
-        yPos += 4;
-    }
-
-    doc.setFont(undefined, 'bold');
-    doc.text('Références', margeTexte, yPos);
-    yPos += 6;
-    doc.setFont(undefined, 'normal');
-    doc.text('• Convention collective nationale de la métallurgie (IDCC 3248), dispositions relatives aux salaires minima hiérarchiques et à leur assiette.', margeTexte, yPos);
-    yPos += 5;
-    doc.text('• Code du travail, art. L.3245-1 : prescription de 3 ans à compter de chaque échéance de paiement.', margeTexte, yPos);
-    yPos += 5;
-    if (state.accordKuhn) {
-        doc.text('• Accord d\'entreprise Kuhn : prime d\'ancienneté dès 2 ans, prime vacances, 13e mois, modalités spécifiques.', margeTexte, yPos);
-        yPos += 5;
-    }
-    doc.text('• Outil indicatif ; pour toute action juridique, consultez un avocat ou votre syndicat.', margeTexte, yPos);
-    yPos += 12;
-
-    checkPageBreak(60);
-
-    const totalPages = (doc.internal.pages && doc.internal.pages.length) || 1;
-    const dateGen = new Date().toLocaleDateString('fr-FR');
-    for (let p = 1; p <= totalPages; p++) {
-        doc.setPage(p);
-        doc.setFontSize(8);
-        doc.setTextColor(128, 128, 128);
-        doc.text(totalPages > 1 ? `Page ${p} / ${totalPages}` : 'Page 1', pageWidth / 2, pageHeight - 10, { align: 'center' });
-        doc.text(`Généré le ${dateGen}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
-    }
-
-    const classificationStr = `${classificationMethode.groupe}${classificationMethode.classe}`;
-    const dateStr = new Date().toISOString().split('T')[0];
-    const filename = `Rapport_Arretees_${classificationStr}_${dateStr}.pdf`;
-
-    doc.save(filename);
-    showToast('✅ Rapport PDF généré avec succès !', 'success', 3000);
-    } catch (err) {
-        showToast('Erreur lors de la génération du PDF : ' + (err && err.message ? err.message : String(err)), 'error', 5000);
+        showToast('⚠️ Modules PDF non chargés. Veuillez recharger la page.', 'error', 5000);
     }
 }
 
@@ -4391,7 +3605,7 @@ function initArretees() {
 
     // Générer le PDF
     if (btnGenererPDF) {
-        btnGenererPDF.addEventListener('click', genererPDFArretees);
+        btnGenererPDF.addEventListener('click', () => genererPDFArreteesFinal());
     }
 
     // Pré-remplir la date d'embauche basée sur l'ancienneté
@@ -4399,407 +3613,19 @@ function initArretees() {
 }
 
 /**
- * Calculer les arriérés de salaire
+ * ============================================
+ * FONCTIONS OBSOLÈTES SUPPRIMÉES
+ * ============================================
+ * 
+ * Les fonctions calculerArretees() et afficherResultatsArretees() ont été supprimées
+ * car elles utilisaient des IDs HTML obsolètes et ont été remplacées par :
+ * - calculerArreteesFinal()
+ * - afficherResultatsArreteesFinal()
  */
-function calculerArretees() {
-    const salaireActuel = parseFloat(document.getElementById('salaire-actuel').value) || 0;
-    const dateEmbauche = document.getElementById('date-embauche').value;
-    const dateChangementClassification = document.getElementById('date-changement-classification').value;
-    const ruptureContrat = document.getElementById('rupture-contrat').checked;
-    const dateRupture = document.getElementById('date-rupture').value;
-    const accordEcrit = document.getElementById('accord-ecrit').checked;
-
-    if (!dateEmbauche) {
-        showToast('⚠️ Veuillez renseigner la date d\'embauche.', 'warning', 3000);
-        return;
-    }
-
-    if (salaireActuel === 0) {
-        showToast('⚠️ Veuillez renseigner votre salaire actuel.', 'warning', 3000);
-        return;
-    }
-
-    // Calculer la rémunération due
-    const remuneration = calculateRemuneration();
-    const salaireDu = remuneration.total;
-
-    if (salaireActuel >= salaireDu) {
-        showToast('✅ Votre salaire actuel est conforme ou supérieur au minimum conventionnel.', 'success', 4000);
-        document.getElementById('arretees-results').classList.add('hidden');
-        return;
-    }
-
-    const difference = salaireDu - salaireActuel;
-
-    // Dates importantes
-    const dateCCNM = new Date('2024-01-01'); // Date d'entrée en vigueur de la CCNM
-    const dateEmbaucheObj = new Date(dateEmbauche);
-    const dateRuptureObj = ruptureContrat && dateRupture ? new Date(dateRupture) : new Date();
-    const dateChangementObj = dateChangementClassification ? new Date(dateChangementClassification) : null;
-
-    // Prescription : 3 ans en arrière depuis aujourd'hui
-    const datePrescription = new Date();
-    datePrescription.setFullYear(datePrescription.getFullYear() - 3);
-
-    // Date de début de calcul : le plus récent entre :
-    // - Date d'embauche
-    // - Date de changement de classification (si applicable)
-    // - Date d'entrée en vigueur CCNM (1er janv 2024)
-    // - Date de prescription (3 ans)
-    let dateDebutCalcul = dateEmbaucheObj;
-    if (dateChangementObj && dateChangementObj > dateDebutCalcul) {
-        dateDebutCalcul = dateChangementObj;
-    }
-    if (dateCCNM > dateDebutCalcul) {
-        dateDebutCalcul = dateCCNM;
-    }
-    if (datePrescription > dateDebutCalcul) {
-        dateDebutCalcul = datePrescription;
-    }
-
-    // Date de fin : rupture ou aujourd'hui
-    const dateFinCalcul = ruptureContrat && dateRupture ? dateRuptureObj : new Date();
-
-    // Vérifier que la date de début est avant la date de fin
-    if (dateDebutCalcul >= dateFinCalcul) {
-        showToast('⚠️ La période de calcul est invalide. Vérifiez les dates renseignées.', 'warning', 4000);
-        return;
-    }
-
-    // Calculer le nombre de mois (arrondi au mois complet)
-    const moisDiff = (dateFinCalcul.getFullYear() - dateDebutCalcul.getFullYear()) * 12 + 
-                     (dateFinCalcul.getMonth() - dateDebutCalcul.getMonth());
-    // Si on est dans le même mois, compter 1 mois minimum
-    const moisArretees = Math.max(1, moisDiff);
-
-    // Montant total des arriérés
-    const montantMensuel = difference / 12;
-    const totalArretees = Math.round(montantMensuel * moisArretees);
-
-    // Conditions juridiques
-    const conditionsValides = [];
-    const conditionsInvalides = [];
-
-    // Vérifier la cohérence des dates
-    if (dateChangementObj && dateChangementObj < dateEmbaucheObj) {
-        conditionsInvalides.push('⚠️ La date de changement de classification ne peut pas être antérieure à la date d\'embauche.');
-    }
-
-    if (dateChangementObj && dateChangementObj > dateFinCalcul) {
-        conditionsInvalides.push('⚠️ La date de changement de classification ne peut pas être postérieure à la date de fin de calcul.');
-    }
-
-    // Limites juridiques
-    if (dateDebutCalcul < dateCCNM) {
-        conditionsInvalides.push(`Les arriérés avant le 1er janvier 2024 (entrée en vigueur de la CCNM) ne sont pas réclamables au titre de cette convention.`);
-    }
-
-    if (dateDebutCalcul < datePrescription) {
-        conditionsInvalides.push(`La prescription de 3 ans (art. L.3245-1 Code du travail) limite les arriérés réclamables à partir du ${datePrescription.toLocaleDateString('fr-FR')}.`);
-    }
-
-    if (ruptureContrat && !dateRupture) {
-        conditionsInvalides.push('La date de rupture doit être renseignée si le contrat est rompu.');
-    }
-
-    // Points favorables
-    if (accordEcrit) {
-        conditionsValides.push('Un accord écrit avec l\'employeur sur la classification renforce votre position juridique.');
-    }
-
-    if (dateChangementObj) {
-        conditionsValides.push('Un changement de classification documenté peut faciliter la réclamation.');
-    }
-
-    // Afficher les résultats
-    afficherResultatsArretees({
-        salaireActuel,
-        salaireDu,
-        difference,
-        montantMensuel,
-        totalArretees,
-        moisArretees,
-        dateDebutCalcul,
-        dateFinCalcul,
-        datePrescription,
-        conditionsValides,
-        conditionsInvalides,
-        ruptureContrat,
-        dateRupture: dateRuptureObj
-    });
-}
-
-/**
- * Afficher les résultats du calcul d'arriérés
- */
-function afficherResultatsArretees(data) {
-    const resultsDiv = document.getElementById('arretees-results');
-    const summaryDiv = document.getElementById('arretees-summary');
-    const legalInfoDiv = document.getElementById('arretees-legal-info');
-    const instructionsDiv = document.getElementById('arretees-instructions');
-    const instructionsContent = document.getElementById('arretees-instructions-content');
-
-    // Résumé
-    summaryDiv.innerHTML = `
-        <div class="arretees-summary-item">
-            <span>Salaire actuel :</span>
-            <strong>${formatMoney(data.salaireActuel)}</strong>
-        </div>
-        <div class="arretees-summary-item">
-            <span>Salaire dû :</span>
-            <strong>${formatMoney(data.salaireDu)}</strong>
-        </div>
-        <div class="arretees-summary-item">
-            <span>Différence annuelle :</span>
-            <strong style="color: var(--color-link);">${formatMoney(data.difference)}</strong>
-        </div>
-        <div class="arretees-summary-item">
-            <span>Période concernée :</span>
-            <span>${data.dateDebutCalcul.toLocaleDateString('fr-FR')} → ${data.dateFinCalcul.toLocaleDateString('fr-FR')}</span>
-        </div>
-        <div class="arretees-summary-item">
-            <span>Nombre de mois :</span>
-            <strong>${data.moisArretees} mois</strong>
-        </div>
-        <div class="arretees-summary-item">
-            <span>Montant mensuel dû :</span>
-            <strong>${formatMoney(data.montantMensuel)}</strong>
-        </div>
-        <div class="arretees-summary-item">
-            <span><strong>Total des arriérés :</strong></span>
-            <strong>${formatMoney(data.totalArretees)}</strong>
-        </div>
-    `;
-
-    // Informations juridiques
-    let legalHTML = '<h4>⚠️ Points d\'attention juridiques</h4><ul>';
-    
-    if (data.conditionsInvalides.length > 0) {
-        legalHTML += '<li><strong>Limitations :</strong><ul>';
-        data.conditionsInvalides.forEach(condition => {
-            legalHTML += `<li>${condition}</li>`;
-        });
-        legalHTML += '</ul></li>';
-    }
-
-    if (data.conditionsValides.length > 0) {
-        legalHTML += '<li><strong>Points favorables :</strong><ul>';
-        data.conditionsValides.forEach(condition => {
-            legalHTML += `<li>${condition}</li>`;
-        });
-        legalHTML += '</ul></li>';
-    }
-
-    legalHTML += '<li><strong>Prescription :</strong> En France, la prescription est de 3 ans. Les arriérés au-delà de cette période ne sont généralement pas réclamables.</li>';
-    legalHTML += '<li><strong>Convention collective nationale de la métallurgie (CCNM) 2024 :</strong> La nouvelle convention collective est entrée en vigueur le 1er janvier 2024. Les arriérés antérieurs à cette date ne sont pas réclamables au titre de cette convention.</li>';
-    
-    if (data.ruptureContrat) {
-        legalHTML += '<li><strong>Rupture de contrat :</strong> En cas de rupture, les arriérés sont calculés jusqu\'à la date de rupture.</li>';
-    }
-
-    legalHTML += '</ul>';
-    legalInfoDiv.innerHTML = legalHTML;
-
-    // Instructions
-    instructionsContent.innerHTML = `
-        <ol>
-            <li><strong>Vérifiez les informations :</strong> Assurez-vous que toutes les dates et montants sont corrects. Vérifiez notamment :
-                <ul>
-                    <li>Votre classification actuelle sur votre fiche de paie</li>
-                    <li>Votre ancienneté dans l'entreprise</li>
-                    <li>Les dates de changement éventuel de classification</li>
-                </ul>
-            </li>
-            <li><strong>Consultez un professionnel :</strong> Avant toute démarche, consultez :
-                <ul>
-                    <li>Un avocat spécialisé en droit du travail</li>
-                    <li>Votre syndicat (CFDT, CGT, FO, etc.)</li>
-                    <li>Les services de l'inspection du travail</li>
-                </ul>
-            </li>
-            <li><strong>Rassemblez les preuves :</strong>
-                <ul>
-                    <li>Tous vos bulletins de paie depuis la date de début de calcul</li>
-                    <li>Votre contrat de travail et avenants éventuels</li>
-                    <li>Correspondances avec l'employeur (emails, courriers)</li>
-                    <li>Fiches de poste ou descriptions de fonction</li>
-                    <li>Attestations de formation ou certifications</li>
-                </ul>
-            </li>
-            <li><strong>Demande amiable (étape obligatoire) :</strong>
-                <ul>
-                    <li>Rédigez une lettre recommandée avec accusé de réception (LRAR)</li>
-                    <li>Joignez ce rapport PDF et les documents justificatifs</li>
-                    <li>Demandez un rendez-vous pour discuter de la situation</li>
-                    <li>Conservez une copie de tous les documents envoyés</li>
-                </ul>
-            </li>
-            <li><strong>Si la demande amiable échoue :</strong>
-                <ul>
-                    <li><strong>Médiation :</strong> Vous pouvez proposer une médiation conventionnelle</li>
-                    <li><strong>Conseil de Prud'hommes :</strong> Saisie possible dans les 3 ans suivant la dernière échéance</li>
-                    <li><strong>Inspection du travail :</strong> Pour signaler un non-respect de la convention collective</li>
-                </ul>
-            </li>
-            <li><strong>Délais importants :</strong>
-                <ul>
-                    <li>Prescription de 3 ans : Agissez rapidement pour ne pas perdre vos droits</li>
-                    <li>Délai de réponse à une LRAR : 15 jours ouvrés</li>
-                    <li>Délai de saisine Prud'hommes : 3 ans à compter de chaque échéance</li>
-                </ul>
-            </li>
-        </ol>
-        <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
-            <p style="margin: 0;"><strong>⚠️ Avertissement légal :</strong> Ce rapport est un outil d'aide au calcul basé sur les informations fournies. Il ne constitue pas un avis juridique. Seul un professionnel du droit (avocat, syndicat) peut vous conseiller sur la stratégie à adopter et la faisabilité de votre demande d'arriérés.</p>
-        </div>
-    `;
-
-    // Afficher les sections
-    resultsDiv.classList.remove('hidden');
-    instructionsDiv.classList.remove('hidden');
-
-    // Stocker les données pour le PDF
-    window.arreteesData = data;
-}
 
 /**
  * Générer le PDF du rapport d'arriérés
  */
-function genererPDFArretees() {
-    if (!window.arreteesData) {
-        showToast('⚠️ Veuillez d\'abord calculer les arriérés.', 'warning', 3000);
-        return;
-    }
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const data = window.arreteesData;
-    const remuneration = calculateRemuneration();
-    const { groupe, classe } = getActiveClassification();
-
-    // En-tête
-    doc.setFontSize(16);
-    doc.text('Rapport d\'Arriérés de Salaire', 105, 20, { align: 'center' });
-    doc.setFontSize(10);
-    doc.text('Convention Collective Métallurgie 2024', 105, 28, { align: 'center' });
-    doc.text(`Classification : ${groupe}${classe}`, 105, 34, { align: 'center' });
-
-    // Date du rapport
-    doc.setFontSize(9);
-    doc.text(`Date du rapport : ${new Date().toLocaleDateString('fr-FR')}`, 20, 45);
-
-    // Informations
-    let y = 55;
-    doc.setFontSize(11);
-    doc.text('Informations', 20, y);
-    y += 8;
-    doc.setFontSize(9);
-    doc.text(`Salaire annuel brut actuel : ${formatMoney(data.salaireActuel)}`, 20, y);
-    y += 6;
-    doc.text(`Salaire minimum hiérarchique dû : ${formatMoney(data.salaireDu)}`, 20, y);
-    y += 6;
-    doc.text(`Différence annuelle : ${formatMoney(data.difference)}`, 20, y);
-    y += 10;
-
-    // Calcul des arriérés
-    doc.setFontSize(11);
-    doc.text('Calcul des Arriérés', 20, y);
-    y += 8;
-    doc.setFontSize(9);
-    doc.text(`Période : ${data.dateDebutCalcul.toLocaleDateString('fr-FR')} → ${data.dateFinCalcul.toLocaleDateString('fr-FR')}`, 20, y);
-    y += 6;
-    doc.text(`Nombre de mois : ${data.moisArretees}`, 20, y);
-    y += 6;
-    doc.text(`Montant mensuel dû : ${formatMoney(data.montantMensuel)}`, 20, y);
-    y += 8;
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text(`TOTAL DES ARRIÉRÉS : ${formatMoney(data.totalArretees)}`, 20, y);
-    doc.setFont(undefined, 'normal');
-    y += 15;
-
-    // Points juridiques
-    if (data.conditionsInvalides.length > 0 || data.conditionsValides.length > 0) {
-        doc.setFontSize(11);
-        doc.text('Points d\'attention juridiques', 20, y);
-        y += 8;
-        doc.setFontSize(9);
-        
-        if (data.conditionsInvalides.length > 0) {
-            doc.text('Limitations :', 20, y);
-            y += 6;
-            data.conditionsInvalides.forEach(condition => {
-                doc.text(`• ${condition}`, 25, y);
-                y += 6;
-            });
-            y += 3;
-        }
-        
-        if (data.conditionsValides.length > 0) {
-            doc.text('Points favorables :', 20, y);
-            y += 6;
-            data.conditionsValides.forEach(condition => {
-                doc.text(`• ${condition}`, 25, y);
-                y += 6;
-            });
-        }
-        y += 10;
-    }
-
-    // Informations juridiques générales
-    y += 5;
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'bold');
-    doc.text('Informations juridiques importantes', 20, y);
-    y += 8;
-    doc.setFont(undefined, 'normal');
-    doc.setFontSize(8);
-    
-    const legalTexts = [
-        '• Prescription : 3 ans à compter de chaque échéance (art. L.3245-1 du Code du travail)',
-        '• CCNM 2024 : Entrée en vigueur le 1er janvier 2024',
-        '• Demande amiable recommandée avant toute action judiciaire',
-        '• Conseil de Prud\'hommes compétent pour les litiges'
-    ];
-    
-    legalTexts.forEach(text => {
-        if (y > 270) {
-            doc.addPage();
-            y = 20;
-        }
-        doc.text(text, 20, y, { maxWidth: 170 });
-        y += 6;
-    });
-
-    // Avertissement
-    y += 5;
-    if (y > 270) {
-        doc.addPage();
-        y = 20;
-    }
-    doc.setFontSize(9);
-    doc.setTextColor(150, 0, 0);
-    doc.text('⚠️ Ce rapport est indicatif. Consultez un avocat spécialisé en droit du travail ou votre syndicat avant toute démarche juridique.', 20, y, { maxWidth: 170 });
-    doc.setTextColor(0, 0, 0);
-
-    // Pied de page sur toutes les pages
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        const pageHeight = doc.internal.pageSize.height;
-        doc.setFontSize(8);
-        doc.setTextColor(100);
-        doc.text('Généré par le Simulateur Métallurgie 2024', 105, pageHeight - 10, { align: 'center' });
-        doc.text(`Page ${i}/${pageCount}`, 105, pageHeight - 5, { align: 'center' });
-        doc.setTextColor(0);
-    }
-
-    // Télécharger
-    const fileName = `Rapport_Arretees_${groupe}${classe}_${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(fileName);
-    
-    showToast('✅ Rapport PDF généré avec succès.', 'success', 3000);
-}
 
 // Initialiser le graphique après le chargement
 document.addEventListener('DOMContentLoaded', () => {

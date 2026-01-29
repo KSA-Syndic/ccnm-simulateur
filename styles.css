@@ -49,6 +49,22 @@ body {
     overflow: hidden;
 }
 
+/* Mode Iframe */
+body.iframe-mode {
+    padding: 0;
+    background: transparent;
+}
+
+body.iframe-mode .simulator-container {
+    box-shadow: none;
+    border-radius: 0;
+    background: var(--body-background);
+}
+
+body.iframe-mode .simulator-container.iframe-container {
+    background: transparent;
+}
+
 /* Header */
 .simulator-header {
     background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
@@ -87,6 +103,21 @@ body {
 
 .header-info svg {
     display: block;
+}
+
+/* Badge accord dans header */
+.header-accord-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.header-accord-badge.hidden {
+    display: none;
 }
 
 /* ============================================
@@ -2812,6 +2843,20 @@ body {
 .simulator-footer .disclaimer {
     font-style: italic;
     font-size: 0.8rem;
+}
+
+.simulator-footer .footer-credit {
+    margin-top: 8px;
+    font-size: 0.75rem;
+}
+
+.simulator-footer .footer-credit a {
+    color: var(--color-link);
+    text-decoration: none;
+}
+
+.simulator-footer .footer-credit a:hover {
+    text-decoration: underline;
 }
 
 /* ============================================

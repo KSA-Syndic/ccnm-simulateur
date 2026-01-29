@@ -1,93 +1,212 @@
-# Simulateur de Classification et Rémunération - Métallurgie 2024
+# 🏭 Simulateur de Classification et Rémunération - Métallurgie 2024
 
-Application web permettant aux salariés de la métallurgie de déterminer leur classification (Groupe/Classe) et leur salaire minimum conventionnel selon la nouvelle Convention Collective Nationale de la Métallurgie (CCNM 2024).
+> **Un outil simple et gratuit** pour connaître votre classification et vérifier votre salaire minimum conventionnel selon la Convention Collective Nationale de la Métallurgie (CCNM) 2024.
 
-## Fonctionnalités
+## 🎯 À quoi sert cet outil ?
 
-### 1. Cotation par Roulette
-- Évaluation intuitive sur 6 critères classants (de 1 à 10)
-- Interface "tambour" avec navigation par clic, scroll ou swipe tactile
-- Tooltips explicatifs pour chaque critère et degré
+Cet outil vous permet de :
 
-### 2. Classification Automatique/Manuelle
-- Calcul automatique basé sur le score total (6 à 60 points)
-- Mode manuel pour saisir directement sa classification connue
-- Basculement facile entre les deux modes
+- ✅ **Déterminer votre classification** (Groupe/Classe) selon les 6 critères de la CCNM 2024
+- ✅ **Calculer votre salaire minimum** (SMH) selon votre classification
+- ✅ **Vérifier vos arriérés de salaire** mois par mois si vous êtes sous-payé
+- ✅ **Comparer avec/sans accord d'entreprise** pour voir les avantages de votre accord
+- ✅ **Générer un rapport PDF** professionnel pour vos démarches
 
-### 3. Calcul de Rémunération
-Trois scénarios gérés automatiquement :
+**💡 C'est gratuit, anonyme et sans inscription !**
 
-| Scénario | Classes | Spécificités |
-|----------|---------|--------------|
-| Non-Cadres | 1 à 10 (Groupes A-E) | Prime d'ancienneté (+1%/an, plafond 15%) |
-| Cadres Confirmés | 11 à 18 (Groupes F-I) | Majorations forfaits (+15% heures, +30% jours) |
-| Cadres Débutants | 11 uniquement | Barème salariés débutants si ancienneté < 6 ans |
+## 🚀 Comment l'utiliser ?
 
-## Installation
+### Étape 1 : Classification 📊
 
-### Utilisation Standalone
-Ouvrez simplement `index.html` dans un navigateur web moderne.
+**Vous connaissez déjà votre classification ?**
+- Cliquez sur "Oui, je la connais"
+- Sélectionnez votre Groupe (A à I) et votre Classe (1 à 18)
 
-### Intégration Hugo (Thème Book)
-1. Copiez les fichiers dans votre dossier de contenu Hugo
-2. Incluez le HTML dans une page Markdown avec le shortcode `rawhtml` ou similaire
-3. Les styles sont compatibles avec les variables CSS du thème Book
+**Vous voulez l'estimer ?**
+- Cliquez sur "Non, je veux l'estimer"
+- Répondez aux 6 critères classants avec les carrousels
+- L'outil calcule automatiquement votre classification
 
-## Structure des Fichiers
+### Étape 2 : Votre Situation 👤
 
+Renseignez vos informations :
+- **Ancienneté** dans l'entreprise (en années)
+- **Point Territorial** (valeur par défaut : 5,90 € pour le Bas-Rhin)
+- **Type de forfait** (si vous êtes cadre : 35h, heures ou jours)
+- **Conditions de travail** (travail de nuit, dimanche, équipes postées)
+
+### Étape 3 : Résultat 💰
+
+Découvrez votre rémunération annuelle et mensuelle :
+- **Salaire Minimum Hiérarchique (SMH)** selon votre classification
+- **Détail du calcul** (primes, majorations, etc.)
+- **Comparaison avec/sans accord d'entreprise** (si disponible)
+- **Évolution vs inflation** (projection sur plusieurs années)
+
+### Étape 4 : Arriérés de Salaire 📅 (optionnel)
+
+Si votre salaire actuel est inférieur au SMH :
+- **Saisissez vos salaires** mois par mois sur la frise chronologique
+- **Calculez vos arriérés** automatiquement
+- **Générez un rapport PDF** professionnel pour vos démarches
+
+## 🏢 Accords d'Entreprise
+
+L'outil supporte les **accords d'entreprise** qui peuvent améliorer votre rémunération :
+
+- ✅ **Prime d'ancienneté** améliorée (seuil plus bas, plafond plus haut)
+- ✅ **Majorations** avantageuses (nuit, dimanche)
+- ✅ **Primes spécifiques** (équipe, vacances, etc.)
+- ✅ **Répartition sur 13 mois** au lieu de 12
+
+**Exemple : Accord Kuhn** (UES KUHN SAS/KUHN MGM SAS)
+- Ancienneté dès 2 ans (au lieu de 3 ans)
+- Plafond à 25 ans (au lieu de 15 ans)
+- Majoration nuit +20% (au lieu de +15%)
+- Majoration dimanche +50% (au lieu de +100%)
+- Prime d'équipe : 0,82 €/heure
+- Prime de vacances : 525 € en juillet
+
+### Comment utiliser un accord ?
+
+1. **Via l'URL** : Ajoutez `?accord=kuhn` dans l'adresse (ex: pour intégrer dans un site)
+2. **Dans l'application** : Cochez "Appliquer l'accord d'entreprise" dans l'étape 3
+3. **Comparaison** : Décochez pour comparer avec/sans accord
+
+## 📚 Documentation
+
+### Pour les Utilisateurs
+
+- **[Guide d'utilisation](README.md)** (ce fichier) : Présentation simple de l'outil
+- **[Guide pour ajouter un accord](docs/AJOUTER_ACCORD_SIMPLE.md)** : Comment contribuer si vous avez un accord d'entreprise à ajouter
+
+### Pour les Développeurs et Syndicats
+
+- **[Documentation technique](README_TECHNIQUE.md)** : Architecture, modules, flux de données
+- **[Guide technique pour ajouter un accord](docs/AJOUTER_ACCORD.md)** : Instructions détaillées pour développeurs
+- **[PRD (Product Requirements Document)](PRD.md)** : Spécifications complètes de l'application
+
+## 🔧 Installation (pour développeurs)
+
+```bash
+# Cloner le repository
+git clone https://github.com/votre-repo/simulateur-metallurgie.git
+
+# Installer les dépendances
+npm install
+
+# Lancer les tests
+npm test
+
+# Ouvrir dans un navigateur
+# Ouvrir index.html directement ou utiliser un serveur local
 ```
-├── index.html      # Page principale
-├── styles.css      # Styles CSS (compatible Hugo Book)
-├── config.js       # Données métier centralisées (SMH, grilles)
-├── app.js          # Logique applicative
-├── PRD.md          # Spécifications fonctionnelles
-└── README.md       # Cette documentation
+
+## 📖 Fonctionnalités Détaillées
+
+### Classification Automatique
+
+L'outil utilise les **6 critères classants** de la CCNM 2024 :
+1. **Complexité** : Difficulté et technicité du travail
+2. **Connaissances** : Savoirs requis (formation, expérience)
+3. **Autonomie** : Latitude d'action et niveau de contrôle
+4. **Contribution** : Impact sur l'organisation
+5. **Encadrement** : Dimension managériale ou appui technique
+6. **Communication** : Nature et complexité des échanges
+
+Chaque critère est noté de 1 à 10. Le total (6 à 60 points) détermine votre classification.
+
+### Calcul de Rémunération
+
+L'outil calcule automatiquement :
+- **SMH de base** selon votre classification
+- **Prime d'ancienneté** (CCN ou accord d'entreprise)
+- **Majorations** (nuit, dimanche, heures supplémentaires)
+- **Primes spécifiques** (équipe, vacances selon accord)
+- **Forfaits cadres** (+15% heures, +30% jours)
+
+### Arriérés de Salaire
+
+Si vous êtes sous-payé, l'outil vous permet de :
+- **Saisir vos salaires** mois par mois sur une frise chronologique interactive
+- **Calculer précisément** les arriérés avec l'ancienneté progressive
+- **Respecter la prescription** (3 ans en arrière)
+- **Générer un PDF** professionnel avec tous les détails
+
+## 🎨 Intégration dans un Site Web
+
+L'outil peut être intégré dans n'importe quel site via **iframe** :
+
+```html
+<iframe 
+    src="https://simulateur.cfdt-kuhn.com?accord=kuhn&iframe=true&bgcolor=#ffffff" 
+    width="100%" 
+    height="800px"
+    frameborder="0">
+</iframe>
 ```
 
-## Mise à Jour Annuelle
+**Paramètres URL disponibles :**
+- `?accord=kuhn` : Sélectionner un accord d'entreprise
+- `?bgcolor=#ffffff` : Couleur de fond autour du simulateur
+- `?iframe=true` : Mode iframe (détection automatique)
 
-Pour mettre à jour les salaires (révision annuelle), modifiez uniquement le fichier `config.js` :
+## ⚖️ Avertissement Légal
 
-```javascript
-// Dans CONFIG.SMH, mettez à jour les montants
-SMH: {
-    1: 21500,   // A1 - Nouveau montant
-    2: 22000,   // A2
-    // ...
-}
-```
+⚠️ **Cet outil est indicatif** et ne remplace pas un conseil juridique professionnel.
 
-## Déploiement GitHub Pages
+- Les calculs sont basés sur la CCNM 2024 et les accords d'entreprise disponibles
+- Les résultats peuvent varier selon votre situation spécifique
+- **Consultez un avocat ou votre syndicat** avant toute démarche juridique
 
-L'application est automatiquement déployée sur GitHub Pages à chaque push sur la branche `main`.
+## 🤝 Contribuer
 
-### Configuration initiale
+### Ajouter un Accord d'Entreprise
 
-1. **Créer le repository GitHub** et pousser le code :
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git branch -M main
-   git remote add origin https://github.com/VOTRE_USERNAME/VOTRE_REPO.git
-   git push -u origin main
-   ```
+Vous avez un accord d'entreprise à ajouter ? C'est simple !
 
-2. **Activer GitHub Pages** :
-   - Allez dans les **Settings** du repository
-   - Dans la section **Pages** (menu latéral)
-   - Source : sélectionnez **GitHub Actions**
+**Option 1 : Via Email** 📧
+Envoyez un email à **ksa.syndic@gmail.com** avec :
+- Le nom de votre entreprise
+- Le nom de l'accord
+- Le fichier PDF ou lien vers le texte officiel
+- Les dates importantes (signature, entrée en vigueur)
 
-3. Le workflow se déclenchera automatiquement et votre site sera disponible à :
-   `https://VOTRE_USERNAME.github.io/VOTRE_REPO/`
+**Option 2 : Via GitHub** 💻
+1. Créez une Pull Request avec le fichier de l'accord
+2. Suivez le [guide technique](docs/AJOUTER_ACCORD.md)
+3. L'équipe validera et intégrera votre contribution
 
-### Déploiement manuel
+Voir le [guide simple](docs/AJOUTER_ACCORD_SIMPLE.md) pour plus de détails.
 
-Vous pouvez aussi déclencher un déploiement manuellement :
-1. Allez dans l'onglet **Actions** du repository
-2. Sélectionnez le workflow **Deploy to GitHub Pages**
-3. Cliquez sur **Run workflow**
+### Signaler un Bug ou Suggérer une Amélioration
 
-## Licence
+- Ouvrez une [Issue sur GitHub](https://github.com/votre-repo/issues)
+- Ou contactez **ksa.syndic@gmail.com**
 
-Usage interne - Convention Collective Nationale de la Métallurgie 2024
+## 📝 Mise à Jour Annuelle
+
+L'outil est mis à jour chaque année avec :
+- ✅ Les nouveaux SMH de la CCNM
+- ✅ Les nouveaux accords d'entreprise
+- ✅ Les nouvelles valeurs du Point Territorial
+
+**Dernière mise à jour** : 2024 (CCNM 2024)
+
+## 🌐 Liens Utiles
+
+- **Textes conventionnels** : [UIMM - La Fabrique de l'Avenir](https://uimm.lafabriquedelavenir.fr/textes-conventionnels-metallurgie/)
+- **Convention Collective** : CCNM 2024 (IDCC 3248)
+- **Point Territorial** : [Code du Travail](https://code.travail.gouv.fr/contribution/3248-quand-le-salarie-a-t-il-droit-a-une-prime-danciennete-quel-est-son-montant)
+
+## 📧 Contact
+
+Pour toute question ou contribution :
+- **Email** : ksa.syndic@gmail.com
+- **GitHub** : [Repository du projet](https://github.com/votre-repo)
+
+---
+
+**Réalisé par CFDT Kuhn** | [cfdt-kuhn.fr](https://cfdt-kuhn.fr)
+
+*Outil développé pour aider les salariés de la métallurgie à connaître leurs droits et à vérifier leur rémunération.*

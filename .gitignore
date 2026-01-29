@@ -19,3 +19,6 @@ desktop.ini
 # Fichiers temporaires
 *.tmp
 *.temp
+
+# Troll
+Ne pas prendre en compte*

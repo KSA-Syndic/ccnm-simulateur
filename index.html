@@ -17,8 +17,9 @@
         <header class="simulator-header">
             <h1>🏭 Simulateur Métallurgie 2024</h1>
             <p class="subtitle">
-                Classification et Rémunération
-                <span class="header-info tooltip-trigger__light" data-tippy-content="Estimez votre classification et vérifiez vos minima salariaux, selon la &lt;strong&gt;Convention Collective Métallurgie 2024&lt;/strong&gt; et l'&lt;strong&gt;Accord Kuhn&lt;/strong&gt;.&lt;br&gt;📋 &lt;a href='https://cfdt-kuhn.fr/droits/convention-collective-metallurgie/' target='_blank'&gt;Voir méthodologie et convention (PDF, format de document portable)&lt;/a&gt;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+                <span id="header-subtitle-text">Classification et Rémunération</span>
+                <span id="header-accord-badge" class="header-accord-badge hidden"></span>
+                <span class="header-info tooltip-trigger__light" data-tippy-content="Estimez votre classification et vérifiez vos minima salariaux selon la &lt;strong&gt;Convention Collective Nationale de la Métallurgie (CCNM) 2024&lt;/strong&gt;.&lt;br&gt;📋 &lt;a href='https://uimm.lafabriquedelavenir.fr/textes-conventionnels-metallurgie/' target='_blank'&gt;Voir les textes conventionnels&lt;/a&gt;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
             </p>
         </header>
 
@@ -561,7 +562,8 @@
 
         <!-- Footer -->
         <footer class="simulator-footer">
-            <p>Convention Collective Métallurgie 2024 • <span class="disclaimer">Outil indicatif</span></p>
+            <p>Convention Collective Nationale de la Métallurgie (CCNM) 2024 • <span class="disclaimer">Outil indicatif</span></p>
+            <p class="footer-credit"><a href="https://cfdt-kuhn.fr" target="_blank" rel="noopener">Réalisé par CFDT Kuhn</a></p>
         </footer>
     </div>
 
@@ -569,6 +571,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- jsPDF pour génération PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Modules ES6 -->
+    <script type="module" src="src/app-integration.js"></script>
+    <script type="module" src="src/compat/expose-to-app.js"></script>
+    <!-- Config et App -->
     <script src="config.js"></script>
     <script src="app.js"></script>
 </body>
