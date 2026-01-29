@@ -264,8 +264,9 @@ export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = 
         doc.text('SMH mensuel dû', margin + 5 + colWidths.periode + colWidths.salairePerçu, yPos);
         doc.text('Arriérés', margin + 5 + colWidths.periode + colWidths.salairePerçu + colWidths.salaireDu, yPos);
         doc.setDrawColor(200, 200, 200);
-        doc.line(margin + 5, yPos + 5, marginRight - 5, yPos + 5);
-        yPos += 6;
+        const headerLineY = yPos + 4;
+        doc.line(margin, headerLineY, marginRight, headerLineY);
+        yPos = headerLineY + 5;
         doc.setFont(undefined, 'normal');
         
         detailsPourPdf.forEach((detail) => {
