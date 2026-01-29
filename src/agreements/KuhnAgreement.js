@@ -17,7 +17,7 @@ export const KuhnAgreement = {
     id: 'kuhn',
     nom: 'Kuhn (UES KUHN SAS/KUHN MGM SAS)',
     nomCourt: 'Kuhn',
-    url: 'https://cfdt-kuhn.fr/droits/convention-collective-metallurgie/',
+    url: 'https://www.maitredata.com/app/accords-entreprise/kuhn-sas/300633',
     dateEffet: '2024-01-01',
     dateSignature: '2024-03-06',
     

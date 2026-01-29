@@ -924,6 +924,9 @@ function initControls() {
             updateConditionsTravailDisplay();
             updateTauxInfo();
             updateAll();
+            if (typeof window.updateHeaderAgreement === 'function') {
+                window.updateHeaderAgreement(window.AgreementLoader?.getActiveAgreement?.() ?? null);
+            }
         });
     }
 
@@ -1578,16 +1581,24 @@ function showToast(message, type = 'info', duration = 3000) {
  * ============================================
  */
 function initTooltips() {
-    // Initialiser tous les tooltips
-    tippy('[data-tippy-content]', {
-        theme: 'metallurgie',
-        animation: 'shift-away',
-        duration: [200, 150],
-        arrow: true,
-        maxWidth: 300,
-        interactive: true,
-        allowHTML: true,
-        appendTo: document.body
+    // Initialiser tous les tooltips et stocker l'instance sur chaque élément pour mises à jour dynamiques (ex. header info + accord)
+    const elements = document.querySelectorAll('[data-tippy-content]');
+    elements.forEach((el) => {
+        if (el._tippy) {
+            el._tippy.destroy();
+            el._tippy = null;
+        }
+        const instances = tippy(el, {
+            theme: 'metallurgie',
+            animation: 'shift-away',
+            duration: [200, 150],
+            arrow: true,
+            maxWidth: 300,
+            interactive: true,
+            allowHTML: true,
+            appendTo: document.body
+        });
+        if (instances && instances[0]) el._tippy = instances[0];
     });
     
     // Empêcher la propagation des clics sur les tooltips pour éviter de déclencher les actions parentes

@@ -25,23 +25,15 @@ export function initAppIntegration() {
     const urlParamsObj = new URLSearchParams(window.location.search);
     const agreement = loadAgreementFromURL(urlParamsObj);
     
-    // Mettre à jour le header avec l'accord
+    // Mettre à jour le header avec l'accord (badge + tooltip info)
     updateHeaderAgreement(agreement);
-    
-    // Mettre à jour le badge dans le header si accord disponible
-    const badge = document.getElementById('header-accord-badge');
-    if (badge && agreement) {
-        badge.textContent = `• ${agreement.nomCourt || agreement.nom}`;
-        badge.classList.remove('hidden');
-    } else if (badge) {
-        badge.classList.add('hidden');
-    }
     
     // Exposer les fonctions pour compatibilité avec app.js existant
     window.AgreementLoader = {
         getActiveAgreement,
         loadAgreementFromURL
     };
+    window.updateHeaderAgreement = updateHeaderAgreement;
     
     window.URLParams = {
         isIframeMode,

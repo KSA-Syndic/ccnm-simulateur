@@ -105,21 +105,6 @@ body.iframe-mode .simulator-container.iframe-container {
     display: block;
 }
 
-/* Badge accord dans header */
-.header-accord-badge {
-    display: inline-block;
-    margin-left: 8px;
-    padding: 2px 8px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-    font-size: 0.85rem;
-    font-weight: 500;
-}
-
-.header-accord-badge.hidden {
-    display: none;
-}
-
 /* ============================================
    WIZARD - Indicateur de progression
    ============================================ */

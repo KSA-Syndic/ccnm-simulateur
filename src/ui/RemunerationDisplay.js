@@ -45,18 +45,47 @@ export function updateRemunerationDisplay(remuneration, nbMois = 12) {
     }
 }
 
+const HEADER_SUBTITLE_BASE = 'Classification et Rémunération';
+const HEADER_INFO_BASE_TOOLTIP = "Convention Collective Nationale de la Métallurgie (CCNM) 2024.<br>📋 <a href='https://uimm.lafabriquedelavenir.fr/textes-conventionnels-metallurgie/' target='_blank' rel='noopener'>Textes conventionnels</a>";
+
 /**
- * Mettre à jour le header avec l'accord sélectionné
+ * Met à jour le header : sous-titre (avec accord éventuel) et un seul tooltip sur l’icône ?.
  * @param {Object|null} agreement - Accord actif ou null
  */
 export function updateHeaderAgreement(agreement) {
-    const badge = document.getElementById('header-accord-badge');
-    const subtitle = document.getElementById('header-subtitle-text');
-    
-    if (badge && agreement) {
-        badge.textContent = `• ${agreement.nomCourt || agreement.nom}`;
-        badge.classList.remove('hidden');
-    } else if (badge) {
-        badge.classList.add('hidden');
+    const subtitleEl = document.getElementById('header-subtitle-text');
+    const headerInfoIcon = document.getElementById('header-info-icon');
+
+    if (subtitleEl) {
+        const nomAccord = agreement ? (agreement.nomCourt || agreement.nom) : '';
+        subtitleEl.textContent = nomAccord ? `${HEADER_SUBTITLE_BASE} · ${nomAccord}` : HEADER_SUBTITLE_BASE;
     }
+
+    if (headerInfoIcon) {
+        let tooltipContent = HEADER_INFO_BASE_TOOLTIP;
+        if (agreement) {
+            const nom = agreement.nomCourt || agreement.nom;
+            const desc = (agreement.labels && agreement.labels.description) || (agreement.labels && agreement.labels.tooltip) || '';
+            tooltipContent += `<br><br>🏢 <strong>${escapeHtml(nom)}</strong>`;
+            if (desc) tooltipContent += `<br>${escapeHtml(desc)}`;
+            if (agreement.url) tooltipContent += `<br>📋 <a href="${escapeAttr(agreement.url)}" target="_blank" rel="noopener">Voir le texte de l'accord</a>`;
+        }
+        headerInfoIcon.setAttribute('data-tippy-content', tooltipContent);
+        if (headerInfoIcon._tippy) headerInfoIcon._tippy.setContent(tooltipContent);
+    }
+}
+
+function escapeHtml(text) {
+    if (typeof text !== 'string') return '';
+    const div = typeof document !== 'undefined' ? document.createElement('div') : null;
+    if (div) {
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function escapeAttr(text) {
+    if (typeof text !== 'string') return '';
+    return text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
