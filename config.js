@@ -75,8 +75,8 @@ const CONFIG = {
         }
     },
 
-    // Taux pour calcul Prime d'Ancienneté (Non-Cadres uniquement)
-    // Formule : Point Territorial × Taux × 100 × Années d'ancienneté
+    // Taux pour calcul Prime d'ancienneté (non-cadres uniquement, CCNM Art. 142)
+    // Formule : Point territorial × Taux (classe) × Années = montant mensuel ; annuel = mensuel × 12
     TAUX_ANCIENNETE: {
         1: 1.45,    // A1
         2: 1.60,    // A2
@@ -136,8 +136,7 @@ const CONFIG = {
     // Seuil Cadre (à partir de la classe 11)
     SEUIL_CADRE: 11,
 
-    // Prime d'ancienneté Non-Cadres
-    // Formule : Point Territorial × Taux Classe × 100 × Années
+    // Prime d'ancienneté non-cadres (seuil, plafond)
     ANCIENNETE: {
         seuil: 3,       // Déclenchement à 3 ans
         plafond: 15     // Plafonné à 15 ans

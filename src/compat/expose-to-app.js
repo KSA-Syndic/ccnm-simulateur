@@ -45,8 +45,8 @@ function syncStateToModules(appState) {
     if (appState.accordInputs && typeof appState.accordInputs === 'object') {
         moduleState.accordInputs = { ...(moduleState.accordInputs || {}), ...appState.accordInputs };
     }
-    // Synchroniser accordActif (app.js) vers accordActif/accordId (modules) ; compat. ancienne clé accordKuhn
-    const accordActif = appState.accordActif ?? appState.accordKuhn;
+    // Synchroniser accordActif (app.js) vers accordActif/accordId (modules)
+    const accordActif = appState.accordActif;
     if (accordActif !== undefined) {
         moduleState.accordActif = !!accordActif;
         if (!accordActif) {
@@ -127,8 +127,7 @@ window.genererPDFArreteesFromModules = function(data, infosPersonnelles, appStat
 window.getMontantPrimesFixesAnnuelFromModules = function(appState) {
     syncStateToModules(appState);
     const agreement = getActiveAgreement();
-    const accordActif = appState.accordActif ?? appState.accordKuhn;
-    if (!agreement || !accordActif) return 0;
+    if (!agreement || !appState.accordActif) return 0;
     return getMontantPrimesFixesAnnuel(moduleState, agreement);
 };
 
@@ -142,7 +141,6 @@ window.getMontantPrimesFixesAnnuelFromModules = function(appState) {
 window.getMontantPrimesVerseesCeMoisFromModules = function(appState, mois) {
     syncStateToModules(appState);
     const agreement = getActiveAgreement();
-    const accordActif = appState.accordActif ?? appState.accordKuhn;
-    if (!agreement || !accordActif || !mois || mois < 1 || mois > 12) return 0;
+    if (!agreement || !appState.accordActif || !mois || mois < 1 || mois > 12) return 0;
     return getMontantPrimesVerseesCeMois(moduleState, agreement, mois);
 };

@@ -161,7 +161,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         scenario = 'non-cadre';
         details.push({ label: `SMH Base (${groupe}${classe})`, value: baseSMH, isBase: true });
 
-        // Prime ancienneté : principe de faveur (convention vs accord)
+        // Prime ancienneté : principe de faveur (Art. L2254-2) — CCN vs accord, on retient le plus avantageux
         const convPrimeDefs = getConventionPrimeDefs();
         const defAncienneteCCN = convPrimeDefs.find(d => d.semanticId === SEMANTIC_ID.PRIME_ANCIENNETE);
         const rCCN = defAncienneteCCN ? computePrime(defAncienneteCCN, context) : { amount: 0 };
