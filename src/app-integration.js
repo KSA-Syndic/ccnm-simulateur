@@ -25,6 +25,16 @@ export function initAppIntegration() {
     const urlParamsObj = new URLSearchParams(window.location.search);
     const agreement = loadAgreementFromURL(urlParamsObj);
     
+    // Page 3 : n'afficher l'option "Appliquer l'accord d'entreprise" que si un accord a été chargé depuis l'URL
+    const resultAccordBlock = document.getElementById('result-accord-options-block');
+    if (resultAccordBlock) {
+        if (agreement) {
+            resultAccordBlock.classList.remove('hidden');
+        } else {
+            resultAccordBlock.classList.add('hidden');
+        }
+    }
+    
     // Mettre à jour le header avec l'accord (badge + tooltip info)
     updateHeaderAgreement(agreement);
     

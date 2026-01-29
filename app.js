@@ -1509,7 +1509,7 @@ function updateHintDisplay(remuneration) {
             content: `
                 <strong>Majorations CCN appliquées</strong><br>
                 Taux CCN : nuit +15%, dimanche +100%.<br>
-                <small>Activez l'accord Kuhn pour les taux entreprise.</small>
+                <small>Activez un accord d'entreprise pour les taux entreprise.</small>
             `
         });
     }
