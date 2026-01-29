@@ -29,6 +29,7 @@ export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = 
     
     // Utiliser le state fourni ou le state par défaut
     const state = stateParam || defaultState;
+    const hasAccord = !!(state.accordActif || state.accordId);
     
     // CORRECTION BUG : Forcer le mode SMH seul pour le PDF
     // Créer un snapshot du state pour ne pas modifier l'original
@@ -251,71 +252,36 @@ export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = 
         doc.setFontSize(8);
         doc.setFont(undefined, 'bold');
         
-        // CORRECTION BUG : Colonnes avec largeurs adaptées pour éviter les dépassements
         const colWidths = {
-            periode: 40,
-            salairePerçu: 45,
-            salaireDu: 45,
-            arrieres: 40
+            periode: 52,
+            salairePerçu: 50,
+            salaireDu: 50,
+            arrieres: 52
         };
         
-        // CORRECTION BUG : Utiliser splitTextToSize pour les en-têtes de colonnes si nécessaire
         doc.text('Période', margin + 5, yPos);
-        const salairePerçuHeaderLines = doc.splitTextToSize('Salaire brut perçu', colWidths.salairePerçu - 2);
-        salairePerçuHeaderLines.forEach((line, idx) => {
-            doc.text(line, margin + 5 + colWidths.periode, yPos + (idx * 5));
-        });
-        const smhDuHeaderLines = doc.splitTextToSize('SMH mensuel dû', colWidths.salaireDu - 2);
-        smhDuHeaderLines.forEach((line, idx) => {
-            doc.text(line, margin + 5 + colWidths.periode + colWidths.salairePerçu, yPos + (idx * 5));
-        });
+        doc.text('Salaire brut perçu', margin + 5 + colWidths.periode, yPos);
+        doc.text('SMH mensuel dû', margin + 5 + colWidths.periode + colWidths.salairePerçu, yPos);
         doc.text('Arriérés', margin + 5 + colWidths.periode + colWidths.salairePerçu + colWidths.salaireDu, yPos);
-        // Ajuster yPos selon le nombre maximum de lignes dans les en-têtes
-        const maxHeaderLines = Math.max(1, salairePerçuHeaderLines.length, smhDuHeaderLines.length);
-        yPos += Math.max(5, (maxHeaderLines - 1) * 5);
         doc.setDrawColor(200, 200, 200);
-        doc.line(margin + 5, yPos, marginRight - 5, yPos);
+        doc.line(margin + 5, yPos + 5, marginRight - 5, yPos + 5);
         yPos += 6;
         doc.setFont(undefined, 'normal');
         
         detailsPourPdf.forEach((detail) => {
             checkPageBreak(12);
-            
-            // CORRECTION BUG : Utiliser splitTextToSize pour les périodes longues
-            const periodeDetailLines = doc.splitTextToSize(detail.periode, colWidths.periode - 5);
-            
-            let startY = yPos;
-            periodeDetailLines.forEach((line, idx) => {
-                doc.text(line, margin + 5, startY + (idx * 5));
-            });
-            
-            // CORRECTION BUG : Utiliser splitTextToSize pour les montants si nécessaire
             const salairePerçuText = formatMoneyPDF(detail.salaireMensuelReel);
             const salaireDuText = formatMoneyPDF(detail.salaireMensuelDu);
             const arrieresText = formatMoneyPDF(detail.difference);
-            
-            // Vérifier si les montants dépassent et utiliser splitTextToSize si nécessaire
-            const salairePerçuLines = doc.splitTextToSize(salairePerçuText, colWidths.salairePerçu - 2);
-            const salaireDuLines = doc.splitTextToSize(salaireDuText, colWidths.salaireDu - 2);
-            const arrieresLines = doc.splitTextToSize(arrieresText, colWidths.arrieres - 2);
-            
-            const maxLines = Math.max(periodeDetailLines.length, salairePerçuLines.length, salaireDuLines.length, arrieresLines.length);
-            
-            salairePerçuLines.forEach((line, idx) => {
-                doc.text(line, margin + 5 + colWidths.periode, yPos + (idx * 5));
-            });
-            salaireDuLines.forEach((line, idx) => {
-                doc.text(line, margin + 5 + colWidths.periode + colWidths.salairePerçu, yPos + (idx * 5));
-            });
+            doc.text(detail.periode, margin + 5, yPos);
+            doc.text(salairePerçuText, margin + 5 + colWidths.periode, yPos);
+            doc.text(salaireDuText, margin + 5 + colWidths.periode + colWidths.salairePerçu, yPos);
             doc.setTextColor(9, 105, 218);
             doc.setFont(undefined, 'bold');
-            arrieresLines.forEach((line, idx) => {
-                doc.text(line, margin + 5 + colWidths.periode + colWidths.salairePerçu + colWidths.salaireDu, yPos + (idx * 5));
-            });
+            doc.text(arrieresText, margin + 5 + colWidths.periode + colWidths.salairePerçu + colWidths.salaireDu, yPos);
             doc.setTextColor(0, 0, 0);
             doc.setFont(undefined, 'normal');
-            
-            yPos += Math.max(6, maxLines * 5);
+            yPos += 6;
         });
     }
     
@@ -361,11 +327,17 @@ export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = 
     doc.setFontSize(9);
     doc.setFont(undefined, 'normal');
     
-    const methodologyText = [
-        'Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, le rapport PDF est toujours établi sur la base du SMH (option « SMH seul » forcée).',
-        'SMH de base, majoration forfait, répartition 12/13 mois (13e mois en novembre si accord Kuhn). Accord Kuhn : prime ancienneté, prime vacances, 13e mois — mentionnés pour contexte, mais le salaire dû retenu dans le PDF = assiette SMH uniquement (base + forfait, hors primes). L\'ancienneté n\'affecte pas l\'assiette SMH.',
-        'Calcul rétrospectif mois par mois : pour chaque mois, le salaire dû = assiette SMH ; comparé au salaire perçu (hors primes). Sources et références : CCN Métallurgie (IDCC 3248), SMH et assiette ; Code du travail art. L.3245-1 ; Accord Kuhn si pertinent.'
-    ];
+    const methodologyText = hasAccord
+        ? [
+            'Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, le rapport PDF est toujours établi sur la base du SMH (option « SMH seul » forcée).',
+            'SMH de base, majoration forfait, répartition 12/13 mois (13e mois en novembre si accord d\'entreprise). Accord d\'entreprise : prime ancienneté, prime vacances, 13e mois — mentionnés pour contexte, mais le salaire dû retenu dans le PDF = assiette SMH uniquement (base + forfait, hors primes). L\'ancienneté n\'affecte pas l\'assiette SMH.',
+            'Calcul rétrospectif mois par mois : pour chaque mois, le salaire dû = assiette SMH ; comparé au salaire perçu (hors primes). Sources et références : CCN Métallurgie (IDCC 3248), SMH et assiette ; Code du travail art. L.3245-1 ; accord d\'entreprise si pertinent.'
+          ]
+        : [
+            'Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, le rapport PDF est toujours établi sur la base du SMH (option « SMH seul » forcée).',
+            'SMH de base, majoration forfait, répartition 12 mois. Le salaire dû retenu dans le PDF = assiette SMH uniquement (base + forfait, hors primes). L\'ancienneté n\'affecte pas l\'assiette SMH.',
+            'Calcul rétrospectif mois par mois : pour chaque mois, le salaire dû = assiette SMH ; comparé au salaire perçu (hors primes). Sources et références : CCN Métallurgie (IDCC 3248), SMH et assiette ; Code du travail art. L.3245-1.'
+          ];
     
     methodologyText.forEach(text => {
         checkPageBreak(20);
@@ -423,25 +395,24 @@ export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = 
     doc.text('Calcul du salaire mensuel dû :', margin + 5, yPos);
     yPos += 6;
     doc.setFont(undefined, 'normal');
-    const calculSalaireLines = doc.splitTextToSize('Le salaire dû retenu dans ce rapport = assiette SMH uniquement (base + forfait ; inclus : base, forfaits cadres, 13e mois ; exclus : primes ancienneté, prime vacances, majorations pénibilité/nuit/dimanche/équipe). Répartition 12 ou 13 mois (13e mois en novembre si Kuhn).', pageWidth - margin * 2 - 10);
+    const calculSalaireText = hasAccord
+        ? 'Le salaire dû retenu dans ce rapport = assiette SMH uniquement (base + forfait ; inclus : base, forfaits cadres, 13e mois ; exclus : primes ancienneté, prime vacances, majorations pénibilité/nuit/dimanche/équipe). Répartition 12 ou 13 mois (13e mois en novembre si accord d\'entreprise).'
+        : 'Le salaire dû retenu dans ce rapport = assiette SMH uniquement (base + forfait ; inclus : base, forfaits cadres ; exclus : primes ancienneté, prime vacances, majorations pénibilité/nuit/dimanche/équipe). Répartition 12 mois.';
+    const calculSalaireLines = doc.splitTextToSize(calculSalaireText, pageWidth - margin * 2 - 10);
     calculSalaireLines.forEach(line => {
         doc.text(line, margin + 5, yPos);
         yPos += 5;
     });
     yPos += 5;
     
-    // Formule
+    // Formule (deux lignes explicites pour éviter une coupure mal placée)
     doc.setFont(undefined, 'bold');
     doc.text('Formule :', margin + 5, yPos);
     yPos += 6;
     doc.setFont(undefined, 'normal');
-    // CORRECTION BUG : Utiliser splitTextToSize pour la formule longue
-    const formuleText = 'Arriérés(mois) = max(0 ; Salaire mensuel dû(mois) − Salaire mensuel perçu(mois)) ; total = somme sur tous les mois.';
-    const formuleLines = doc.splitTextToSize(formuleText, pageWidth - margin * 2 - 10);
-    formuleLines.forEach(line => {
-        doc.text(line, margin + 5, yPos);
-        yPos += 5;
-    });
+    doc.text('Arriérés(mois) = max(0 ; Salaire mensuel dû(mois) - Salaire mensuel perçu(mois))', margin + 5, yPos);
+    yPos += 5;
+    doc.text('total = somme sur tous les mois.', margin + 5, yPos);
     yPos += 5;
     
     // Base de calcul
@@ -465,7 +436,10 @@ export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = 
     doc.text('Références :', margin + 5, yPos);
     yPos += 6;
     doc.setFont(undefined, 'normal');
-    const referencesLines = doc.splitTextToSize('Convention collective nationale de la métallurgie (IDCC 3248), dispositions relatives aux salaires minima hiérarchiques et à leur assiette ; Code du travail, art. L.3245-1 ; Accord Kuhn si pertinent.', pageWidth - margin * 2 - 10);
+    const referencesText = hasAccord
+        ? 'Convention collective nationale de la métallurgie (IDCC 3248), dispositions relatives aux salaires minima hiérarchiques et à leur assiette ; Code du travail, art. L.3245-1 ; accord d\'entreprise si pertinent.'
+        : 'Convention collective nationale de la métallurgie (IDCC 3248), dispositions relatives aux salaires minima hiérarchiques et à leur assiette ; Code du travail, art. L.3245-1.';
+    const referencesLines = doc.splitTextToSize(referencesText, pageWidth - margin * 2 - 10);
     referencesLines.forEach(line => {
         doc.text(line, margin + 5, yPos);
         yPos += 5;

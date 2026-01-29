@@ -405,9 +405,8 @@ function navigateToStep(stepNumber) {
                 legalSec.classList.add('hidden');
             }
         }
-        if (!arreteesPdfStore && !window.arreteesDataFinal) {
-            initTimeline();
-        }
+        // Toujours rafraîchir la courbe à l'entrée sur l'étape 4 pour qu'elle reflète le salaire annuel (étape 3)
+        initTimeline();
     }
     
     // Scroll en haut
@@ -1286,6 +1285,12 @@ function updateAll() {
     
     // Synchroniser le graphique si visible
     syncEvolutionChart();
+    
+    // Si l'étape 4 (courbe des arriérés) est affichée, rafraîchir la courbe pour qu'elle reflète le nouveau salaire annuel
+    const step4 = document.getElementById('step-4');
+    if (step4 && step4.classList.contains('active') && !step4.classList.contains('hidden')) {
+        initTimeline();
+    }
 }
 
 /**
@@ -1508,15 +1513,24 @@ function updateHintDisplay(remuneration) {
     
     // === HINT PAR DÉFAUT si aucun autre ===
     if (hints.length === 0) {
-        const seuilAnc = state.accordKuhn ? '2 ans (Kuhn)' : '3 ans (CCN)';
-        const hasAnciennete = state.anciennete >= 3 || (state.accordKuhn && state.anciennete >= 2);
-        
-        hints.push({
-            type: 'info',
-            content: hasAnciennete
-                ? `Ce montant est le minimum conventionnel. Prime d'ancienneté incluse.`
-                : `Ce montant est le minimum conventionnel. Prime d'ancienneté à partir de ${seuilAnc}.`
-        });
+        const isCadre = typeof remuneration.classe === 'number' && remuneration.classe >= CONFIG.SEUIL_CADRE;
+        if (isCadre) {
+            // Cadres : pas de prime d'ancienneté CCN, message neutre
+            hints.push({
+                type: 'info',
+                content: 'Ce montant est le minimum conventionnel.'
+            });
+        } else {
+            // Non-cadres : prime d'ancienneté CCN (ou Kuhn si accord)
+            const seuilAnc = state.accordKuhn ? '2 ans (Kuhn)' : '3 ans (CCN)';
+            const hasAnciennete = state.anciennete >= 3 || (state.accordKuhn && state.anciennete >= 2);
+            hints.push({
+                type: 'info',
+                content: hasAnciennete
+                    ? `Ce montant est le minimum conventionnel. Prime d'ancienneté incluse.`
+                    : `Ce montant est le minimum conventionnel. Prime d'ancienneté à partir de ${seuilAnc}.`
+            });
+        }
     }
     
     // Générer le HTML
