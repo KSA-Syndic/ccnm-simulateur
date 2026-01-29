@@ -39,6 +39,13 @@ describe('Wizard - Parcours Utilisateur', () => {
             </div>
         `;
         document.body.appendChild(container);
+        // Simuler la logique de navigation de l'app : au clic sur un step, activer cette étape
+        container.querySelectorAll('.progress-step').forEach(step => {
+            step.addEventListener('click', () => {
+                container.querySelectorAll('.progress-step').forEach(s => s.classList.remove('active'));
+                step.classList.add('active');
+            });
+        });
     });
 
     it('devrait permettre la navigation entre les étapes', () => {

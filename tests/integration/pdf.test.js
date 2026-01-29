@@ -26,7 +26,8 @@ describe('PDF - Génération', () => {
             addPage: vi.fn().mockReturnThis(),
             splitTextToSize: vi.fn((text) => [text]),
             save: vi.fn(),
-            setDrawColor: vi.fn().mockReturnThis()
+            setDrawColor: vi.fn().mockReturnThis(),
+            setPage: vi.fn().mockReturnThis()
         }));
     });
 
@@ -45,7 +46,8 @@ describe('PDF - Génération', () => {
                 addPage: vi.fn().mockReturnThis(),
                 splitTextToSize: vi.fn((text) => [text]),
                 save: vi.fn(),
-                setDrawColor: vi.fn().mockReturnThis()
+                setDrawColor: vi.fn().mockReturnThis(),
+                setPage: vi.fn().mockReturnThis()
             };
             
             global.jsPDF = vi.fn(() => mockDoc);
@@ -95,7 +97,8 @@ describe('PDF - Génération', () => {
                 addPage: vi.fn().mockReturnThis(),
                 splitTextToSize: vi.fn((text) => [text]),
                 save: vi.fn(),
-                setDrawColor: vi.fn().mockReturnThis()
+                setDrawColor: vi.fn().mockReturnThis(),
+                setPage: vi.fn().mockReturnThis()
             };
             
             global.jsPDF = vi.fn(() => mockDoc);
@@ -143,7 +146,8 @@ describe('PDF - Génération', () => {
                 addPage: vi.fn().mockReturnThis(),
                 splitTextToSize: vi.fn((text) => [text]),
                 save: vi.fn(),
-                setDrawColor: vi.fn().mockReturnThis()
+                setDrawColor: vi.fn().mockReturnThis(),
+                setPage: vi.fn().mockReturnThis()
             };
             
             global.jsPDF = vi.fn(() => mockDoc);
@@ -190,7 +194,8 @@ describe('PDF - Génération', () => {
                     return [text];
                 }),
                 save: vi.fn(),
-                setDrawColor: vi.fn().mockReturnThis()
+                setDrawColor: vi.fn().mockReturnThis(),
+                setPage: vi.fn().mockReturnThis()
             };
             
             global.jsPDF = vi.fn(() => mockDoc);
@@ -262,7 +267,8 @@ describe('PDF - Génération', () => {
                 addPage: vi.fn().mockReturnThis(),
                 splitTextToSize: vi.fn((text) => [text]),
                 save: vi.fn(),
-                setDrawColor: vi.fn().mockReturnThis()
+                setDrawColor: vi.fn().mockReturnThis(),
+                setPage: vi.fn().mockReturnThis()
             };
             
             global.jsPDF = vi.fn(() => mockDoc);
@@ -314,7 +320,8 @@ describe('PDF - Génération', () => {
                     return [text];
                 }),
                 save: vi.fn(),
-                setDrawColor: vi.fn().mockReturnThis()
+                setDrawColor: vi.fn().mockReturnThis(),
+                setPage: vi.fn().mockReturnThis()
             };
             
             global.jsPDF = vi.fn(() => mockDoc);
@@ -370,7 +377,8 @@ describe('PDF - Génération', () => {
                 addPage: vi.fn().mockReturnThis(),
                 splitTextToSize: vi.fn((text) => [text]),
                 save: vi.fn(),
-                setDrawColor: vi.fn().mockReturnThis()
+                setDrawColor: vi.fn().mockReturnThis(),
+                setPage: vi.fn().mockReturnThis()
             };
             
             global.jsPDF = vi.fn(() => mockDoc);
@@ -418,7 +426,8 @@ describe('PDF - Génération', () => {
                 addPage: vi.fn().mockReturnThis(),
                 splitTextToSize: vi.fn((text) => [text]),
                 save: vi.fn(),
-                setDrawColor: vi.fn().mockReturnThis()
+                setDrawColor: vi.fn().mockReturnThis(),
+                setPage: vi.fn().mockReturnThis()
             };
             
             global.jsPDF = vi.fn(() => mockDoc);
@@ -481,10 +490,15 @@ describe('PDF - Génération', () => {
                 addPage: vi.fn().mockReturnThis(),
                 splitTextToSize: vi.fn((text) => [text]),
                 save: vi.fn(),
-                setDrawColor: vi.fn().mockReturnThis()
+                setDrawColor: vi.fn().mockReturnThis(),
+                setPage: vi.fn().mockReturnThis()
             };
             
             global.jsPDF = vi.fn(() => mockDoc);
+            global.window = {
+                jsPDF: global.jsPDF,
+                jspdf: { jsPDF: global.jsPDF }
+            };
             
             genererPDFArretees(data, {}, false);
             
@@ -535,7 +549,8 @@ describe('PDF - Génération', () => {
                         return [text];
                     }),
                     save: vi.fn(),
-                    setDrawColor: vi.fn().mockReturnThis()
+                    setDrawColor: vi.fn().mockReturnThis(),
+                    setPage: vi.fn().mockReturnThis()
                 };
                 
                 global.jsPDF = vi.fn(() => mockDoc);
@@ -579,11 +594,13 @@ describe('PDF - Génération', () => {
 
                 genererPDFArretees(data, {}, false, stateF11);
                 
-                // Vérifier que le SMH affiché correspond à la tranche
+                // Vérifier que le SMH affiché correspond à la tranche (montant formaté "31 979 €" ou brut)
                 const textCalls = mockDoc.text.mock.calls;
+                const expectedStr = expectedSMH.toString();
                 const smhCall = textCalls.find(call => 
                     call[0] && (
-                        call[0].includes(expectedSMH.toString().substring(0, 4)) ||
+                        call[0].includes(expectedStr) ||
+                        call[0].replace(/\s/g, '').includes(expectedStr) ||
                         call[0].includes(label) ||
                         (experiencePro < 6 && call[0].includes('barème débutants'))
                     )
