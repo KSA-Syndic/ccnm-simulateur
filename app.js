@@ -918,22 +918,18 @@ function initControls() {
                 if (agreement && window.AgreementHelpers?.hydrateAccordInputs) {
                     window.AgreementHelpers.hydrateAccordInputs(agreement, state);
                 }
+                // Restituer l'affichage des options (page 3) depuis state.accordInputs conservé à la désactivation
+                accordOptions?.querySelectorAll('input[data-state-key-actif]').forEach(inp => {
+                    const key = inp.dataset.stateKeyActif;
+                    if (key && key in state.accordInputs) inp.checked = !!state.accordInputs[key];
+                });
                 const { classe } = getActiveClassification();
                 const isCadre = classe >= CONFIG.SEUIL_CADRE;
-                if (!isCadre) showToast('💡 Les options de l\'accord sont maintenant disponibles dans l\'étape Situation.', 'info', 4000);
             }
 
-            // Désactivation accord : réinitialiser les options sans connaître les clés (générique)
+            // Désactivation accord : conserver l'état des options (primes, heures, etc.) pour les restituer à la réactivation
             if (wasActive && !isActive) {
-                const agreement = window.AgreementLoader?.getActiveAgreement?.();
-                if (agreement && window.AgreementHelpers?.getPrimes) {
-                    window.AgreementHelpers.getPrimes(agreement).forEach(prime => {
-                        if (prime.stateKeyActif) state.accordInputs[prime.stateKeyActif] = false;
-                    });
-                }
-                accordOptions?.querySelectorAll('input[data-state-key-actif]').forEach(inp => { inp.checked = false; });
                 updateConditionsTravailDisplay();
-                showToast('ℹ️ Les options de l\'accord ont été réinitialisées.', 'info', 4000);
             }
             if (accordOptions) {
                 accordOptions.classList.toggle('hidden', !state.accordActif);

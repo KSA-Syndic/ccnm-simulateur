@@ -38,7 +38,7 @@ Le simulateur utilise une interface de type **wizard** (assistant pas à pas) po
 
 #### Étape 3 : Résultat
 - Options de calcul (Accord d'entreprise si disponible, 13e mois)
-- **Comparaison avec/sans accord** : Checkbox pour activer/désactiver l'accord d'entreprise et comparer les résultats
+- **Comparaison avec/sans accord** : Checkbox pour activer/désactiver l'accord d'entreprise et comparer les résultats. À la désactivation, l'état et les valeurs des options accord (primes cochées, heures, etc.) sont **conservés** et restitués à la réactivation, sans obliger l'utilisateur à ressaisir.
 - Badge visuel indiquant si l'accord est appliqué dans le calcul
 - Affichage du SMH annuel et mensuel
 - Détail du calcul (panneau dépliable) avec indication de l'origine (CCN ou Accord)
@@ -112,6 +112,7 @@ Les accords d'entreprise sont **définis en dehors du PRD** (dossier `accords/`,
 **Comportement générique :**
 * L'utilisateur peut activer un accord d'entreprise via une **checkbox** (libellé et liste d'accords fournis par les définitions chargées).
 * Une fois un accord activé, des options supplémentaires apparaissent pour configurer les éléments de rémunération prévus par cet accord (primes, majorations, etc.).
+* **Désactivation sans perte :** Lorsque l'accord est désactivé (décocher la case), l'état et les valeurs des options (primes cochées, heures, etc.) sont **conservés** ; à la réactivation (recocher la case ou activer une option liée à l'accord), les valeurs sont restituées sans ressaisie.
 * **Principe de faveur (Art. L2254-2 Code du Travail) :** Le système compare les règles CCN et accord et applique la règle la plus avantageuse pour le salarié (ex. prime d'ancienneté, majorations nuit/dimanche).
 * Les primes et majorations spécifiques à l'accord (prime d'équipe, prime de vacances, etc.) sont décrites dans chaque fichier d'accord ; l'UI s'adapte dynamiquement (options conditionnelles, activation/désactivation liée à l'accord).
 * **Répartition 12/13 mois :** Si l'accord prévoit une répartition sur 13 mois (ex. 13e mois en novembre), le sélecteur « sur 12 mois » / « sur 13 mois » et les calculs (SMH mensuel, arriérés) en tiennent compte.
@@ -545,7 +546,7 @@ Le code est organisé en modules fonctionnels :
 8. **Cadres éligibles :** Si l'accord prévoit la prime d'ancienneté pour tous les statuts, les cadres en bénéficient.
 9. **Majorations accord :** Les taux (nuit, dimanche) sont ceux de l'accord si activé ; principe de faveur avec la CCN.
 10. **Primes accord :** Primes spécifiques (vacances, équipe, etc.) selon la définition de l'accord et les options cochées.
-11. **Activation / désactivation :** Options liées à l'accord (ex. prime d'équipe) activent ou désactivent l'accord avec notification selon le comportement défini.
+11. **Activation / désactivation :** Options liées à l'accord (ex. prime d'équipe) activent ou désactivent l'accord avec notification selon le comportement défini. La désactivation ne réinitialise pas les options (primes, heures) : elles sont conservées et restituées à la réactivation.
 
 #### 5.4. Tests Répartition 13 Mois
 11. **Calcul sur 12 mois :** Classe A1 (21 700€) → 1 808€/mois
