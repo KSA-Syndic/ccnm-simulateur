@@ -44,8 +44,9 @@ export function initAppIntegration() {
     const urlParamsObj = new URLSearchParams(window.location.search);
     const agreement = loadAgreementFromURL(urlParamsObj);
 
-    // Page 2 : libellé "Travail de nuit" dynamique selon l'accord chargé (sans accord = CCN seul)
+    // Page 2 : libellés "Travail de nuit" dynamiques selon l'accord chargé (poste nuit + poste matin)
     const optionPosteNuit = document.getElementById('option-poste-nuit');
+    const optionPosteMatin = document.getElementById('option-poste-matin');
     if (optionPosteNuit) {
         if (agreement && agreement.majorations?.nuit?.posteNuit != null) {
             const pct = Math.round(agreement.majorations.nuit.posteNuit * 100);
@@ -53,6 +54,15 @@ export function initAppIntegration() {
             optionPosteNuit.textContent = `Poste de nuit (+15% CCN ; +${pct}% ${nom})`;
         } else {
             optionPosteNuit.textContent = 'Poste de nuit (+15%)';
+        }
+    }
+    if (optionPosteMatin) {
+        if (agreement && agreement.majorations?.nuit?.posteMatin != null) {
+            const pct = Math.round(agreement.majorations.nuit.posteMatin * 100);
+            const nom = getAccordNomCourt(agreement);
+            optionPosteMatin.textContent = `Poste matin/AM (+15% CCN ; +${pct}% ${nom})`;
+        } else {
+            optionPosteMatin.textContent = 'Poste matin/AM (+15%)';
         }
     }
 

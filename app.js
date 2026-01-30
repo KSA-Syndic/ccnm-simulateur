@@ -1146,15 +1146,18 @@ function updateTauxInfo() {
     const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
     const nomAccord = getAccordNomCourt(agreement) || 'accord';
 
-    // Taux de nuit
+    // Taux de nuit (poste nuit / poste matin : taux accord si présent, sinon CCN)
     if (tauxNuitInfo) {
         if (state.typeNuit !== 'aucun') {
-            if (state.accordActif && agreement) {
-                const taux = state.typeNuit === 'poste-nuit' ? '+20%' : '+15%';
-                tauxNuitInfo.textContent = `Taux ${nomAccord} : ${taux}`;
+            if (state.accordActif && agreement && agreement.majorations?.nuit) {
+                const nuit = agreement.majorations.nuit;
+                const tauxAccord = state.typeNuit === 'poste-nuit' ? nuit.posteNuit : nuit.posteMatin;
+                const pct = tauxAccord != null ? Math.round(tauxAccord * 100) : (state.typeNuit === 'poste-nuit' ? 20 : 15);
+                tauxNuitInfo.textContent = `Taux ${nomAccord} : +${pct}%`;
                 tauxNuitInfo.className = 'taux-applique accord';
             } else {
-                tauxNuitInfo.textContent = 'Taux CCN : +15%';
+                const pctCCN = state.typeNuit === 'poste-nuit' ? 15 : 15;
+                tauxNuitInfo.textContent = `Taux CCN : +${pctCCN}%`;
                 tauxNuitInfo.className = 'taux-applique';
             }
         } else {
@@ -1162,10 +1165,14 @@ function updateTauxInfo() {
         }
     }
 
-    // Taux dimanche
+    // Taux dimanche (taux accord si présent, sinon CCN +100%)
     if (tauxDimancheInfo) {
         if (state.travailDimanche) {
-            if (state.accordActif && agreement) {
+            if (state.accordActif && agreement && agreement.majorations?.dimanche != null) {
+                const pct = Math.round(agreement.majorations.dimanche * 100);
+                tauxDimancheInfo.textContent = `Taux ${nomAccord} : +${pct}%`;
+                tauxDimancheInfo.className = 'taux-applique accord';
+            } else if (state.accordActif && agreement) {
                 tauxDimancheInfo.textContent = `Taux ${nomAccord} : +50%`;
                 tauxDimancheInfo.className = 'taux-applique accord';
             } else {
