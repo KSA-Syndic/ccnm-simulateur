@@ -37,7 +37,7 @@ function buildContext(state, baseSMH, classe, agreement) {
 
 /**
  * Définition prime ancienneté accord (pour principe de faveur).
- * Entièrement dérivée de agreement.anciennete : seuil, plafond, barème, majoration forfait jours
+ * Entièrement dérivée de agreement.anciennete : seuil, plafond, barème
  * sont lus depuis l'instance d'accord (fichier accords/xxx.js). Modifier cet objet dans l'accord suffit.
  * @private
  */
@@ -172,9 +172,8 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
 
         if (rCCN.amount > 0 || rAccord.amount > 0) {
             if (rAccord.amount > rCCN.amount) {
-                const suffixForfait = rAccord.meta?.majorationForfaitJours ? ' × 1,30 forfait jours' : '';
                 details.push({
-                    label: `${defAncienneteAccord.label} (${formatMoney(baseSMH)} × ${rAccord.meta?.taux ?? 0}%${suffixForfait})`,
+                    label: `${defAncienneteAccord.label} (${formatMoney(baseSMH)} × ${rAccord.meta?.taux ?? 0}%)`,
                     value: rAccord.amount,
                     isPositive: true,
                     isAgreement: true,
@@ -217,9 +216,8 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
             const defAccord = buildAccordPrimeAncienneteDef(agreement);
             const rAccord = computePrime(defAccord, context);
             if (rAccord.amount > 0) {
-                const suffixForfait = rAccord.meta?.majorationForfaitJours ? ' × 1,30 forfait jours' : '';
                 details.push({
-                    label: rAccord.label + ` (${formatMoney(baseSMH)} × ${rAccord.meta?.taux ?? 0}%${suffixForfait})`,
+                    label: rAccord.label + ` (${formatMoney(baseSMH)} × ${rAccord.meta?.taux ?? 0}%)`,
                     value: rAccord.amount,
                     isPositive: true,
                     isAgreement: true,
@@ -246,9 +244,8 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
             const defAccord = buildAccordPrimeAncienneteDef(agreement);
             const rAccord = computePrime(defAccord, context);
             if (rAccord.amount > 0) {
-                const suffixForfait = rAccord.meta?.majorationForfaitJours ? ' × 1,30 forfait jours' : '';
                 details.push({
-                    label: rAccord.label + ` (${formatMoney(baseSMH)} × ${rAccord.meta?.taux ?? 0}%${suffixForfait})`,
+                    label: rAccord.label + ` (${formatMoney(baseSMH)} × ${rAccord.meta?.taux ?? 0}%)`,
                     value: rAccord.amount,
                     isPositive: true,
                     isAgreement: true,

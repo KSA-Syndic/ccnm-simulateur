@@ -94,7 +94,7 @@ Le simulateur doit gérer **3 profils distincts** avec des règles de paie radic
 ##### PROFIL B : CADRES CONFIRMÉS (Cl. 11 à 18, hors débutants)
 
 * **Salaire de base :** SMH de la classe (CONFIG.SMH).
-* **Prime d'ancienneté CCN :** 0 € (incluse dans le salaire de base des cadres — CCNM Art. 142). Un accord d'entreprise peut prévoir une prime d'ancienneté pour les cadres (base = rémunération de base ; CCNM Art. 139 : majoration +30 % sur le montant de la prime si forfait jours).
+* **Prime d'ancienneté CCN :** 0 € (incluse dans le salaire de base des cadres — CCNM Art. 142). Un accord d'entreprise peut prévoir une prime d'ancienneté pour les cadres (base = rémunération de base).
 * **Majorations forfaits (CCNM Art. 139) :** Forfait heures +15 %, forfait jours +30 % — **incluses dans l'assiette SMH** (CONFIG.FORFAITS).
 
 ##### PROFIL C : CADRES DÉBUTANTS (Classes F11 et F12)
@@ -124,7 +124,6 @@ Les accords d'entreprise sont **définis en dehors du PRD** (dossier `accords/`,
 **Méthodologie prime d'ancienneté et assiette SMH (convention / accord) :**
 * **Assiette SMH** (vérification du minimum conventionnel et mode « SMH seul » arriérés) = base SMH + majorations forfaits cadres si applicable. **Exclues** : primes d'ancienneté (CCN ou accord), prime de vacances, majorations nuit/dimanche/équipe, majorations pénibilité. La prime d'ancienneté **s'ajoute au minimum garanti** ; elle ne fait pas partie de l'assiette SMH.
 * **Base de calcul de la prime d'ancienneté :** CCN (non-cadres) = **valeur du point territorial** × taux (classe) × années (CCNM Art. 142). Accord (ex. Kuhn) = **rémunération de base brute** (dans l'app : SMH de la classe utilisé comme base) ; les dispositions accord se substituent aux art. 142/143 CCN.
-* **CCNM Art. 139 (majoration forfait jours) :** Pour un accord prévoyant une prime d'ancienneté pour les cadres, une **majoration de 30 %** s'applique **sur le montant de la prime** lorsque le salarié est en forfait jours. Ordre : 1) Calcul de la prime (base × taux barème accord) ; 2) Application de la majoration forfait jours sur ce montant si applicable.
 * **Principe de faveur (Art. L2254-2) :** Un accord **moins favorable ou illégal** par rapport à la convention n'est pas appliqué pour l'élément concerné ; la règle CCN prime.
 
 #### 3.4. Répartition sur 13 Mois
@@ -542,7 +541,7 @@ Le code est organisé en modules fonctionnels :
 6. **Cadre débutant :** F11, 4 ans d'expérience, forfait jours → 31 979€ × 1.30
 
 #### 5.3. Tests accord d'entreprise
-7. **Prime ancienneté accord :** Selon l'accord chargé (seuil, plafond, barème, majoration forfait jours si applicable).
+7. **Prime ancienneté accord :** Selon l'accord chargé (seuil, plafond, barème).
 8. **Cadres éligibles :** Si l'accord prévoit la prime d'ancienneté pour tous les statuts, les cadres en bénéficient.
 9. **Majorations accord :** Les taux (nuit, dimanche) sont ceux de l'accord si activé ; principe de faveur avec la CCN.
 10. **Primes accord :** Primes spécifiques (vacances, équipe, etc.) selon la définition de l'accord et les options cochées.

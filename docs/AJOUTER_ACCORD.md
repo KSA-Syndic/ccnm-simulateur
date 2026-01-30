@@ -17,7 +17,7 @@ Un accord doit respecter le schéma validé par `validateAgreement()` dans `Agre
 | `nomCourt` | string | Nom court (badges, tooltips) |
 | `url` | string | Lien vers le texte officiel |
 | `dateEffet` | string | Date d'entrée en vigueur (ISO `YYYY-MM-DD`) |
-| `anciennete` | object | **Prime d'ancienneté** : seuil, plafond, barème, `tousStatuts`, `baseCalcul`, `majorationForfaitJours` (optionnel). Entièrement piloté par l'instance d'accord : modifier cet objet dans le fichier (ex. `accords/KuhnAgreement.js`) suffit pour adapter le calcul. |
+| `anciennete` | object | **Prime d'ancienneté** : seuil, plafond, barème, `tousStatuts`, `baseCalcul`. Entièrement piloté par l'instance d'accord : modifier cet objet dans le fichier (ex. `accords/KuhnAgreement.js`) suffit pour adapter le calcul. |
 | `majorations` | object | `nuit` (posteNuit, posteMatin, plage…), `dimanche` (taux) |
 | `primes` | **array** | Liste de primes (voir ci-dessous) |
 | `repartition13Mois` | object | `actif`, `moisVersement` (1-12), `inclusDansSMH` |

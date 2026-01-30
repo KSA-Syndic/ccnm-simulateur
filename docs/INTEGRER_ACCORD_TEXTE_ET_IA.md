@@ -94,7 +94,7 @@ SCHÉMA OBLIGATOIRE DE L'ACCORD (à respecter strictement)
 - url (string, lien vers texte officiel)
 - dateEffet (string ISO 'YYYY-MM-DD')
 - dateSignature (string ISO, optionnel)
-- anciennete (object) : seuil (nombre d'années), plafond (nombre d'années), tousStatuts (booléen, true si cadres et non-cadres), baseCalcul ('salaire'), barème (objet { année: taux décimal }, ex. { 2: 0.02, 3: 0.03, ..., 25: 0.16 }), formule (string, optionnel)
+- anciennete (object) : seuil (nombre d'années), plafond (nombre d'années), tousStatuts (booléen, true si cadres et non-cadres), baseCalcul ('salaire'), barème (objet { année: taux décimal }, ex. { 2: 0.02, 3: 0.03, ..., 25: 0.16 })
 - majorations (object) : nuit (object avec posteNuit, posteMatin en décimal 0.20 = 20%, plageDebut, plageFin, seuilHeuresPosteNuit), dimanche (nombre décimal 0.50 = 50%)
 - primes (TABLEAU d'objets) : chaque prime doit avoir au minimum :
   - id (string, ex. 'primeEquipe', 'primeVacances', 'primeNoel')

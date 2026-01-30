@@ -54,37 +54,6 @@ describe('PrimeCalculator', () => {
             expect(r.meta?.annees).toBe(25);
         });
 
-        it('devrait appliquer la majoration forfait jours (+30 %) pour F11 forfait jours, 4 ans', () => {
-            const accordAvecForfait = {
-                ...accordKuhn,
-                anciennete: { ...accordKuhn.anciennete, majorationForfaitJours: 0.30 }
-            };
-            // Salaire de base annuel 42 000 € (ex. 3 500 € × 12), taux 4 % pour 4 ans
-            const r = computePrime(defAccordAnciennete, {
-                state: { anciennete: 4, forfait: 'jours' },
-                salaireBase: 42000,
-                agreement: accordAvecForfait
-            });
-            expect(r.amount).toBe(2184); // (42000 * 0.04) * 1.30 = 1680 * 1.30 = 2184
-            expect(r.meta?.taux).toBe(4);
-            expect(r.meta?.annees).toBe(4);
-            expect(r.meta?.majorationForfaitJours).toBe(true);
-        });
-
-        it('devrait ne pas appliquer la majoration forfait jours si forfait 35h', () => {
-            const accordAvecForfait = {
-                ...accordKuhn,
-                anciennete: { ...accordKuhn.anciennete, majorationForfaitJours: 0.30 }
-            };
-            const r = computePrime(defAccordAnciennete, {
-                state: { anciennete: 4, forfait: '35h' },
-                salaireBase: 42000,
-                agreement: accordAvecForfait
-            });
-            expect(r.amount).toBe(1680); // 42000 * 0.04, pas de × 1.30
-            expect(r.meta?.majorationForfaitJours).toBeFalsy();
-        });
-
         it('devrait retourner 0 si accord invalide', () => {
             const r = computePrime(defAccordAnciennete, { state: { anciennete: 5 }, salaireBase: 30000, agreement: null });
             expect(r.amount).toBe(0);

@@ -97,20 +97,11 @@ function computePrimeAccord(def, context) {
                 }
             }
         }
-        let montant = Math.round(salaireBase * taux);
-        // CCNM Art. 139 : majoration forfait jours (+30 %) sur le montant de la prime (accord prévoyant majorationForfaitJours)
-        const majorationForfait = agreement?.anciennete?.majorationForfaitJours;
-        const forfaitJours = (state.forfait === 'jours');
-        if (majorationForfait != null && majorationForfait > 0 && forfaitJours) {
-            montant = Math.round(montant * (1 + majorationForfait));
-        }
+        const montant = Math.round(salaireBase * taux);
         const meta = {
             taux: Math.round(taux * 10000) / 100,
             annees: anneesPrime
         };
-        if (forfaitJours && majorationForfait != null) {
-            meta.majorationForfaitJours = true;
-        }
         return {
             amount: montant,
             label: def.label,

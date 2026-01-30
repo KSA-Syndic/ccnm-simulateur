@@ -66,15 +66,13 @@
 /**
  * Configuration prime d'ancienneté de l'accord (source unique pour le calcul).
  * Toute modification dans le fichier d'accord (ex. accords/KuhnAgreement.js) est prise en compte :
- * seuil, plafond, barème, majoration forfait jours, etc.
+ * seuil, plafond, barème, etc.
  * @typedef {Object} AncienneteConfig
  * @property {number} seuil - Ancienneté minimale en années pour ouvrir droit (ex. 2 pour accord, 3 pour CCN)
  * @property {number} plafond - Ancienneté plafonnée pour le barème (ex. 25 ans)
  * @property {boolean} tousStatuts - true = Cadres et Non-cadres ; false = Non-cadres seuls (comportement CCN)
  * @property {'salaire'|'point'} baseCalcul - Base de calcul : 'salaire' = rémunération brute, 'point' = valeur du point
  * @property {Object|function} barème - Taux par année (ex. { 2: 0.02, 3: 0.03, ... }) ou fonction(annees) => taux
- * @property {number} [majorationForfaitJours] - Majoration du montant en forfait jours (ex. 0.30 = +30 %, CCNM Art. 139)
- * @property {string} [formule] - Formule affichée (optionnel)
  */
 
 /**
@@ -86,7 +84,7 @@
  * @property {string} url - URL vers le texte de l'accord (site officiel, PDF, etc.)
  * @property {string} dateEffet - Date d'entrée en vigueur (format ISO: 'YYYY-MM-DD')
  * @property {string} [dateSignature] - Date de signature (optionnel, format ISO)
- * @property {AncienneteConfig} anciennete - Configuration prime d'ancienneté ; entièrement pilotée par l'instance d'accord (calcul : seuil, plafond, barème, majoration forfait jours)
+ * @property {AncienneteConfig} anciennete - Configuration prime d'ancienneté ; entièrement pilotée par l'instance d'accord (calcul : seuil, plafond, barème)
  * @property {Object} majorations - Configuration majorations (calcul)
  * @property {PrimeDef[]} primes - Liste des primes (schéma générique) ; remplace primes.equipe / primes.vacances
  * @property {Object} repartition13Mois - Configuration répartition mensuelle (13e mois)
@@ -140,9 +138,7 @@ export const AGREEMENT_SCHEMA = {
         tousStatuts: 'boolean (requis) - true = Cadres + Non-cadres',
         baseCalcul: "'salaire' | 'point' (requis)",
         barème: 'object | function (requis) - taux par année',
-        majorationForfaitJours: 'number (optionnel) - ex. 0.30 pour +30 % en forfait jours',
-        tauxParClasse: 'object (optionnel si baseCalcul === "salaire")',
-        formule: 'string (optionnel)'
+        tauxParClasse: 'object (optionnel si baseCalcul === "salaire")'
     },
     majorations: {
         nuit: {

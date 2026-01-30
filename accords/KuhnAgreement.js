@@ -26,24 +26,21 @@ export const KuhnAgreement = {
     // ─────────────────────────────────────────────────────────────
     // PRIME D'ANCIENNETÉ (Art. 2.1 Accord)
     // Remplace articles 142, 143, 153-1 de la CCN
-    // Assiette : rémunération de base brute du salarié (Kuhn) ; CCNM Art. 142 : prime supporte les majorations durée du travail (forfait).
-    // CCNM Art. 139 : majoration forfait jours = +30 % sur le montant de la prime.
+    // Assiette : rémunération de base brute du salarié (Kuhn).
+    // L'accord Kuhn ne prévoit pas de majoration forfait jours sur la prime d'ancienneté.
     // ─────────────────────────────────────────────────────────────
     anciennete: {
         seuil: 2,           // Dès 2 ans (CCN: 3 ans)
         plafond: 25,        // Plafonné à 25 ans (CCN: 15 ans)
         tousStatuts: true,  // Cadres ET Non-Cadres (CCN: Non-Cadres seuls)
         baseCalcul: 'salaire', // Base = rémunération de base brute (salaire réel, pas valeur du point)
-        majorationForfaitJours: 0.30, // CCNM Art. 139 : +30 % sur le montant de la prime si forfait jours
-        sourceMajorationForfait: 'CCNM Art. 139',
         barème: {
             2: 0.02, 3: 0.03, 4: 0.04, 5: 0.05, 6: 0.06,
             7: 0.07, 8: 0.08, 9: 0.09, 10: 0.10, 11: 0.11,
             12: 0.12, 13: 0.13, 14: 0.14, 15: 0.15,
             // 16 à 24 ans : reste à 15%
             25: 0.16  // 16% à partir de 25 ans
-        },
-        formule: 'Prime = (Salaire de base brut × Taux%) × 1,30 si forfait jours'
+        }
     },
 
     // ─────────────────────────────────────────────────────────────
@@ -141,7 +138,7 @@ export const KuhnAgreement = {
             source: 'Accord Kuhn Art. 2.1',
             conditionAnciennete: { type: 'annees_revolues', annees: 2, description: '2 ans révolus' },
             dateCle: 'Mois suivant l\'anniversaire',
-            note: 'Assiette : rémunération de base brute. CCNM Art. 142 : majorations durée du travail (forfait). CCNM Art. 139 : +30 % sur le montant de la prime si forfait jours.'
+            note: 'Assiette : rémunération de base brute.'
         },
         {
             id: 'garantie13eMois',

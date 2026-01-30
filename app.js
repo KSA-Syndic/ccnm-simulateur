@@ -947,8 +947,22 @@ function initControls() {
     }
 
     // Hydrater accordInputs à partir de l'accord (si chargé depuis URL) — pas de clés hardcodées
-    if (window.AgreementHelpers?.hydrateAccordInputs && window.AgreementLoader?.getActiveAgreement?.()) {
-        window.AgreementHelpers.hydrateAccordInputs(window.AgreementLoader.getActiveAgreement(), state);
+    const agreementLoaded = window.AgreementLoader?.getActiveAgreement?.();
+    if (window.AgreementHelpers?.hydrateAccordInputs && agreementLoaded) {
+        window.AgreementHelpers.hydrateAccordInputs(agreementLoaded, state);
+    }
+    // Sélectionner l'accord par défaut quand un accord est chargé (ex. depuis l'URL)
+    if (agreementLoaded) {
+        state.accordActif = true;
+        if (accordCheckbox) accordCheckbox.checked = true;
+        if (accordOptions) accordOptions.classList.remove('hidden');
+        if (typeof updateMonthsToggleFromAccord === 'function') updateMonthsToggleFromAccord();
+        updateConditionsTravailDisplay();
+        updateTauxInfo();
+        updateAll();
+        if (typeof window.updateHeaderAgreement === 'function') {
+            window.updateHeaderAgreement(agreementLoaded);
+        }
     }
 
     // Options accord : délégation sur #accord-options (pas d'id de prime spécifique)
