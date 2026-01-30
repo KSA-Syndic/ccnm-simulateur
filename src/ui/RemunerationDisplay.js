@@ -8,6 +8,7 @@
 
 import { formatMoney } from '../utils/formatters.js';
 import { getActiveAgreement } from '../agreements/AgreementLoader.js';
+import { LABELS, CONVENTION_URL } from './Labels.js';
 
 /**
  * Mettre à jour l'affichage de la rémunération
@@ -45,9 +46,6 @@ export function updateRemunerationDisplay(remuneration, nbMois = 12) {
     }
 }
 
-const HEADER_SUBTITLE_BASE = 'Classification et Rémunération';
-/** Tooltip du header : phrase simple et accessible (sans jargon technique). */
-const HEADER_INFO_BASE_TOOLTIP = "Ce simulateur vous aide à estimer votre niveau de classification et à vérifier que votre salaire respecte au minimum les barèmes de la convention collective de la métallurgie.<br><br>📋 <a href='https://uimm.lafabriquedelavenir.fr/textes-conventionnels-metallurgie/' target='_blank' rel='noopener'>Voir les textes de la convention</a>";
 
 /**
  * Met à jour le header : sous-titre (avec accord éventuel) et un seul tooltip sur l’icône ?.
@@ -59,11 +57,12 @@ export function updateHeaderAgreement(agreement) {
 
     if (subtitleEl) {
         const nomAccord = agreement ? (agreement.nomCourt || agreement.nom) : '';
-        subtitleEl.textContent = nomAccord ? `${HEADER_SUBTITLE_BASE} · ${nomAccord}` : HEADER_SUBTITLE_BASE;
+        subtitleEl.textContent = nomAccord ? `${LABELS.headerSubtitle} · ${nomAccord}` : LABELS.headerSubtitle;
     }
 
     if (headerInfoIcon) {
-        let tooltipContent = HEADER_INFO_BASE_TOOLTIP;
+        let tooltipContent = LABELS.headerInfoTooltip +
+            `<br><br>📋 <a href="${CONVENTION_URL}" target="_blank" rel="noopener">${LABELS.headerInfoTooltipLinkText}</a>`;
         if (agreement) {
             const nom = agreement.nomCourt || agreement.nom;
             const labels = agreement.labels || {};

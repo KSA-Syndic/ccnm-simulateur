@@ -8,15 +8,20 @@
 
 import { formatAcronym, resetAcronymsRegistry } from '../utils/textHelpers.js';
 
+/** URL des textes conventionnels (source officielle UIMM). Centraliser ici pour tooltip header et autres liens. */
+export const CONVENTION_URL = 'https://uimm.lafabriquedelavenir.fr/textes-conventionnels-metallurgie/';
+
 /**
  * Labels de l'interface (phrases courtes et justes)
  */
+
 export const LABELS = {
     // Header
     headerTitle: 'Simulateur Métallurgie 2024',
     headerSubtitle: 'Classification et Rémunération',
-    headerInfoTooltip: 'Ce simulateur vous aide à estimer votre niveau de classification et à vérifier que votre salaire respecte au minimum les barèmes de la convention collective de la métallurgie.',
-    
+    headerInfoTooltip: 'Ce simulateur vous aide à estimer votre niveau de classification et à vérifier que votre salaire respecte au minimum les barèmes de la convention collective de la métallurgie (CCN).',
+    headerInfoTooltipLinkText: 'Voir les textes de la convention',
+
     // Steps
     step1Title: 'Classification',
     step2Title: 'Situation',

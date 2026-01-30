@@ -236,7 +236,7 @@
                             <label for="type-nuit">Travail de nuit</label>
                             <select id="type-nuit" class="book-select">
                                 <option value="aucun">Aucun</option>
-                                <option value="poste-nuit">Poste de nuit (+15% CCN ; +20% si accord d'entreprise)</option>
+                                <option value="poste-nuit" id="option-poste-nuit">Poste de nuit (+15% CCN)</option>
                                 <option value="poste-matin">Poste matin/AM (+15%)</option>
                             </select>
                             <div class="sub-field hidden" id="heures-nuit-field">
@@ -304,12 +304,12 @@
                 <div class="result-card">
                     <div class="result-main">
                         <span class="result-value" id="result-smh">21 500 €</span>
-                        <span class="result-label">par an</span>
+                        <span class="result-label" id="result-label-annuel">par an</span>
                     </div>
 
                     <div class="result-monthly">
                         <span class="result-value-secondary" id="result-mensuel">1 792 €</span>
-                        <span class="result-label">par mois</span>
+                        <span class="result-label" id="result-label-mensuel">par mois</span>
                         <div class="months-toggle">
                             <button type="button" class="month-btn active" data-months="12">12 mois</button>
                             <button type="button" class="month-btn" data-months="13">13 mois</button>

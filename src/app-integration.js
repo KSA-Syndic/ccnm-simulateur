@@ -11,6 +11,7 @@ import { loadAgreementFromURL, getActiveAgreement } from './agreements/Agreement
 import { getPrimes, getPrimeById, getPrimeValue, hydrateAccordInputs } from './agreements/AgreementInterface.js';
 import { extractURLParams, applyIframeStyles, isIframeMode } from './core/URLParams.js';
 import { updateHeaderAgreement } from './ui/RemunerationDisplay.js';
+import { LABELS } from './ui/Labels.js';
 
 /** Nom court pour affichage badge accord (aligné avec app.js). */
 function getAccordNomCourt(agreement) {
@@ -42,7 +43,19 @@ export function initAppIntegration() {
     // Charger l'accord depuis l'URL si présent
     const urlParamsObj = new URLSearchParams(window.location.search);
     const agreement = loadAgreementFromURL(urlParamsObj);
-    
+
+    // Page 2 : libellé "Travail de nuit" dynamique selon l'accord chargé (sans accord = CCN seul)
+    const optionPosteNuit = document.getElementById('option-poste-nuit');
+    if (optionPosteNuit) {
+        if (agreement && agreement.majorations?.nuit?.posteNuit != null) {
+            const pct = Math.round(agreement.majorations.nuit.posteNuit * 100);
+            const nom = getAccordNomCourt(agreement);
+            optionPosteNuit.textContent = `Poste de nuit (+15% CCN ; +${pct}% ${nom})`;
+        } else {
+            optionPosteNuit.textContent = 'Poste de nuit (+15%)';
+        }
+    }
+
     // Page 3 : n'afficher l'option "Appliquer l'accord d'entreprise" que si un accord a été chargé depuis l'URL
     const resultAccordBlock = document.getElementById('result-accord-options-block');
     const accordOptions = document.getElementById('accord-options');
@@ -103,7 +116,16 @@ export function initAppIntegration() {
     
     // Mettre à jour le header avec l'accord (badge + tooltip info)
     updateHeaderAgreement(agreement);
-    
+
+    // Hydrater les libellés depuis LABELS (éviter doublons avec index.html)
+    const resultLabelAnnuel = document.getElementById('result-label-annuel');
+    const resultLabelMensuel = document.getElementById('result-label-mensuel');
+    if (resultLabelAnnuel) resultLabelAnnuel.textContent = LABELS.resultatAnnuel;
+    if (resultLabelMensuel) resultLabelMensuel.textContent = LABELS.resultatMensuel;
+
+    // Exposer LABELS pour app.js et autres scripts non-module
+    window.LABELS = LABELS;
+
     // Exposer les fonctions pour compatibilité avec app.js existant
     window.AgreementLoader = {
         getActiveAgreement,
