@@ -9,6 +9,8 @@
 
 import { calculateAnnualRemuneration, getMontantAnnuelSMHSeul } from '../remuneration/RemunerationCalculator.js';
 import { getMontantPrimesFixesAnnuel, getMontantPrimesVerseesCeMois } from '../remuneration/PrimesFixesHelper.js';
+import { getWorkingDaysBetween } from '../utils/dateUtils.js';
+import { CONFIG } from '../core/config.js';
 
 /**
  * Calculer le salaire dû pour un mois donné avec tous les paramètres
@@ -119,6 +121,18 @@ export function calculerArreteesMoisParMois(params) {
                 }
                 const primesCeMois = agreement ? getMontantPrimesVerseesCeMois(stateMois, agreement, month) : 0;
                 if (primesCeMois > 0) salaireMensuelDu += primesCeMois;
+            }
+
+            // Proratisation premier mois (CCNM Art. 139, 103.5.1, 103.5.2) : salaire au prorata des jours ouvrés
+            const estPremierMois = currentDate.getFullYear() === dateEmbauche.getFullYear() &&
+                currentDate.getMonth() === dateEmbauche.getMonth();
+            if (estPremierMois) {
+                const dernierJourMois = new Date(year, month, 0);
+                const joursOuvres = getWorkingDaysBetween(dateEmbauche, dernierJourMois);
+                const joursRef = CONFIG.JOURS_OUVRES_CCN ?? 22;
+                if (joursRef > 0 && joursOuvres < joursRef) {
+                    salaireMensuelDu = salaireMensuelDu * (joursOuvres / joursRef);
+                }
             }
             
             // Le salaire réel saisi est en mensuel brut

@@ -750,6 +750,7 @@ body.iframe-mode .simulator-container.iframe-container {
     transform: translateX(-50%);
     background: white;
     padding: 20px;
+    padding-top: 36px;
     border-radius: var(--border-radius);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     border: 2px solid var(--color-link);
@@ -757,6 +758,55 @@ body.iframe-mode .simulator-container.iframe-container {
     min-width: 280px;
     transition: all 0.3s ease;
     opacity: 1;
+}
+
+/* Bouton fermer (mobile + desktop) */
+.floating-block-close {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0;
+    border: none;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    font-size: 1.5rem;
+    line-height: 1;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+.floating-block-close:hover,
+.floating-block-close:focus {
+    background: var(--gray-200);
+    color: var(--body-font-color);
+}
+@media (pointer: fine) {
+    .floating-block-close {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+        min-height: 28px;
+        font-size: 1.25rem;
+    }
+}
+@media (max-width: 768px) {
+    .floating-block-close {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        min-height: 44px;
+        top: 6px;
+        right: 6px;
+        font-size: 1.75rem;
+    }
 }
 
 .floating-input-block.animating {
@@ -840,6 +890,25 @@ body.iframe-mode .simulator-container.iframe-container {
     color: var(--gray-600);
     font-size: 0.9rem;
     margin-top: 15px;
+}
+
+.curve-progress--reopen {
+    cursor: pointer;
+    color: var(--color-link);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.curve-progress--reopen:hover {
+    color: var(--color-link-hover, #0550ae);
+}
+.curve-progress-reopen-hint {
+    display: none;
+    margin-left: 0.35em;
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+.curve-progress--reopen .curve-progress-reopen-hint {
+    display: inline;
 }
 
 /* Frise chronologique - Style calendrier */

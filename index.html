@@ -477,6 +477,7 @@
                         <canvas id="salary-curve-chart"></canvas>
                         <!-- Bloc flottant pour saisie -->
                         <div class="floating-input-block" id="floating-input-block">
+                            <button type="button" class="floating-block-close" id="floating-block-close" aria-label="Fermer la saisie">×</button>
                             <div class="floating-label">
                                 <span id="floating-period-label">...</span>
                                 <span class="tooltip-trigger" id="floating-info-icon" data-tippy-content="Salaire mensuel brut : indiquez le « Total brut » de votre fiche de paie pour ce mois.">?</span>
@@ -501,9 +502,10 @@
                         </div>
                     </div>
                     
-                    <!-- Progression -->
-                    <div class="curve-progress">
+                    <!-- Progression (cliquable pour rouvrir la saisie si fermée) -->
+                    <div class="curve-progress" id="curve-progress" role="button" tabindex="-1" aria-label="Progression des mois saisis">
                         <span id="curve-progress-text">0 mois saisis</span>
+                        <span class="curve-progress-reopen-hint" id="curve-progress-reopen-hint" aria-hidden="true"></span>
                     </div>
                 </div>
                 

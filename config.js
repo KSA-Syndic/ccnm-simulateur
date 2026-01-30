@@ -158,6 +158,10 @@ const CONFIG = {
         heuresSup50: 0.50   // +50% (HS suivantes) – inclus assiette SMH
     },
 
+    // Proratisation entrée en cours de mois (CCNM Art. 139, 103.5.1, 103.5.2)
+    // Valeur d'un jour = 1/22 de la rémunération mensuelle ; demi-journée = 1/44
+    JOURS_OUVRES_CCN: 22,
+
     // Accords d'entreprise : définis dans le dossier accords/ et chargés via AgreementLoader/AgreementRegistry
 
     // Définitions des 6 critères classants

@@ -277,6 +277,31 @@ function initWizard() {
         }
     });
 
+    // Bouton fermer du bloc flottant (mobile + desktop)
+    const floatingBlockClose = document.getElementById('floating-block-close');
+    if (floatingBlockClose) {
+        floatingBlockClose.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dismissFloatingBlockFromGraph();
+        });
+    }
+
+    // Clic / touche sur la progression pour rouvrir la saisie quand le bloc est fermé (ex. après Échap sans avoir saisi)
+    const curveProgress = document.getElementById('curve-progress');
+    if (curveProgress) {
+        curveProgress.addEventListener('click', () => {
+            if (!curveProgress.classList.contains('curve-progress--reopen')) return;
+            reopenFloatingBlockFromProgress();
+        });
+        curveProgress.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            if (!curveProgress.classList.contains('curve-progress--reopen')) return;
+            e.preventDefault();
+            reopenFloatingBlockFromProgress();
+        });
+    }
+
     // Onglets guide juridique - Initialiser après le chargement du contenu
     function initLegalTabs() {
         const tabBtns = document.querySelectorAll('.tab-btn');
@@ -2559,6 +2584,26 @@ let periodsData = [];
 /** true quand l'utilisateur a « fermé » le bloc flottant en recliquant sur le point déjà sélectionné (ex. dernière date) */
 let floatingBlockDismissed = false;
 
+/**
+ * Compte les jours ouvrés (lun.–ven.) entre deux dates incluses. CCN Art. 103.5.1 / 103.5.2.
+ * @param {Date} start - Début (inclus)
+ * @param {Date} end - Fin (inclus)
+ * @returns {number}
+ */
+function getWorkingDaysBetween(start, end) {
+    const s = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const e = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    if (s.getTime() > e.getTime()) return 0;
+    let count = 0;
+    const d = new Date(s);
+    while (d.getTime() <= e.getTime()) {
+        const day = d.getDay();
+        if (day >= 1 && day <= 5) count++;
+        d.setDate(d.getDate() + 1);
+    }
+    return count;
+}
+
 function initTimeline() {
     const container = document.getElementById('salary-curve-container');
     if (!container) return;
@@ -2649,6 +2694,18 @@ function initTimeline() {
             const primesCeMois = (typeof window.getMontantPrimesVerseesCeMoisFromModules === 'function')
                 ? window.getMontantPrimesVerseesCeMoisFromModules(stateMois, mois) : 0;
             if (primesCeMois > 0) salaireMensuelDu += primesCeMois;
+        }
+
+        // Proratisation premier mois (CCNM Art. 139, 103.5.1, 103.5.2) : salaire au prorata des jours ouvrés
+        const estPremierMois = currentDate.getFullYear() === dateEmbaucheObj.getFullYear() &&
+            currentDate.getMonth() === dateEmbaucheObj.getMonth();
+        if (estPremierMois) {
+            const dernierJourMois = new Date(year, month, 0);
+            const joursOuvres = getWorkingDaysBetween(dateEmbaucheObj, dernierJourMois);
+            const joursRef = (typeof CONFIG !== 'undefined' && CONFIG.JOURS_OUVRES_CCN) ? CONFIG.JOURS_OUVRES_CCN : 22;
+            if (joursRef > 0 && joursOuvres < joursRef) {
+                salaireMensuelDu = salaireMensuelDu * (joursOuvres / joursRef);
+            }
         }
 
         periodsData.push({
@@ -2988,6 +3045,7 @@ function updateCurveControls(options) {
         }
     }
 
+    updateCurveProgressReopenState();
 }
 
 /**
@@ -3009,7 +3067,7 @@ function positionFloatingBlock(periodIndex) {
 
 /**
  * Masquer le bloc flottant et marquer comme fermé (une seule source de vérité pour le masquage).
- * Utilisé à la fermeture manuelle (Échap, clic sur le point) et à la fin de la dernière saisie.
+ * Utilisé à la fermeture manuelle (Échap, bouton fermer, clic sur le point) et à la fin de la dernière saisie.
  */
 function hideFloatingBlock() {
     floatingBlockDismissed = true;
@@ -3019,11 +3077,49 @@ function hideFloatingBlock() {
         block.style.visibility = 'hidden';
         block.style.pointerEvents = 'none';
     }
+    updateCurveProgressReopenState();
 }
 
 /**
- * Fermer le popup du graphique (bloc flottant) — Échap ou clic sur le point déjà sélectionné.
- * Pour rouvrir : cliquer sur un point du graphique (intuitif, sans instruction).
+ * Met à jour l'affichage « cliquer pour rouvrir la saisie » sous le graphique quand le bloc est fermé et qu'il reste des mois à saisir.
+ */
+function updateCurveProgressReopenState() {
+    const progressWrap = document.getElementById('curve-progress');
+    const hintEl = document.getElementById('curve-progress-reopen-hint');
+    if (!progressWrap) return;
+    const allFilled = periodsData.length > 0 && !periodsData.some(p => !p.salaireReel);
+    const canReopen = floatingBlockDismissed && !allFilled && periodsData.length > 0;
+    if (canReopen) {
+        progressWrap.classList.add('curve-progress--reopen');
+        progressWrap.setAttribute('tabindex', '0');
+        progressWrap.setAttribute('aria-label', `${periodsData.filter(p => p.salaireReel).length} sur ${periodsData.length} mois saisis. Cliquer pour rouvrir la saisie.`);
+        if (hintEl) hintEl.textContent = '— cliquer pour rouvrir la saisie';
+    } else {
+        progressWrap.classList.remove('curve-progress--reopen');
+        progressWrap.setAttribute('tabindex', '-1');
+        const saisis = periodsData.filter(p => p.salaireReel).length;
+        progressWrap.setAttribute('aria-label', `${saisis} sur ${periodsData.length} mois saisis`);
+        if (hintEl) hintEl.textContent = '';
+    }
+}
+
+/**
+ * Rouvrir le bloc de saisie sur le premier mois non saisi (ou le courant). Appelé au clic sur la progression quand le bloc est fermé.
+ */
+function reopenFloatingBlockFromProgress() {
+    if (periodsData.length === 0) return;
+    const allFilled = !periodsData.some(p => !p.salaireReel);
+    if (allFilled) return;
+    floatingBlockDismissed = false;
+    const firstMissing = periodsData.findIndex(p => !p.salaireReel);
+    currentPeriodIndex = firstMissing >= 0 ? firstMissing : 0;
+    showFloatingBlockForPeriodIndex(currentPeriodIndex);
+    updateCurveProgressReopenState();
+}
+
+/**
+ * Fermer le popup du graphique (bloc flottant) — Échap, bouton fermer ou clic sur le point déjà sélectionné.
+ * Pour rouvrir : cliquer sur un point du graphique ou sur la ligne « X / N mois saisis ».
  */
 function dismissFloatingBlockFromGraph() {
     hideFloatingBlock();
