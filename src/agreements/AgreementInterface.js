@@ -92,7 +92,6 @@
  * @property {Object} repartition13Mois - Configuration répartition mensuelle (13e mois)
  * @property {ElementDroit[]} [elements] - Liste des éléments de droit (primes, majorations, garanties) pour affichage dynamique
  * @property {string[]} [pointsVigilance] - Points de vigilance (ex: suspension contrat, calcul ancienneté)
- * @property {Array<{date: string, points: string[]}>} [exemplesRecrutement] - Exemples "Si vous êtes recruté le..." (date, points)
  * @property {Object} [conges] - Congés d'ancienneté (optionnel, informatif)
  * @property {Object} labels - Labels et métadonnées UI
  * @property {Object} metadata - Métadonnées techniques
@@ -178,8 +177,7 @@ export const AGREEMENT_SCHEMA = {
         entreprise: 'string (requis)'
     },
     elements: 'ElementDroit[] (optionnel) - liste pour affichage dynamique',
-    pointsVigilance: 'string[] (optionnel)',
-    exemplesRecrutement: 'Array<{date, points}> (optionnel)'
+    pointsVigilance: 'string[] (optionnel)'
 };
 
 /**

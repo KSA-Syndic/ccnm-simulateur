@@ -161,24 +161,6 @@ export const KuhnAgreement = {
         }
     ],
 
-    exemplesRecrutement: [
-        {
-            date: '1er janvier 2024',
-            points: [
-                'Prime de Vacances : Pas en juillet 2024 (pas 1 an au 1er juin 2024). Premier versement juillet 2025.',
-                'Prime d\'Ancienneté : Début en février 2026 (mois suivant 2 ans d\'ancienneté).',
-                'Garantie SMH : Minimum annuel garanti calculé au prorata du temps de présence sur l\'année 2024.'
-            ]
-        },
-        {
-            date: '1er mai 2023',
-            points: [
-                'Prime de Vacances : Perçue dès juillet 2024 (1 an révolu au 1er juin 2024).',
-                'Prime d\'Ancienneté : Déclenchement en juin 2025 (2 ans d\'ancienneté).'
-            ]
-        }
-    ],
-
     // ─────────────────────────────────────────────────────────────
     // LABELS ET MÉTADONNÉES UI
     // ─────────────────────────────────────────────────────────────
