@@ -2400,15 +2400,13 @@ function updateArreteesUiFromDateEmbauche() {
     const warning = document.getElementById('arretees-warning');
     if (!input || !container) return;
     const val = (input.value || '').trim();
-    const isValid = val && input.validity && input.validity.valid;
+    const dateObj = val ? new Date(val) : null;
+    const isValid = dateObj && !isNaN(dateObj.getTime());
     if (isValid) {
         const prevVal = state.dateEmbaucheArretees;
         state.dateEmbaucheArretees = val;
         if (prevVal !== val) invalidateArreteesDataFinal();
-        // Synchroniser l'ancienneté (page 2) avec la date d'embauche
-        const dateEmbaucheObj = new Date(val);
-        const today = new Date();
-        const anneesDecimal = (today.getTime() - dateEmbaucheObj.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+        const anneesDecimal = (Date.now() - dateObj.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
         const ancienneteAnnee = Math.max(0, Math.floor(anneesDecimal));
         if (state.anciennete !== ancienneteAnnee) {
             state.anciennete = ancienneteAnnee;
@@ -2426,7 +2424,7 @@ function updateArreteesUiFromDateEmbauche() {
         if (stickyWrap) stickyWrap.classList.remove('hidden');
         if (warning) warning.classList.add('hidden');
         initTimeline();
-    } else {
+    } else if (!val) {
         container.classList.add('hidden');
         if (stickyWrap) stickyWrap.classList.add('hidden');
     }
@@ -2452,10 +2450,8 @@ function initArreteesNew() {
             dateEmbaucheInput.value = dateEmbauche.toISOString().split('T')[0];
         }
         
-        // Valide dès que le champ est complet (sans attendre le blur) : 'input' et 'change'
-        dateEmbaucheInput.addEventListener('input', updateArreteesUiFromDateEmbauche);
+        // Un seul événement 'change' : évite les mises à jour pendant la saisie (mois/jour) qui faisaient disparaître le graphique
         dateEmbaucheInput.addEventListener('change', updateArreteesUiFromDateEmbauche);
-        // Appliquer l'état initial (afficher bloc + bouton si date déjà complète ou pré-remplie)
         updateArreteesUiFromDateEmbauche();
     }
 
