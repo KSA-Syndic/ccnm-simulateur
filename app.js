@@ -801,36 +801,28 @@ function initControls() {
         updateAll();
     });
 
-    // Variable pour suivre si on vient de forcer une valeur
-    let experienceProWasForced = false;
-
+    // Saisie libre pendant la frappe (ex. taper "14" sans que le "1" soit bloqué sur mobile)
     experienceProInput.addEventListener('input', (e) => {
-        let value = parseInt(e.target.value) || 0;
-        const attemptedValue = value;
-        
-        // L'expérience pro ne peut pas être inférieure à l'ancienneté
-        if (value < state.anciennete && state.anciennete > 0) {
-            // Afficher le message d'avertissement
-            experienceProWasForced = true;
-            value = state.anciennete;
-            experienceProInput.value = value;
-            // Mettre à jour la validation pour afficher le message
-            updateExperienceProValidation(attemptedValue);
-        } else {
-            experienceProWasForced = false;
-            updateExperienceProValidation();
-        }
-        
-        state.experiencePro = value;
+        const value = parseInt(e.target.value, 10);
+        state.experiencePro = Number.isNaN(value) ? 0 : Math.max(0, value);
+        updateExperienceProValidation();
         updateAll();
     });
 
-    // Au blur, masquer le message si la valeur est correcte
+    // Contrainte (exp. pro >= ancienneté) appliquée uniquement au blur
     experienceProInput.addEventListener('blur', () => {
-        if (state.experiencePro >= state.anciennete) {
-            experienceProWasForced = false;
+        const raw = parseInt(experienceProInput.value, 10) || 0;
+        const minVal = state.anciennete;
+        if (minVal > 0 && raw < minVal) {
+            const attempted = raw;
+            state.experiencePro = minVal;
+            experienceProInput.value = minVal;
+            updateExperienceProValidation(attempted);
+        } else {
+            state.experiencePro = raw;
             updateExperienceProValidation();
         }
+        updateAll();
     });
 
     // Validation initiale
@@ -989,35 +981,27 @@ function initControls() {
 }
 
 /**
- * Mettre à jour la validation du champ expérience professionnelle
- * @param {number} attemptedValue - Valeur que l'utilisateur a tenté de saisir (optionnel)
+ * Mettre à jour la validation du champ expérience professionnelle.
+ * Pendant la saisie (input), on n'affiche pas d'erreur pour ne pas bloquer la frappe (ex. taper "14").
+ * Au blur, si la valeur a été corrigée, on affiche le message de correction.
+ * @param {number} [attemptedValue] - Valeur saisie avant correction (passée au blur uniquement)
  */
 function updateExperienceProValidation(attemptedValue = null) {
     const experienceProInput = document.getElementById('experience-pro');
     const experienceProGroup = experienceProInput?.closest('.form-group');
     if (!experienceProGroup) return;
 
-    // Retirer l'ancien message s'il existe
     const existingError = experienceProGroup.querySelector('.field-error');
-    if (existingError) {
-        existingError.remove();
-    }
+    if (existingError) existingError.remove();
 
-    // Vérifier si l'expérience est inférieure à l'ancienneté
-    const experienceValue = parseInt(experienceProInput.value) || 0;
-    
-    // Afficher le message si l'utilisateur a tenté de mettre une valeur inférieure
-    if (attemptedValue !== null && attemptedValue < state.anciennete && state.anciennete > 0) {
+    const experienceValue = parseInt(experienceProInput.value, 10) || 0;
+    const minAnciennete = state.anciennete;
+
+    // Message uniquement après correction au blur (pas pendant la frappe, pour ne pas gêner la saisie ex. "14")
+    if (typeof attemptedValue === 'number' && attemptedValue < minAnciennete && minAnciennete > 0) {
         const errorMsg = document.createElement('div');
         errorMsg.className = 'field-error';
-        errorMsg.textContent = `⚠️ La valeur saisie (${attemptedValue} ans) a été corrigée. L'expérience professionnelle ne peut pas être inférieure à l'ancienneté dans l'entreprise (${state.anciennete} ans minimum).`;
-        experienceProGroup.appendChild(errorMsg);
-        experienceProInput.classList.add('input-error');
-    } else if (experienceValue < state.anciennete && state.anciennete > 0) {
-        // Cas où la valeur est toujours incorrecte (ne devrait pas arriver normalement)
-        const errorMsg = document.createElement('div');
-        errorMsg.className = 'field-error';
-        errorMsg.textContent = `L'expérience professionnelle ne peut pas être inférieure à l'ancienneté dans l'entreprise (${state.anciennete} ans minimum).`;
+        errorMsg.textContent = `⚠️ La valeur saisie (${attemptedValue} ans) a été corrigée. L'expérience professionnelle ne peut pas être inférieure à l'ancienneté dans l'entreprise (${minAnciennete} ans minimum).`;
         experienceProGroup.appendChild(errorMsg);
         experienceProInput.classList.add('input-error');
     } else {
