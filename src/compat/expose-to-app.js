@@ -14,6 +14,7 @@ import { calculateSalaireDuPourMois } from '../arretees/ArreteesCalculator.js';
 import { genererPDFArretees } from '../arretees/PDFGenerator.js';
 import { getActiveAgreement } from '../agreements/AgreementLoader.js';
 import { state as moduleState } from '../core/state.js';
+import { computeSalaireProrataEntree } from '../utils/dateUtils.js';
 
 /**
  * Synchroniser le state de app.js vers le state des modules
@@ -143,4 +144,16 @@ window.getMontantPrimesVerseesCeMoisFromModules = function(appState, mois) {
     const agreement = getActiveAgreement();
     if (!agreement || !appState.accordActif || !mois || mois < 1 || mois > 12) return 0;
     return getMontantPrimesVerseesCeMois(moduleState, agreement, mois);
+};
+
+/**
+ * Salaire mensuel au prorata pour entrée en cours de mois (CCN Art. 139, 103.5.1, 103.5.2).
+ * Utilise la valeur JOURS_OUVRES_CCN de la config.
+ * @param {number} salaireMensuelComplet - Salaire mensuel brut complet
+ * @param {Date} dateDebutTravail - Premier jour travaillé (ex. date d'embauche)
+ * @param {Date} dernierJourMois - Dernier jour du mois
+ * @returns {number}
+ */
+window.computeSalaireProrataEntreeFromModules = function(salaireMensuelComplet, dateDebutTravail, dernierJourMois) {
+    return computeSalaireProrataEntree(salaireMensuelComplet, dateDebutTravail, dernierJourMois);
 };

@@ -2584,26 +2584,6 @@ let periodsData = [];
 /** true quand l'utilisateur a « fermé » le bloc flottant en recliquant sur le point déjà sélectionné (ex. dernière date) */
 let floatingBlockDismissed = false;
 
-/**
- * Compte les jours ouvrés (lun.–ven.) entre deux dates incluses. CCN Art. 103.5.1 / 103.5.2.
- * @param {Date} start - Début (inclus)
- * @param {Date} end - Fin (inclus)
- * @returns {number}
- */
-function getWorkingDaysBetween(start, end) {
-    const s = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-    const e = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-    if (s.getTime() > e.getTime()) return 0;
-    let count = 0;
-    const d = new Date(s);
-    while (d.getTime() <= e.getTime()) {
-        const day = d.getDay();
-        if (day >= 1 && day <= 5) count++;
-        d.setDate(d.getDate() + 1);
-    }
-    return count;
-}
-
 function initTimeline() {
     const container = document.getElementById('salary-curve-container');
     if (!container) return;
@@ -2696,16 +2676,12 @@ function initTimeline() {
             if (primesCeMois > 0) salaireMensuelDu += primesCeMois;
         }
 
-        // Proratisation premier mois (CCNM Art. 139, 103.5.1, 103.5.2) : salaire au prorata des jours ouvrés
+        // Proratisation premier mois (CCNM Art. 139, 103.5.1, 103.5.2) : salaire au prorata des jours ouvrés (config CCN, dateUtils)
         const estPremierMois = currentDate.getFullYear() === dateEmbaucheObj.getFullYear() &&
             currentDate.getMonth() === dateEmbaucheObj.getMonth();
-        if (estPremierMois) {
+        if (estPremierMois && typeof window.computeSalaireProrataEntreeFromModules === 'function') {
             const dernierJourMois = new Date(year, month, 0);
-            const joursOuvres = getWorkingDaysBetween(dateEmbaucheObj, dernierJourMois);
-            const joursRef = (typeof CONFIG !== 'undefined' && CONFIG.JOURS_OUVRES_CCN) ? CONFIG.JOURS_OUVRES_CCN : 22;
-            if (joursRef > 0 && joursOuvres < joursRef) {
-                salaireMensuelDu = salaireMensuelDu * (joursOuvres / joursRef);
-            }
+            salaireMensuelDu = window.computeSalaireProrataEntreeFromModules(salaireMensuelDu, dateEmbaucheObj, dernierJourMois);
         }
 
         periodsData.push({
