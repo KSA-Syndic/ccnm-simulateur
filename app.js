@@ -318,6 +318,26 @@ function initWizard() {
 }
 
 /**
+ * Réafficher le bloc flottant pour un mois donné (après animation de fermeture).
+ */
+function showFloatingBlockForPeriodIndex(index) {
+    const floatingBlock = document.getElementById('floating-input-block');
+    if (!floatingBlock) return;
+    currentPeriodIndex = index;
+    floatingBlock.classList.remove('floating-block-hidden');
+    floatingBlock.style.visibility = '';
+    floatingBlock.style.pointerEvents = '';
+    updateCurveControls();
+    floatingBlock.style.opacity = '0.88';
+    floatingBlock.style.transform = 'translate(-50%, -50%) scale(0.92)';
+    floatingBlock.style.transition = 'opacity 0.2s ease-out, transform 0.2s ease-out';
+    requestAnimationFrame(() => {
+        floatingBlock.style.opacity = '1';
+        floatingBlock.style.transform = 'translate(-50%, -50%) scale(1)';
+    });
+}
+
+/**
  * Sauvegarder le salaire actuel et passer au suivant avec animation
  * Le salaire est maintenant stocké en mensuel brut
  */
@@ -337,40 +357,23 @@ function saveCurrentSalaryAndNext() {
         // Animation : le bloc se rétrécit et se déplace vers le point puis disparaît
         if (floatingBlock && salaryCurveChart) {
             animateBlockToPoint(floatingBlock, currentPeriodIndex, () => {
-                updateCurveChart();
                 const nextIndex = periodsData.findIndex((p, i) => i > currentPeriodIndex && !p.salaireReel);
                 const firstMissing = periodsData.findIndex(p => !p.salaireReel);
-                if (nextIndex !== -1) {
-                    currentPeriodIndex = nextIndex;
-                    floatingBlock.classList.remove('floating-block-hidden');
-                    floatingBlock.style.visibility = '';
-                    updateCurveControls();
-                    floatingBlock.style.opacity = '0.88';
-                    floatingBlock.style.transform = 'translate(-50%, -50%) scale(0.92)';
-                    floatingBlock.style.transition = 'opacity 0.2s ease-out, transform 0.2s ease-out';
-                    requestAnimationFrame(() => {
-                        floatingBlock.style.opacity = '1';
-                        floatingBlock.style.transform = 'translate(-50%, -50%) scale(1)';
-                    });
-                } else if (firstMissing !== -1) {
-                    currentPeriodIndex = firstMissing;
-                    floatingBlock.classList.remove('floating-block-hidden');
-                    floatingBlock.style.visibility = '';
-                    updateCurveControls();
-                    floatingBlock.style.opacity = '0.88';
-                    floatingBlock.style.transform = 'translate(-50%, -50%) scale(0.92)';
-                    floatingBlock.style.transition = 'opacity 0.2s ease-out, transform 0.2s ease-out';
-                    requestAnimationFrame(() => {
-                        floatingBlock.style.opacity = '1';
-                        floatingBlock.style.transform = 'translate(-50%, -50%) scale(1)';
-                    });
-                } else {
-                    // Dernier salaire saisi : fermer le popup et ne plus rouvrir pour laisser contempler le graphique complet
-                    currentPeriodIndex = Math.min(currentPeriodIndex + 1, periodsData.length - 1);
+                const allFilled = firstMissing === -1;
+
+                if (allFilled) {
+                    // Dernier salaire : masquer tout de suite pour éviter tout réaffichage (reflow / update du graphique)
+                    hideFloatingBlock();
                     updateCurveChart();
-                    dismissFloatingBlockFromGraph();
+                    const progressEl = document.getElementById('curve-progress-text');
+                    if (progressEl) progressEl.textContent = `${periodsData.length} / ${periodsData.length} mois saisis`;
                     showToast('✅ Tous les salaires ont été saisis ! Vous pouvez cliquer sur un point pour modifier un mois, puis calculer les arriérés.', 'success', 4000);
+                } else {
+                    updateCurveChart();
+                    currentPeriodIndex = nextIndex !== -1 ? nextIndex : firstMissing;
+                    showFloatingBlockForPeriodIndex(currentPeriodIndex);
                 }
+
                 const stickyBtn = document.getElementById('arretees-calc-sticky');
                 if (stickyBtn) stickyBtn.classList.remove('hidden');
             });
@@ -2869,6 +2872,7 @@ function createSalaryCurve() {
                                 } else {
                                     block.classList.remove('floating-block-hidden');
                                     block.style.visibility = '';
+                                    block.style.pointerEvents = '';
                                     positionFloatingBlock(currentPeriodIndex);
                                 }
                             }
@@ -2995,6 +2999,7 @@ function positionFloatingBlock(periodIndex) {
     if (!floatingBlock || !chartWrapper) return;
 
     floatingBlock.style.visibility = '';
+    floatingBlock.style.pointerEvents = '';
     floatingBlock.style.opacity = '1';
     floatingBlock.classList.remove('floating-block-hidden');
     floatingBlock.style.left = '50%';
@@ -3003,16 +3008,25 @@ function positionFloatingBlock(periodIndex) {
 }
 
 /**
- * Fermer le popup du graphique (bloc flottant) — Échap ou clic sur le point déjà sélectionné.
- * Pour rouvrir : cliquer sur un point du graphique (intuitif, sans instruction).
+ * Masquer le bloc flottant et marquer comme fermé (une seule source de vérité pour le masquage).
+ * Utilisé à la fermeture manuelle (Échap, clic sur le point) et à la fin de la dernière saisie.
  */
-function dismissFloatingBlockFromGraph() {
+function hideFloatingBlock() {
     floatingBlockDismissed = true;
     const block = document.getElementById('floating-input-block');
     if (block) {
         block.classList.add('floating-block-hidden');
         block.style.visibility = 'hidden';
+        block.style.pointerEvents = 'none';
     }
+}
+
+/**
+ * Fermer le popup du graphique (bloc flottant) — Échap ou clic sur le point déjà sélectionné.
+ * Pour rouvrir : cliquer sur un point du graphique (intuitif, sans instruction).
+ */
+function dismissFloatingBlockFromGraph() {
+    hideFloatingBlock();
 }
 
 /**
@@ -3060,6 +3074,7 @@ function animateBlockToPoint(block, periodIndex, callback) {
             block.classList.remove('animating');
             block.classList.add('floating-block-hidden');
             block.style.visibility = 'hidden';
+            block.style.pointerEvents = 'none';
             block.style.transition = '';
             if (callback) callback();
         }, 300);
@@ -3085,6 +3100,7 @@ function animatePointToCenter(periodIndex, callback) {
 
     floatingBlock.classList.remove('floating-block-hidden');
     floatingBlock.style.visibility = '';
+    floatingBlock.style.pointerEvents = '';
     floatingBlock.style.left = coords.x + 'px';
     floatingBlock.style.top = coords.y + 'px';
     floatingBlock.style.transform = 'translate(-50%, -50%) scale(0.2)';
