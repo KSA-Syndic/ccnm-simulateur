@@ -301,11 +301,11 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         }
     }
 
-    // Primes accord (horaire, montant) — toujours si accord actif (tous profils : non-cadre, cadre 35h, cadre forfait jours)
+    // Primes accord : liste générique (horaire + montant) — on itère sur toutes les primes de l'accord, sans filtre par type
     if (agreement) {
         const accordPrimeDefs = getAccordPrimeDefsAsElements(agreement);
         for (const def of accordPrimeDefs) {
-            if (def.semanticId === SEMANTIC_ID.PRIME_ANCIENNETE) continue;
+            if (def.semanticId === SEMANTIC_ID.PRIME_ANCIENNETE) continue; // déjà traitée au-dessus (principe de faveur)
             const actif = getAccordInput(state, def.config?.stateKeyActif);
             if (actif !== true && actif !== 'true') continue;
             const r = computePrime(def, context);

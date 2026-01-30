@@ -613,6 +613,11 @@ body.iframe-mode .simulator-container.iframe-container {
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
+.month-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.85;
+}
+
 /* Détails du calcul (collapsible) – style de référence pour étape 3 et arriérés */
 .result-details-toggle {
     margin: 15px 0;
@@ -3143,6 +3148,21 @@ body.iframe-mode .simulator-container.iframe-container {
 .accord-options .checkbox-label {
     font-weight: normal;
     font-size: 0.95rem;
+}
+
+/* Message lorsque l'accord est désactivé : modalités qui ne sont plus prises en compte */
+.accord-desactive-message {
+    margin-top: 12px;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    color: var(--gray-700, #374151);
+    background: var(--gray-100, #f3f4f6);
+    border: 1px solid var(--gray-300, #d1d5db);
+    border-radius: var(--border-radius, 6px);
+}
+
+.accord-desactive-message.hidden {
+    display: none;
 }
 
 /* Sous-champs (heures, etc.) */

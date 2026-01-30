@@ -10,6 +10,7 @@
 import { loadAgreementFromURL, getActiveAgreement } from './agreements/AgreementLoader.js';
 import { getPrimes, getPrimeById, getPrimeValue, hydrateAccordInputs } from './agreements/AgreementInterface.js';
 import { extractURLParams, applyIframeStyles, isIframeMode } from './core/URLParams.js';
+import { CONFIG } from './core/config.js';
 import { updateHeaderAgreement } from './ui/RemunerationDisplay.js';
 import { LABELS } from './ui/Labels.js';
 
@@ -44,26 +45,44 @@ export function initAppIntegration() {
     const urlParamsObj = new URLSearchParams(window.location.search);
     const agreement = loadAgreementFromURL(urlParamsObj);
 
-    // Page 2 : libellés "Travail de nuit" dynamiques selon l'accord chargé (poste nuit + poste matin)
+    // Page 2 : options sans taux dans le texte ; taux dans tooltip à côté du label
     const optionPosteNuit = document.getElementById('option-poste-nuit');
     const optionPosteMatin = document.getElementById('option-poste-matin');
-    if (optionPosteNuit) {
-        if (agreement && agreement.majorations?.nuit?.posteNuit != null) {
-            const pct = Math.round(agreement.majorations.nuit.posteNuit * 100);
+    const typeNuitTooltip = document.getElementById('type-nuit-tooltip');
+    const travailDimancheTooltip = document.getElementById('travail-dimanche-tooltip');
+    if (optionPosteNuit) optionPosteNuit.textContent = 'Poste de nuit';
+    if (optionPosteMatin) optionPosteMatin.textContent = 'Poste matin/AM';
+    const pctNuitCCN = Math.round((CONFIG.MAJORATIONS_CCN?.nuit ?? 0.15) * 100);
+    const pctDimancheCCN = Math.round((CONFIG.MAJORATIONS_CCN?.dimanche ?? 1) * 100);
+    const prefixAccordOnly = LABELS.tooltipPrefixAccordOnly;
+    if (typeNuitTooltip) {
+        if (agreement && agreement.majorations?.nuit) {
+            const n = agreement.majorations.nuit;
+            const pctNuit = n.posteNuit != null ? Math.round(n.posteNuit * 100) : pctNuitCCN;
+            const pctMatin = n.posteMatin != null ? Math.round(n.posteMatin * 100) : pctNuitCCN;
             const nom = getAccordNomCourt(agreement);
-            optionPosteNuit.textContent = `Poste de nuit (+15% CCN ; +${pct}% ${nom})`;
+            typeNuitTooltip.setAttribute('data-tippy-content', `Poste de nuit : +${pctNuitCCN}% CCN ; +${pctNuit}% ${nom}.<br>Poste matin/AM : +${pctNuitCCN}% CCN ; +${pctMatin}% ${nom}.`);
         } else {
-            optionPosteNuit.textContent = 'Poste de nuit (+15%)';
+            typeNuitTooltip.setAttribute('data-tippy-content', `Poste de nuit : +${pctNuitCCN}%.<br>Poste matin/AM : +${pctNuitCCN}%.`);
         }
+        if (typeNuitTooltip._tippy) typeNuitTooltip._tippy.setContent(typeNuitTooltip.getAttribute('data-tippy-content'));
     }
-    if (optionPosteMatin) {
-        if (agreement && agreement.majorations?.nuit?.posteMatin != null) {
-            const pct = Math.round(agreement.majorations.nuit.posteMatin * 100);
+    if (travailDimancheTooltip) {
+        if (agreement && agreement.majorations?.dimanche != null) {
+            const pct = Math.round(agreement.majorations.dimanche * 100);
             const nom = getAccordNomCourt(agreement);
-            optionPosteMatin.textContent = `Poste matin/AM (+15% CCN ; +${pct}% ${nom})`;
+            travailDimancheTooltip.setAttribute('data-tippy-content', `Taux CCN : +${pctDimancheCCN}%. Avec accord ${nom} : +${pct}%.`);
         } else {
-            optionPosteMatin.textContent = 'Poste matin/AM (+15%)';
+            travailDimancheTooltip.setAttribute('data-tippy-content', `+${pctDimancheCCN}%.`);
         }
+        if (travailDimancheTooltip._tippy) travailDimancheTooltip._tippy.setContent(travailDimancheTooltip.getAttribute('data-tippy-content'));
+    }
+    const forfaitTooltipEl = document.getElementById('forfait-tooltip');
+    if (forfaitTooltipEl && CONFIG.FORFAITS) {
+        const pctHeures = Math.round((CONFIG.FORFAITS.heures ?? 0.15) * 100);
+        const pctJours = Math.round((CONFIG.FORFAITS.jours ?? 0.30) * 100);
+        forfaitTooltipEl.setAttribute('data-tippy-content', `Base 35h : sans majoration. Forfait Heures : +${pctHeures}%. Forfait Jours : +${pctJours}%.`);
+        if (forfaitTooltipEl._tippy) forfaitTooltipEl._tippy.setContent(forfaitTooltipEl.getAttribute('data-tippy-content'));
     }
 
     // Page 3 : n'afficher l'option "Appliquer l'accord d'entreprise" que si un accord a été chargé depuis l'URL
@@ -100,7 +119,7 @@ export function initAppIntegration() {
                     const checked = prime.defaultActif === true;
                     const label = document.createElement('label');
                     label.className = 'checkbox-label';
-                    const tooltipAttr = prime.tooltip ? ` data-tippy-content="${String(prime.tooltip).replace(/"/g, '&quot;')}"` : '';
+                    const tooltipAttr = prime.tooltip ? ` data-tippy-content="${(prefixAccordOnly + String(prime.tooltip)).replace(/"/g, '&quot;')}"` : '';
                     const tooltipSpan = prime.tooltip ? ` <span class="tooltip-trigger"${tooltipAttr} aria-label="Aide">?</span>` : '';
                     const nomAccord = getAccordNomCourt(agreement);
                     const badgeHtml = nomAccord ? ` <span class="accord-badge" aria-label="Accord d'entreprise : ${nomAccord.replace(/"/g, '&quot;')}">\u{1F3E2} ${nomAccord.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>` : '';

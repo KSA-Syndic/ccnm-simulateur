@@ -198,11 +198,11 @@
                 <!-- Options Cadre -->
                 <div class="modalites-cadre hidden" id="modalites-cadre">
                     <div class="form-group">
-                        <label for="forfait">Type de forfait</label>
+                        <label for="forfait">Type de forfait <span class="tooltip-trigger" id="forfait-tooltip" data-tippy-content="Base 35h : sans majoration. Forfait Heures : +15%. Forfait Jours : +30%." aria-label="Taux">?</span></label>
                         <select id="forfait" class="book-select">
                             <option value="35h">Base 35h</option>
-                            <option value="heures">Forfait Heures (+15%)</option>
-                            <option value="jours">Forfait Jours (+30%)</option>
+                            <option value="heures">Forfait Heures</option>
+                            <option value="jours">Forfait Jours</option>
                         </select>
                     </div>
 
@@ -233,11 +233,11 @@
                         
                         <!-- Travail de nuit -->
                         <div class="form-group" id="group-nuit">
-                            <label for="type-nuit">Travail de nuit</label>
+                            <label for="type-nuit">Travail de nuit <span class="tooltip-trigger" id="type-nuit-tooltip" data-tippy-content="Poste de nuit : +15%.&lt;br&gt;Poste matin/AM : +15%." aria-label="Taux">?</span></label>
                             <select id="type-nuit" class="book-select">
                                 <option value="aucun">Aucun</option>
-                                <option value="poste-nuit" id="option-poste-nuit">Poste de nuit (+15% CCN)</option>
-                                <option value="poste-matin" id="option-poste-matin">Poste matin/AM (+15%)</option>
+                                <option value="poste-nuit" id="option-poste-nuit">Poste de nuit</option>
+                                <option value="poste-matin" id="option-poste-matin">Poste matin/AM</option>
                             </select>
                             <div class="sub-field hidden" id="heures-nuit-field">
                                 <label for="heures-nuit">Heures de nuit/mois</label>
@@ -250,6 +250,7 @@
                             <label class="checkbox-label">
                                 <input type="checkbox" id="travail-dimanche" class="book-checkbox">
                                 <span>Travail le dimanche</span>
+                                <span class="tooltip-trigger" id="travail-dimanche-tooltip" data-tippy-content="+100%." aria-label="Taux">?</span>
                             </label>
                             <div class="sub-field hidden" id="heures-dimanche-field">
                                 <label for="heures-dimanche">Heures dimanche/mois</label>
@@ -297,6 +298,8 @@
                                 <span>Prime de vacances (525€/an)</span>
                             </label>
                         </div>
+                        <!-- Message lorsque l'accord est désactivé : modalités qui ne sont plus prises en compte (hors primes page 3, évidentes) -->
+                        <div class="accord-desactive-message hidden" id="accord-desactive-message" role="status" aria-live="polite"></div>
                     </div>
                 </div>
 

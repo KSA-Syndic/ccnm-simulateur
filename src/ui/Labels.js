@@ -51,7 +51,9 @@ export const LABELS = {
     heuresDimanche: 'Heures dimanche/mois',
     travailEquipe: 'Travail en équipes postées',
     heuresEquipe: 'Heures équipe/mois',
-    
+    /** Préfixe des tooltips pour les modalités spécifiques à l'accord d'entreprise (nuit, dimanche, primes). */
+    tooltipPrefixAccordOnly: "Spécifique à l'accord d'entreprise. <br>",
+
     // Résultat
     resultatAnnuel: 'par an',
     resultatMensuel: 'par mois',

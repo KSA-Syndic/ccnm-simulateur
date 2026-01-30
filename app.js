@@ -918,6 +918,8 @@ function initControls() {
                 if (agreement && window.AgreementHelpers?.hydrateAccordInputs) {
                     window.AgreementHelpers.hydrateAccordInputs(agreement, state);
                 }
+                // Appliquer 12 ou 13 mois selon l'accord (répartition imposée)
+                if (typeof updateMonthsToggleFromAccord === 'function') updateMonthsToggleFromAccord();
                 // Restituer l'affichage des options (page 3) depuis state.accordInputs conservé à la désactivation
                 accordOptions?.querySelectorAll('input[data-state-key-actif]').forEach(inp => {
                     const key = inp.dataset.stateKeyActif;
@@ -964,16 +966,50 @@ function initControls() {
         });
     }
     
-    // Toggle nombre de mois (12 ou 13)
+    // Toggle nombre de mois (12 ou 13) — verrouillé quand un accord impose 12 ou 13 mois
     const monthBtns = document.querySelectorAll('.month-btn');
     monthBtns.forEach(btn => {
         btn.addEventListener('click', () => {
+            const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
+            if (agreement && state.accordActif && agreement.repartition13Mois?.actif != null) return; // bloqué si accord impose 12/13
             monthBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            state.nbMois = parseInt(btn.dataset.months);
+            state.nbMois = parseInt(btn.dataset.months, 10);
             updateRemunerationDisplay(calculateRemuneration());
         });
     });
+}
+
+/**
+ * Applique la répartition 12/13 mois de l'accord au switch et le verrouille si accord sélectionné.
+ */
+function updateMonthsToggleFromAccord() {
+    const monthBtns = document.querySelectorAll('.month-btn');
+    if (!monthBtns.length) return;
+    const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
+    const accordImposeMois = agreement && state.accordActif && agreement.repartition13Mois && typeof agreement.repartition13Mois.actif === 'boolean';
+    if (accordImposeMois) {
+        state.nbMois = agreement.repartition13Mois.actif ? 13 : 12;
+        monthBtns.forEach(btn => {
+            btn.disabled = true;
+            btn.setAttribute('aria-disabled', 'true');
+            if (parseInt(btn.dataset.months, 10) === state.nbMois) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    } else {
+        monthBtns.forEach(btn => {
+            btn.disabled = false;
+            btn.removeAttribute('aria-disabled');
+            if (parseInt(btn.dataset.months, 10) === state.nbMois) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
 }
 
 /**
@@ -1003,6 +1039,66 @@ function updateExperienceProValidation(attemptedValue = null) {
     } else {
         experienceProInput.classList.remove('input-error');
     }
+}
+
+/**
+ * Liste des modalités accord qui ne sont plus prises en compte dans le calcul quand l'accord est désactivé.
+ * Exclut les primes à versement unique (page 3) car visibles sur la même page.
+ * @param {Object|null} agreement - Accord chargé
+ * @returns {string[]}
+ */
+function getModalitesHorsPrimesPage3(agreement) {
+    if (!agreement || typeof agreement !== 'object') return [];
+    const items = [];
+    if (agreement.anciennete && typeof agreement.anciennete.seuil === 'number') {
+        items.push('Prime d\'ancienneté (seuil/barème accord)');
+    }
+    if (agreement.majorations?.nuit && (agreement.majorations.nuit.posteNuit != null || agreement.majorations.nuit.posteMatin != null)) {
+        const n = agreement.majorations.nuit;
+        const pctNuit = n.posteNuit != null ? '+' + Math.round(n.posteNuit * 100) + '% poste nuit' : '';
+        const pctMatin = n.posteMatin != null ? '+' + Math.round(n.posteMatin * 100) + '% poste matin' : '';
+        const lib = [pctNuit, pctMatin].filter(Boolean).join(', ');
+        if (lib) items.push('Majorations nuit (' + lib + ')');
+    }
+    if (agreement.majorations?.dimanche != null) {
+        const pct = Math.round(agreement.majorations.dimanche * 100);
+        items.push('Majoration dimanche (+' + pct + '%)');
+    }
+    if (agreement.primes && Array.isArray(agreement.primes)) {
+        const primesHoraires = agreement.primes.filter(p => p.valueType === 'horaire' && p.stateKeyHeures);
+        primesHoraires.forEach(p => {
+            const taux = p.valeurAccord != null ? String(p.valeurAccord).replace('.', ',') : '';
+            const unit = p.unit || '€/h';
+            const lib = p.label ? `${p.label} (${taux} ${unit})` : `Prime horaire (${taux} ${unit})`;
+            items.push(lib);
+        });
+    }
+    if (agreement.repartition13Mois?.actif === true) {
+        items.push('13e mois (répartition sur 13 mois)');
+    }
+    return items;
+}
+
+/**
+ * Affiche ou masque le message listant les modalités qui ne sont plus prises en compte lorsque l'accord est désactivé.
+ */
+function updateAccordDesactiveMessage() {
+    const block = document.getElementById('accord-desactive-message');
+    if (!block) return;
+    const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
+    if (!agreement || state.accordActif) {
+        block.classList.add('hidden');
+        block.textContent = '';
+        return;
+    }
+    const modalites = getModalitesHorsPrimesPage3(agreement);
+    if (modalites.length === 0) {
+        block.classList.add('hidden');
+        block.textContent = '';
+        return;
+    }
+    block.classList.remove('hidden');
+    block.textContent = 'Les éléments suivants ne sont plus pris en compte dans le calcul : ' + modalites.join(', ') + '.';
 }
 
 /**
@@ -1074,10 +1170,18 @@ function updateConditionsTravailDisplay() {
                 }
                 labelCheck.appendChild(cb);
                 labelCheck.appendChild(spanLabel);
-                if (prime.tooltip) {
+                const prefixAccordOnly = (typeof window.LABELS !== 'undefined' && window.LABELS.tooltipPrefixAccordOnly) || '';
+                const tooltipContent = (() => {
+                    const taux = prime.valeurAccord != null ? String(prime.valeurAccord).replace('.', ',') : '';
+                    const unit = prime.unit || '€/h';
+                    const ratePart = taux ? `${taux} ${unit}. ` : '';
+                    const baseTooltip = prime.tooltip ? String(prime.tooltip) : '';
+                    return (prefixAccordOnly + (ratePart + baseTooltip).trim()).trim();
+                })();
+                if (tooltipContent) {
                     const tooltipSpan = document.createElement('span');
                     tooltipSpan.className = 'tooltip-trigger';
-                    tooltipSpan.setAttribute('data-tippy-content', String(prime.tooltip).replace(/"/g, '&quot;'));
+                    tooltipSpan.setAttribute('data-tippy-content', tooltipContent.replace(/"/g, '&quot;'));
                     tooltipSpan.setAttribute('aria-label', 'Aide');
                     tooltipSpan.textContent = '?';
                     labelCheck.appendChild(tooltipSpan);
@@ -1148,11 +1252,11 @@ function updateTauxInfo() {
             if (state.accordActif && agreement && agreement.majorations?.nuit) {
                 const nuit = agreement.majorations.nuit;
                 const tauxAccord = state.typeNuit === 'poste-nuit' ? nuit.posteNuit : nuit.posteMatin;
-                const pct = tauxAccord != null ? Math.round(tauxAccord * 100) : (state.typeNuit === 'poste-nuit' ? 20 : 15);
+                const pct = tauxAccord != null ? Math.round(tauxAccord * 100) : (state.typeNuit === 'poste-nuit' ? 20 : Math.round((CONFIG.MAJORATIONS_CCN?.nuit ?? 0.15) * 100));
                 tauxNuitInfo.textContent = `Taux ${nomAccord} : +${pct}%`;
                 tauxNuitInfo.className = 'taux-applique accord';
             } else {
-                const pctCCN = state.typeNuit === 'poste-nuit' ? 15 : 15;
+                const pctCCN = Math.round((CONFIG.MAJORATIONS_CCN?.nuit ?? 0.15) * 100);
                 tauxNuitInfo.textContent = `Taux CCN : +${pctCCN}%`;
                 tauxNuitInfo.className = 'taux-applique';
             }
@@ -1172,7 +1276,8 @@ function updateTauxInfo() {
                 tauxDimancheInfo.textContent = `Taux ${nomAccord} : +50%`;
                 tauxDimancheInfo.className = 'taux-applique accord';
             } else {
-                tauxDimancheInfo.textContent = 'Taux CCN : +100%';
+                const pctCCN = Math.round((CONFIG.MAJORATIONS_CCN?.dimanche ?? 1) * 100);
+                tauxDimancheInfo.textContent = `Taux CCN : +${pctCCN}%`;
                 tauxDimancheInfo.className = 'taux-applique';
             }
         } else {
@@ -1389,6 +1494,12 @@ function updateAll() {
     const accordOptionsEl = document.getElementById('accord-options');
     if (accordCheckboxEl) accordCheckboxEl.checked = !!state.accordActif;
     if (accordOptionsEl) accordOptionsEl.classList.toggle('hidden', !state.accordActif);
+
+    // Message lorsque l'accord est désactivé : modalités qui ne sont plus prises en compte
+    updateAccordDesactiveMessage();
+
+    // Switch 12/13 mois : appliquer et verrouiller selon l'accord si sélectionné
+    if (typeof updateMonthsToggleFromAccord === 'function') updateMonthsToggleFromAccord();
 
     // Mise à jour des taux affichés (CCN vs accord)
     updateTauxInfo();
@@ -1622,12 +1733,13 @@ function updateHintDisplay(remuneration) {
             `
         });
     } else if (hasMajorations && !state.accordActif) {
-        // Majorations CCN sans Kuhn
+        const pctNuitCCN = Math.round((CONFIG.MAJORATIONS_CCN?.nuit ?? 0.15) * 100);
+        const pctDimCCN = Math.round((CONFIG.MAJORATIONS_CCN?.dimanche ?? 1) * 100);
         hints.push({
             type: 'info',
             content: `
                 <strong>Majorations CCN appliquées</strong><br>
-                Taux CCN : nuit +15%, dimanche +100%.<br>
+                Taux CCN : nuit +${pctNuitCCN}%, dimanche +${pctDimCCN}%.<br>
                 <small>Activez un accord d'entreprise pour les taux entreprise.</small>
             `
         });

@@ -86,7 +86,7 @@ export function getConventionForfaitDefs() {
             kind: ELEMENT_KIND_FORFAIT,
             source: SOURCE_CONVENTION,
             valueKind: VALUE_KIND_POURCENTAGE,
-            label: 'Forfait Heures (+15%)',
+            label: `Forfait Heures (+${Math.round((CONFIG.FORFAITS.heures ?? 0.15) * 100)}%)`,
             config: {
                 forfaitKey: 'heures',
                 taux: CONFIG.FORFAITS.heures
@@ -98,7 +98,7 @@ export function getConventionForfaitDefs() {
             kind: ELEMENT_KIND_FORFAIT,
             source: SOURCE_CONVENTION,
             valueKind: VALUE_KIND_POURCENTAGE,
-            label: 'Forfait Jours (+30%)',
+            label: `Forfait Jours (+${Math.round((CONFIG.FORFAITS.jours ?? 0.30) * 100)}%)`,
             config: {
                 forfaitKey: 'jours',
                 taux: CONFIG.FORFAITS.jours
