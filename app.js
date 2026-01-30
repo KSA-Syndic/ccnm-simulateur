@@ -1010,10 +1010,16 @@ function initControls() {
     
     // Toggle nombre de mois (12 ou 13) — verrouillé quand un accord impose 12 ou 13 mois
     const monthBtns = document.querySelectorAll('.month-btn');
+    const monthsToggle = document.querySelector('.months-toggle');
     monthBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
-            if (agreement && state.accordActif && agreement.repartition13Mois?.actif != null) return; // bloqué si accord impose 12/13
+            if (agreement && state.accordActif && agreement.repartition13Mois?.actif != null) {
+                const nom = getAccordNomCourt(agreement) || 'd\'entreprise';
+                const nb = agreement.repartition13Mois.actif ? 13 : 12;
+                showToast(`La répartition sur ${nb} mois est imposée par l'accord ${nom}. Vous ne pouvez pas la modifier.`, 'info', 4000);
+                return;
+            }
             monthBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             state.nbMois = parseInt(btn.dataset.months, 10);
@@ -1023,18 +1029,24 @@ function initControls() {
 }
 
 /**
- * Applique la répartition 12/13 mois de l'accord au switch et le verrouille si accord sélectionné.
+ * Applique la répartition 12/13 mois de l'accord au switch et le verrouille visuellement si accord sélectionné.
+ * Les boutons restent cliquables pour afficher un toast explicatif au clic.
  */
 function updateMonthsToggleFromAccord() {
     const monthBtns = document.querySelectorAll('.month-btn');
+    const monthsToggle = document.querySelector('.months-toggle');
     if (!monthBtns.length) return;
     const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
     const accordImposeMois = agreement && state.accordActif && agreement.repartition13Mois && typeof agreement.repartition13Mois.actif === 'boolean';
+    if (monthsToggle) {
+        monthsToggle.classList.toggle('months-toggle-locked', !!accordImposeMois);
+        monthsToggle.setAttribute('aria-label', accordImposeMois ? 'Répartition imposée par l\'accord d\'entreprise (cliquez pour plus d\'infos)' : 'Choisir 12 ou 13 mois');
+    }
     if (accordImposeMois) {
         state.nbMois = agreement.repartition13Mois.actif ? 13 : 12;
         monthBtns.forEach(btn => {
-            btn.disabled = true;
-            btn.setAttribute('aria-disabled', 'true');
+            btn.disabled = false;
+            btn.removeAttribute('aria-disabled');
             if (parseInt(btn.dataset.months, 10) === state.nbMois) {
                 btn.classList.add('active');
             } else {

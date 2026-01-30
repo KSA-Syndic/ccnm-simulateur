@@ -618,6 +618,12 @@ body.iframe-mode .simulator-container.iframe-container {
     opacity: 0.85;
 }
 
+/* Switch 12/13 mois verrouillé par l'accord (reste cliquable pour afficher le message) */
+.months-toggle.months-toggle-locked .month-btn:not(.active) {
+    cursor: not-allowed;
+    opacity: 0.85;
+}
+
 /* Détails du calcul (collapsible) – style de référence pour étape 3 et arriérés */
 .result-details-toggle {
     margin: 15px 0;
