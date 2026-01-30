@@ -12,6 +12,23 @@ import { getPrimes, getPrimeById, getPrimeValue, hydrateAccordInputs } from './a
 import { extractURLParams, applyIframeStyles, isIframeMode } from './core/URLParams.js';
 import { updateHeaderAgreement } from './ui/RemunerationDisplay.js';
 
+/** Nom court pour affichage badge accord (aligné avec app.js). */
+function getAccordNomCourt(agreement) {
+    if (!agreement || typeof agreement !== 'object') return '';
+    return agreement.nomCourt || agreement.nom || 'Accord';
+}
+
+/** Crée un span DOM .accord-badge pour indiquer visuellement l'accord (réutilisable partout). */
+function createAccordBadgeElement(agreement) {
+    const nom = getAccordNomCourt(agreement);
+    if (!nom) return null;
+    const span = document.createElement('span');
+    span.className = 'accord-badge';
+    span.textContent = `\u{1F3E2} ${nom}`;
+    span.setAttribute('aria-label', `Accord d'entreprise : ${nom}`);
+    return span;
+}
+
 /**
  * Initialiser l'intégration des nouveaux modules
  */
@@ -33,8 +50,12 @@ export function initAppIntegration() {
     if (resultAccordBlock) {
         if (agreement) {
             resultAccordBlock.classList.remove('hidden');
-            // Libellé dynamique selon l'accord
-            if (accordLabel) accordLabel.textContent = `Appliquer l'accord d'entreprise ${agreement.nomCourt}`;
+            // Libellé dynamique + badge accord (ludique, cohérent avec le reste de l'app)
+            if (accordLabel) {
+                accordLabel.textContent = "Appliquer l'accord d'entreprise ";
+                const badgeEl = createAccordBadgeElement(agreement);
+                if (badgeEl) accordLabel.appendChild(badgeEl);
+            }
             // Tooltip page Résultat : description technique et avantages condensés
             const accordTooltipEl = document.getElementById('accord-actif-tooltip');
             const page3Content = agreement.labels && (agreement.labels.description || agreement.labels.tooltipPage3 || agreement.labels.tooltip);
@@ -58,7 +79,9 @@ export function initAppIntegration() {
                     label.className = 'checkbox-label';
                     const tooltipAttr = prime.tooltip ? ` data-tippy-content="${String(prime.tooltip).replace(/"/g, '&quot;')}"` : '';
                     const tooltipSpan = prime.tooltip ? ` <span class="tooltip-trigger"${tooltipAttr} aria-label="Aide">?</span>` : '';
-                    label.innerHTML = `<input type="checkbox" id="${inputId}" class="book-checkbox" data-state-key-actif="${prime.stateKeyActif}" ${checked ? 'checked' : ''}><span>${labelText}</span>${tooltipSpan}`;
+                    const nomAccord = getAccordNomCourt(agreement);
+                    const badgeHtml = nomAccord ? ` <span class="accord-badge" aria-label="Accord d'entreprise : ${nomAccord.replace(/"/g, '&quot;')}">\u{1F3E2} ${nomAccord.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>` : '';
+                    label.innerHTML = `<input type="checkbox" id="${inputId}" class="book-checkbox" data-state-key-actif="${prime.stateKeyActif}" ${checked ? 'checked' : ''}><span>${labelText}</span>${badgeHtml}${tooltipSpan}`;
                     if (prime.sourceValeur === 'modalite') {
                         const inputVal = document.createElement('input');
                         inputVal.type = 'number';

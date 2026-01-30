@@ -169,8 +169,7 @@ export const AGREEMENT_SCHEMA = {
         description: 'string (optionnel) - texte unique pour tooltips header et page Résultat',
         tooltipHeader: 'string (optionnel, fallback description)',
         tooltipPage3: 'string (optionnel, fallback description)',
-        tooltip: 'string (optionnel, fallback description)',
-        badge: 'string (optionnel)'
+        tooltip: 'string (optionnel, fallback description)'
     },
     metadata: {
         version: 'string (requis)',

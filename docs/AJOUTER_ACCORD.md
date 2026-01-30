@@ -21,7 +21,7 @@ Un accord doit respecter le schéma validé par `validateAgreement()` dans `Agre
 | `majorations` | object | `nuit` (posteNuit, posteMatin, plage…), `dimanche` (taux) |
 | `primes` | **array** | Liste de primes (voir ci-dessous) |
 | `repartition13Mois` | object | `actif`, `moisVersement` (1-12), `inclusDansSMH` |
-| `labels` | object | `nomCourt`, `tooltip`, `description`, `badge` |
+| `labels` | object | `nomCourt`, `tooltip`, `description` |
 | `metadata` | object | `version`, `articlesSubstitues`, `territoire`, `entreprise` |
 
 ### Primes (tableau)
@@ -95,7 +95,7 @@ export const MonAccord = {
     majorations: { nuit: { posteNuit: 0.20, posteMatin: 0.15 }, dimanche: 0.50 },
     primes: [ /* tableau PrimeDef */ ],
     repartition13Mois: { actif: false, moisVersement: 11, inclusDansSMH: true },
-    labels: { nomCourt: 'Mon Accord', tooltip: '...', description: '...', badge: '🏢' },
+    labels: { nomCourt: 'Mon Accord', tooltip: '...', description: '...' },
     metadata: { version: '1.0', articlesSubstitues: [], territoire: '', entreprise: '' }
 };
 

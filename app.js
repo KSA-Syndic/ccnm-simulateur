@@ -51,6 +51,43 @@ const state = {
 let arreteesPdfStore = null;
 
 /**
+ * Nom court de l'accord pour affichage (badge, tooltips).
+ * @param {Object|null} agreement - Accord actif ou null
+ * @returns {string}
+ */
+function getAccordNomCourt(agreement) {
+    if (!agreement || typeof agreement !== 'object') return '';
+    return agreement.nomCourt || agreement.nom || 'Accord';
+}
+
+/**
+ * Crée un élément DOM span pour le badge accord (🏢 nom).
+ * Utilisé partout pour indiquer visuellement ce qui relève de l'accord d'entreprise.
+ * @param {Object|null} agreement - Accord actif ou null
+ * @returns {HTMLSpanElement|null} span.accord-badge ou null si pas d'accord
+ */
+function createAccordBadgeElement(agreement) {
+    const nom = getAccordNomCourt(agreement);
+    if (!nom) return null;
+    const span = document.createElement('span');
+    span.className = 'accord-badge';
+    span.textContent = `\u{1F3E2} ${nom}`;
+    span.setAttribute('aria-label', `Accord d'entreprise : ${nom}`);
+    return span;
+}
+
+/**
+ * Retourne le HTML du badge accord pour insertion dans innerHTML.
+ * @param {Object|null} agreement - Accord actif ou null
+ * @returns {string} '' ou ' <span class="accord-badge">🏢 nom</span>'
+ */
+function getAccordBadgeHtml(agreement) {
+    const nom = getAccordNomCourt(agreement);
+    if (!nom) return '';
+    return ` <span class="accord-badge" aria-label="Accord d'entreprise : ${nom.replace(/"/g, '&quot;')}">\u{1F3E2} ${escapeHTML(nom)}</span>`;
+}
+
+/**
  * ============================================
  * INITIALISATION
  * ============================================
@@ -1050,6 +1087,11 @@ function updateConditionsTravailDisplay() {
                 cb.checked = actif;
                 const spanLabel = document.createElement('span');
                 spanLabel.textContent = prime.label || "Prime horaire (accord d'entreprise)";
+                const badgeEl = createAccordBadgeElement(agreement);
+                if (badgeEl) {
+                    spanLabel.appendChild(document.createTextNode(' '));
+                    spanLabel.appendChild(badgeEl);
+                }
                 labelCheck.appendChild(cb);
                 labelCheck.appendChild(spanLabel);
                 if (prime.tooltip) {
@@ -1118,7 +1160,7 @@ function updateTauxInfo() {
     const tauxNuitInfo = document.getElementById('taux-nuit-info');
     const tauxDimancheInfo = document.getElementById('taux-dimanche-info');
     const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
-    const nomAccord = agreement?.nomCourt || 'accord';
+    const nomAccord = getAccordNomCourt(agreement) || 'accord';
 
     // Taux de nuit
     if (tauxNuitInfo) {
@@ -1397,12 +1439,12 @@ function updateRemunerationDisplay(remuneration) {
     const aggregatedDetails = aggregateRemunerationDetails(remuneration.details);
     
     const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
-    const nomAccord = agreement?.nomCourt || 'accord';
+    const nomAccord = getAccordNomCourt(agreement) || 'accord';
     aggregatedDetails.forEach(detail => {
         const valueClass = detail.isPositive ? 'positive' : '';
         const prefix = detail.isPositive ? '+' : '';
         const isAccord = detail.isAgreement ?? detail.isKuhn;
-        const accordBadge = isAccord ? ` <span class="accord-badge">🏢 ${nomAccord}</span>` : '';
+        const accordBadge = isAccord ? getAccordBadgeHtml(agreement) : '';
         const origin = detail.tooltipOrigin || (isAccord ? `Accord d'entreprise ${nomAccord}` : 'Convention collective (CCN)');
         let tipContent = '<strong>Origine :</strong> ' + (typeof origin === 'string' ? origin : (isAccord ? `Accord d'entreprise ${nomAccord}` : 'Convention collective (CCN)')) + '<br>';
         if (detail.breakdown && detail.breakdown.length) {
@@ -1493,7 +1535,7 @@ function aggregateRemunerationDetails(details) {
     });
 
     const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
-    const nomAccord = agreement?.nomCourt || 'accord';
+    const nomAccord = getAccordNomCourt(agreement) || 'accord';
 
     // Lignes agrégées séparées CCN / Accord d'entreprise (badge + tooltip pour l'origine)
     if (majorationsCCN > 0) {
@@ -1557,7 +1599,7 @@ function updateHintDisplay(remuneration) {
     );
     const hasAccordElements = accordDetails.length > 0;
     const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
-    const nomAccord = agreement?.nomCourt || 'accord';
+    const nomAccord = getAccordNomCourt(agreement) || 'accord';
 
     // === HINT 1: Barème salariés débutants ===
     if (remuneration.scenario === 'cadre-debutant') {

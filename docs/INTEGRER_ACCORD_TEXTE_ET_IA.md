@@ -108,7 +108,7 @@ SCHÉMA OBLIGATOIRE DE L'ACCORD (à respecter strictement)
   - moisVersement (nombre 1-12, pour prime type montant versée un mois donné : 7 = juillet, 12 = décembre)
   - conditionAnciennete (optionnel), tooltip (optionnel)
 - repartition13Mois (object) : actif (booléen), moisVersement (1-12, ex. 11 = novembre), inclusDansSMH (booléen)
-- labels (object) : nomCourt, tooltip (courte description), description (longue), badge (emoji ou texte)
+- labels (object) : nomCourt, tooltip (courte description), description (longue)
 - metadata (object) : version, articlesSubstitues (tableau de numéros d'articles CCN), territoire, entreprise
 
 CHAMPS OPTIONNELS (recommandés si présents dans le texte)
