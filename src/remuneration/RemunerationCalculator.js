@@ -262,15 +262,15 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         const convMajDefs = getConventionMajorationDefs();
         const accordMajDefs = buildAccordMajorationDefs(agreement);
 
-        const defNuit = (accordMajDefs.length && state.typeNuit !== 'aucun') 
+        const hasNuitClassique = state.typeNuit !== 'aucun' && (state.heuresNuit ?? 0) > 0;
+        const defNuit = (accordMajDefs.length && hasNuitClassique)
             ? accordMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_NUIT) ?? convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_NUIT)
             : convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_NUIT);
-        if (defNuit && state.typeNuit !== 'aucun' && state.heuresNuit > 0) {
+        if (defNuit && hasNuitClassique) {
             const rNuit = computeMajoration(defNuit, context);
             if (rNuit.amount > 0) {
-                const typePoste = state.typeNuit === 'poste-nuit' ? 'poste nuit' : 'poste matin/AM';
                 details.push({
-                    label: `Majoration nuit ${typePoste} (+${rNuit.meta?.taux ?? 0}%) (${state.heuresNuit}h/mois)`,
+                    label: `Majoration nuit (+${rNuit.meta?.taux ?? 0}%) (${state.heuresNuit}h/mois)`,
                     value: rNuit.amount,
                     isPositive: true,
                     isAgreement: rNuit.source === SOURCE_ACCORD,
@@ -309,7 +309,10 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
             if (r.amount > 0) {
                 let label = r.label;
                 if (def.valueKind === 'horaire' && r.meta?.heures != null) {
-                    label = `${r.label} (${r.meta.heures}h × ${r.meta.tauxHoraire ?? 0}€ ${agreement.nomCourt})`;
+                    const taux = r.meta.tauxHoraire ?? 0;
+                    label = `${r.label} (${r.meta.heures}h × +${taux}€ ${agreement.nomCourt})`;
+                } else if (def.valueKind === 'majorationHoraire' && r.meta?.heures != null) {
+                    label = `${r.label} (+${r.meta.taux ?? 0}%) (${r.meta.heures}h/mois)`;
                 } else if (def.valueKind === 'montant' && def.config?.moisVersement != null) {
                     const moisNom = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'][def.config.moisVersement - 1];
                     label = `${r.label} ${agreement.nomCourt} (${moisNom})`;

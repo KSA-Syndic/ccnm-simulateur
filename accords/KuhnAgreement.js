@@ -48,11 +48,10 @@ export const KuhnAgreement = {
     // ─────────────────────────────────────────────────────────────
     majorations: {
         nuit: {
-            posteNuit: 0.20,        // +20% si poste de nuit (≥2h entre 20h-6h)
-            posteMatin: 0.15,       // +15% heures entre 20h-6h (poste matin/AM)
-            plageDebut: 20,         // 20h00
-            plageFin: 6,            // 6h00
-            seuilHeuresPosteNuit: 2 // Min 2h dans la plage pour être "poste nuit"
+            posteNuit: 0.20,
+            plageDebut: 20,
+            plageFin: 6,
+            seuilHeuresPosteNuit: 2
         },
         dimanche: 0.50,            // +50% (CCN: +100%)
         heuresSupplementaires: {
@@ -75,7 +74,6 @@ export const KuhnAgreement = {
             valeurAccord: 0.82,     // €/heure (01/01/2024)
             stateKeyActif: 'travailEquipe',
             stateKeyHeures: 'heuresEquipe',
-            defaultHeures: 151.67, // Heures mensuelles par défaut (défini par l'accord)
             conditionAnciennete: { type: 'aucune', description: 'Aucune' },
             tooltip: 'Horaire avec pause 20 min, durée effective ≥ 6 h/poste, horaire collectif posté (équipes successives).'
         },
@@ -91,6 +89,19 @@ export const KuhnAgreement = {
             moisVersement: 7,       // Juillet
             conditionAnciennete: { type: 'annees_revolues', annees: 1, description: '1 an au 1er juin' },
             tooltip: 'Contrat ≥ 50 % temps légal. Non versée si contrat suspendu sur toute la période de référence (1er juin N-1 au 31 mai N).'
+        },
+        {
+            id: 'majorationNuitPosteMatin',
+            label: 'Majoration nuit poste matin / Après-Midi',
+            sourceValeur: 'accord',
+            valueType: 'majorationHoraire',
+            unit: '%',
+            valeurAccord: 0.15,     // +15 % du taux horaire (heures entre 20h-6h hors poste de nuit ≥2h)
+            stateKeyActif: 'majorationNuitPosteMatin',
+            stateKeyHeures: 'heuresMajorationNuitPosteMatin',
+            defaultHeures: 0,
+            conditionAnciennete: { type: 'aucune', description: 'Aucune' },
+            tooltip: 'Heures entre 20h-6h hors poste de nuit (≥2h). En plus du poste de nuit (+20 %).'
         }
     ],
 
@@ -155,6 +166,15 @@ export const KuhnAgreement = {
             source: 'Accord Kuhn Art. 2.2',
             conditionAnciennete: { type: 'aucune', description: 'Aucune' },
             dateCle: 'Dès le premier poste effectué'
+        },
+        {
+            id: 'majorationNuitPosteMatin',
+            type: 'prime',
+            label: 'Majoration nuit poste matin / Après-Midi',
+            source: 'Accord Kuhn (majorations nuit)',
+            conditionAnciennete: { type: 'aucune', description: 'Aucune' },
+            dateCle: 'Heures entre 20h-6h hors poste de nuit (≥2h)',
+            note: '+15 % (en plus du poste de nuit +20 %).'
         }
     ],
 

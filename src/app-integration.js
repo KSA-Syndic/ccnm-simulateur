@@ -46,25 +46,14 @@ export function initAppIntegration() {
     const agreement = loadAgreementFromURL(urlParamsObj);
 
     // Page 2 : options sans taux dans le texte ; taux dans tooltip à côté du label
-    const optionPosteNuit = document.getElementById('option-poste-nuit');
-    const optionPosteMatin = document.getElementById('option-poste-matin');
+    // Sans accord : CCN = checkbox "Travail de nuit" + heures. Avec accord à deux taux : bloc dédié (heures poste nuit + heures poste matin/AM).
     const typeNuitTooltip = document.getElementById('type-nuit-tooltip');
     const travailDimancheTooltip = document.getElementById('travail-dimanche-tooltip');
-    if (optionPosteNuit) optionPosteNuit.textContent = 'Poste de nuit';
-    if (optionPosteMatin) optionPosteMatin.textContent = 'Poste matin/AM';
     const pctNuitCCN = Math.round((CONFIG.MAJORATIONS_CCN?.nuit ?? 0.15) * 100);
     const pctDimancheCCN = Math.round((CONFIG.MAJORATIONS_CCN?.dimanche ?? 1) * 100);
-    const prefixAccordOnly = LABELS.tooltipPrefixAccordOnly;
     if (typeNuitTooltip) {
-        if (agreement && agreement.majorations?.nuit) {
-            const n = agreement.majorations.nuit;
-            const pctNuit = n.posteNuit != null ? Math.round(n.posteNuit * 100) : pctNuitCCN;
-            const pctMatin = n.posteMatin != null ? Math.round(n.posteMatin * 100) : pctNuitCCN;
-            const nom = getAccordNomCourt(agreement);
-            typeNuitTooltip.setAttribute('data-tippy-content', `Poste de nuit : +${pctNuitCCN}% CCN ; +${pctNuit}% ${nom}.<br>Poste matin/AM : +${pctNuitCCN}% CCN ; +${pctMatin}% ${nom}.`);
-        } else {
-            typeNuitTooltip.setAttribute('data-tippy-content', `Poste de nuit : +${pctNuitCCN}%.<br>Poste matin/AM : +${pctNuitCCN}%.`);
-        }
+        // Ce bloc (select) n'est visible que sans accord ou accord à un seul taux ; un seul taux CCN ou accord
+        typeNuitTooltip.setAttribute('data-tippy-content', `+${pctNuitCCN}%.`);
         if (typeNuitTooltip._tippy) typeNuitTooltip._tippy.setContent(typeNuitTooltip.getAttribute('data-tippy-content'));
     }
     if (travailDimancheTooltip) {
@@ -91,6 +80,7 @@ export function initAppIntegration() {
     const accordLabel = document.querySelector('#result-accord-options-block .checkbox-highlight span');
     if (resultAccordBlock) {
         if (agreement) {
+            const prefixAccordOnly = (LABELS && LABELS.tooltipPrefixAccordOnly) || '';
             resultAccordBlock.classList.remove('hidden');
             // Libellé dynamique + badge accord (ludique, cohérent avec le reste de l'app)
             if (accordLabel) {
@@ -114,7 +104,8 @@ export function initAppIntegration() {
                     const valeur = prime.sourceValeur === 'accord' && prime.valeurAccord != null
                         ? prime.valeurAccord
                         : (prime.sourceValeur === 'modalite' ? '' : prime.valeurAccord ?? '');
-                    const labelText = `${prime.label} (${valeur} ${prime.unit}/an)`;
+                    const valeurAffichage = valeur !== '' && prime.sourceValeur === 'accord' ? `+${valeur}` : valeur;
+                    const labelText = `${prime.label} (${valeurAffichage} ${prime.unit}/an)`;
                     const inputId = `prime-opt-${prime.id}`;
                     const checked = prime.defaultActif === true;
                     const label = document.createElement('label');

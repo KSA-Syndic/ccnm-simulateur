@@ -340,7 +340,7 @@ export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = 
                 });
                 doc.setFont(undefined, 'normal');
                 primes.forEach(p => {
-                    const desc = p.label + (p.valeurAccord != null ? ` (${p.valeurAccord} ${p.unit})` : '');
+                    const desc = p.label + (p.valeurAccord != null ? ` (+${p.valeurAccord} ${p.unit})` : '');
                     const lines = doc.splitTextToSize('• ' + desc, pageWidth - margin * 2 - 15);
                     lines.forEach(line => {
                         doc.text(line, margin + 5, yPos);

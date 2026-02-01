@@ -111,6 +111,29 @@ function computePrimeAccord(def, context) {
         };
     }
 
+    if (def.valueKind === 'majorationHoraire') {
+        const actif = (cfg.stateKeyActif && (getAccordInput(state, cfg.stateKeyActif) === true || state[cfg.stateKeyActif] === true));
+        if (!actif) {
+            return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
+        }
+        const taux = getPrimeValue(agreement, def.id, state);
+        const heuresRaw = cfg.stateKeyHeures ? (getAccordInput(state, cfg.stateKeyHeures) ?? state[cfg.stateKeyHeures]) : 0;
+        const heures = Number(heuresRaw) || 0;
+        const tauxHoraire = context.tauxHoraire ?? 0;
+        if (taux == null || !heures || !tauxHoraire) {
+            return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
+        }
+        const montantMensuel = Math.round(heures * tauxHoraire * taux * 100) / 100;
+        const montantAnnuel = Math.round(montantMensuel * 12);
+        return {
+            amount: montantAnnuel,
+            label: def.label,
+            source: SOURCE_ACCORD,
+            semanticId: def.semanticId,
+            meta: { taux: Math.round(taux * 100), heures }
+        };
+    }
+
     if (def.valueKind === 'horaire') {
         const actif = (cfg.stateKeyActif && (getAccordInput(state, cfg.stateKeyActif) === true || state[cfg.stateKeyActif] === true));
         if (!actif) {
@@ -122,7 +145,6 @@ function computePrimeAccord(def, context) {
         if (!valeur || !heures) {
             return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
         }
-        // valueType 'horaire' ⇒ période mensuelle : heures/mois × taux, puis × 12 (calculMensuel conservé pour rétrocompat / cas particulier)
         const calculMensuel = (def.valueKind === 'horaire') || (cfg.calculMensuel !== false);
         const montantMensuel = calculMensuel
             ? Math.round(heures * valeur * 100) / 100

@@ -493,6 +493,18 @@ body.iframe-mode .simulator-container.iframe-container {
     margin-top: 10px;
 }
 
+/* Sous-champ sans encadré, aligné au label (ex. heures nuit/dimanche) */
+.sub-field-inline {
+    margin-left: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+}
+.sub-field-inline .input-with-unit {
+    margin-top: 6px;
+}
+
 /* Animation pour les groupes qui apparaissent */
 .form-group {
     transition: opacity 0.3s ease;
@@ -3240,8 +3252,8 @@ body.iframe-mode .simulator-container.iframe-container {
     display: none;
 }
 
-/* Sous-champs (heures, etc.) */
-.sub-field {
+/* Sous-champs (heures, etc.) — encadré par défaut */
+.sub-field:not(.sub-field-inline) {
     margin-top: 8px;
     margin-left: 28px;
     padding: 10px;

@@ -78,9 +78,10 @@ describe('Accords - Interface (getPrimes, getPrimeById, getElements)', () => {
     it('devrait retourner la liste des primes Kuhn', () => {
         const primes = getPrimes(KuhnAgreement);
         expect(Array.isArray(primes)).toBe(true);
-        expect(primes.length).toBe(2);
+        expect(primes.length).toBe(3);
         expect(primes.some(p => p.id === 'primeEquipe')).toBe(true);
         expect(primes.some(p => p.id === 'primeVacances')).toBe(true);
+        expect(primes.some(p => p.id === 'majorationNuitPosteMatin')).toBe(true);
     });
 
     it('devrait retourner une prime par id', () => {
@@ -169,7 +170,7 @@ describe('Accords - Interface (primeDefToElementDef, getAccordPrimeDefsAsElement
 
     it('devrait retourner toutes les primes accord en ElementDef', () => {
         const elements = getAccordPrimeDefsAsElements(KuhnAgreement);
-        expect(elements.length).toBe(2);
+        expect(elements.length).toBe(3);
         expect(elements.every(e => e.source === SOURCE_ACCORD && e.kind === 'prime')).toBe(true);
     });
 });

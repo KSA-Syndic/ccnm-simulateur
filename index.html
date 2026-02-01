@@ -198,7 +198,7 @@
                 <!-- Options Cadre -->
                 <div class="modalites-cadre hidden" id="modalites-cadre">
                     <div class="form-group">
-                        <label for="forfait">Type de forfait <span class="tooltip-trigger" id="forfait-tooltip" data-tippy-content="Base 35h : sans majoration. Forfait Heures : +15%. Forfait Jours : +30%." aria-label="Taux">?</span></label>
+                        <label for="forfait">Type de forfait <span class="tooltip-trigger" id="forfait-tooltip" data-tippy-content="" aria-label="Taux">?</span></label>
                         <select id="forfait" class="book-select">
                             <option value="35h">Base 35h</option>
                             <option value="heures">Forfait Heures</option>
@@ -231,17 +231,17 @@
                             <p><strong>📋 Forfait jours :</strong> En tant que cadre au forfait jours, les majorations pour travail de nuit ou du dimanche ne s'appliquent pas financièrement. Elles donnent lieu à du <strong>repos compensateur</strong> (non simulable ici).</p>
                         </div>
                         
-                        <!-- Travail de nuit -->
                         <div class="form-group" id="group-nuit">
-                            <label for="type-nuit">Travail de nuit <span class="tooltip-trigger" id="type-nuit-tooltip" data-tippy-content="Poste de nuit : +15%.&lt;br&gt;Poste matin/AM : +15%." aria-label="Taux">?</span></label>
-                            <select id="type-nuit" class="book-select">
-                                <option value="aucun">Aucun</option>
-                                <option value="poste-nuit" id="option-poste-nuit">Poste de nuit</option>
-                                <option value="poste-matin" id="option-poste-matin">Poste matin/AM</option>
-                            </select>
-                            <div class="sub-field hidden" id="heures-nuit-field">
-                                <label for="heures-nuit">Heures de nuit/mois</label>
-                                <input type="number" id="heures-nuit" class="book-input" min="0" max="200" value="0">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="travail-nuit" class="book-checkbox">
+                                <span>Travail de nuit</span>
+                                <span class="tooltip-trigger" id="type-nuit-tooltip" data-tippy-content="" aria-label="Taux">?</span>
+                            </label>
+                            <div class="sub-field sub-field-inline hidden" id="heures-nuit-field">
+                                <div class="input-with-unit">
+                                    <input type="number" id="heures-nuit" class="book-input" min="0" max="200" step="0.01" value="0" aria-label="Heures de nuit par mois">
+                                    <span class="input-unit">heures/mois</span>
+                                </div>
                             </div>
                         </div>
 
@@ -250,11 +250,13 @@
                             <label class="checkbox-label">
                                 <input type="checkbox" id="travail-dimanche" class="book-checkbox">
                                 <span>Travail le dimanche</span>
-                                <span class="tooltip-trigger" id="travail-dimanche-tooltip" data-tippy-content="+100%." aria-label="Taux">?</span>
+                                <span class="tooltip-trigger" id="travail-dimanche-tooltip" data-tippy-content="" aria-label="Taux">?</span>
                             </label>
-                            <div class="sub-field hidden" id="heures-dimanche-field">
-                                <label for="heures-dimanche">Heures dimanche/mois</label>
-                                <input type="number" id="heures-dimanche" class="book-input" min="0" max="50" value="0">
+                            <div class="sub-field sub-field-inline hidden" id="heures-dimanche-field">
+                                <div class="input-with-unit">
+                                    <input type="number" id="heures-dimanche" class="book-input" min="0" max="50" step="0.01" value="0" aria-label="Heures dimanche par mois">
+                                    <span class="input-unit">heures/mois</span>
+                                </div>
                             </div>
                         </div>
 

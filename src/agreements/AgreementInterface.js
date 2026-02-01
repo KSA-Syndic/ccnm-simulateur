@@ -36,7 +36,8 @@
  * - horaire : montant par heure (€/h) ; saisie d'heures mensuelles → calcul mensuel (heures × taux) puis × 12
  * - montant : montant fixe annuel (€) ; versement en un mois (moisVersement optionnel)
  * - pourcentage : % d'une base (ex. salaire)
- * @typedef {'horaire'|'montant'|'pourcentage'} PrimeValueType
+ * - majorationHoraire : majoration en % du taux horaire ; saisie heures/mois → montant = heures × tauxHoraire × valeurAccord × 12
+ * @typedef {'horaire'|'montant'|'pourcentage'|'majorationHoraire'} PrimeValueType
  */
 
 /**
@@ -143,7 +144,7 @@ export const AGREEMENT_SCHEMA = {
     majorations: {
         nuit: {
             posteNuit: 'number (requis)',
-            posteMatin: 'number (requis)',
+            posteMatin: 'number (optionnel) - si absent, peut être défini comme prime majorationHoraire',
             plageDebut: 'number (requis)',
             plageFin: 'number (requis)',
             seuilHeuresPosteNuit: 'number (requis)'

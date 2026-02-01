@@ -36,8 +36,8 @@ export const state = {
     experiencePro: 0,            // Expérience professionnelle (Barème débutants F11/F12)
     
     // === CONDITIONS DE TRAVAIL (Non-Cadres) ===
-    typeNuit: 'aucun',           // 'aucun', 'poste-nuit', 'poste-matin'
-    heuresNuit: 0,               // Heures de nuit mensuelles
+    typeNuit: 'aucun',           // 'aucun', 'poste-nuit', 'poste-matin' (CCN)
+    heuresNuit: 0,               // Heures de nuit mensuelles (CCN)
     travailDimanche: false,      // Travail le dimanche
     heuresDimanche: 0,           // Heures dimanche mensuelles
     

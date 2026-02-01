@@ -33,8 +33,8 @@ const state = {
     experiencePro: 0,            // Expérience professionnelle (Barème débutants F11/F12)
     
     // === CONDITIONS DE TRAVAIL (Non-Cadres) ===
-    typeNuit: 'aucun',           // 'aucun', 'poste-nuit', 'poste-matin'
-    heuresNuit: 0,               // Heures de nuit mensuelles
+    typeNuit: 'aucun',           // 'aucun', 'poste-nuit', 'poste-matin' (CCN)
+    heuresNuit: 0,               // Heures de nuit mensuelles (CCN)
     travailDimanche: false,      // Travail le dimanche
     heuresDimanche: 0,           // Heures dimanche mensuelles
     
@@ -860,20 +860,21 @@ function initControls() {
     // CONTRÔLES CONDITIONS DE TRAVAIL (Non-Cadres)
     // ═══════════════════════════════════════════════════════════════
 
-    // Travail de nuit
-    const typeNuitSelect = document.getElementById('type-nuit');
+    // Travail de nuit (checkbox comme travail dimanche)
+    const travailNuitCheckbox = document.getElementById('travail-nuit');
     const heuresNuitField = document.getElementById('heures-nuit-field');
     const heuresNuitInput = document.getElementById('heures-nuit');
     
-    typeNuitSelect.addEventListener('change', (e) => {
-        state.typeNuit = e.target.value;
-        heuresNuitField.classList.toggle('hidden', e.target.value === 'aucun');
+    travailNuitCheckbox.addEventListener('change', (e) => {
+        state.typeNuit = e.target.checked ? 'poste-nuit' : 'aucun';
+        heuresNuitField.classList.toggle('hidden', !e.target.checked);
         updateTauxInfo();
         updateAll();
     });
     
     heuresNuitInput.addEventListener('input', (e) => {
-        state.heuresNuit = parseFloat(e.target.value) || 0;
+        const raw = String(e.target.value).replace(',', '.');
+        state.heuresNuit = parseFloat(raw) || 0;
         updateAll();
     });
 
@@ -890,7 +891,8 @@ function initControls() {
     });
     
     heuresDimancheInput.addEventListener('input', (e) => {
-        state.heuresDimanche = parseFloat(e.target.value) || 0;
+        const raw = String(e.target.value).replace(',', '.');
+        state.heuresDimanche = parseFloat(raw) || 0;
         updateAll();
     });
 
@@ -922,7 +924,8 @@ function initControls() {
         accordPrimesHorairesContainer.addEventListener('input', (e) => {
             const keyHeures = e.target.dataset?.stateKeyHeures;
             if (e.target.type === 'number' && keyHeures) {
-                state.accordInputs[keyHeures] = parseFloat(e.target.value) || 0;
+                const raw = String(e.target.value).replace(',', '.');
+                state.accordInputs[keyHeures] = parseFloat(raw) || 0;
                 updateAll();
             }
         });
@@ -1107,24 +1110,28 @@ function getModalitesHorsPrimesPage3(agreement) {
     if (agreement.anciennete && typeof agreement.anciennete.seuil === 'number') {
         items.push('Prime d\'ancienneté (seuil/barème accord)');
     }
-    if (agreement.majorations?.nuit && (agreement.majorations.nuit.posteNuit != null || agreement.majorations.nuit.posteMatin != null)) {
-        const n = agreement.majorations.nuit;
-        const pctNuit = n.posteNuit != null ? '+' + Math.round(n.posteNuit * 100) + '% poste nuit' : '';
-        const pctMatin = n.posteMatin != null ? '+' + Math.round(n.posteMatin * 100) + '% poste matin' : '';
-        const lib = [pctNuit, pctMatin].filter(Boolean).join(', ');
-        if (lib) items.push('Majorations nuit (' + lib + ')');
+    if (agreement.majorations?.nuit && agreement.majorations.nuit.posteNuit != null) {
+        const pct = Math.round(agreement.majorations.nuit.posteNuit * 100);
+        items.push('Majoration nuit (+' + pct + '%)');
     }
     if (agreement.majorations?.dimanche != null) {
         const pct = Math.round(agreement.majorations.dimanche * 100);
         items.push('Majoration dimanche (+' + pct + '%)');
     }
     if (agreement.primes && Array.isArray(agreement.primes)) {
-        const primesHoraires = agreement.primes.filter(p => p.valueType === 'horaire' && p.stateKeyHeures);
+        const primesHoraires = agreement.primes.filter(p => (p.valueType === 'horaire' || p.valueType === 'majorationHoraire') && p.stateKeyHeures);
         primesHoraires.forEach(p => {
             const taux = p.valeurAccord != null ? String(p.valeurAccord).replace('.', ',') : '';
-            const unit = p.unit || '€/h';
-            const lib = p.label ? `${p.label} (${taux} ${unit})` : `Prime horaire (${taux} ${unit})`;
-            items.push(lib);
+            const prefix = taux ? '+' : '';
+            if (p.valueType === 'majorationHoraire') {
+                const pct = Math.round((p.valeurAccord ?? 0) * 100);
+                const lib = p.label ? `${p.label} (+${pct}%)` : `Majoration horaire (+${pct}%)`;
+                items.push(lib);
+            } else {
+                const unit = p.unit || '€/h';
+                const lib = p.label ? `${p.label} (${prefix}${taux} ${unit})` : `Prime horaire (${prefix}${taux} ${unit})`;
+                items.push(lib);
+            }
         });
     }
     if (agreement.repartition13Mois?.actif === true) {
@@ -1170,7 +1177,7 @@ function updateConditionsTravailDisplay() {
     
     const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
     const primesHoraires = agreement && typeof window.AgreementHelpers?.getPrimes === 'function'
-        ? window.AgreementHelpers.getPrimes(agreement).filter(p => p.valueType === 'horaire' && p.stateKeyHeures)
+        ? window.AgreementHelpers.getPrimes(agreement).filter(p => (p.valueType === 'horaire' || p.valueType === 'majorationHoraire') && p.stateKeyHeures)
         : [];
     const hasPrimeHeures = primesHoraires.length > 0;
     
@@ -1188,19 +1195,44 @@ function updateConditionsTravailDisplay() {
         primesHoraires.forEach(p => {
             if (p.stateKeyActif) state.accordInputs[p.stateKeyActif] = false;
         });
-        document.getElementById('type-nuit').value = 'aucun';
+        document.getElementById('travail-nuit').checked = false;
         document.getElementById('travail-dimanche').checked = false;
         document.getElementById('heures-nuit-field').classList.add('hidden');
         document.getElementById('heures-dimanche-field').classList.add('hidden');
     } else {
         hintForfaitJours.classList.add('hidden');
-        groupNuit.classList.remove('hidden');
         groupDimanche.classList.remove('hidden');
+        groupNuit.classList.remove('hidden');
+        const travailNuitCheckbox = document.getElementById('travail-nuit');
+        const heuresNuitEl = document.getElementById('heures-nuit');
+        if (travailNuitCheckbox) travailNuitCheckbox.checked = state.typeNuit !== 'aucun';
+        if (heuresNuitEl) heuresNuitEl.value = String(state.heuresNuit ?? 0);
+        const hnf = document.getElementById('heures-nuit-field');
+        if (hnf) hnf.classList.toggle('hidden', state.typeNuit === 'aucun');
         
         if (!container) return;
-        container.innerHTML = '';
+        const accordPrimesSignature = (agreement?.id ?? '') + '-' + (primesHoraires.length || 0);
+        const alreadyBuilt = container.children.length > 0 && container.dataset.accordPrimesBuilt === accordPrimesSignature;
         if (!isCadre && hasPrimeHeures) {
             container.classList.remove('hidden');
+            if (alreadyBuilt) {
+                primesHoraires.forEach(prime => {
+                    const actif = state.accordInputs[prime.stateKeyActif] === true;
+                    const heures = state.accordInputs[prime.stateKeyHeures] != null ? state.accordInputs[prime.stateKeyHeures] : (prime.defaultHeures ?? 151.67);
+                    const formGroup = container.querySelector(`[data-state-key-actif="${prime.stateKeyActif}"]`);
+                    if (formGroup) {
+                        const cb = formGroup.querySelector('input[type="checkbox"]');
+                        const inputHeures = formGroup.querySelector('input[data-state-key-heures]');
+                        const subField = formGroup.querySelector('.sub-field');
+                        if (cb) cb.checked = actif;
+                        if (inputHeures) inputHeures.value = String(heures);
+                        if (subField) subField.classList.toggle('hidden', !actif);
+                    }
+                });
+                return;
+            }
+            container.dataset.accordPrimesBuilt = accordPrimesSignature;
+            container.innerHTML = '';
             primesHoraires.forEach(prime => {
                 const actif = state.accordInputs[prime.stateKeyActif] === true;
                 const heures = state.accordInputs[prime.stateKeyHeures] != null ? state.accordInputs[prime.stateKeyHeures] : (prime.defaultHeures ?? 151.67);
@@ -1226,10 +1258,15 @@ function updateConditionsTravailDisplay() {
                 labelCheck.appendChild(spanLabel);
                 const prefixAccordOnly = (typeof window.LABELS !== 'undefined' && window.LABELS.tooltipPrefixAccordOnly) || '';
                 const tooltipContent = (() => {
+                    const baseTooltip = prime.tooltip ? String(prime.tooltip) : '';
+                    if (prime.valueType === 'majorationHoraire' && prime.valeurAccord != null) {
+                        const pct = Math.round(prime.valeurAccord * 100);
+                        const ratePart = `+${pct}%. `;
+                        return (prefixAccordOnly + (ratePart + baseTooltip).trim()).trim();
+                    }
                     const taux = prime.valeurAccord != null ? String(prime.valeurAccord).replace('.', ',') : '';
                     const unit = prime.unit || '€/h';
-                    const ratePart = taux ? `${taux} ${unit}. ` : '';
-                    const baseTooltip = prime.tooltip ? String(prime.tooltip) : '';
+                    const ratePart = taux ? `+${taux} ${unit}. ` : '';
                     return (prefixAccordOnly + (ratePart + baseTooltip).trim()).trim();
                 })();
                 if (tooltipContent) {
@@ -1241,10 +1278,10 @@ function updateConditionsTravailDisplay() {
                     labelCheck.appendChild(tooltipSpan);
                 }
                 const subField = document.createElement('div');
-                subField.className = 'sub-field' + (actif ? '' : ' hidden');
+                subField.className = 'sub-field sub-field-inline' + (actif ? '' : ' hidden');
                 subField.dataset.heuresFieldFor = prime.stateKeyActif;
-                const labelHeures = document.createElement('label');
-                labelHeures.textContent = 'Heures / mois';
+                const inputWithUnit = document.createElement('div');
+                inputWithUnit.className = 'input-with-unit';
                 const inputHeures = document.createElement('input');
                 inputHeures.type = 'number';
                 inputHeures.className = 'book-input';
@@ -1253,9 +1290,14 @@ function updateConditionsTravailDisplay() {
                 inputHeures.step = prime.step ?? 0.01;
                 inputHeures.value = heures;
                 inputHeures.dataset.stateKeyHeures = prime.stateKeyHeures;
+                inputHeures.setAttribute('aria-label', 'Heures par mois');
                 inputHeures.addEventListener('focus', function () { this.select(); });
-                subField.appendChild(labelHeures);
-                subField.appendChild(inputHeures);
+                const spanUnit = document.createElement('span');
+                spanUnit.className = 'input-unit';
+                spanUnit.textContent = 'heures/mois';
+                inputWithUnit.appendChild(inputHeures);
+                inputWithUnit.appendChild(spanUnit);
+                subField.appendChild(inputWithUnit);
                 formGroup.appendChild(labelCheck);
                 formGroup.appendChild(subField);
                 container.appendChild(formGroup);
@@ -1284,6 +1326,7 @@ function updateConditionsTravailDisplay() {
             }
         } else {
             container.classList.add('hidden');
+            delete container.dataset.accordPrimesBuilt;
             primesHoraires.forEach(p => {
                 if (p.stateKeyActif) state.accordInputs[p.stateKeyActif] = false;
             });
@@ -1300,13 +1343,11 @@ function updateTauxInfo() {
     const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
     const nomAccord = getAccordNomCourt(agreement) || 'accord';
 
-    // Taux de nuit (poste nuit / poste matin : taux accord si présent, sinon CCN)
+    // Taux de nuit (taux accord si présent, sinon CCN)
     if (tauxNuitInfo) {
         if (state.typeNuit !== 'aucun') {
-            if (state.accordActif && agreement && agreement.majorations?.nuit) {
-                const nuit = agreement.majorations.nuit;
-                const tauxAccord = state.typeNuit === 'poste-nuit' ? nuit.posteNuit : nuit.posteMatin;
-                const pct = tauxAccord != null ? Math.round(tauxAccord * 100) : (state.typeNuit === 'poste-nuit' ? 20 : Math.round((CONFIG.MAJORATIONS_CCN?.nuit ?? 0.15) * 100));
+            if (state.accordActif && agreement && agreement.majorations?.nuit?.posteNuit != null) {
+                const pct = Math.round(agreement.majorations.nuit.posteNuit * 100);
                 tauxNuitInfo.textContent = `Taux ${nomAccord} : +${pct}%`;
                 tauxNuitInfo.className = 'taux-applique accord';
             } else {

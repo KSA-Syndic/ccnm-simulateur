@@ -83,7 +83,7 @@ describe('RemunerationCalculator', () => {
                 barème: { 2: 0.02, 5: 0.05, 15: 0.15 }
             },
             majorations: {
-                nuit: { posteNuit: 0.20, posteMatin: 0.15 },
+                nuit: { posteNuit: 0.20 },
                 dimanche: 0.50
             },
             primes: [
@@ -107,6 +107,17 @@ describe('RemunerationCalculator', () => {
                     moisVersement: 7,
                     conditionAnciennete: { type: 'annees_revolues', annees: 1 },
                     stateKeyActif: 'primeVacances'
+                },
+                {
+                    id: 'majorationNuitPosteMatin',
+                    label: 'Majoration nuit poste matin / Après-Midi',
+                    sourceValeur: 'accord',
+                    valueType: 'majorationHoraire',
+                    unit: '%',
+                    valeurAccord: 0.15,
+                    stateKeyActif: 'majorationNuitPosteMatin',
+                    stateKeyHeures: 'heuresMajorationNuitPosteMatin',
+                    defaultHeures: 0
                 }
             ],
             repartition13Mois: { actif: true, moisVersement: 11, inclusDansSMH: true },
@@ -188,6 +199,26 @@ describe('RemunerationCalculator', () => {
             const result = calculateAnnualRemuneration(state, accordKuhn, { mode: 'full' });
             const primeVacances = result.details.find(d => d.label.includes('vacances'));
             expect(primeVacances).toBeUndefined();
+        });
+
+        it('devrait afficher majoration nuit (champ unique) + prime majoration poste matin/AM quand accord Kuhn', () => {
+            const state = {
+                ...stateBase,
+                scores: [3, 3, 3, 3, 3, 3], // C5
+                accordActif: true,
+                typeNuit: 'poste-nuit',
+                heuresNuit: 20,
+                accordInputs: { majorationNuitPosteMatin: true, heuresMajorationNuitPosteMatin: 10 }
+            };
+            const result = calculateAnnualRemuneration(state, accordKuhn, { mode: 'full' });
+            const majNuit = result.details.find(d => d.label.includes('Majoration nuit (+20%)') && d.label.includes('20h/mois'));
+            const majPosteMatin = result.details.find(d => d.label.includes('poste matin / Après-Midi') && d.label.includes('15%'));
+            expect(majNuit).toBeDefined();
+            expect(majPosteMatin).toBeDefined();
+            const baseSMH = CONFIG.SMH[5];
+            const tauxHoraire = baseSMH / 12 / 151.67;
+            expect(majNuit.value).toBe(Math.round(20 * tauxHoraire * 0.20 * 12));
+            expect(majPosteMatin.value).toBe(Math.round(10 * tauxHoraire * 0.15 * 12));
         });
     });
 

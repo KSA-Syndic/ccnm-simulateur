@@ -32,9 +32,9 @@ Le simulateur utilise une interface de type **wizard** (assistant pas à pas) po
 - Ancienneté dans l'entreprise
 - Options spécifiques selon le profil :
   - **Non-Cadres :** Valeur du Point Territorial
-  - **Cadres :** Type de forfait (35h, Heures +15%, Jours +30%)
+  - **Cadres :** Type de forfait (ex. 35h, forfait heures, forfait jours — taux dans CONFIG.FORFAITS)
   - **Cadres débutants (F11/F12) :** Expérience professionnelle
-- Conditions de travail particulières (panneau dépliable)
+- Conditions de travail particulières (panneau dépliable) : travail de nuit (type + heures ou, si accord avec deux taux nuit, deux champs heures poste nuit / poste matin), travail dimanche
 
 #### Étape 3 : Résultat
 - Options de calcul (Accord d'entreprise si disponible, 13e mois)
@@ -64,14 +64,7 @@ Le système calcule la classe d'emploi (1 à 18) basée sur la somme des points 
 
 * **Entrées :** 6 Critères × 10 Degrés (Voir Annexe pour les textes).
 * **Calcul :** Somme des points (Min 6, Max 60).
-* **Table de Transposition (Juin 2024) :**
-  * **A1** (6-8) | **A2** (9-11) | **B3** (12-14) | **B4** (15-17)
-  * **C5** (18-20) | **C6** (21-23) | **D7** (24-26) | **D8** (27-29)
-  * **E9** (30-33) | **E10** (34-37)
-  * **F11** (38-41) | **F12** (42-45)
-  * **G13** (46-49) | **G14** (50-52)
-  * **H15** (53-55) | **H16** (56-57)
-  * **I17** (58-59) | **I18** (60)
+* **Table de Transposition :** Points → Groupe/Classe (ex. A1 pour 6-8 pts, I18 pour 60 pts). Valeurs dans CONFIG.MAPPING_POINTS.
 
 * **Fonctionnalité "Débrayage" :** L'utilisateur doit pouvoir forcer manuellement le couple Groupe/Classe via un bouton "Ajuster manuellement".
 
@@ -83,27 +76,29 @@ Le simulateur doit gérer **3 profils distincts** avec des règles de paie radic
 
 * **Salaire Base :** SMH de la classe (Voir Annexe).
 * **Prime d'ancienneté (CCN, non-cadres) :**
-  * *Condition :* Ancienneté ≥ 3 ans (CONFIG.ANCIENNETE.seuil).
+  * *Condition :* Ancienneté ≥ seuil CCN (CONFIG.ANCIENNETE.seuil ; ex. 3 ans).
   * *Base de calcul :* Valeur du point territorial (pas le SMH). *Source :* CCNM Art. 142.
-  * *Formule :* Point territorial × Taux (classe) × Années = montant **mensuel** ; annuel = mensuel × 12. Taux et plafond : CONFIG.TAUX_ANCIENNETE, CONFIG.ANCIENNETE.plafond (15 ans).
-  * *Exemple :* 5,90 × 2,20 × 10 = 129,80 €/mois → 1 558 €/an (classe C5, 10 ans).
+  * *Formule :* Point territorial × Taux (classe) × Années = montant **mensuel** ; annuel = mensuel × 12. Taux et plafond : CONFIG.TAUX_ANCIENNETE, CONFIG.ANCIENNETE.plafond (ex. 15 ans).
+  * *Exemple :* Point 5,90 × taux C5 × 10 ans → montant mensuel puis × 12 (valeurs numériques dans CONFIG).
   * *Principe de faveur :* Si un accord prévoit une prime d'ancienneté plus avantageuse, le système applique la règle la plus favorable (Art. L2254-2).
 
-* **Majorations conditions de travail (CCNM Art. 145, 146) :** Nuit +15 %, dimanche +100 % (CONFIG.MAJORATIONS_CCN). Exclues de l'assiette SMH. Principe de faveur : si un accord prévoit des taux différents, le système applique le plus avantageux. Saisie des heures dans le simulateur pour le calcul.
+* **Majorations conditions de travail (CCNM Art. 145, 146) :** Les taux CCN (ex. nuit, dimanche) sont centralisés dans CONFIG.MAJORATIONS_CCN et peuvent être mis à jour ; les valeurs actuelles ne sont pas figées (ex. à titre indicatif : nuit +15 %, dimanche +100 %). Exclues de l'assiette SMH. Principe de faveur : si un accord prévoit des taux différents, le système applique le plus avantageux. Saisie des heures dans le simulateur pour le calcul.
+  * **CCN seule :** Un seul type de nuit (un taux CCN pour toutes les heures de nuit) ; l'utilisateur choisit « aucun », « poste de nuit » ou « poste matin/AM » et saisit les heures de nuit/mois.
+  * **Accord avec deux taux nuit (ex. poste nuit / poste matin) :** Lorsqu'un accord définit deux majorations nuit distinctes (ex. +20 % poste nuit, +15 % poste matin/AM — valeurs d'exemple, propres à chaque accord), le simulateur affiche **deux champs** : « Heures poste de nuit/mois » et « Heures poste matin/AM/mois », afin de refléter la diversité des postes d'un ouvrier sur un même mois (plusieurs types d'heures de nuit cumulables).
 
 ##### PROFIL B : CADRES CONFIRMÉS (Cl. 11 à 18, hors débutants)
 
 * **Salaire de base :** SMH de la classe (CONFIG.SMH).
-* **Prime d'ancienneté CCN :** 0 € (incluse dans le salaire de base des cadres — CCNM Art. 142). Un accord d'entreprise peut prévoir une prime d'ancienneté pour les cadres (base = rémunération de base).
-* **Majorations forfaits (CCNM Art. 139) :** Forfait heures +15 %, forfait jours +30 % — **incluses dans l'assiette SMH** (CONFIG.FORFAITS).
+* **Prime d'ancienneté CCN :** Incluse dans le salaire de base des cadres (CCNM Art. 142). Un accord d'entreprise peut prévoir une prime d'ancienneté pour les cadres (base = rémunération de base).
+* **Majorations forfaits (CCNM Art. 139) :** Taux forfait heures / forfait jours — **inclus dans l'assiette SMH** (CONFIG.FORFAITS ; ex. +15 % heures, +30 % jours).
 
 ##### PROFIL C : CADRES DÉBUTANTS (Classes F11 et F12)
 
 * **Déclencheur :** Si classe 11 ou 12, demander l’expérience professionnelle.
-* **Logique :** Si expérience &lt; 6 ans, le SMH suit le barème débutants (CONFIG.BAREME_DEBUTANTS), pas le SMH standard de la classe.
+* **Logique :** Si expérience &lt; seuil (ex. 6 ans), le SMH suit le barème débutants (CONFIG.BAREME_DEBUTANTS), pas le SMH standard de la classe.
 * **Source :** CCNM Art. 139, barème salariés débutants.
-* **Tranches :** &lt; 2 ans, 2 à &lt; 4 ans, 4 à 6 ans, ≥ 6 ans (SMH standard). L’alternance compte pour moitié.
-* **Note :** Les montants du barème intègrent déjà les majorations Art. 139 (5 % à 2 ans, 8 % à 4 ans).
+* **Tranches :** Définies dans CONFIG.BAREME_DEBUTANTS (ex. &lt; 2 ans, 2 à &lt; 4 ans, 4 à 6 ans, ≥ 6 ans). L’alternance compte pour moitié.
+* **Note :** Les montants du barème intègrent déjà les majorations Art. 139 (taux selon tranche ; ex. 5 % à 2 ans, 8 % à 4 ans).
 
 #### 3.3. Accord d'entreprise
 
@@ -115,11 +110,13 @@ Les accords d'entreprise sont **définis en dehors du PRD** (dossier `accords/`,
 * **Désactivation sans perte :** Lorsque l'accord est désactivé (décocher la case), l'état et les valeurs des options (primes cochées, heures, etc.) sont **conservés** ; à la réactivation (recocher la case ou activer une option liée à l'accord), les valeurs sont restituées sans ressaisie.
 * **Principe de faveur (Art. L2254-2 Code du Travail) :** Le système compare les règles CCN et accord et applique la règle la plus avantageuse pour le salarié (ex. prime d'ancienneté, majorations nuit/dimanche).
 * Les primes et majorations spécifiques à l'accord (prime d'équipe, prime de vacances, etc.) sont décrites dans chaque fichier d'accord ; l'UI s'adapte dynamiquement (options conditionnelles, activation/désactivation liée à l'accord).
-* **Répartition 12/13 mois :** Si l'accord prévoit une répartition sur 13 mois (ex. 13e mois en novembre), le sélecteur « sur 12 mois » / « sur 13 mois » et les calculs (SMH mensuel, arriérés) en tiennent compte.
+* **Répartition 12/13 mois :** Si l'accord prévoit une répartition sur 13 mois (mois de versement défini dans l'accord, ex. novembre), le sélecteur et les calculs en tiennent compte.
 
 **Documentation :** Pour ajouter ou modifier un accord, voir `docs/AJOUTER_ACCORD.md` et `docs/INTEGRER_ACCORD_TEXTE_ET_IA.md`. Référence du schéma : `src/agreements/AgreementInterface.js` et exemples dans `accords/`.
 
 **Règle d'architecture (ancre métier) :** L'application est **générique** vis-à-vis des accords : pas d'identifiants ni de conditions spécifiques à un accord ou à une prime ; seuls les types du schéma (ex. `valueType`, `stateKeyHeures`, `defaultActif`) sont utilisés. Options accord : affichage dynamique, délégation d'événements, `state.accordInputs`.
+
+**Règle commentaires (toutes modifications futures) :** Ne conserver que les commentaires à valeur ajoutée durable (règles métier, non-évidents, ancre pour maintenance). Proscrire les commentaires de simple mise à jour ou sans portée.
 
 **Méthodologie prime d'ancienneté et assiette SMH (convention / accord) :**
 * **Assiette SMH** (vérification du minimum conventionnel et mode « SMH seul » arriérés) = base SMH + majorations forfaits cadres si applicable. **Exclues** : primes d'ancienneté (CCN ou accord), prime de vacances, majorations nuit/dimanche/équipe, majorations pénibilité. La prime d'ancienneté **s'ajoute au minimum garanti** ; elle ne fait pas partie de l'assiette SMH.
@@ -135,14 +132,14 @@ Le 13e mois est une **modalité de versement**, pas un élément de rémunérati
 * **Calcul :**
   * Sur 12 mois : SMH annuel ÷ 12
   * Sur 13 mois : SMH annuel ÷ 13 (avec un mois de "bonus" versé selon l'entreprise)
-* **Versement (si accord avec 13e mois) :** Selon l'accord, le 13e mois peut être versé en novembre (salaire annuel réparti sur 13 mois).
+* **Versement (si accord avec 13e mois) :** Selon l'accord, le 13e mois est versé un mois donné (ex. novembre ; défini dans l'accord).
 * **Note importante :** Le 13e mois est **inclus** dans la vérification du SMH minimum (il fait **partie du SMH**), contrairement à la prime d'ancienneté (non-cadres) ou à la prime de vacances qui en sont exclues. En mode « SMH seul » (étape 4 arriérés), la répartition sur 12 ou 13 mois s'applique donc au SMH : novembre = 2 × (SMH annuel / 13), autres mois = SMH annuel / 13 si accord avec répartition 13 mois, sinon SMH annuel / 12.
 
 #### 3.4.1. Assiette SMH – Inclus / Exclus
 
 Aligné sur la convention (IDCC 3248) et la config (config.js).
 
-**INCLUS :** Base SMH (ou CONFIG.BAREME_DEBUTANTS si cadre F11/F12 &lt; 6 ans), majorations forfaits cadres (CONFIG.FORFAITS : heures +15 %, jours +30 %), majorations heures sup, 13e mois (répartition 12/13).
+**INCLUS :** Base SMH (ou CONFIG.BAREME_DEBUTANTS si cadre F11/F12 sous le seuil), majorations forfaits cadres (CONFIG.FORFAITS), majorations heures sup, 13e mois (répartition 12/13).
 
 **EXCLUS :** Primes d'ancienneté (CCN ou accord), prime de vacances, majorations pénibilité, majorations nuit / dimanche / prime d'équipe.
 
@@ -155,11 +152,11 @@ Fonctionnalité permettant de visualiser l'évolution projetée du salaire compa
 ##### 3.5.1. Fonctionnalités
 
 * **Bouton "Comparer à l'inflation"** : Affiche/masque le panneau du graphique
-* **Projection temporelle** : 5, 10, 15, 20, 25, 30 ans ou jusqu'à la retraite
+* **Projection temporelle** : horizons proposés (ex. 5, 10, 15, 20, 25, 30 ans) ou jusqu'à la retraite
 * **Option "Jusqu'à la retraite"** : 
   * Affiche un champ pour saisir l'âge actuel
-  * Calcule automatiquement les années restantes (retraite à 64 ans)
-* **Augmentation générale annuelle** : Taux moyen d'augmentation appliqué dans l'entreprise (0% à 10%)
+  * Calcule automatiquement les années restantes (âge légal de départ, ex. 64 ans)
+* **Augmentation générale annuelle** : Taux moyen d'augmentation configurable par l'utilisateur (ex. 0 % à 10 %)
 * **Synchronisation automatique** : Le graphique se met à jour en temps réel avec le simulateur
 
 ##### 3.5.2. Sources de Données Inflation
@@ -179,8 +176,8 @@ Plus la période récupérée sera longue, mieux ce sera.
   * Expérience professionnelle incrémentée de 1 chaque année (pour cadres débutants)
   * Toutes les majorations et primes sont recalculées selon les nouvelles valeurs
 * **Augmentation générale** : 
-  * Taux configurable par l'utilisateur (0% à 10%)
-  * Appliquée sur la partie variable du salaire (hors prime vacances fixe de 525€)
+  * Taux configurable par l'utilisateur (ex. 0 % à 10 %)
+  * Appliquée sur la partie variable du salaire (hors primes à montant fixe type prime vacances, montant défini par l'accord)
   * Cumulée année après année
 * **Inflation cumulée** : 
   * Calcul basé sur la moyenne historique des données récupérées (API Banque Mondiale ou INSEE)
@@ -208,7 +205,7 @@ L'application utilise un système de notifications temporaires pour informer l'u
 
 **Comportement :**
 * Affichage en bas à droite de l'écran
-* Disparition automatique après 3-4 secondes
+* Disparition automatique après quelques secondes (ex. 3–4 s)
 * Animation d'entrée/sortie fluide
 * Responsive : Adaptation sur mobile (pleine largeur en bas)
 
@@ -224,18 +221,16 @@ L'interface peut afficher **plusieurs messages informatifs simultanément** selo
 
 ##### Types de Hints
 
-| Type | Couleur | Cas d'affichage |
-| --- | --- | --- |
-| **Warning (orange)** | Barème salariés débutants | Cadre F11/F12 avec < 6 ans d'expérience |
-| **Success (vert)** | Accord appliqué | Accord activé avec éléments calculés |
-| **Info (bleu)** | Majorations CCN | Majorations nuit/dimanche sans accord d'entreprise |
-| **Info (bleu)** | Message par défaut | Minimum conventionnel |
+| Type | Couleur | Idée | Quand l'afficher |
+| --- | --- | --- | --- |
+| Warning | orange | Barème spécifique (ex. débutants) : rappel du régime et du seuil pour le SMH standard | Cas particulier (ex. cadre avec peu d'expérience) |
+| Success | vert | Accord d'entreprise appliqué : rappel des éléments pris en compte (primes, majorations) | Accord activé et éléments accord dans le calcul |
+| Info | bleu | Majorations CCN : rappel des taux et invitation à activer un accord si pertinent | Majorations cochées sans accord activé |
+| Info | bleu | Message par défaut : minimum conventionnel, éventuellement prime d'ancienneté | Aucun des cas ci-dessus |
 
-##### Combinaisons Possibles
+##### Combinaisons possibles
 
-Plusieurs hints peuvent s'afficher ensemble, par exemple :
-- "Barème salariés débutants" + "Accord d'entreprise appliqué"
-- Permet à l'utilisateur de comprendre précisément ce qui est pris en compte
+Plusieurs hints peuvent coexister (ex. barème spécifique + accord appliqué). Sinon un seul hint suffit pour contextualiser le résultat.
 
 #### 3.8. Contraintes de Cohérence des Données
 
@@ -280,8 +275,8 @@ Le formulaire demande :
 * **Période affichée** : Déterminée par la date la plus récente entre :
   * Date d'embauche
   * Date de changement de classification (si applicable)
-  * **1er janvier 2024** (entrée en vigueur CCNM)
-  * **Date de prescription** (3 ans en arrière)
+  * **Entrée en vigueur CCNM** (ex. 1er janvier 2024)
+  * **Date de prescription** (délai légal en arrière ; ex. 3 ans)
 * **Date de fin** : Date de rupture du contrat ou date du jour
 
 **Affichage :**
@@ -316,8 +311,8 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 * **Accord d'entreprise** : Appliqué si activé (impact sur primes d'ancienneté, majorations, etc.)
 * **Conditions de travail** : Majorations nuit/dimanche, prime d'équipe (selon l'état actuel)
 * **Versements mensuels spécifiques (accord)** :
-        * **Prime de vacances** : Versée **en une fois en juillet** (pas étalée sur l'année). Répartition : salaire mensuel dû en juillet = (salaire annuel hors prime)/12 + prime ; les autres mois = (salaire annuel hors prime)/12. Si 13e mois : idem avec dénominateur 13, et juillet = base/13 + prime.
-        * **13e mois** : **Fait partie du SMH** (modalité de versement, pas une prime). Versé **en novembre uniquement** (si répartition sur 13 mois activée). En novembre, salaire mensuel dû = 2 × (salaire annuel / 13) ; les autres mois = salaire annuel / 13. S'applique aussi en mode « SMH seul ».
+        * **Prime de vacances** : Versée **en une fois** un mois donné (ex. juillet ; défini par l'accord, pas étalée sur l'année). Répartition : salaire mensuel dû en juillet = (salaire annuel hors prime)/12 + prime ; les autres mois = (salaire annuel hors prime)/12. Si 13e mois : idem avec dénominateur 13, et juillet = base/13 + prime.
+        * **13e mois** : **Fait partie du SMH** (modalité de versement, pas une prime). Versé **un mois donné** (ex. novembre ; défini par l'accord, si répartition sur 13 mois activée). En novembre, salaire mensuel dû = 2 × (salaire annuel / 13) ; les autres mois = salaire annuel / 13. S'applique aussi en mode « SMH seul ».
       * **Toutes les autres primes** : Prime d'ancienneté (CCN ou accord), etc.
     * Le calcul utilise, selon le mode, `getMontantAnnuelSMHSeul()` (SMH seul) ou la fonction `calculateRemuneration()` principale avec les paramètres temporairement ajustés pour ce mois spécifique
     * Salaire mensuel réel = Salaire mensuel saisi
@@ -368,18 +363,18 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 * Formatage des montants : Espaces comme séparateurs de milliers (ex: "35 000 €" au lieu de "35/000€")
 
 **Section 4 : Points d'attention juridiques**
-* Prescription : Article L.3245-1 du Code du travail (3 ans par échéance)
+* Prescription : Article L.3245-1 du Code du travail (délai par échéance, ex. 3 ans)
 * Convention Collective : Limitation aux arriérés postérieurs au 1er janvier 2024
 * Points favorables : Accord écrit, changement de classification documenté (si applicable)
 
 **Section 5 : Méthodologie de calcul** (résumé)
 * **Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette**, le rapport PDF n'est généré **qu'en mode « SMH seul »** (génération bloquée sinon, avec avertissement).
-* SMH de base, majoration forfait, répartition 12/13 mois (13e mois en novembre si accord avec répartition 13 mois). Accord d'entreprise : prime ancienneté, prime vacances, 13e mois — mentionnés pour contexte, mais **le salaire dû retenu dans le PDF = assiette SMH uniquement** (base + forfait, hors primes). L'ancienneté n'affecte pas l'assiette SMH.
+* SMH de base, majoration forfait, répartition 12/13 mois (mois de versement du 13e mois défini par l'accord, ex. novembre). Accord d'entreprise : prime ancienneté, prime vacances, 13e mois — mentionnés pour contexte, mais **le salaire dû retenu dans le PDF = assiette SMH uniquement** (base + forfait, hors primes). L'ancienneté n'affecte pas l'assiette SMH.
 * Calcul rétrospectif mois par mois : pour chaque mois, le salaire dû = assiette SMH ; comparé au salaire perçu (hors primes). Sources et références : CCN Métallurgie (IDCC 3248), SMH et assiette ; Code du travail art. L.3245-1 ; accord d'entreprise si pertinent.
 
 **Section 6 : Méthodes de calcul détaillées**
 * **Principe :** Rapport établi sur la base du SMH uniquement (assiette § 3.4.1). Pour chaque mois : salaire dû = assiette SMH ; comparé au salaire perçu (hors primes). L'assiette SMH ne dépend pas de l'ancienneté. Référence : CCN (IDCC 3248), Code du travail art. L.3245-1.
-* **Période :** Date de début (embauche / changement de classification / 01/01/2024 / prescription 3 ans), date de fin (rupture ou aujourd'hui).
+* **Période :** Date de début (embauche / changement de classification / entrée en vigueur CCNM / prescription), date de fin (rupture ou aujourd'hui).
 * **Salaire mensuel dû :** Assiette SMH (base + forfait, 13e mois ; hors primes, majorations nuit/dimanche/équipe, pénibilité). Répartition 12 ou 13 mois selon accord.
 * **Formule :** `Arriérés(mois) = max(0 ; Salaire mensuel dû(mois) − Salaire mensuel perçu(mois))` ; total = somme sur tous les mois.
 
@@ -423,10 +418,10 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 * **Étape 2 : Médiation/Juridiction**
   * Médiation si demande amiable échoue
   * Saisine Conseil de Prud'hommes
-  * Délai de prescription (3 ans)
+  * Délai de prescription (délai légal ; ex. 3 ans)
 * **Étape 3 : Délais et prescription**
-  * Prescription : 3 ans par échéance de paiement
-  * Délai de réponse LRAR : 1 mois
+  * Prescription : délai légal par échéance de paiement (ex. 3 ans)
+  * Délai de réponse LRAR : délai usuel (ex. 1 mois)
   * Saisine Prud'hommes dans les délais
   * Limitation CCNM 2024
 
@@ -493,6 +488,8 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 
 Le code centralise les données **CCN** dans `config.js` (CONFIG) : SMH, BAREME_DEBUTANTS, TAUX_ANCIENNETE, FORFAITS, MAJORATIONS_CCN, etc. Les **accords d'entreprise** ne sont pas dans CONFIG : ils sont définis dans le dossier `accords/` (fichiers par accord) et chargés à l'exécution via AgreementLoader/AgreementRegistry.
 
+**Valeurs numériques (convention, accords) :** Les montants, taux, seuils et délais mentionnés dans ce PRD (SMH, majorations, forfaits, ancienneté, barèmes, prescription, etc.) sont donnés **à titre d'exemple** ou reflètent une version antérieure des textes. Les valeurs à jour à utiliser dans l'application doivent être cherchées dans les **fichiers de configuration** (`src/core/config.js`, objet CONFIG) et dans les **définitions d'accord** (dossier `accords/`, fichiers par accord).
+
 ```javascript
 const CONFIG = {
     SMH: { 1: 21700, ... 18: 68000 }, // Valeurs annuelles
@@ -501,10 +498,10 @@ const CONFIG = {
     MAPPING_POINTS: [ ... ], // Logique 6-60 pts → Groupe/Classe
     CRITERES: [ ... ], // Textes et définitions des 6 critères
     SEUIL_CADRE: 11, // Classe à partir de laquelle on est cadre
-    FORFAITS: { '35h': 0, 'heures': 0.15, 'jours': 0.30 },
-    ANCIENNETE: { seuil: 3, plafond: 15 }, // CCN non-cadres
-    POINT_TERRITORIAL_DEFAUT: 5.90, // Bas-Rhin 2025
-    MAJORATIONS_CCN: { nuit: 0.15, dimanche: 1.00 }
+    FORFAITS: { '35h': 0, 'heures': 0.15, 'jours': 0.30 }, // ex.
+    ANCIENNETE: { seuil: 3, plafond: 15 }, // CCN non-cadres, ex.
+    POINT_TERRITORIAL_DEFAUT: 5.90, // ex. Bas-Rhin
+    MAJORATIONS_CCN: { nuit: 0.15, dimanche: 1.00 } // ex.
 };
 // Accords : dossier accords/, chargés via AgreementLoader/AgreementRegistry
 ```
@@ -536,9 +533,9 @@ Le code est organisé en modules fonctionnels :
 3. **Débrayage manuel :** Possibilité de forcer n'importe quelle combinaison Groupe/Classe
 
 #### 5.2. Tests de Rémunération CCN
-4. **Non-Cadre avec ancienneté :** Classe C5, 10 ans d'ancienneté, Point 5.90€ → Prime = `5.90 × 2.20 × 10 × 12 = 1 558€/an`
-5. **Cadre forfait jours :** F11 → SMH × 1.30
-6. **Cadre débutant :** F11, 4 ans d'expérience, forfait jours → 31 979€ × 1.30
+4. **Non-Cadre avec ancienneté :** Classe C5, ancienneté ≥ seuil CCN, point territorial → Prime = point × taux (classe) × années × 12 (valeurs dans CONFIG).
+5. **Cadre forfait jours :** F11 → SMH × taux forfait jours (CONFIG.FORFAITS.jours).
+6. **Cadre débutant :** F11, expérience dans une tranche donnée, forfait jours → SMH barème débutants × taux forfait (CONFIG.BAREME_DEBUTANTS, CONFIG.FORFAITS).
 
 #### 5.3. Tests accord d'entreprise
 7. **Prime ancienneté accord :** Selon l'accord chargé (seuil, plafond, barème).
@@ -548,8 +545,8 @@ Le code est organisé en modules fonctionnels :
 11. **Activation / désactivation :** Options liées à l'accord (ex. prime d'équipe) activent ou désactivent l'accord avec notification selon le comportement défini. La désactivation ne réinitialise pas les options (primes, heures) : elles sont conservées et restituées à la réactivation.
 
 #### 5.4. Tests Répartition 13 Mois
-11. **Calcul sur 12 mois :** Classe A1 (21 700€) → 1 808€/mois
-12. **Calcul sur 13 mois :** Classe A1 (21 700€) → 1 669€/mois (total annuel inchangé)
+11. **Calcul sur 12 mois :** SMH annuel ÷ 12 (ex. classe A1).
+12. **Calcul sur 13 mois :** SMH annuel ÷ 13 (total annuel inchangé ; ex. classe A1).
 
 #### 5.5. Tests de Cohérence des Données
 13. **Expérience ≥ Ancienneté :** Si ancienneté = 5, expérience pro ne peut pas être < 5
@@ -562,7 +559,7 @@ Le code est organisé en modules fonctionnels :
 18. **Augmentation générale :** Avec 2%/an sur 10 ans, le salaire variable augmente d'environ 22%
 19. **Source inflation :** Affichage de la source (Banque Mondiale ou INSEE) et de la période
 20. **Lazy loading :** Les données d'inflation ne sont chargées qu'à l'ouverture du panneau
-21. **Projection retraite :** Option "Jusqu'à la retraite" calcule correctement les années restantes (64 ans - âge actuel)
+21. **Projection retraite :** Option "Jusqu'à la retraite" calcule correctement les années restantes (âge légal - âge actuel, ex. 64 ans)
 22. **Synchronisation :** Modification des paramètres (ancienneté, majorations, accord d'entreprise) → graphique mis à jour automatiquement
 23. **Responsive mobile :** Graphique lisible sur petits écrans (labels adaptés, tooltips optimisés)
 
@@ -595,7 +592,7 @@ Le code est organisé en modules fonctionnels :
 37. **Calcul avec arriérés :** Salaires inférieurs au SMH → Calcul mois par mois des différences
 37bis. **Option « SMH seul » :** Si cochée, salaire dû = assiette SMH (base + forfaits ; forfaits et heures sup inclus, pénibilité et primes ancienneté exclues) avec répartition 12/13 mois ; le 13e mois fait partie du SMH. Saisie utilisateur = brut hors primes ; avertissement et tooltip le rappellent
 37ter. **PDF uniquement sur SMH :** Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, le rapport PDF n'est généré qu'en mode « SMH seul ». Si l'option n'est pas cochée, la génération est bloquée et un message avertit l'utilisateur de cocher « SMH seul », saisir les salaires bruts hors primes et recalculer.
-38. **Prescription 3 ans :** Date embauche 2015, aujourd'hui 2025 → Période limitée à 3 ans (2022-2025) ou CCNM (2024-2025) si plus récent
+38. **Prescription :** Période limitée au délai légal (ex. 3 ans) en arrière et/ou à l'entrée en vigueur CCNM selon les cas
 39. **CCNM 2024 :** Date embauche 2020 → Période commence au 01/01/2024 (pas avant)
 40. **Changement classification :** Date changement après embauche → Période commence à la date de changement
 41. **Rupture contrat :** Date rupture renseignée → Période se termine à la date de rupture
@@ -610,9 +607,9 @@ Le code est organisé en modules fonctionnels :
 
 ### 6. Annexe Technique : Données Brutes
 
-*À inclure dans l'objet `CONFIG` du script.*
+*À inclure dans l'objet `CONFIG` du script. Les tableaux ci-dessous sont donnés **à titre d'exemple** ; les valeurs à jour sont dans `src/core/config.js` (CONFIG) et dans les accords (dossier `accords/`).*
 
-#### 6.1. Grille SMH 2024 (Base 35h)
+#### 6.1. Grille SMH (Base 35h)
 
 | Classe | Montant Annuel |
 | --- | --- |
@@ -635,9 +632,11 @@ Le code est organisé en modules fonctionnels :
 | **I17** | 59 300 € |
 | **I18** | 68 000 € |
 
+*Valeurs réelles : CONFIG.SMH.*
+
 #### 6.2. Barème Cadres Débutants (Groupe F : F11 et F12)
 
-*Base 35h, mensualisée 151,66h. Inclut les majorations de 5% (2 ans) ou 8% (4 ans) prévues par l'Art. 139.*
+*Base 35h, mensualisée 151,66h. Inclut les majorations Art. 139 (taux selon tranche ; ex. 5 % à 2 ans, 8 % à 4 ans). Valeurs réelles : CONFIG.BAREME_DEBUTANTS.*
 
 | Expérience professionnelle | F11 | F12 |
 | --- | --- | --- |
@@ -646,17 +645,17 @@ Le code est organisé en modules fonctionnels :
 | **4 à 6 ans** | 31 979 € | 33 680 € |
 | **≥ 6 ans** | 34 900 € (standard) | 36 700 € (standard) |
 
-#### 6.3. Valeur du Point Territorial (Bas-Rhin)
+#### 6.3. Valeur du Point Territorial (ex. Bas-Rhin)
 
 | Territoire | Valeur 2025 | Source |
 | --- | --- | --- |
-| **Bas-Rhin (67)** | 5.90 € | Accord du 17 avril 2025 |
+| **Bas-Rhin (67)** | 5.90 € (ex.) | Accord territorial (ex. 17 avril 2025) |
 
 *Source officielle : [code.travail.gouv.fr](https://code.travail.gouv.fr/contribution/3248-quand-le-salarie-a-t-il-droit-a-une-prime-danciennete-quel-est-son-montant)*
 
 #### 6.4. Taux pour Prime d'Ancienneté (Non-Cadres)
 
-*Formule : `Point Territorial × Taux × 100 × Années`*
+*Formule : `Point Territorial × Taux × 100 × Années`. Valeurs réelles : CONFIG.TAUX_ANCIENNETE.*
 
 | Classe | Taux (%) | Classe | Taux (%) |
 | :--- | :--- | :--- | :--- |
@@ -678,13 +677,13 @@ Le code est organisé en modules fonctionnels :
 #### 6.6. Aspects Juridiques - Arriérés de Salaire
 
 **Références légales :**
-* **Prescription :** Article L.3245-1 du Code du travail - 3 ans à compter de chaque échéance
+* **Prescription :** Article L.3245-1 du Code du travail — délai à compter de chaque échéance (ex. 3 ans)
 * **CCNM 2024 (IDCC 3248) :** Entrée en vigueur le 1er janvier 2024 ; dispositions relatives aux salaires minima hiérarchiques et à leur assiette (inclus / exclus, voir § 3.4.1)
 * **Maintien de salaire :** Article L.2261-22 - Obligation de maintien si nouvelle classification fait baisser la rémunération
 
 **Conditions de réclamation :**
 * Salaire actuel < SMH calculé selon la classification
-* Période dans les limites de prescription (3 ans)
+* Période dans les limites de prescription (délai légal ; ex. 3 ans)
 * Période postérieure au 1er janvier 2024 (CCNM)
 * Pas de rupture de contrat invalidante (démission sans préavis, faute grave, etc.)
 

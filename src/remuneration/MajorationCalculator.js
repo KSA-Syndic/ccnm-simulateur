@@ -70,7 +70,7 @@ function computeMajorationConvention(def, context) {
 }
 
 /**
- * Majoration accord : nuit (posteNuit / posteMatin), dimanche (taux accord).
+ * Majoration accord : nuit (posteNuit), dimanche (taux accord).
  * @private
  */
 function computeMajorationAccord(def, context) {
@@ -78,37 +78,44 @@ function computeMajorationAccord(def, context) {
     const state = context?.state ?? {};
     const tauxHoraire = context.tauxHoraire ?? 0;
 
-    let heures = 0;
-    let taux = 0;
-
     if (def.semanticId === SEMANTIC_ID.MAJORATION_NUIT) {
+        const nuit = agreement?.majorations?.nuit;
         if (state.typeNuit === 'aucun') {
             return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
         }
-        heures = state.heuresNuit ?? 0;
-        const nuit = agreement?.majorations?.nuit;
-        taux = nuit
-            ? (state.typeNuit === 'poste-nuit' ? nuit.posteNuit : nuit.posteMatin)
-            : (CONFIG.MAJORATIONS_CCN.nuit);
-    } else if (def.semanticId === SEMANTIC_ID.MAJORATION_DIMANCHE) {
-        heures = state.heuresDimanche ?? 0;
-        taux = agreement?.majorations?.dimanche ?? CONFIG.MAJORATIONS_CCN.dimanche;
-    } else {
-        return { amount: 0, label: def.label, source: SOURCE_ACCORD };
+        const heures = state.heuresNuit ?? 0;
+        const taux = nuit?.posteNuit != null ? nuit.posteNuit : (CONFIG.MAJORATIONS_CCN.nuit);
+        if (heures === 0) {
+            return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
+        }
+        const montantMensuel = Math.round(heures * tauxHoraire * taux * 100) / 100;
+        const amount = Math.round(montantMensuel * 12);
+        return {
+            amount,
+            label: def.label,
+            source: SOURCE_ACCORD,
+            semanticId: def.semanticId,
+            meta: { taux: Math.round(taux * 100), montantMensuel }
+        };
     }
 
-    if (heures === 0) {
-        return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
+    if (def.semanticId === SEMANTIC_ID.MAJORATION_DIMANCHE) {
+        const heures = state.heuresDimanche ?? 0;
+        const taux = agreement?.majorations?.dimanche ?? CONFIG.MAJORATIONS_CCN.dimanche;
+        if (heures === 0) {
+            return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
+        }
+        const montantMensuel = Math.round(heures * tauxHoraire * taux * 100) / 100;
+        const amount = Math.round(montantMensuel * 12);
+        return {
+            amount,
+            label: def.label,
+            source: SOURCE_ACCORD,
+            semanticId: def.semanticId,
+            meta: { taux: Math.round(taux * 100), montantMensuel }
+        };
     }
-    const montantMensuel = Math.round(heures * tauxHoraire * taux * 100) / 100;
-    const amount = Math.round(montantMensuel * 12);
 
-    return {
-        amount,
-        label: def.label,
-        source: SOURCE_ACCORD,
-        semanticId: def.semanticId,
-        meta: { taux: Math.round(taux * 100), montantMensuel }
-    };
+    return { amount: 0, label: def.label, source: SOURCE_ACCORD };
 }
 
