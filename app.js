@@ -56,6 +56,15 @@ const ANALYTICS_CONSENT_KEY = 'simulator_analytics_consent';
 let umamiResultatSalaireSent = false;
 
 /**
+ * Indique si l’app tourne en local (aucun analytics envoyé).
+ * @returns {boolean}
+ */
+function isLocalEnv() {
+    const h = typeof window !== 'undefined' && window.location ? window.location.hostname : '';
+    return h === 'localhost' || h === '127.0.0.1' || h === '';
+}
+
+/**
  * Indique si l’utilisateur a autorisé les analytics (défaut: oui).
  * @returns {boolean}
  */
@@ -77,7 +86,7 @@ function setAnalyticsConsentOff() {
  * @param {Object} [data] - Données additionnelles (pas de données personnelles/salaires)
  */
 function umamiTrackIfConsent(name, data) {
-    if (!getAnalyticsConsent() || !CONFIG.UMAMI_WEBSITE_ID) return;
+    if (isLocalEnv() || !getAnalyticsConsent() || !CONFIG.UMAMI_WEBSITE_ID) return;
     if (typeof window.umami !== 'undefined' && typeof window.umami.track === 'function') {
         try {
             window.umami.track(name, data);
@@ -91,7 +100,7 @@ function umamiTrackIfConsent(name, data) {
  * Charge le script Umami Cloud si config et consentement présents (pas de bannière cookie).
  */
 function initUmamiScript() {
-    if (!getAnalyticsConsent() || !CONFIG.UMAMI_WEBSITE_ID || !CONFIG.UMAMI_SCRIPT_URL) return;
+    if (isLocalEnv() || !getAnalyticsConsent() || !CONFIG.UMAMI_WEBSITE_ID || !CONFIG.UMAMI_SCRIPT_URL) return;
     if (document.querySelector('script[data-website-id]')) return;
     const script = document.createElement('script');
     script.async = true;
