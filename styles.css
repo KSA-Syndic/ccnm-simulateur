@@ -2907,24 +2907,49 @@ body.iframe-mode .simulator-container.iframe-container {
 
 /* Footer */
 .simulator-footer {
-    padding: 20px 30px;
+    padding: 24px 30px;
     background: var(--gray-100);
     text-align: center;
     font-size: 0.85rem;
     color: var(--gray-500);
 }
 
-.simulator-footer p {
-    margin: 5px 0;
+.simulator-footer .footer-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem 1rem;
 }
 
-.simulator-footer .disclaimer {
+.simulator-footer .footer-item {
+    white-space: nowrap;
+}
+
+.simulator-footer .footer-disclaimer {
     font-style: italic;
     font-size: 0.8rem;
 }
 
+.simulator-footer .footer-sep {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--gray-400);
+    flex-shrink: 0;
+}
+
+.simulator-footer .footer-privacy-link {
+    color: var(--color-link);
+    text-decoration: none;
+}
+
+.simulator-footer .footer-privacy-link:hover {
+    text-decoration: underline;
+}
+
 .simulator-footer .footer-credit {
-    margin-top: 8px;
+    margin-top: 12px;
     font-size: 0.75rem;
 }
 

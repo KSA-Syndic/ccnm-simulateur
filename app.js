@@ -50,6 +50,56 @@ const state = {
 /** Source de vérité unique pour les données PDF arriérés (étape 4). Remplit uniquement par calculerArreteesFinal / afficherResultatsArreteesFinal, vidé par invalidateArreteesDataFinal. */
 let arreteesPdfStore = null;
 
+/** Clé localStorage pour le consentement analytics (Umami). Absent ou '1' = autorisé, '0' = retiré. */
+const ANALYTICS_CONSENT_KEY = 'simulator_analytics_consent';
+/** Envoi unique de l’événement "Resultat salaire" par chargement de page. */
+let umamiResultatSalaireSent = false;
+
+/**
+ * Indique si l’utilisateur a autorisé les analytics (défaut: oui).
+ * @returns {boolean}
+ */
+function getAnalyticsConsent() {
+    const v = localStorage.getItem(ANALYTICS_CONSENT_KEY);
+    return v === null || v === '1';
+}
+
+/**
+ * Retire le consentement analytics (ne pas envoyer d’événements ensuite).
+ */
+function setAnalyticsConsentOff() {
+    localStorage.setItem(ANALYTICS_CONSENT_KEY, '0');
+}
+
+/**
+ * Envoie un événement Umami si consentement actif et script chargé (sans saturer les 100k événements).
+ * @param {string} name - Nom de l’événement (max 50 car.)
+ * @param {Object} [data] - Données additionnelles (pas de données personnelles/salaires)
+ */
+function umamiTrackIfConsent(name, data) {
+    if (!getAnalyticsConsent() || !CONFIG.UMAMI_WEBSITE_ID) return;
+    if (typeof window.umami !== 'undefined' && typeof window.umami.track === 'function') {
+        try {
+            window.umami.track(name, data);
+        } catch (e) {
+            // ignore
+        }
+    }
+}
+
+/**
+ * Charge le script Umami Cloud si config et consentement présents (pas de bannière cookie).
+ */
+function initUmamiScript() {
+    if (!getAnalyticsConsent() || !CONFIG.UMAMI_WEBSITE_ID || !CONFIG.UMAMI_SCRIPT_URL) return;
+    if (document.querySelector('script[data-website-id]')) return;
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = CONFIG.UMAMI_SCRIPT_URL;
+    script.setAttribute('data-website-id', CONFIG.UMAMI_WEBSITE_ID);
+    document.head.appendChild(script);
+}
+
 /**
  * Nom court de l'accord pour affichage (badge, tooltips).
  * @param {Object|null} agreement - Accord actif ou null
@@ -95,8 +145,10 @@ function getAccordBadgeHtml(agreement) {
 document.addEventListener('DOMContentLoaded', () => {
     initWizard();
     initRoulettes();
+    initUmamiScript();
     initControls();
     initTooltips();
+    initPrivacyModal();
     updateAll();
 });
 
@@ -459,6 +511,10 @@ function navigateToStep(stepNumber) {
         updateAll();
     } else if (stepNumber === 3) {
         updateAll();
+        if (!umamiResultatSalaireSent) {
+            umamiResultatSalaireSent = true;
+            umamiTrackIfConsent('Resultat salaire');
+        }
     } else if (stepNumber === 4) {
         const legalSec = document.getElementById('legal-instructions');
         if (legalSec) {
@@ -750,6 +806,42 @@ function updateFullDescription(index, value) {
         const critere = CONFIG.CRITERES[index];
         descContainer.querySelector('p').textContent = critere.degres[value];
     }
+}
+
+/**
+ * Modal « Politique de confidentialité » + retrait du consentement analytics (sans quitter la page).
+ */
+function initPrivacyModal() {
+    const link = document.getElementById('footer-privacy-link');
+    if (!link) return;
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        let overlay = document.getElementById('privacy-modal-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'privacy-modal-overlay';
+            overlay.className = 'modal-overlay';
+            overlay.innerHTML = `
+                <div class="modal pdf-infos-modal" onclick="event.stopPropagation()">
+                    <h3 class="modal-title">Politique de confidentialité</h3>
+                    <p class="modal-subtitle">Ce simulateur utilise Umami Cloud pour des statistiques d’usage anonymes (pages vues, événements comme « résultat salaire » ou « PDF généré »). Aucun salaire ni donnée personnelle n’est envoyé.</p>
+                    <p>Vous pouvez retirer votre autorisation à tout moment ; les statistiques ne seront plus envoyées à partir de cette visite.</p>
+                    <div class="modal-actions">
+                        <button type="button" class="book-btn btn-secondary" id="privacy-modal-close">Fermer</button>
+                        <button type="button" class="book-btn btn-primary" id="privacy-modal-revoke">Retirer mon autorisation</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', (ev) => { if (ev.target === overlay) overlay.classList.remove('visible'); });
+            document.getElementById('privacy-modal-close').addEventListener('click', () => overlay.classList.remove('visible'));
+            document.getElementById('privacy-modal-revoke').addEventListener('click', () => {
+                setAnalyticsConsentOff();
+                overlay.classList.remove('visible');
+                showToast('Autorisation retirée. Les statistiques ne seront plus envoyées.', 'success', 4000);
+            });
+        }
+        overlay.classList.add('visible');
+    });
 }
 
 /**
@@ -3822,6 +3914,19 @@ function genererPDFArreteesFinal(infosPersonnelles, dataPrevalide) {
     if (typeof window.genererPDFArreteesFromModules === 'function') {
         try {
             window.genererPDFArreteesFromModules(data, infosPersonnelles || {}, state);
+            const classification = getActiveClassification();
+            const accord = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
+            const dateDebutStr = data.dateDebut instanceof Date ? data.dateDebut.toISOString().slice(0, 10) : (data.dateDebut ? String(data.dateDebut) : '');
+            const dateFinStr = data.dateFin instanceof Date ? data.dateFin.toISOString().slice(0, 10) : (data.dateFin ? String(data.dateFin) : '');
+            umamiTrackIfConsent('PDF arrieres', {
+                totalArretees: data.totalArretees ?? 0,
+                dateDebut: dateDebutStr,
+                dateFin: dateFinStr,
+                groupe: classification?.groupe ?? '',
+                classe: classification?.classe ?? '',
+                nbMois: state.nbMois ?? 12,
+                accord: accord ? (accord.nomCourt || 'oui') : 'non'
+            });
         } catch (error) {
             console.error('Erreur lors de la génération du PDF:', error);
             showToast('⚠️ Erreur lors de la génération du PDF. Veuillez recharger la page.', 'error', 5000);

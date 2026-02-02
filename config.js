@@ -340,7 +340,15 @@ const CONFIG = {
                 10: "Communication au plus haut niveau engageant l'entreprise dans sa globalité."
             }
         }
-    ]
+    ],
+
+    // ╔════════════════════════════════════════════════════════════════╗
+    // ║         ANALYTICS (Umami Cloud)                                 ║
+    // ╚════════════════════════════════════════════════════════════════╝
+    /** ID du site Umami Cloud (vide = analytics désactivées) */
+    UMAMI_WEBSITE_ID: '9859e5b8-305a-4b6d-a36e-a320c44e5c6e',
+    /** URL du script Umami (Cloud par défaut) */
+    UMAMI_SCRIPT_URL: 'https://cloud.umami.is/script.js'
 };
 
 // Export pour utilisation dans d'autres modules (si nécessaire)
