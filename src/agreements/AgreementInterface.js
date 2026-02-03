@@ -94,6 +94,8 @@
  * @property {Object} [conges] - Congés d'ancienneté (optionnel, informatif)
  * @property {Object} labels - Labels et métadonnées UI
  * @property {Object} metadata - Métadonnées techniques
+ * @property {string} [syndicatNom] - Nom du syndicat pour la modal post-PDF (ex. « CFDT Kuhn Saverne »)
+ * @property {string} [syndicatEmail] - Email du syndicat pour « envoyer par mail » (mailto) ; si présent, la modal post-PDF s'affiche
  */
 
 /**

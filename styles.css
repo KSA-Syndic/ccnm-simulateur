@@ -1154,6 +1154,36 @@ body.iframe-mode .simulator-container.iframe-container {
     margin-top: 25px;
 }
 
+.modal .modal-actions-spaced {
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.post-pdf-syndicat-modal .modal-title {
+    margin-top: 0;
+}
+
+.post-pdf-syndicat-modal .post-pdf-syndicat-notice {
+    font-size: 0.9rem;
+    color: var(--gray-600);
+    margin-top: 0.5rem;
+}
+
+.post-pdf-syndicat-modal .post-pdf-syndicat-webmail {
+    font-size: 0.85rem;
+    margin-top: 12px;
+    margin-bottom: 0;
+}
+
+.post-pdf-syndicat-modal .post-pdf-syndicat-webmail a {
+    color: var(--color-link);
+    text-decoration: none;
+}
+
+.post-pdf-syndicat-modal .post-pdf-syndicat-webmail a:hover {
+    text-decoration: underline;
+}
+
 .label-optional {
     color: var(--gray-600);
     font-weight: normal;

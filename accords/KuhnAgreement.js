@@ -194,7 +194,11 @@ export const KuhnAgreement = {
         articlesSubstitues: ['142', '143', '144', '145', '146', '153-1'],
         territoire: 'Bas-Rhin (67)',
         entreprise: 'UES KUHN SAS/KUHN MGM SAS'
-    }
+    },
+
+    // Contact syndicat (modal post-PDF arriérés : « l'union fait la force »)
+    syndicatNom: 'CFDT Kuhn Saverne',
+    syndicatEmail: 'ksa.syndic@gmail.com'
 };
 
 // Validation de l'accord au chargement
