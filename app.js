@@ -3996,7 +3996,12 @@ function showPostPdfSyndicatModal(agreement) {
             </div>`;
         document.body.appendChild(overlay);
         overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('visible'); });
-        document.getElementById('post-pdf-syndicat-close').addEventListener('click', () => overlay.classList.remove('visible'));
+
+        function closeAndCelebrate(ag) {
+            overlay.classList.remove('visible');
+            showPostPdfCelebration(ag);
+        }
+        document.getElementById('post-pdf-syndicat-close').addEventListener('click', () => closeAndCelebrate(overlay._agreement));
 
         function openMail(ag) {
             const to = (ag && (ag.syndicatEmail || '').trim()) || '';
@@ -4007,7 +4012,7 @@ function showPostPdfSyndicatModal(agreement) {
             } else {
                 window.location.href = `mailto:?subject=${subject}&body=${body}`;
             }
-            overlay.classList.remove('visible');
+            closeAndCelebrate(ag);
         }
         document.getElementById('post-pdf-syndicat-mailto').addEventListener('click', () => openMail(overlay._agreement));
 
@@ -4016,12 +4021,74 @@ function showPostPdfSyndicatModal(agreement) {
             const ag = overlay._agreement;
             const to = (ag && (ag.syndicatEmail || '').trim()) || '';
             window.open(buildGmailComposeUrl(to, SYNDICAT_MAIL_SUBJECT, SYNDICAT_MAIL_BODY), '_blank', 'noopener');
-            overlay.classList.remove('visible');
+            closeAndCelebrate(ag);
         });
     }
     overlay._agreement = agreement;
     const nomEl = document.getElementById('post-pdf-syndicat-nom');
     if (nomEl) nomEl.textContent = nom;
+    overlay.classList.add('visible');
+}
+
+/**
+ * Célébration discrète après clic sur un bouton de la modal post-PDF : animation légère, message de félicitations,
+ * option « Renvoyer le mail » (réouvre la modal post-PDF) ou « Fermer ».
+ * @param {Object} [agreement] - Accord (pour rouvrir la modal « envoyer au syndicat » si besoin)
+ */
+function showPostPdfCelebration(agreement) {
+    let overlay = document.getElementById('post-pdf-celebration-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'post-pdf-celebration-overlay';
+        overlay.className = 'celebration-overlay';
+        const confettiCount = 24;
+        let confettiHtml = '';
+        const colors = ['#1e3a5f', '#2d5a87', '#4a90c4', '#7cb3e0', '#c9a227', '#6b8e6b'];
+        for (let i = 0; i < confettiCount; i++) {
+            const left = 5 + Math.random() * 90;
+            const delay = Math.random() * 0.8;
+            const duration = 1.8 + Math.random() * 0.6;
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const size = 6 + Math.floor(Math.random() * 4);
+            confettiHtml += `<span class="celebration-confetti" style="left:${left}%; animation-delay:${delay}s; animation-duration:${duration}s; background:${color}; width:${size}px; height:${size}px;"></span>`;
+        }
+        overlay.innerHTML = `
+            <div class="celebration-confetti-container">${confettiHtml}</div>
+            <div class="celebration-card" onclick="event.stopPropagation()">
+                <div class="celebration-icon" aria-hidden="true">✓</div>
+                <h3 class="celebration-title">Félicitations 🎉</h3>
+                <p class="celebration-text">Vous avez mené la simulation à son terme.</p>
+                <p class="celebration-hint">Si l'envoi du mail a échoué, rouvrez la fenêtre pour réessayer.</p>
+                <div class="celebration-actions">
+                    <button type="button" class="book-btn btn-primary" id="celebration-resend">Renvoyer le mail</button>
+                    <button type="button" class="book-btn btn-secondary" id="celebration-close">Fermer</button>
+                </div>
+            </div>`;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('visible'); });
+        document.getElementById('celebration-close').addEventListener('click', () => overlay.classList.remove('visible'));
+        document.getElementById('celebration-resend').addEventListener('click', () => {
+            overlay.classList.remove('visible');
+            if (overlay._agreement && (overlay._agreement.syndicatEmail || '').trim()) {
+                showPostPdfSyndicatModal(overlay._agreement);
+            }
+        });
+        document.addEventListener('visibilitychange', function celebrationOnVisibilityChange() {
+            const el = document.getElementById('post-pdf-celebration-overlay');
+            if (!el) return;
+            if (document.visibilityState === 'hidden') {
+                if (el.classList.contains('visible')) el._celebrationWasHidden = true;
+                return;
+            }
+            if (document.visibilityState === 'visible' && el.classList.contains('visible') && el._celebrationWasHidden && !el.classList.contains('celebration-animated')) {
+                el._celebrationWasHidden = false;
+                el.classList.add('celebration-animated');
+            }
+        });
+    }
+    overlay._agreement = agreement;
+    overlay._celebrationWasHidden = false;
+    overlay.classList.remove('celebration-animated');
     overlay.classList.add('visible');
 }
 
