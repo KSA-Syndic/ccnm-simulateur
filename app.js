@@ -3969,22 +3969,6 @@ function buildGmailComposeUrl(to, subject, body) {
 }
 
 /**
- * Construit l’URL Outlook.com pour ouvrir une rédaction (to, sujet, corps).
- * @param {string} to - Email destinataire
- * @param {string} subject - Objet
- * @param {string} body - Corps du mail
- * @returns {string}
- */
-function buildOutlookComposeUrl(to, subject, body) {
-    const params = new URLSearchParams();
-    if (to) params.set('to', to);
-    if (subject) params.set('subject', subject);
-    if (body) params.set('body', body);
-    const q = params.toString();
-    return `https://outlook.office.com/mail/deeplink/compose?${q}`;
-}
-
-/**
  * Affiche la modal « union fait la force » après génération du PDF arriérés (accord avec syndicatEmail uniquement).
  * Propose mailto (logiciel par défaut), Gmail et Outlook.com pour joindre le syndicat.
  * @param {Object} agreement - Accord actif (doit avoir syndicatEmail et syndicatNom)
@@ -4002,13 +3986,13 @@ function showPostPdfSyndicatModal(agreement) {
         overlay.innerHTML = `
             <div class="modal pdf-infos-modal post-pdf-syndicat-modal" onclick="event.stopPropagation()">
                 <h3 class="modal-title">L'union fait la force 💪</h3>
-                <p>Mieux vaut avancer avec <strong id="post-pdf-syndicat-nom">${nom}</strong>. Envoyez-lui votre rapport par mail ou rendez-lui visite — un passage en direct aide souvent.</p>
+                <p><strong id="post-pdf-syndicat-nom">${nom}</strong> peut donner du poids à votre dossier — seul, c’est plus léger. Envoyez-lui le rapport (mail ou visite) et il se fera un plaisir de vous aider.</p>
                 <p class="post-pdf-syndicat-notice">Une fois le mail ouvert, <strong>ajoutez le PDF en pièce jointe</strong> (fichier que vous venez de télécharger). Les liens ci-dessous ne peuvent pas joindre le fichier à votre place.</p>
                 <div class="modal-actions modal-actions-spaced">
                     <button type="button" class="book-btn btn-secondary" id="post-pdf-syndicat-close">Je gère</button>
                     <button type="button" class="book-btn btn-primary" id="post-pdf-syndicat-mailto">Ouvrir ma messagerie</button>
                 </div>
-                <p class="post-pdf-syndicat-webmail">Pas de messagerie sur ce PC ? <a href="#" id="post-pdf-syndicat-gmail">Ouvrir dans Gmail</a> · <a href="#" id="post-pdf-syndicat-outlook">Ouvrir dans Outlook.com</a></p>
+                <p class="post-pdf-syndicat-webmail">Pas de messagerie sur cet appareil ? <a href="#" id="post-pdf-syndicat-gmail">Ouvrir dans Gmail</a></p>
             </div>`;
         document.body.appendChild(overlay);
         overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('visible'); });
@@ -4032,13 +4016,6 @@ function showPostPdfSyndicatModal(agreement) {
             const ag = overlay._agreement;
             const to = (ag && (ag.syndicatEmail || '').trim()) || '';
             window.open(buildGmailComposeUrl(to, SYNDICAT_MAIL_SUBJECT, SYNDICAT_MAIL_BODY), '_blank', 'noopener');
-            overlay.classList.remove('visible');
-        });
-        document.getElementById('post-pdf-syndicat-outlook').addEventListener('click', (e) => {
-            e.preventDefault();
-            const ag = overlay._agreement;
-            const to = (ag && (ag.syndicatEmail || '').trim()) || '';
-            window.open(buildOutlookComposeUrl(to, SYNDICAT_MAIL_SUBJECT, SYNDICAT_MAIL_BODY), '_blank', 'noopener');
             overlay.classList.remove('visible');
         });
     }
