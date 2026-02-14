@@ -2856,6 +2856,10 @@ body.iframe-mode .simulator-container.iframe-container {
 }
 
 /* Sous-ligne SMH (Art. 140) : rattachée visuellement à la ligne de base, indentée */
+/* Retirer le séparateur entre la ligne de base et sa 1re sous-ligne */
+.result-detail-item:has(+ .result-detail-item.smh-sub-line) {
+    border-bottom: none;
+}
 .result-detail-item.smh-sub-line {
     padding-left: 1.2em;
     padding-top: 2px;
@@ -2863,6 +2867,10 @@ body.iframe-mode .simulator-container.iframe-container {
     border-bottom: none;
     font-size: 0.92em;
     opacity: 0.82;
+}
+/* Rétablir le séparateur après la dernière sous-ligne SMH du groupe */
+.result-detail-item.smh-sub-line:has(+ .result-detail-item:not(.smh-sub-line)) {
+    border-bottom: 1px solid var(--gray-200);
 }
 .result-detail-item.smh-sub-line .result-detail-label {
     font-style: italic;
