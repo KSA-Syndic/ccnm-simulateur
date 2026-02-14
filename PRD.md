@@ -450,7 +450,7 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 
 ---
 
-### 4. Spécifications Techniques & UI (Design System Hugo Book)
+### 4. Spécifications Techniques & UI
 
 #### A. Stack Technique
 
@@ -466,8 +466,12 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 
 #### B. Interface Utilisateur (UI)
 
-* **Intégration Thème :**
-* Utilisation des variables CSS natives : `var(--color-link)`, `var(--body-background)`, `var(--gray-200)`.
+* **Charte graphique :**
+  * **Palette** : orange CFDT (#E15C12, Pantone 166) comme couleur primaire et d'accent. Déclinaisons : primary-dark (#c04e0f), primary-light (#f4a261), arrière-plan subtil (rgba 6 %). Gris neutres pour texte, bordures et fonds. Pas de bleu ni de gradient.
+  * **Design brut et épuré** : aucun border-radius (angles droits partout), pas de box-shadow décoratifs, pas de linear-gradient sur les composants. Bordures fines (1 px solid) pour délimiter les zones.
+  * **Typographie** : Inter (ou system fallback), hiérarchie claire par taille et graisse uniquement.
+  * **Principe** : modernité et sobriété ; l'identité CFDT transparaît par la couleur orange sans surcharge visuelle.
+* **Variables CSS** : `var(--color-primary)`, `var(--color-primary-dark)`, `var(--color-primary-bg)`, `var(--body-background)`, `var(--gray-100..600)`.
 * Composants natifs : Boutons `.book-btn`, Alertes `.book-hint`.
 
 * **Le Composant "Carrousel" (Tambour horizontal) :**

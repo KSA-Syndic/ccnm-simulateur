@@ -3375,14 +3375,14 @@ function openSalaryModal(periodKey, periodLabel, currentSalary) {
                 <!-- Ligne total brut -->
                 <line x1="10" y1="80" x2="390" y2="80" stroke="#ddd" stroke-width="1"/>
                 <text x="20" y="95" font-family="Arial" font-size="11" font-weight="bold">Total brut</text>
-                <text x="300" y="95" font-family="Arial" font-size="11" font-weight="bold" fill="#0969da">XXXX €</text>
+                <text x="300" y="95" font-family="Arial" font-size="11" font-weight="bold" fill="#E15C12">XXXX €</text>
                 
                 <!-- Flèche pointant vers le total brut -->
-                <path d="M 350 95 L 370 95 L 370 140 L 380 130 L 370 120 L 370 140 Z" fill="#0969da" opacity="0.7"/>
-                <text x="310" y="135" font-family="Arial" font-size="9" fill="#0969da" font-weight="bold">TOTAL BRUT MENSUEL</text>
+                <path d="M 350 95 L 370 95 L 370 140 L 380 130 L 370 120 L 370 140 Z" fill="#E15C12" opacity="0.7"/>
+                <text x="310" y="135" font-family="Arial" font-size="9" fill="#E15C12" font-weight="bold">TOTAL BRUT MENSUEL</text>
                 
                 <!-- Zone mise en évidence -->
-                <rect x="280" y="85" width="100" height="20" fill="#e3f2fd" opacity="0.5" stroke="#0969da" stroke-width="2" stroke-dasharray="3,3"/>
+                <rect x="280" y="85" width="100" height="20" fill="rgba(225,92,18,0.08)" opacity="0.5" stroke="#E15C12" stroke-width="2" stroke-dasharray="3,3"/>
                 
                 <!-- Note en bas -->
                 <text x="20" y="170" font-family="Arial" font-size="9" fill="#666">* Indiquez le Total brut du mois sur votre fiche de paie</text>
@@ -4043,7 +4043,7 @@ function showPostPdfCelebration(agreement) {
         overlay.className = 'celebration-overlay';
         const confettiCount = 24;
         let confettiHtml = '';
-        const colors = ['#1e3a5f', '#2d5a87', '#4a90c4', '#7cb3e0', '#c9a227', '#6b8e6b'];
+        const colors = ['#E15C12', '#c04e0f', '#f4a261', '#d97706', '#a3a3a3', '#6b8e6b'];
         for (let i = 0; i < confettiCount; i++) {
             const left = 5 + Math.random() * 90;
             const delay = Math.random() * 0.8;
