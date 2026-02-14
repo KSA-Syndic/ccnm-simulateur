@@ -62,6 +62,12 @@
  * @property {number} [moisVersement] - Mois de versement 1-12 (valueType === 'montant' : prime versée ce mois-là)
  * @property {ConditionAnciennete} [conditionAnciennete] - Condition d'ancienneté pour en bénéficier (générique ; utilisé pour le calcul)
  * @property {string} [tooltip] - Texte d'aide affiché au survol (?) sur l'option (modalités particulières)
+ * @property {boolean} [inclusDansSMH=false] - Si true, la prime est incluse dans l'assiette de comparaison du SMH (Art. 140 CCNM).
+ *   Elle constitue une distribution du salaire permettant d'atteindre le SMH grille, PAS un supplément.
+ *   Elle ne s'ajoute pas au total annuel affiché. Toujours active (pas de checkbox).
+ *   Si false (défaut), elle est exclue de l'assiette SMH et s'ajoute au-dessus du SMH garanti.
+ *   Exemples : prime de vacances (incluse, complément salarial annuel), 13e mois (inclus, modalité de versement),
+ *   prime d'ancienneté (exclue), majorations nuit/dim/équipe (exclues).
  */
 
 /**
@@ -74,6 +80,7 @@
  * @property {boolean} tousStatuts - true = Cadres et Non-cadres ; false = Non-cadres seuls (comportement CCN)
  * @property {'salaire'|'point'} baseCalcul - Base de calcul : 'salaire' = rémunération brute, 'point' = valeur du point
  * @property {Object|function} barème - Taux par année (ex. { 2: 0.02, 3: 0.03, ... }) ou fonction(annees) => taux
+ * @property {boolean} [inclusDansSMH=false] - Toujours false : la prime d'ancienneté est formellement exclue de l'assiette SMH (Art. 140 CCNM, Conseil d'État)
  */
 
 /**
@@ -241,8 +248,13 @@ export function hydrateAccordInputs(agreement, state) {
     if (!state.accordInputs) state.accordInputs = {};
     const primes = getPrimes(agreement);
     for (const prime of primes) {
-        if (prime.stateKeyActif && !(prime.stateKeyActif in state.accordInputs)) {
-            state.accordInputs[prime.stateKeyActif] = prime.defaultActif === true;
+        if (prime.stateKeyActif) {
+            if (prime.inclusDansSMH === true) {
+                // Primes incluses dans le SMH (Art. 140 CCNM) : toujours actives, pas de choix utilisateur
+                state.accordInputs[prime.stateKeyActif] = true;
+            } else if (!(prime.stateKeyActif in state.accordInputs)) {
+                state.accordInputs[prime.stateKeyActif] = prime.defaultActif === true;
+            }
         }
         if (prime.stateKeyHeures && !(prime.stateKeyHeures in state.accordInputs)) {
             state.accordInputs[prime.stateKeyHeures] = prime.defaultHeures ?? DEFAULT_HEURES_MENSUELLES;

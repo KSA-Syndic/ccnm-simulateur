@@ -17,7 +17,7 @@ Un accord doit respecter le schéma validé par `validateAgreement()` dans `Agre
 | `nomCourt` | string | Nom court (badges, tooltips) |
 | `url` | string | Lien vers le texte officiel |
 | `dateEffet` | string | Date d'entrée en vigueur (ISO `YYYY-MM-DD`) |
-| `anciennete` | object | **Prime d'ancienneté** : seuil, plafond, barème, `tousStatuts`, `baseCalcul`. Entièrement piloté par l'instance d'accord : modifier cet objet dans le fichier (ex. `accords/KuhnAgreement.js`) suffit pour adapter le calcul. |
+| `anciennete` | object | **Prime d'ancienneté** : seuil, plafond, barème, `tousStatuts`, `baseCalcul`, `inclusDansSMH` (toujours `false`). Entièrement piloté par l'instance d'accord. |
 | `majorations` | object | `nuit` (posteNuit, posteMatin, plage…), `dimanche` (taux) |
 | `primes` | **array** | Liste de primes (voir ci-dessous) |
 | `repartition13Mois` | object | `actif`, `moisVersement` (1-12), `inclusDansSMH` |
@@ -31,14 +31,29 @@ Chaque prime est un objet avec au minimum :
 - **`id`** : identifiant unique (ex. `'primeEquipe'`, `'primeVacances'`, `'primeNoel'`)
 - **`label`** : libellé affiché
 - **`sourceValeur`** : `'accord'` (valeur fixe) ou `'modalite'` (saisie utilisateur)
-- **`valueType`** : `'horaire'` (€/h ; période mensuelle), `'montant'` (€ annuel), ou `'pourcentage'`
+- **`valueType`** : `'horaire'` (€/h ; période mensuelle), `'montant'` (€ annuel), `'pourcentage'`, ou `'majorationHoraire'` (majoration en % du taux horaire)
 - **`unit`** : `'€/h'`, `'€'`, `'%'`
 - **`valeurAccord`** : nombre (ou `null` si modalité)
 - **`stateKeyActif`** : clé dans `state.accordInputs` pour activer/désactiver (ex. `'travailEquipe'`, `'primeVacances'`)
-- **`stateKeyHeures`** : (si horaire) clé pour les heures **mensuelles** (ex. `'heuresEquipe'`)
-- **`moisVersement`** : (si montant) mois 1-12 du versement (ex. 7 = juillet, 12 = décembre)
-- **`conditionAnciennete`** : (optionnel) `{ type: 'annees_revolues'|'aucune', annees?, description? }` — condition d'ancienneté pour ouvrir droit (ex. prime vacances : 1 an)
+- **`stateKeyHeures`** : (si horaire/majorationHoraire) clé pour les heures **mensuelles** (ex. `'heuresEquipe'`)
+- **`moisVersement`** : (si montant) mois 1-12 du versement — **déduit du texte de l'accord**, pas copié d'un autre accord
+- **`inclusDansSMH`** : **(OBLIGATOIRE)** `true` si la prime est un complément salarial annuel inclus dans l'assiette SMH (Art. 140 CCNM) ; `false` si c'est une contrepartie de conditions de travail exclue de l'assiette. Voir section « Assiette SMH » ci-dessous.
+- **`conditionAnciennete`** : (optionnel) `{ type: 'annees_revolues'|'aucune', annees?, description? }` — condition d'ancienneté pour ouvrir droit
 - **`tooltip`** : (optionnel) texte d'aide affiché au survol (?) sur l'option
+
+#### Assiette SMH (`inclusDansSMH`)
+
+La CCN Métallurgie définit quels éléments entrent dans l'assiette de vérification du SMH. Pour chaque prime, déterminer :
+
+| Critère | `inclusDansSMH` | Exemples |
+|---------|-----------------|----------|
+| Complément salarial annuel (modalité de versement) | `true` | Prime de vacances, 13e mois, prime de fin d'année |
+| Contrepartie conditions de travail / sujétion | `false` | Prime d'équipe, majorations nuit/dimanche, pénibilité |
+| Prime d'ancienneté | **toujours `false`** | Exclue par la CCN et la jurisprudence |
+
+**Comportement dans l'app :**
+- `inclusDansSMH: true` → prime **toujours active** (pas de checkbox). C'est une distribution du salaire permettant d'atteindre le SMH grille, **pas un supplément**. Elle **ne s'ajoute pas** au total annuel affiché. Affichée comme sous-ligne informative du SMH (préfixe « dont »). Influence uniquement la distribution mensuelle.
+- `inclusDansSMH: false` → prime **activable/désactivable** par l'utilisateur, **s'ajoute** au-dessus du SMH garanti.
 
 Exemple minimal pour deux primes :
 
@@ -54,6 +69,7 @@ primes: [
         stateKeyActif: 'travailEquipe',
         stateKeyHeures: 'heuresEquipe',
         defaultHeures: 151.67,
+        inclusDansSMH: false,   // Condition de travail → exclu de l'assiette SMH
         conditionAnciennete: { type: 'aucune', description: 'Aucune' }
     },
     {
@@ -64,8 +80,9 @@ primes: [
         unit: '€',
         valeurAccord: 525,
         stateKeyActif: 'primeVacances',
-        defaultActif: true,       // optionnel : case cochée par défaut (évite de coder des ids dans l'app)
-        moisVersement: 7,
+        defaultActif: true,
+        inclusDansSMH: true,    // Complément salarial annuel → inclus dans l'assiette SMH (Art. 140 CCNM)
+        moisVersement: 7,       // Juillet — déduit du texte de l'accord
         conditionAnciennete: { type: 'annees_revolues', annees: 1, description: '1 an au 1er juin' }
     }
 ]
@@ -91,7 +108,7 @@ export const MonAccord = {
     url: 'https://example.com/accord.pdf',
     dateEffet: '2024-01-01',
     dateSignature: '2023-12-15',
-    anciennete: { seuil: 2, plafond: 25, tousStatuts: true, baseCalcul: 'salaire', barème: { 2: 0.02 } },
+    anciennete: { seuil: 2, plafond: 25, tousStatuts: true, baseCalcul: 'salaire', barème: { 2: 0.02 }, inclusDansSMH: false },
     majorations: { nuit: { posteNuit: 0.20, posteMatin: 0.15 }, dimanche: 0.50 },
     primes: [ /* tableau PrimeDef */ ],
     repartition13Mois: { actif: false, moisVersement: 11, inclusDansSMH: true },
@@ -121,6 +138,8 @@ function initializeRegistry() {
 ### 3. Déclarer les entrées d'accord (optionnel)
 
 Si l'accord utilise de nouvelles clés (ex. `primeNoel`), ajouter les valeurs par défaut dans **`src/core/state.js`** et **`app.js`** dans `state.accordInputs` (ex. `primeNoel: false`), et prévoir les champs/options dans l'UI (étape 3 du wizard).
+
+**Note :** les primes avec `inclusDansSMH: true` sont automatiquement forcées à `true` dans `hydrateAccordInputs()` et ne nécessitent pas de checkbox — l'UI les affiche comme label informatif non-togglable.
 
 ### 4. Tester
 

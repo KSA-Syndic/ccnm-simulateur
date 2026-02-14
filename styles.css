@@ -2855,6 +2855,23 @@ body.iframe-mode .simulator-container.iframe-container {
     margin-top: 8px;
 }
 
+/* Sous-ligne SMH (Art. 140) : rattachée visuellement à la ligne de base, indentée */
+.result-detail-item.smh-sub-line {
+    padding-left: 1.2em;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    border-bottom: none;
+    font-size: 0.92em;
+    opacity: 0.82;
+}
+.result-detail-item.smh-sub-line .result-detail-label {
+    font-style: italic;
+}
+.result-detail-item.smh-sub-line .result-detail-value {
+    font-size: 0.95em;
+}
+
+
 .result-detail-label {
     color: var(--gray-500);
     display: inline-flex;
@@ -3392,24 +3409,6 @@ body.iframe-mode .simulator-container.iframe-container {
     margin: 0;
 }
 
-/* Legacy - Options détaillées de l'accord */
-.accord-options {
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px dashed var(--gray-300);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.accord-options .form-group {
-    margin-bottom: 0;
-}
-
-.accord-options .checkbox-label {
-    font-weight: normal;
-    font-size: 0.95rem;
-}
 
 /* Message lorsque l'accord est désactivé : modalités qui ne sont plus prises en compte */
 .accord-desactive-message {
@@ -3445,19 +3444,6 @@ body.iframe-mode .simulator-container.iframe-container {
 
 .sub-field .book-input {
     width: 150px;
-}
-
-/* Grille pour les options sur desktop */
-@media (min-width: 768px) {
-    .accord-options {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-    }
-    
-    .accord-options .form-group:first-child {
-        grid-column: 1 / -1;
-    }
 }
 
 /* ============================================

@@ -10,22 +10,31 @@
  * - CCN : Données Convention Collective Nationale Métallurgie 2024 (SMH, barèmes, taux, forfaits, majorations)
  * - Accords d'entreprise : définis dans le dossier accords/ et chargés à l'exécution (AgreementLoader/AgreementRegistry)
  *
- * RÈGLES MÉTIER - ASSIETTE SMH (pour arriérés « SMH seul » et référence générale)
- * -------------------------------------------------------------------------------
- * INCLUS dans l'assiette SMH :
+ * RÈGLES MÉTIER - ASSIETTE SMH (Art. 140 CCNM — pour arriérés « SMH seul » et référence générale)
+ * --------------------------------------------------------------------------------------------
+ * Le SMH est le minimum défini par la grille CCN. Les éléments inclus sont des distributions
+ * du salaire permettant d'atteindre ce minimum, PAS des suppléments qui s'y ajoutent.
+ *
+ * INCLUS dans l'assiette SMH (distributions comptant pour atteindre le minimum conventionnel) :
  * - Base SMH (ou barème débutants F11/F12 si < 6 ans)
- * - Majorations forfaits cadres (heures +15%, jours +30%) : elles font partie du SMH
+ * - Majorations forfaits cadres (heures +15%, jours +30%) : font partie du SMH
  * - Majorations heures supplémentaires : incluses dans l'assiette SMH
- * - 13e mois : fait partie du SMH (modalité de versement, répartition 12/13)
- * EXCLUS de l'assiette SMH :
- * - Primes d'ancienneté (CCN ou accord)
- * - Prime de vacances
+ * - 13e mois : distribution du salaire (répartition 12/13), pas un supplément
+ * - Primes d'accord avec inclusDansSMH: true (ex. prime de vacances) : distribution du salaire
+ *   concentrée dans un mois donné, ne modifie PAS le total annuel
+ *
+ * EXCLUS de l'assiette SMH (s'ajoutent AU-DESSUS du minimum garanti) :
+ * - Prime d'ancienneté (CCN ou accord) — Art. 140 CCNM, Conseil d'État
  * - Majorations pénibilité
  * - Majorations nuit / dimanche / prime d'équipe
+ * - Primes d'accord avec inclusDansSMH: false
  *
- * Option « SMH seul » (arretesSurSMHSeul) : salaire dû = assiette SMH ci-dessus (base + forfait,
- * sans prime vacances, prime ancienneté, majorations nuit/dimanche/équipe, majorations pénibilité).
- * Répartition 12 ou 13 mois selon l'accord. Saisie utilisateur = brut hors primes.
+ * Total annuel affiché = SMH grille + forfait + éléments EXCLUS uniquement.
+ * Les primes inclusDansSMH: true n'augmentent pas ce total ; elles sont informationnelles.
+ *
+ * Distribution mensuelle (arriérés) : les primes SMH sont soustraites du total annuel pour
+ * répartition uniforme, puis rajoutées dans leur mois de versement.
+ * Saisie utilisateur = brut incluant primes SMH (Art. 140), excluant ancienneté et majorations.
  */
 
 const CONFIG = {

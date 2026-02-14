@@ -55,23 +55,27 @@ Pour ajouter un accord, nous avons besoin de :
 - Taux majoration dimanche (ex: +50%)
 
 ### Primes Spécifiques
-- Prime d'équipe : montant horaire, conditions
-- Prime de vacances : montant, mois de versement, conditions
+Pour chaque prime, nous avons besoin de :
+- Nom de la prime (ex: prime d'équipe, prime de vacances, prime de Noël)
+- Montant ou taux (ex: 0,82 €/h, 525 €/an, +15%)
+- Mois de versement (ex: juillet pour vacances, décembre pour Noël)
+- Conditions (ancienneté requise, catégorie de personnel, etc.)
+- **Inclusion dans le SMH** : cette prime est-elle un complément de salaire (oui) ou une contrepartie de conditions de travail (non) ? Cela détermine si l'employeur peut l'utiliser pour atteindre le minimum conventionnel. En cas de doute, l'équipe analysera la CCN.
 
 ### Répartition Mensuelle
 - Répartition sur 13 mois ? (oui/non)
-- Mois du versement du 13e mois (ex: novembre)
+- Mois du versement du 13e mois (précisé dans votre accord)
 
 ## Exemple
 
-**Exemple d'accord (ex. Kuhn)** :
+**Exemple d'accord** :
 - Seuil ancienneté : 2 ans (au lieu de 3 ans CCN)
 - Plafond : 25 ans (au lieu de 15 ans CCN)
-- Majoration nuit : +20% (au lieu de +15% CCN)
-- Majoration dimanche : +50% (au lieu de +100% CCN)
-- Prime équipe : 0,82 €/heure
-- Prime vacances : 525 € en juillet
-- 13e mois : novembre
+- Majoration nuit : +20%
+- Majoration dimanche : +50%
+- Prime équipe : 0,82 €/h (exclue du SMH — condition de travail)
+- Prime vacances : 525 €/an versée en juillet (incluse dans le SMH — complément salarial)
+- 13e mois : versé en novembre
 
 ## Questions ?
 

@@ -18,7 +18,7 @@ const state = {
     ruptureContratArretees: false,
     dateRuptureArretees: null,
     accordEcritArretees: false,
-    arretesSurSMHSeul: true,     // true = salaire dû = assiette SMH (base + forfait ; exclut primes, pénibilité, nuit/dim/équipe)
+    arretesSurSMHSeul: true,     // true = assiette SMH (base + forfait). Primes avec inclusDansSMH (Art. 140) gérées dans distribution mensuelle.
     
     // === CLASSIFICATION ===
     scores: [1, 1, 1, 1, 1, 1],  // Scores des 6 critères (1-10)
@@ -1008,8 +1008,7 @@ function initControls() {
                     state.accordActif = true;
                     const accordCheckbox = document.getElementById('accord-actif');
                     if (accordCheckbox) accordCheckbox.checked = true;
-                    const accordOptions = document.getElementById('accord-options');
-                    if (accordOptions) accordOptions.classList.remove('hidden');
+                    buildAccordOptionsUI(); // Gère la visibilité du container accord-options
                     const accordNom = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? (window.AgreementLoader.getActiveAgreement()?.nomCourt || 'd\'entreprise') : 'd\'entreprise';
                     showToast(`✅ L'accord ${accordNom} a été activé automatiquement pour permettre cette option.`, 'success', 4000);
                     updateConditionsTravailDisplay();
@@ -1037,7 +1036,6 @@ function initControls() {
     // ═══════════════════════════════════════════════════════════════
     
     const accordCheckbox = document.getElementById('accord-actif');
-    const accordOptions = document.getElementById('accord-options');
     
     if (accordCheckbox) {
         accordCheckbox.addEventListener('change', (e) => {
@@ -1052,22 +1050,15 @@ function initControls() {
                 }
                 // Appliquer 12 ou 13 mois selon l'accord (répartition imposée)
                 if (typeof updateMonthsToggleFromAccord === 'function') updateMonthsToggleFromAccord();
-                // Restituer l'affichage des options (page 3) depuis state.accordInputs conservé à la désactivation
-                accordOptions?.querySelectorAll('input[data-state-key-actif]').forEach(inp => {
-                    const key = inp.dataset.stateKeyActif;
-                    if (key && key in state.accordInputs) inp.checked = !!state.accordInputs[key];
-                });
-                const { classe } = getActiveClassification();
-                const isCadre = classe >= CONFIG.SEUIL_CADRE;
             }
 
             // Désactivation accord : conserver l'état des options (primes, heures, etc.) pour les restituer à la réactivation
             if (wasActive && !isActive) {
                 updateConditionsTravailDisplay();
             }
-            if (accordOptions) {
-                accordOptions.classList.toggle('hidden', !state.accordActif);
-            }
+            // buildAccordOptionsUI gère la visibilité du container #accord-options
+            // et reconstruit les checkboxes avec l'état depuis state.accordInputs
+            buildAccordOptionsUI();
             
             updateConditionsTravailDisplay();
             updateTauxInfo();
@@ -1087,7 +1078,7 @@ function initControls() {
     if (agreementLoaded) {
         state.accordActif = true;
         if (accordCheckbox) accordCheckbox.checked = true;
-        if (accordOptions) accordOptions.classList.remove('hidden');
+        buildAccordOptionsUI(); // Gère la visibilité et le contenu du container
         if (typeof updateMonthsToggleFromAccord === 'function') updateMonthsToggleFromAccord();
         updateConditionsTravailDisplay();
         updateTauxInfo();
@@ -1436,6 +1427,54 @@ function updateConditionsTravailDisplay() {
 }
 
 /**
+ * Construit dynamiquement le contenu de #accord-options à partir des primes de l'accord.
+ * - Primes inclusDansSMH === true : label informatif (non-togglable, toujours actives)
+ * - Primes de type montant avec inclusDansSMH === false : checkbox togglable
+ * - Primes horaires/majorationHoraire : déjà gérées dans #accord-primes-horaires-container
+ */
+function buildAccordOptionsUI() {
+    const container = document.getElementById('accord-options');
+    if (!container) return;
+    const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
+    if (!agreement || !state.accordActif) {
+        container.innerHTML = '';
+        container.classList.add('hidden');
+        return;
+    }
+    const primes = typeof window.AgreementHelpers?.getPrimes === 'function'
+        ? window.AgreementHelpers.getPrimes(agreement) : [];
+    // Ne prendre que les primes non-horaires (montant, etc.) — les horaires sont dans conditions de travail
+    const primesNonHoraires = primes.filter(p => p.valueType !== 'horaire' && p.valueType !== 'majorationHoraire');
+    // Seules les primes hors-SMH et hors-horaires méritent une checkbox ici.
+    // Les primes inclusDansSMH: true sont déjà visibles en sous-ligne « dont ... » dans les résultats.
+    const primesTogglables = primesNonHoraires.filter(p => p.inclusDansSMH !== true);
+    if (primesTogglables.length === 0) {
+        container.innerHTML = '';
+        container.classList.add('hidden');
+        return;
+    }
+    const moisNoms = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    let html = '';
+    for (const prime of primesTogglables) {
+        const montant = prime.valeurAccord != null ? formatMoney(prime.valeurAccord) : '';
+        const moisStr = prime.moisVersement ? ` (${moisNoms[prime.moisVersement - 1]})` : '';
+        const actif = state.accordInputs[prime.stateKeyActif] === true;
+        html += `<label class="checkbox-label">
+            <input type="checkbox" class="book-checkbox" data-state-key-actif="${escapeHTML(prime.stateKeyActif || '')}" ${actif ? 'checked' : ''}>
+            <span>${escapeHTML(prime.label || 'Prime')} ${montant ? '(' + montant + '/an' + moisStr + ')' : ''}</span>
+        </label>`;
+    }
+    container.innerHTML = html;
+    container.classList.remove('hidden');
+    // Initialiser Tippy sur les éventuels tooltips
+    if (typeof tippy !== 'undefined') {
+        container.querySelectorAll('.tooltip-trigger[data-tippy-content]').forEach((el) => {
+            if (!el._tippy) tippy(el, { theme: 'metallurgie', animation: 'shift-away', duration: [200, 150], arrow: true, maxWidth: 300 });
+        });
+    }
+}
+
+/**
  * Mettre à jour les informations de taux appliqués (CCN vs accord)
  */
 function updateTauxInfo() {
@@ -1599,8 +1638,11 @@ function calculateRemuneration() {
  * Utilisé pour le calcul des arriérés quand "SMH seul" est coché.
  * INCLUT : base SMH (ou barème débutants F11/F12 avec < 6 ans) + majorations forfaits cadres (heures/jours).
  * Les majorations forfaits font partie du SMH. Les majorations heures sup sont incluses dans l'assiette SMH
- * (non calculées ici tant que l'app ne simule pas les HS). EXCLUT : primes ancienneté, prime vacances,
- * majorations pénibilité, majorations nuit/dimanche, prime d'équipe.
+ * (non calculées ici tant que l'app ne simule pas les HS).
+ * EXCLUT : primes ancienneté, majorations pénibilité, majorations nuit/dimanche, prime d'équipe.
+ * NOTE : Les primes d'accord avec inclusDansSMH === true (ex. prime de vacances, Art. 140 CCNM)
+ * sont une distribution du salaire permettant d'atteindre le SMH grille, pas un supplément.
+ * Elles ne modifient pas le total annuel mais sont prises en compte dans la distribution mensuelle.
  */
 function getMontantAnnuelSMHSeul() {
     // Utiliser le nouveau module si disponible
@@ -1685,11 +1727,12 @@ function updateAll() {
     // Affichage des conditions de travail selon statut/forfait
     updateConditionsTravailDisplay();
 
-    // Synchroniser la checkbox accord et le bloc options depuis state
+    // Synchroniser la checkbox accord depuis state
     const accordCheckboxEl = document.getElementById('accord-actif');
-    const accordOptionsEl = document.getElementById('accord-options');
     if (accordCheckboxEl) accordCheckboxEl.checked = !!state.accordActif;
-    if (accordOptionsEl) accordOptionsEl.classList.toggle('hidden', !state.accordActif);
+    // Construire dynamiquement les options accord (primes montant, etc.)
+    // buildAccordOptionsUI gère lui-même la visibilité du container
+    buildAccordOptionsUI();
 
     // Message lorsque l'accord est désactivé : modalités qui ne sont plus prises en compte
     updateAccordDesactiveMessage();
@@ -1737,7 +1780,7 @@ function updateRemunerationDisplay(remuneration) {
     aggregatedDetails.forEach(detail => {
         const valueClass = detail.isPositive ? 'positive' : '';
         const prefix = detail.isPositive ? '+' : '';
-        const isAccord = detail.isAgreement ?? detail.isKuhn;
+        const isAccord = !!detail.isAgreement;
         const accordBadge = isAccord ? getAccordBadgeHtml(agreement) : '';
         const origin = detail.tooltipOrigin || (isAccord ? `Accord d'entreprise ${nomAccord}` : 'Convention collective (CCN)');
         let tipContent = '<strong>Origine :</strong> ' + (typeof origin === 'string' ? origin : (isAccord ? `Accord d'entreprise ${nomAccord}` : 'Convention collective (CCN)')) + '<br>';
@@ -1752,9 +1795,13 @@ function updateRemunerationDisplay(remuneration) {
             tipContent += '<strong>Détail :</strong> ' + escapeHTML(detail.label) + ' : ' + formatMoney(detail.value);
         }
         const tipAttr = tipContent.replace(/"/g, '&quot;');
+        // Sous-lignes SMH (Art. 140) : indentées, rattachées visuellement à la base
+        const isSub = detail.isSMHSubLine === true;
+        const subClass = isSub ? ' smh-sub-line' : '';
+        const subPrefix = isSub ? '↳ ' : '';
         detailsHTML += `
-            <div class="result-detail-item">
-                <span class="result-detail-label">${detail.label}${accordBadge}
+            <div class="result-detail-item${subClass}">
+                <span class="result-detail-label">${subPrefix}${detail.label}${accordBadge}
                     <span class="result-detail-info-icon tooltip-trigger" data-tippy-content="${tipAttr}" data-tippy-allowHTML="true" aria-label="Détails">i</span>
                 </span>
                 <span class="result-detail-value ${valueClass}">${prefix}${formatMoney(detail.value)}</span>
@@ -1795,7 +1842,8 @@ function aggregateRemunerationDetails(details) {
     let primesAccord = 0;
     const primesBreakdownCCN = [];
     const primesBreakdownAccord = [];
-    const isAccordDetail = (d) => d.isAgreement ?? d.isKuhn;
+    const smhSubLines = []; // Primes incluses dans le SMH (Art. 140) — sous-lignes rattachées à la base
+    const isAccordDetail = (d) => !!d.isAgreement;
 
     details.forEach(detail => {
         // SMH de base toujours affiché (avec origine pour tooltip)
@@ -1804,6 +1852,21 @@ function aggregateRemunerationDetails(details) {
                 ...detail,
                 tooltipOrigin: 'CCN Métallurgie 2024',
                 tooltipDetail: detail.label
+            });
+        }
+        // Primes incluses dans le SMH (Art. 140) : sous-lignes rattachées à la base SMH
+        else if (detail.isSMHIncluded) {
+            // Prime incluse dans le SMH (Art. 140) : ne s'ajoute PAS au total, c'est une distribution
+            // du salaire permettant d'atteindre le SMH grille. Affichée en sous-ligne informative.
+            // Le mois de versement est déjà dans detail.label (ex. "Prime de vacances Kuhn (juillet)")
+            smhSubLines.push({
+                label: `dont ${detail.label}`,
+                value: detail.value,
+                isPositive: false,
+                isAgreement: isAccordDetail(detail),
+                isSMHSubLine: true,
+                tooltipOrigin: 'Incluse dans le SMH (Art. 140 CCNM) — ne s\'ajoute pas au total',
+                tooltipDetail: `${detail.label} — distribution du SMH, pas un supplément`
             });
         }
         // Agréger les majorations en CCN vs accord
@@ -1816,7 +1879,7 @@ function aggregateRemunerationDetails(details) {
                 majorationsBreakdownCCN.push({ label: detail.label, value: detail.value, isAgreement: false });
             }
         }
-        // Agréger les primes en CCN vs accord
+        // Agréger les primes en CCN vs accord (exclues du SMH)
         else if (detail.isPositive && !detail.isBase) {
             if (isAccordDetail(detail)) {
                 primesAccord += detail.value;
@@ -1827,6 +1890,11 @@ function aggregateRemunerationDetails(details) {
             }
         }
     });
+
+    // Insérer les sous-lignes SMH juste après la ligne de base (rattachées visuellement)
+    if (smhSubLines.length > 0) {
+        aggregated.push(...smhSubLines);
+    }
 
     const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
     const nomAccord = getAccordNomCourt(agreement) || 'accord';
@@ -1865,7 +1933,7 @@ function aggregateRemunerationDetails(details) {
     }
     if (primesAccord > 0) {
         aggregated.push({
-            label: 'Primes (ancienneté, vacances, etc.)',
+            label: 'Primes (ancienneté, etc.)',
             value: primesAccord,
             isPositive: true,
             isAgreement: true,
@@ -1886,8 +1954,8 @@ function updateHintDisplay(remuneration) {
     
     const hints = [];
     
-    // Compter les éléments appliqués (accord = isAgreement ou isKuhn pour compat)
-    const accordDetails = remuneration.details.filter(d => d.isAgreement ?? d.isKuhn);
+    // Compter les éléments appliqués (accord = isAgreement)
+    const accordDetails = remuneration.details.filter(d => !!d.isAgreement);
     const hasMajorations = remuneration.details.some(d =>
         d.label.includes('nuit') || d.label.includes('dimanche') || d.label.includes('équipe')
     );
@@ -1910,13 +1978,11 @@ function updateHintDisplay(remuneration) {
     
     // === HINT 2: Accord d'entreprise ===
     if (state.accordActif && hasAccordElements && agreement) {
+        // Résumer les éléments accord appliqués (dynamique, sans keywords hardcodés)
         const elementsAccord = accordDetails.map(d => {
-            if (d.label.includes('ancienneté')) return 'prime ancienneté';
-            if (d.label.includes('équipe')) return 'prime équipe';
-            if (d.label.includes('nuit')) return 'majoration nuit';
-            if (d.label.includes('dimanche')) return 'majoration dimanche';
-            if (d.label.includes('vacances')) return 'prime vacances';
-            return null;
+            // Extraire un nom court depuis le label (supprimer les détails entre parenthèses)
+            const short = (d.label || '').replace(/\s*\(.*$/, '').trim();
+            return short || null;
         }).filter(Boolean);
         const listeElements = [...new Set(elementsAccord)].join(', ');
         const descTaux = agreement.tooltip ? agreement.tooltip : `Taux et primes selon l'accord ${nomAccord}.`;
@@ -2234,11 +2300,14 @@ function calculateSalaryEvolution(years, augmentationAnnuelle = 0) {
         // L'augmentation s'applique sur le total hors primes fixes (vacances)
         const augmentationFactor = Math.pow(1 + augmentationAnnuelle / 100, i);
         
-        // Séparer les éléments fixes (primes à versement unique) des éléments proportionnels
+        // Séparer les éléments fixes (primes à versement unique hors SMH) des éléments proportionnels
+        // Les primes incluses dans le SMH (Art. 140) ne sont PAS dans le total → ne pas les soustraire
         let salaryVariable = remuneration.total;
         let salaryFixe = 0;
         if (state.accordActif && typeof window.getMontantPrimesFixesAnnuelFromModules === 'function') {
-            salaryFixe = window.getMontantPrimesFixesAnnuelFromModules(state);
+            const totalFixe = window.getMontantPrimesFixesAnnuelFromModules(state);
+            const fixeSMH = window.getMontantPrimesFixesAnnuelFromModules(state, { smhOnly: true }) || 0;
+            salaryFixe = totalFixe - fixeSMH; // Seulement les primes fixes hors SMH
             salaryVariable -= salaryFixe;
         }
         
@@ -2700,7 +2769,7 @@ function initArreteesNew() {
         });
     }
 
-    // SMH seul pour les arriérés (salaire dû = assiette SMH : base + forfait ; exclut primes, pénibilité, nuit/dim/équipe)
+    // SMH seul pour les arriérés (assiette SMH Art. 140 : base + forfait ; primes inclusDansSMH gérées dans distribution mensuelle)
     const arreteesSmhSeulCheckbox = document.getElementById('arretees-smh-seul');
     if (arreteesSmhSeulCheckbox) {
         state.arretesSurSMHSeul = arreteesSmhSeulCheckbox.checked;
@@ -2715,7 +2784,7 @@ function initArreteesNew() {
 
 /**
  * Met à jour le texte d'avertissement "salaire brut" selon l'option SMH seul,
- * pour rappeler à l'utilisateur de ne pas inclure les primes quand il compare au SMH.
+ * pour rappeler à l'utilisateur quels éléments inclure/exclure (Art. 140 CCNM).
  */
 function updateArreteesSalaireHint() {
     const el = document.getElementById('arretees-salaire-hint');
@@ -2723,10 +2792,70 @@ function updateArreteesSalaireHint() {
     const p = el.querySelector('p');
     if (!p) return;
     if (state.arretesSurSMHSeul) {
-        p.innerHTML = '<strong>Attention :</strong> Saisissez le <strong>salaire mensuel brut hors primes</strong> (sans prime de vacances, prime ancienneté, majorations nuit/dimanche/équipe, majorations pénibilité). Le 13e mois et les majorations forfaits font partie du SMH. N\'incluez pas les éléments exclus dans les montants saisis.';
+        p.innerHTML = buildSmhHintHtml();
     } else {
         p.innerHTML = '<strong>Attention :</strong> Indiquez le <strong>total brut</strong> du bulletin (y compris primes) pour comparer à la rémunération complète.';
     }
+}
+
+/**
+ * Construit dynamiquement le texte d'avertissement SMH en fonction des primes
+ * de l'accord actif et de leur flag inclusDansSMH (Art. 140 CCNM).
+ * @returns {string} HTML du hint
+ */
+function buildSmhHintHtml() {
+    const agreement = (typeof window.AgreementLoader?.getActiveAgreement === 'function')
+        ? window.AgreementLoader.getActiveAgreement() : null;
+    const primes = (state.accordActif && agreement?.primes) ? agreement.primes : [];
+    const primesIncluses = primes.filter(p => p.inclusDansSMH === true);
+    const primesExclues = primes.filter(p => !p.inclusDansSMH);
+
+    let msg = '<strong>Attention (Art. 140 CCNM) :</strong> ';
+    if (primesIncluses.length > 0) {
+        const noms = primesIncluses.map(p => p.label.toLowerCase()).join(', ');
+        msg += `Saisissez le <strong>salaire mensuel brut incluant ${noms}</strong> (lorsque versée(s) ce mois-là). `;
+    } else {
+        msg += 'Saisissez le <strong>salaire mensuel brut</strong>. ';
+    }
+
+    // Éléments toujours exclus : ancienneté + majorations + primes hors SMH
+    const exclusions = [];
+    if (agreement?.anciennete) exclusions.push('prime d\'ancienneté');
+    primesExclues.forEach(p => exclusions.push(p.label.toLowerCase()));
+    // Majorations CCN (nuit, dimanche) sont toujours exclues
+    exclusions.push('majorations nuit/dimanche', 'majorations pénibilité');
+    if (exclusions.length > 0) {
+        msg += `<strong>Excluez</strong> : ${exclusions.join(', ')}. `;
+    }
+    msg += 'Le 13e mois et les majorations forfaits font partie du SMH.';
+    return msg;
+}
+
+/**
+ * Version texte brut (sans HTML) du hint SMH pour les tooltips.
+ * @returns {string}
+ */
+function buildSmhTooltipText() {
+    const agreement = (typeof window.AgreementLoader?.getActiveAgreement === 'function')
+        ? window.AgreementLoader.getActiveAgreement() : null;
+    const primes = (state.accordActif && agreement?.primes) ? agreement.primes : [];
+    const primesIncluses = primes.filter(p => p.inclusDansSMH === true);
+    const primesExclues = primes.filter(p => !p.inclusDansSMH);
+
+    let msg = '';
+    if (primesIncluses.length > 0) {
+        const noms = primesIncluses.map(p => p.label.toLowerCase()).join(', ');
+        msg += `Brut incluant ${noms} (si versée(s) ce mois). `;
+    } else {
+        msg += 'Brut hors primes. ';
+    }
+    const exclusions = [];
+    if (agreement?.anciennete) exclusions.push('prime d\'ancienneté');
+    primesExclues.forEach(p => exclusions.push(p.label.toLowerCase()));
+    exclusions.push('majorations nuit/dimanche', 'pénibilité');
+    msg += `Excluez : ${exclusions.join(', ')}. `;
+    msg += 'Le 13e mois et les majorations forfaits font partie du SMH.';
+    return msg;
 }
 
 /**
@@ -2802,23 +2931,32 @@ function initTimeline() {
 
         let salaireMensuelDu;
         const mois = currentDate.getMonth() + 1;
-        const estJuillet = mois === 7;
-        const estNovembre = mois === 11;
+        // Mois de versement du 13e mois : dynamique depuis l'accord (ex. novembre = 11)
+        const agreement13e = (typeof window.AgreementLoader?.getActiveAgreement === 'function') ? window.AgreementLoader.getActiveAgreement() : null;
+        const moisVersement13e = agreement13e?.repartition13Mois?.moisVersement ?? 11;
+        const estMois13eMois = mois === moisVersement13e;
         if (state.arretesSurSMHSeul) {
-            // SMH seul (assiette SMH) : base + majorations forfaits, sans prime vacances/ancienneté. Le 13e mois fait partie du SMH (répartition 12/13) si accord avec nbMois 13.
-            if (state.accordActif && state.nbMois === 13 && estNovembre) {
-                salaireMensuelDu = (salaireAnnuelDuMois / 13) * 2;
+            // SMH seul (assiette SMH Art. 140) : primes incluses concentrées dans leur mois de versement
+            const primesFixesSMH = (typeof window.getMontantPrimesFixesAnnuelFromModules === 'function')
+                ? window.getMontantPrimesFixesAnnuelFromModules(stateMois, { smhOnly: true }) : 0;
+            const baseSmhPourRepartition = salaireAnnuelDuMois - primesFixesSMH;
+            if (state.accordActif && state.nbMois === 13 && estMois13eMois) {
+                salaireMensuelDu = (baseSmhPourRepartition / 13) * 2;
             } else if (state.accordActif && state.nbMois === 13) {
-                salaireMensuelDu = salaireAnnuelDuMois / 13;
+                salaireMensuelDu = baseSmhPourRepartition / 13;
             } else {
-                salaireMensuelDu = salaireAnnuelDuMois / 12;
+                salaireMensuelDu = baseSmhPourRepartition / 12;
             }
+            // Ajouter les primes SMH versées ce mois-là (dynamique via moisVersement de chaque prime)
+            const primesCeMoisSMH = (typeof window.getMontantPrimesVerseesCeMoisFromModules === 'function')
+                ? window.getMontantPrimesVerseesCeMoisFromModules(stateMois, mois, { smhOnly: true }) : 0;
+            if (primesCeMoisSMH > 0) salaireMensuelDu += primesCeMoisSMH;
         } else {
-            // Rémunération complète : primes à versement unique selon ancienneté/conditions du mois
+            // Rémunération complète : primes à versement unique selon moisVersement de chaque prime
             const primesFixesAnnuel = (typeof window.getMontantPrimesFixesAnnuelFromModules === 'function')
                 ? window.getMontantPrimesFixesAnnuelFromModules(stateMois) : 0;
             const baseAnnuellePourRepartition = salaireAnnuelDuMois - primesFixesAnnuel;
-            if (state.accordActif && state.nbMois === 13 && estNovembre) {
+            if (state.accordActif && state.nbMois === 13 && estMois13eMois) {
                 salaireMensuelDu = (baseAnnuellePourRepartition / 13) * 2;
             } else if (state.accordActif && state.nbMois === 13) {
                 salaireMensuelDu = baseAnnuellePourRepartition / 13;
@@ -3150,10 +3288,10 @@ function updateCurveControls(options) {
         }
     }
 
-    // Tooltip "?" : rappeler hors primes si SMH seul
+    // Tooltip "?" : rappeler quels éléments inclure/exclure selon le mode
     if (floatingInfoIcon) {
         const tooltipSMHSeul = state.arretesSurSMHSeul
-            ? ' Saisissez le brut hors primes (sans prime vacances, prime ancienneté, majorations nuit/dimanche/équipe, pénibilité). Le 13e mois et les majorations forfaits font partie du SMH.'
+            ? ' ' + buildSmhTooltipText()
             : ' Indiquez le « Total brut » de votre fiche de paie pour ce mois.';
         floatingInfoIcon.setAttribute('data-tippy-content', 'Salaire mensuel brut :' + tooltipSMHSeul);
     }
@@ -3529,22 +3667,31 @@ function calculerArreteesFinal() {
             
             let salaireMensuelDu;
             const mois = currentDate.getMonth() + 1;
-            const estJuillet = mois === 7;
-            const estNovembre = mois === 11;
+            // Mois de versement du 13e mois : dynamique depuis l'accord
+            const agreementCalc = (typeof window.AgreementLoader?.getActiveAgreement === 'function') ? window.AgreementLoader.getActiveAgreement() : null;
+            const moisVersement13eCalc = agreementCalc?.repartition13Mois?.moisVersement ?? 11;
+            const estMois13eMoisCalc = mois === moisVersement13eCalc;
             if (state.arretesSurSMHSeul) {
-                // SMH seul (assiette SMH) : base + forfait, 13e mois inclus si accord avec nbMois 13
-                if (state.accordActif && state.nbMois === 13 && estNovembre) {
-                    salaireMensuelDu = (salaireAnnuelDuMois / 13) * 2;
+                // SMH seul (Art. 140) : primes incluses concentrées dans leur mois de versement
+                const primesFixesSMH = (typeof window.getMontantPrimesFixesAnnuelFromModules === 'function')
+                    ? window.getMontantPrimesFixesAnnuelFromModules(state, { smhOnly: true }) : 0;
+                const baseSmhPourRepartition = salaireAnnuelDuMois - primesFixesSMH;
+                if (state.accordActif && state.nbMois === 13 && estMois13eMoisCalc) {
+                    salaireMensuelDu = (baseSmhPourRepartition / 13) * 2;
                 } else if (state.accordActif && state.nbMois === 13) {
-                    salaireMensuelDu = salaireAnnuelDuMois / 13;
+                    salaireMensuelDu = baseSmhPourRepartition / 13;
                 } else {
-                    salaireMensuelDu = salaireAnnuelDuMois / 12;
+                    salaireMensuelDu = baseSmhPourRepartition / 12;
                 }
+                // Ajouter les primes SMH versées ce mois-là (dynamique via moisVersement)
+                const primesCeMoisSMH = (typeof window.getMontantPrimesVerseesCeMoisFromModules === 'function')
+                    ? window.getMontantPrimesVerseesCeMoisFromModules(state, mois, { smhOnly: true }) : 0;
+                if (primesCeMoisSMH > 0) salaireMensuelDu += primesCeMoisSMH;
             } else {
                 const primesFixesAnnuel = (typeof window.getMontantPrimesFixesAnnuelFromModules === 'function')
                     ? window.getMontantPrimesFixesAnnuelFromModules(state) : 0;
                 const baseAnnuellePourRepartition = salaireAnnuelDuMois - primesFixesAnnuel;
-                if (state.accordActif && state.nbMois === 13 && estNovembre) {
+                if (state.accordActif && state.nbMois === 13 && estMois13eMoisCalc) {
                     salaireMensuelDu = (baseAnnuellePourRepartition / 13) * 2;
                 } else if (state.accordActif && state.nbMois === 13) {
                     salaireMensuelDu = baseAnnuellePourRepartition / 13;
@@ -3817,7 +3964,7 @@ function getArreteesDataForPdf() {
 function openPdfInfosModal() {
     if (!state.arretesSurSMHSeul) {
         showToast(
-            'Le rapport PDF ne peut être généré qu\'en mode « SMH seul ». Cochez l\'option « Calculer les arriérés sur le SMH seul » et saisissez les salaires bruts hors primes (assiette SMH), puis recalculez les arriérés.',
+            'Le rapport PDF ne peut être généré qu\'en mode « SMH seul ». Cochez l\'option « Calculer les arriérés sur le SMH seul » et saisissez les salaires bruts selon l\'assiette SMH (Art. 140 CCNM), puis recalculez les arriérés.',
             'warning',
             6000
         );
@@ -3847,7 +3994,7 @@ function openPdfInfosModal() {
             <div class="modal pdf-infos-modal" onclick="event.stopPropagation()">
                 <h3>Informations pour le dossier</h3>
                 <p class="modal-subtitle">Ces informations seront incluses dans le rapport PDF. Tous les champs sont facultatifs.</p>
-                <p class="pdf-smh-only-notice"><strong>Le rapport PDF est établi sur la base du SMH</strong> (assiette conventionnelle hors primes). Assurez-vous d'avoir coché « SMH seul » et saisi les salaires bruts hors primes.</p>
+                <p class="pdf-smh-only-notice"><strong>Le rapport PDF est établi sur la base du SMH</strong> (assiette conventionnelle Art. 140 CCNM). Vérifiez que « SMH seul » est coché et que les salaires saisis respectent l'assiette SMH (incluant les primes intégrées, hors ancienneté et majorations).</p>
                 <div class="form-group">
                     <label for="pdf-infos-nom">Nom et prénom</label>
                     <input type="text" id="pdf-infos-nom" class="book-input" placeholder="Ex. Dupont Jean">

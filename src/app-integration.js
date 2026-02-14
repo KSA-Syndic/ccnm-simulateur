@@ -76,11 +76,9 @@ export function initAppIntegration() {
 
     // Page 3 : n'afficher l'option "Appliquer l'accord d'entreprise" que si un accord a été chargé depuis l'URL
     const resultAccordBlock = document.getElementById('result-accord-options-block');
-    const accordOptions = document.getElementById('accord-options');
     const accordLabel = document.querySelector('#result-accord-options-block .checkbox-highlight span');
     if (resultAccordBlock) {
         if (agreement) {
-            const prefixAccordOnly = (LABELS && LABELS.tooltipPrefixAccordOnly) || '';
             resultAccordBlock.classList.remove('hidden');
             // Libellé dynamique + badge accord (ludique, cohérent avec le reste de l'app)
             if (accordLabel) {
@@ -95,40 +93,8 @@ export function initAppIntegration() {
                 accordTooltipEl.setAttribute('data-tippy-content', page3Content);
                 if (accordTooltipEl._tippy) accordTooltipEl._tippy.setContent(page3Content);
             }
-            // Options primes : lister les primes de type annuel (montant) et les afficher dynamiquement
-            // Règle : pas de condition sur prime.id ou valeurs d'accord, uniquement sur le type (valueType)
-            if (accordOptions && Array.isArray(agreement.primes)) {
-                const primesAnnuelles = getPrimes(agreement).filter(p => p.valueType === 'montant');
-                accordOptions.innerHTML = '';
-                primesAnnuelles.forEach(prime => {
-                    const valeur = prime.sourceValeur === 'accord' && prime.valeurAccord != null
-                        ? prime.valeurAccord
-                        : (prime.sourceValeur === 'modalite' ? '' : prime.valeurAccord ?? '');
-                    const valeurAffichage = valeur !== '' && prime.sourceValeur === 'accord' ? `+${valeur}` : valeur;
-                    const labelText = `${prime.label} (${valeurAffichage} ${prime.unit}/an)`;
-                    const inputId = `prime-opt-${prime.id}`;
-                    const checked = prime.defaultActif === true;
-                    const label = document.createElement('label');
-                    label.className = 'checkbox-label';
-                    const tooltipAttr = prime.tooltip ? ` data-tippy-content="${(prefixAccordOnly + String(prime.tooltip)).replace(/"/g, '&quot;')}"` : '';
-                    const tooltipSpan = prime.tooltip ? ` <span class="tooltip-trigger"${tooltipAttr} aria-label="Aide">?</span>` : '';
-                    const nomAccord = getAccordNomCourt(agreement);
-                    const badgeHtml = nomAccord ? ` <span class="accord-badge" aria-label="Accord d'entreprise : ${nomAccord.replace(/"/g, '&quot;')}">\u{1F3E2} ${nomAccord.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>` : '';
-                    label.innerHTML = `<input type="checkbox" id="${inputId}" class="book-checkbox" data-state-key-actif="${prime.stateKeyActif}" ${checked ? 'checked' : ''}><span>${labelText}</span>${badgeHtml}${tooltipSpan}`;
-                    if (prime.sourceValeur === 'modalite') {
-                        const inputVal = document.createElement('input');
-                        inputVal.type = 'number';
-                        inputVal.className = 'book-input';
-                        inputVal.placeholder = `${prime.unit}`;
-                        inputVal.dataset.primeId = prime.id;
-                        if (prime.min != null) inputVal.min = prime.min;
-                        if (prime.max != null) inputVal.max = prime.max;
-                        if (prime.step != null) inputVal.step = prime.step;
-                        label.appendChild(inputVal);
-                    }
-                    accordOptions.appendChild(label);
-                });
-            }
+            // Les options primes (checkboxes toggleables) sont construites dynamiquement
+            // par buildAccordOptionsUI() dans app.js — pas de construction ici.
         } else {
             resultAccordBlock.classList.add('hidden');
         }

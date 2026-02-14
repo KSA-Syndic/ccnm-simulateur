@@ -21,7 +21,9 @@ import { computeSalaireProrataEntree } from '../utils/dateUtils.js';
  * @returns {number} Salaire annuel dû pour ce mois
  */
 export function calculateSalaireDuPourMois(dateMois, dateEmbauche, stateSnapshot, agreement, smhSeul) {
-    // Option « SMH seul » : salaire dû = assiette SMH (base + forfait ; exclut primes, pénibilité, nuit/dim/équipe)
+    // Option « SMH seul » : salaire dû = assiette SMH (base + forfait).
+    // Les primes marquées inclusDansSMH (Art. 140 CCNM, ex. prime de vacances)
+    // ne changent pas le total annuel dû mais sont gérées dans la distribution mensuelle.
     if (smhSeul) {
         return getMontantAnnuelSMHSeul(stateSnapshot);
     }
@@ -91,26 +93,32 @@ export function calculerArreteesMoisParMois(params) {
             
             // Calculer le salaire mensuel dû avec répartition 12/13 mois
             let salaireMensuelDu;
-            const estJuillet = month === 7;
-            const estNovembre = month === 11;
+            // Mois de versement du 13e mois : défini par l'accord (ex. novembre = 11), pas hardcodé
+            const moisVersement13e = agreement?.repartition13Mois?.moisVersement ?? 11;
+            const estMois13eMois = month === moisVersement13e;
             
             if (smhSeul) {
-                // SMH seul : répartition simple
+                // SMH seul : répartition tenant compte des primes incluses dans le SMH (Art. 140 CCNM)
+                const primesFixesSMH = agreement ? getMontantPrimesFixesAnnuel(stateMois, agreement, { smhOnly: true }) : 0;
+                const baseAnnuellePourRepartition = salaireAnnuelDuMois - primesFixesSMH;
                 if (agreement && agreement.repartition13Mois && agreement.repartition13Mois.actif && nbMois === 13) {
-                    if (estNovembre) {
-                        salaireMensuelDu = (salaireAnnuelDuMois / 13) * 2;
+                    if (estMois13eMois) {
+                        salaireMensuelDu = (baseAnnuellePourRepartition / 13) * 2;
                     } else {
-                        salaireMensuelDu = salaireAnnuelDuMois / 13;
+                        salaireMensuelDu = baseAnnuellePourRepartition / 13;
                     }
                 } else {
-                    salaireMensuelDu = salaireAnnuelDuMois / 12;
+                    salaireMensuelDu = baseAnnuellePourRepartition / 12;
                 }
+                // Ajouter les primes SMH versées ce mois-là (dynamique via moisVersement de chaque prime)
+                const primesCeMoisSMH = agreement ? getMontantPrimesVerseesCeMois(stateMois, agreement, month, { smhOnly: true }) : 0;
+                if (primesCeMoisSMH > 0) salaireMensuelDu += primesCeMoisSMH;
             } else {
-                // Rémunération complète : primes à versement unique (vacances, Noël, Pâques, etc.) selon moisVersement
+                // Rémunération complète : primes à versement unique selon moisVersement de chaque prime
                 const primesFixesAnnuel = agreement ? getMontantPrimesFixesAnnuel(stateMois, agreement) : 0;
                 const baseAnnuellePourRepartition = salaireAnnuelDuMois - primesFixesAnnuel;
                 if (agreement && agreement.repartition13Mois && agreement.repartition13Mois.actif && nbMois === 13) {
-                    if (estNovembre) {
+                    if (estMois13eMois) {
                         salaireMensuelDu = (baseAnnuellePourRepartition / 13) * 2;
                     } else {
                         salaireMensuelDu = baseAnnuellePourRepartition / 13;

@@ -13,11 +13,14 @@ import { getAccordPrimeDefsAsElements, getAccordInput } from '../agreements/Agre
  * Un accord n'a pas forcément de "prime vacances" ; toute prime montant (vacances, Noël, Pâques, etc.) est incluse.
  * @param {Object} state - État de l'application
  * @param {Object|null} agreement - Accord d'entreprise actif
+ * @param {Object} [options]
+ * @param {boolean} [options.smhOnly=false] - Si true, ne retient que les primes dont inclusDansSMH === true (Art. 140 CCNM)
  * @returns {number}
  */
-export function getMontantPrimesFixesAnnuel(state, agreement) {
+export function getMontantPrimesFixesAnnuel(state, agreement, { smhOnly = false } = {}) {
     if (!agreement) return 0;
-    const defs = getAccordPrimeDefsAsElements(agreement).filter(d => d.valueKind === 'montant');
+    let defs = getAccordPrimeDefsAsElements(agreement).filter(d => d.valueKind === 'montant');
+    if (smhOnly) defs = defs.filter(d => d.config?.inclusDansSMH === true);
     let total = 0;
     for (const def of defs) {
         const actif = getAccordInput(state, def.config?.stateKeyActif);
@@ -34,13 +37,16 @@ export function getMontantPrimesFixesAnnuel(state, agreement) {
  * @param {Object} state - État de l'application
  * @param {Object|null} agreement - Accord d'entreprise actif
  * @param {number} mois - Mois (1-12)
+ * @param {Object} [options]
+ * @param {boolean} [options.smhOnly=false] - Si true, ne retient que les primes dont inclusDansSMH === true (Art. 140 CCNM)
  * @returns {number}
  */
-export function getMontantPrimesVerseesCeMois(state, agreement, mois) {
+export function getMontantPrimesVerseesCeMois(state, agreement, mois, { smhOnly = false } = {}) {
     if (!agreement || !mois || mois < 1 || mois > 12) return 0;
-    const defs = getAccordPrimeDefsAsElements(agreement).filter(
+    let defs = getAccordPrimeDefsAsElements(agreement).filter(
         d => d.valueKind === 'montant' && (d.config?.moisVersement ?? 0) === mois
     );
+    if (smhOnly) defs = defs.filter(d => d.config?.inclusDansSMH === true);
     let total = 0;
     for (const def of defs) {
         const actif = getAccordInput(state, def.config?.stateKeyActif);

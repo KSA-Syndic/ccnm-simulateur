@@ -34,6 +34,7 @@ export const KuhnAgreement = {
         plafond: 25,        // Plafonné à 25 ans (CCN: 15 ans)
         tousStatuts: true,  // Cadres ET Non-Cadres (CCN: Non-Cadres seuls)
         baseCalcul: 'salaire', // Base = rémunération de base brute (salaire réel, pas valeur du point)
+        inclusDansSMH: false,   // Art. 140 CCNM : la prime d'ancienneté est formellement exclue de l'assiette SMH
         barème: {
             2: 0.02, 3: 0.03, 4: 0.04, 5: 0.05, 6: 0.06,
             7: 0.07, 8: 0.08, 9: 0.09, 10: 0.10, 11: 0.11,
@@ -74,6 +75,7 @@ export const KuhnAgreement = {
             valeurAccord: 0.82,     // €/heure (01/01/2024)
             stateKeyActif: 'travailEquipe',
             stateKeyHeures: 'heuresEquipe',
+            inclusDansSMH: false,   // Exclue de l'assiette SMH (condition de travail, pas complément salarial)
             conditionAnciennete: { type: 'aucune', description: 'Aucune' },
             tooltip: 'Horaire avec pause 20 min, durée effective ≥ 6 h/poste, horaire collectif posté (équipes successives).'
         },
@@ -86,6 +88,7 @@ export const KuhnAgreement = {
             valeurAccord: 525,      // € bruts / an
             stateKeyActif: 'primeVacances',
             defaultActif: true,     // Coché par défaut (défini par l'accord)
+            inclusDansSMH: true,    // Art. 140 CCNM : distribution du salaire pour atteindre le SMH (ne s'ajoute pas au total)
             moisVersement: 7,       // Juillet
             conditionAnciennete: { type: 'annees_revolues', annees: 1, description: '1 an au 1er juin' },
             tooltip: 'Contrat ≥ 50 % temps légal. Non versée si contrat suspendu sur toute la période de référence (1er juin N-1 au 31 mai N).'
@@ -100,6 +103,7 @@ export const KuhnAgreement = {
             stateKeyActif: 'majorationNuitPosteMatin',
             stateKeyHeures: 'heuresMajorationNuitPosteMatin',
             defaultHeures: 0,
+            inclusDansSMH: false,   // Exclue de l'assiette SMH (majoration condition de travail)
             conditionAnciennete: { type: 'aucune', description: 'Aucune' },
             tooltip: 'Heures entre 20h-6h hors poste de nuit (≥2h). En plus du poste de nuit (+20 %).'
         }

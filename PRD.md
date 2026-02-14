@@ -118,8 +118,8 @@ Les accords d'entreprise sont **définis en dehors du PRD** (dossier `accords/`,
 
 **Règle commentaires (toutes modifications futures) :** Ne conserver que les commentaires à valeur ajoutée durable (règles métier, non-évidents, ancre pour maintenance). Proscrire les commentaires de simple mise à jour ou sans portée.
 
-**Méthodologie prime d'ancienneté et assiette SMH (convention / accord) :**
-* **Assiette SMH** (vérification du minimum conventionnel et mode « SMH seul » arriérés) = base SMH + majorations forfaits cadres si applicable. **Exclues** : primes d'ancienneté (CCN ou accord), prime de vacances, majorations nuit/dimanche/équipe, majorations pénibilité. La prime d'ancienneté **s'ajoute au minimum garanti** ; elle ne fait pas partie de l'assiette SMH.
+**Méthodologie prime d'ancienneté et assiette SMH (convention / accord — Art. 140 CCNM) :**
+* **Assiette SMH** (vérification du minimum conventionnel et mode « SMH seul » arriérés) = base SMH + majorations forfaits cadres + primes d'accord avec `inclusDansSMH: true` (ex. prime de vacances, complément salarial annuel). **Exclues** : prime d'ancienneté (CCN ou accord — formellement exclue par l'Art. 140 et le Conseil d'État), majorations nuit/dimanche/équipe, majorations pénibilité. La prime d'ancienneté **s'ajoute au minimum garanti** ; elle ne fait pas partie de l'assiette SMH.
 * **Base de calcul de la prime d'ancienneté :** CCN (non-cadres) = **valeur du point territorial** × taux (classe) × années (CCNM Art. 142). Accord (ex. Kuhn) = **rémunération de base brute** (dans l'app : SMH de la classe utilisé comme base) ; les dispositions accord se substituent aux art. 142/143 CCN.
 * **Principe de faveur (Art. L2254-2) :** Un accord **moins favorable ou illégal** par rapport à la convention n'est pas appliqué pour l'élément concerné ; la règle CCN prime.
 
@@ -133,17 +133,17 @@ Le 13e mois est une **modalité de versement**, pas un élément de rémunérati
   * Sur 12 mois : SMH annuel ÷ 12
   * Sur 13 mois : SMH annuel ÷ 13 (avec un mois de "bonus" versé selon l'entreprise)
 * **Versement (si accord avec 13e mois) :** Selon l'accord, le 13e mois est versé un mois donné (ex. novembre ; défini dans l'accord).
-* **Note importante :** Le 13e mois est **inclus** dans la vérification du SMH minimum (il fait **partie du SMH**), contrairement à la prime d'ancienneté (non-cadres) ou à la prime de vacances qui en sont exclues. En mode « SMH seul » (étape 4 arriérés), la répartition sur 12 ou 13 mois s'applique donc au SMH : novembre = 2 × (SMH annuel / 13), autres mois = SMH annuel / 13 si accord avec répartition 13 mois, sinon SMH annuel / 12.
+* **Note importante :** Le 13e mois est **inclus** dans la vérification du SMH minimum (il fait **partie du SMH**), tout comme les primes d'accord marquées `inclusDansSMH: true` (ex. prime de vacances). En revanche, la prime d'ancienneté est **exclue** (Art. 140 CCNM). En mode « SMH seul » (étape 4 arriérés), la répartition sur 12 ou 13 mois s'applique à la base SMH hors primes fixes incluses, celles-ci étant concentrées dans leur mois de versement (ex. vacances en juillet).
 
-#### 3.4.1. Assiette SMH – Inclus / Exclus
+#### 3.4.1. Assiette SMH – Inclus / Exclus (Art. 140 CCNM)
 
-Aligné sur la convention (IDCC 3248) et la config (config.js).
+Aligné sur la convention (IDCC 3248, Art. 140) et la config (config.js). Chaque prime d'accord porte un flag `inclusDansSMH` (défini dans le fichier d'accord) qui détermine dynamiquement son inclusion.
 
-**INCLUS :** Base SMH (ou CONFIG.BAREME_DEBUTANTS si cadre F11/F12 sous le seuil), majorations forfaits cadres (CONFIG.FORFAITS), majorations heures sup, 13e mois (répartition 12/13).
+**INCLUS (comptent pour atteindre le minimum) :** Base SMH (ou CONFIG.BAREME_DEBUTANTS si cadre F11/F12 sous le seuil), majorations forfaits cadres (CONFIG.FORFAITS), majorations heures sup, 13e mois (répartition 12/13), primes d'accord avec `inclusDansSMH: true` (ex. prime de vacances = complément salarial annuel).
 
-**EXCLUS :** Primes d'ancienneté (CCN ou accord), prime de vacances, majorations pénibilité, majorations nuit / dimanche / prime d'équipe.
+**EXCLUS (s'ajoutent au minimum, ne servent pas à l'atteindre) :** Prime d'ancienneté (CCN ou accord — Art. 140, Conseil d'État), majorations pénibilité, majorations nuit / dimanche / prime d'équipe, primes d'accord avec `inclusDansSMH: false`.
 
-S'applique à la vérification du minimum conventionnel et au mode « SMH seul » des arriérés (étape 4).
+S'applique à la vérification du minimum conventionnel et au mode « SMH seul » des arriérés (étape 4). En mode SMH seul, les primes incluses avec `moisVersement` sont concentrées dans leur mois de versement pour une comparaison mensuelle correcte.
 
 #### 3.5. Graphique d'Évolution Salaire vs Inflation
 
@@ -265,7 +265,7 @@ Le formulaire demande :
 * **Date de changement de classification** : Optionnelle, si la classification a changé
 * **Rupture de contrat** : Checkbox avec date de rupture si applicable
 * **Accord écrit** : Checkbox indiquant si un accord écrit existe avec l'employeur sur la classification
-* **Calculer les arriérés sur le SMH seul** : Option (cochée par défaut) pour l'affichage et le calcul à l'écran. Si coché, le salaire dû = assiette SMH : base + forfait cadres (les majorations forfaits font partie du SMH), sans prime de vacances, prime d'ancienneté, majorations nuit/dimanche/équipe, majorations pénibilité. Les majorations heures sup sont incluses dans l'assiette SMH ; les majorations pénibilité en sont exclues (voir § 3.4.1). **Le 13e mois fait partie du SMH**. L'utilisateur doit saisir les salaires mensuels bruts **hors primes** ; un avertissement et un tooltip le rappellent. **Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, le rapport PDF n'est généré qu'en mode « SMH seul »** : la génération est bloquée sinon, avec avertissement à l'utilisateur (voir § 3.9.5).
+* **Calculer les arriérés sur le SMH seul** : Option (cochée par défaut) pour l'affichage et le calcul à l'écran. Si coché, le salaire dû = assiette SMH Art. 140 : base + forfait cadres + primes d'accord avec `inclusDansSMH: true` (ex. prime de vacances, concentrée dans son mois de versement). Exclues : prime d'ancienneté, majorations nuit/dimanche/équipe/pénibilité. Majorations heures sup et 13e mois inclus (voir § 3.4.1). L'utilisateur saisit les salaires bruts **incluant les primes SMH** (ex. vacances en juillet) mais **excluant** ancienneté et majorations ; un avertissement dynamique (construit depuis les flags `inclusDansSMH` de l'accord) et un tooltip le rappellent. **Conformément à la CCN Métallurgie (IDCC 3248), Art. 140, le rapport PDF n'est généré qu'en mode « SMH seul »** : la génération est bloquée sinon (voir § 3.9.5).
 
 ##### 3.9.3. Frise Chronologique Interactive
 
@@ -294,16 +294,16 @@ Le formulaire demande :
 
 ##### 3.9.4. Calcul des Arriérés (Mois par Mois avec Paramètres Complets)
 
-**Option « SMH seul » (état `arretesSurSMHSeul`)**  
+**Option « SMH seul » (état `arretesSurSMHSeul`) — Art. 140 CCNM**  
 Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
-* **Salaire dû** = assiette SMH : base + **majorations forfaits** (heures/jours), le cas échéant. Sont **exclus** : prime de vacances, primes d'ancienneté, majorations nuit/dimanche/équipe, **majorations pénibilité**. Les majorations heures sup sont **incluses** dans l'assiette SMH (voir § 3.4.1).
-* **Le 13e mois fait partie du SMH** : la répartition sur 12 ou 13 mois (selon l'accord) s'applique. Si répartition sur 13 mois : novembre = 2 × (SMH annuel / 13), autres mois = SMH annuel / 13 ; sinon SMH annuel / 12. Les salaires saisis par l'utilisateur doivent être **hors primes** pour comparer au SMH.
+* **Salaire dû annuel** = base SMH + **majorations forfaits** (heures/jours). Les primes d'accord avec `inclusDansSMH: true` (ex. prime de vacances) ne modifient pas le total annuel dû mais sont **gérées dans la distribution mensuelle** (concentrées dans leur mois de versement). **Exclues** : prime d'ancienneté (Art. 140), majorations nuit/dimanche/équipe, pénibilité. Les majorations heures sup et le 13e mois sont **inclus** (voir § 3.4.1).
+* **Distribution mensuelle :** Base de répartition = annuel − primes fixes SMH. Si 13 mois : novembre = 2 × (base / 13), autres = base / 13 ; sinon base / 12. Primes SMH ajoutées dans leur mois (ex. vacances en juillet). Les salaires saisis incluent les primes SMH (ex. vacances quand versées) mais **excluent** ancienneté et majorations.
 
 **Logique de calcul précise et exhaustive :**
 * **Pour chaque mois** de la période réclamable :
   * Si un salaire réel a été saisi pour ce mois :
     * **Calcul rétrospectif du SMH dû** : Pour chaque mois, le système recalcule le SMH dû :
-* **En mode SMH seul** : `getMontantAnnuelSMHSeul()` puis répartition mensuelle (12 ou 13 mois ; 13e mois en novembre si accord avec répartition 13 mois). Le 13e mois fait partie du SMH.
+* **En mode SMH seul** : `getMontantAnnuelSMHSeul()` puis répartition mensuelle (annuel − primes fixes SMH, divisé par 12 ou 13 ; primes SMH ajoutées dans leur mois de versement ; 13e mois en novembre si accord).
 * **En mode rémunération complète** : ancienneté progressive, expérience pro, forfait, accord d'entreprise, conditions de travail, versements spécifiques :
       * **Ancienneté progressive** : L'ancienneté au moment de ce mois précis (depuis la date d'embauche)
       * **Expérience professionnelle** : Utilisée telle quelle (déjà remplie à l'étape 2 du simulateur)
@@ -332,12 +332,12 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 
 ##### 3.9.5. Génération du Rapport PDF
 
-**Règle : PDF uniquement sur la base du SMH**
-* **Conformément à la convention collective nationale de la métallurgie (IDCC 3248), dispositions relatives aux salaires minima hiérarchiques et à leur assiette**, le rapport PDF est **toujours** établi sur la base du SMH (assiette conventionnelle hors primes).
-* La génération du PDF n'est possible **qu'en mode « SMH seul »** : si la case n'est pas cochée, l'ouverture du modal est bloquée et un message avertit l'utilisateur de cocher l'option, saisir les salaires bruts hors primes et recalculez les arriérés.
+**Règle : PDF uniquement sur la base du SMH (Art. 140 CCNM)**
+* **Conformément à la CCN Métallurgie (IDCC 3248), Art. 140 relatif à l'assiette des SMH**, le rapport PDF est **toujours** établi sur la base du SMH. L'assiette inclut les compléments salariaux annuels (`inclusDansSMH: true`, ex. prime de vacances) et exclut la prime d'ancienneté et les majorations de conditions de travail.
+* La génération du PDF n'est possible **qu'en mode « SMH seul »** : si la case n'est pas cochée, l'ouverture du modal est bloquée avec avertissement.
 * L'utilisateur est **prévenu** :
-  * Par un **toast** à l'ouverture du modal : « Le rapport PDF est établi uniquement sur la base du SMH (assiette hors primes). »
-  * Par une **notice visible dans le modal** (avant les champs) : « Le rapport PDF est établi sur la base du SMH (assiette conventionnelle hors primes). Assurez-vous d'avoir coché « SMH seul » et saisi les salaires bruts hors primes. »
+  * Par un **toast** à l'ouverture du modal.
+  * Par une **notice visible dans le modal** (avant les champs) rappelant l'assiette SMH Art. 140 (primes incluses et éléments exclus).
 
 **Contenu exhaustif du PDF :**
 
@@ -368,14 +368,14 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 * Points favorables : Accord écrit, changement de classification documenté (si applicable)
 
 **Section 5 : Méthodologie de calcul** (résumé)
-* **Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette**, le rapport PDF n'est généré **qu'en mode « SMH seul »** (génération bloquée sinon, avec avertissement).
-* SMH de base, majoration forfait, répartition 12/13 mois (mois de versement du 13e mois défini par l'accord, ex. novembre). Accord d'entreprise : prime ancienneté, prime vacances, 13e mois — mentionnés pour contexte, mais **le salaire dû retenu dans le PDF = assiette SMH uniquement** (base + forfait, hors primes). L'ancienneté n'affecte pas l'assiette SMH.
-* Calcul rétrospectif mois par mois : pour chaque mois, le salaire dû = assiette SMH ; comparé au salaire perçu (hors primes). Sources et références : CCN Métallurgie (IDCC 3248), SMH et assiette ; Code du travail art. L.3245-1 ; accord d'entreprise si pertinent.
+* **Conformément à la CCN Métallurgie (IDCC 3248), Art. 140**, le rapport PDF n'est généré **qu'en mode « SMH seul »** (génération bloquée sinon, avec avertissement).
+* Assiette SMH : base + forfait + primes incluses Art. 140 (ex. prime de vacances, 13e mois). Répartition 12/13 mois. Exclues : prime d'ancienneté, majorations nuit/dimanche/équipe/pénibilité.
+* Calcul rétrospectif mois par mois : salaire dû = assiette SMH avec primes incluses dans leur mois de versement ; comparé au salaire perçu (incluant les mêmes éléments). Sources : CCN (IDCC 3248), Art. 140 ; Code du travail art. L.3245-1 ; accord d'entreprise si pertinent.
 
 **Section 6 : Méthodes de calcul détaillées**
-* **Principe :** Rapport établi sur la base du SMH uniquement (assiette § 3.4.1). Pour chaque mois : salaire dû = assiette SMH ; comparé au salaire perçu (hors primes). L'assiette SMH ne dépend pas de l'ancienneté. Référence : CCN (IDCC 3248), Code du travail art. L.3245-1.
+* **Principe :** Rapport établi sur la base du SMH (assiette Art. 140, § 3.4.1). Pour chaque mois : salaire dû = assiette SMH (primes incluses dans leur mois) ; comparé au salaire perçu. L'ancienneté est exclue de l'assiette et s'ajoute au minimum garanti. Référence : CCN (IDCC 3248), Art. 140 ; Code du travail art. L.3245-1.
 * **Période :** Date de début (embauche / changement de classification / entrée en vigueur CCNM / prescription), date de fin (rupture ou aujourd'hui).
-* **Salaire mensuel dû :** Assiette SMH (base + forfait, 13e mois ; hors primes, majorations nuit/dimanche/équipe, pénibilité). Répartition 12 ou 13 mois selon accord.
+* **Salaire mensuel dû :** Base de répartition = annuel SMH − primes fixes incluses SMH, divisée par 12 ou 13 mois. Primes SMH ajoutées dans leur mois de versement (ex. vacances en juillet). Exclues : ancienneté, majorations nuit/dimanche/équipe, pénibilité.
 * **Formule :** `Arriérés(mois) = max(0 ; Salaire mensuel dû(mois) − Salaire mensuel perçu(mois))` ; total = somme sur tous les mois.
 
 **Formatage et lisibilité :**
@@ -594,8 +594,8 @@ Le code est organisé en modules fonctionnels :
 35bis. **Modification après complétion :** Une fois tous les salaires saisis, le popup reste affiché ; clic sur un point du graphique → réouverture du popup sur ce mois pour modifier le salaire
 36. **Calcul sans arriérés :** Tous les salaires saisis ≥ SMH mensuel → Message "aucun arriéré"
 37. **Calcul avec arriérés :** Salaires inférieurs au SMH → Calcul mois par mois des différences
-37bis. **Option « SMH seul » :** Si cochée, salaire dû = assiette SMH (base + forfaits ; forfaits et heures sup inclus, pénibilité et primes ancienneté exclues) avec répartition 12/13 mois ; le 13e mois fait partie du SMH. Saisie utilisateur = brut hors primes ; avertissement et tooltip le rappellent
-37ter. **PDF uniquement sur SMH :** Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, le rapport PDF n'est généré qu'en mode « SMH seul ». Si l'option n'est pas cochée, la génération est bloquée et un message avertit l'utilisateur de cocher « SMH seul », saisir les salaires bruts hors primes et recalculer.
+37bis. **Option « SMH seul » (Art. 140 CCNM) :** Si cochée, salaire dû = assiette SMH (base + forfaits + primes `inclusDansSMH: true` gérées dans distribution mensuelle ; exclues : ancienneté, majorations nuit/dim/équipe, pénibilité). Répartition 12/13 mois. Saisie utilisateur = brut incluant primes SMH (ex. vacances), excluant ancienneté et majorations ; avertissement dynamique et tooltip le rappellent.
+37ter. **PDF uniquement sur SMH :** Conformément à la CCN Métallurgie (IDCC 3248), Art. 140, le rapport PDF n'est généré qu'en mode « SMH seul ». Si l'option n'est pas cochée, la génération est bloquée avec avertissement.
 38. **Prescription :** Période limitée au délai légal (ex. 3 ans) en arrière et/ou à l'entrée en vigueur CCNM selon les cas
 39. **CCNM 2024 :** Date embauche 2020 → Période commence au 01/01/2024 (pas avant)
 40. **Changement classification :** Date changement après embauche → Période commence à la date de changement

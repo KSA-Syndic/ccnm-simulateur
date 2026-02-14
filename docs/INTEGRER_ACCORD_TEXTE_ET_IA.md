@@ -81,57 +81,118 @@ Si l’accord introduit de **nouvelles** clés (ex. prime Noël avec `stateKeyAc
 ```
 Tu es un expert en droit du travail et en modélisation de données pour une application de simulation de rémunération (Convention collective métallurgie, accords d'entreprise).
 
+═══════════════════════════════════════════════════════════════
 CONTEXTE APPLICATION
+═══════════════════════════════════════════════════════════════
 - Simulateur de rémunération CCN Métallurgie (IDCC 3248) avec possibilité d'appliquer un accord d'entreprise.
 - Les accords sont définis dans des fichiers JavaScript placés dans le dossier `accords/` à la racine du projet.
 - Chaque fichier exporte un seul objet accord et appelle `validateAgreement(accord)` en fin de fichier.
 - L'import utilisé en tête de fichier est : `import { validateAgreement } from '../src/agreements/AgreementInterface.js';`
 
+═══════════════════════════════════════════════════════════════
+MÉTHODOLOGIE D'ANALYSE DE LA CCN — LOGIQUE DE LECTURE
+═══════════════════════════════════════════════════════════════
+Tu dois TOUJOURS te référer à la version en vigueur de la CCN Métallurgie (IDCC 3248) pour appliquer les règles ci-dessous. La CCN évolue ; les articles mentionnés ici le sont à titre de repère logique, pas de référence figée. En cas de doute, relis le texte source de la convention plutôt que de te fier à un numéro d'article isolé.
+
+ASSIETTE DU SMH (Salaire Minimum Hiérarchique) — LOGIQUE D'INCLUSION/EXCLUSION
+La CCN définit ce qui entre dans l'assiette de vérification du SMH. La logique à appliquer :
+
+1. LIRE l'article de la CCN en vigueur relatif à l'assiette des SMH (historiquement Art. 140 CCNM, mais le numéro peut changer lors de mises à jour). Cet article détermine quels éléments de rémunération sont pris en compte pour vérifier si l'employeur atteint le minimum.
+
+2. ANALYSER chaque élément de rémunération de l'accord en se posant la question :
+   « Cet élément est-il un complément salarial annuel (modalité de versement du salaire) ou une contrepartie de conditions de travail / sujétion particulière ? »
+
+3. APPLIQUER la règle :
+   - INCLUS dans le SMH (inclusDansSMH: true) : éléments qui constituent un complément salarial annuel, c'est-à-dire une modalité de versement du salaire de base. Exemples typiques : prime de vacances (complément annuel versé en été), 13e mois (répartition du salaire sur 13 versements), prime de fin d'année. L'employeur peut les utiliser pour atteindre le minimum conventionnel.
+   - EXCLUS du SMH (inclusDansSMH: false) : éléments qui compensent des conditions de travail particulières ou des sujétions. Exemples typiques : prime d'ancienneté (exclue par la CCN et la jurisprudence), majorations nuit/dimanche/équipe (contrepartie de conditions de travail), primes de pénibilité, primes de rendement individuelles.
+
+4. EN CAS DE DOUTE : si le texte de l'accord ou de la CCN est ambigu sur l'inclusion d'un élément, mettre inclusDansSMH: false par défaut (plus protecteur pour le salarié) et ajouter un commentaire explicatif.
+
+5. PRIME D'ANCIENNETÉ : toujours inclusDansSMH: false — c'est une règle constante confirmée par le Conseil d'État et la jurisprudence, indépendante des évolutions de la CCN.
+
+SÉMANTIQUE ESSENTIELLE — NE PAS CONFONDRE :
+Les primes inclusDansSMH: true NE S'AJOUTENT PAS au SMH. Elles constituent une distribution particulière du salaire permettant d'atteindre le SMH grille, pas un supplément. Le SMH reste le montant défini par la grille CCN. La prime de vacances (par exemple 525 €) est une partie du SMH, pas un montant en plus.
+Concrètement dans le simulateur :
+- Le total annuel affiché = SMH grille + forfait cadres + éléments EXCLUS du SMH (ancienneté, majorations).
+- Les primes inclusDansSMH: true n'augmentent pas ce total ; elles sont affichées en sous-lignes informatives rattachées au SMH (préfixe « dont »).
+- Elles sont TOUJOURS actives (pas de checkbox) et influencent uniquement la distribution mensuelle (le mois de leur versement a un montant attendu différent).
+
+MOIS DE VERSEMENT — TOUT EST DYNAMIQUE
+Aucun mois ne doit être déduit d'un autre accord ou d'une convention par défaut. Chaque accord définit ses propres mois de versement :
+- repartition13Mois.moisVersement : le mois où le 13e mois est versé (déduit du texte de l'accord)
+- primes[].moisVersement : le mois où chaque prime annuelle est versée (déduit du texte de l'accord)
+Si le texte ne précise pas le mois, ajouter un commentaire et utiliser la convention la plus courante dans le secteur, en indiquant que c'est une hypothèse.
+
+═══════════════════════════════════════════════════════════════
 SCHÉMA OBLIGATOIRE DE L'ACCORD (à respecter strictement)
+═══════════════════════════════════════════════════════════════
 - id (string, kebab-case, ex. 'mon-accord')
 - nom (string, nom complet affiché)
 - nomCourt (string, court pour badges/tooltips)
 - url (string, lien vers texte officiel)
 - dateEffet (string ISO 'YYYY-MM-DD')
 - dateSignature (string ISO, optionnel)
-- anciennete (object) : seuil (nombre d'années), plafond (nombre d'années), tousStatuts (booléen, true si cadres et non-cadres), baseCalcul ('salaire'), barème (objet { année: taux décimal }, ex. { 2: 0.02, 3: 0.03, ..., 25: 0.16 })
+
+ANCIENNETE :
+- anciennete (object) : seuil (nombre d'années), plafond (nombre d'années), tousStatuts (booléen, true si cadres et non-cadres), baseCalcul ('salaire'), barème (objet { année: taux décimal }, ex. { 2: 0.02, 3: 0.03, ..., 25: 0.16 }), inclusDansSMH (TOUJOURS false — exclue de l'assiette SMH par la CCN et la jurisprudence)
+
+MAJORATIONS :
 - majorations (object) : nuit (object avec posteNuit, posteMatin en décimal 0.20 = 20%, plageDebut, plageFin, seuilHeuresPosteNuit), dimanche (nombre décimal 0.50 = 50%)
-- primes (TABLEAU d'objets) : chaque prime doit avoir au minimum :
+
+PRIMES (TABLEAU d'objets) : chaque prime doit avoir au minimum :
   - id (string, ex. 'primeEquipe', 'primeVacances', 'primeNoel')
   - label (string)
   - sourceValeur ('accord' ou 'modalite')
-  - valueType ('horaire', 'montant', ou 'pourcentage')
+  - valueType ('horaire', 'montant', 'pourcentage', ou 'majorationHoraire')
   - unit ('€/h', '€', '%')
   - valeurAccord (nombre ou null)
   - stateKeyActif (string, ex. 'travailEquipe', 'primeVacances') : clé pour activer/désactiver dans l'UI
-  - stateKeyHeures (string, obligatoire si valueType === 'horaire', ex. 'heuresEquipe')
-  - moisVersement (nombre 1-12, pour prime type montant versée un mois donné : 7 = juillet, 12 = décembre)
-  - conditionAnciennete (optionnel), tooltip (optionnel)
-- repartition13Mois (object) : actif (booléen), moisVersement (1-12, ex. 11 = novembre), inclusDansSMH (booléen)
+  - stateKeyHeures (string, obligatoire si valueType === 'horaire' ou 'majorationHoraire', ex. 'heuresEquipe')
+  - defaultActif (booléen, optionnel) : si true, la case est cochée par défaut. Pour les primes inclusDansSMH: true, cette valeur est ignorée car la prime est toujours active.
+  - moisVersement (nombre 1-12, OBLIGATOIRE si valueType === 'montant' et prime annuelle versée un mois donné)
+  - inclusDansSMH (booléen, OBLIGATOIRE) : déterminé selon la logique d'analyse de la CCN décrite ci-dessus
+    → true : distribution du salaire permettant d'atteindre le SMH grille (ne s'ajoute PAS au total, toujours actif)
+    → false : élément exclu de l'assiette SMH, s'ajoute AU-DESSUS du SMH (conditions de travail, sujétion, ancienneté)
+  - conditionAnciennete (optionnel) : { type: 'aucune'|'annees_revolues'|'proratise', annees?, description? }
+  - tooltip (optionnel) : texte d'aide affiché au survol
+
+REPARTITION 13e MOIS :
+- repartition13Mois (object) : actif (booléen), moisVersement (1-12, déduit du texte de l'accord), inclusDansSMH (booléen, généralement true car le 13e mois est une modalité de versement du salaire)
+
+LABELS ET METADONNEES :
 - labels (object) : nomCourt, tooltip (courte description), description (longue)
 - metadata (object) : version, articlesSubstitues (tableau de numéros d'articles CCN), territoire, entreprise
 
-CHAMPS OPTIONNELS (recommandés si présents dans le texte)
+CHAMPS OPTIONNELS (recommandés si présents dans le texte) :
 - elements (tableau) : synthèse pour affichage, chaque élément { id, type: 'prime'|'majoration'|'garantie', label, source, conditionAnciennete: { type, annees, description }, dateCle }
 - pointsVigilance (tableau de strings)
 - exemplesRecrutement (tableau de { date: string, points: string[] })
 - conges (object, informatif)
 
-CONVENTIONS
+═══════════════════════════════════════════════════════════════
+CONVENTIONS DE CODAGE
+═══════════════════════════════════════════════════════════════
 - Les taux sont en décimaux : 20% → 0.20, 50% → 0.50.
 - Les primes avec valueType 'montant' et un mois de versement unique doivent avoir moisVersement (1-12).
 - Chaque prime activable par l'utilisateur doit avoir un stateKeyActif unique (camelCase) ; si une nouvelle prime (ex. prime Noël), inventer une clé cohérente (ex. primeNoel) et l'ajouter dans la liste des stateKeyActif à documenter pour le développeur.
 - Si le texte ne précise pas une valeur, mettre une valeur par défaut raisonnable ou null et indiquer en commentaire.
+- Le flag inclusDansSMH est OBLIGATOIRE pour chaque prime et pour anciennete. Ne l'oublie jamais.
+- Chaque moisVersement est déduit du texte de l'accord, jamais copié d'un autre accord.
+- Commente chaque inclusDansSMH avec la justification juridique (ex. : « complément salarial annuel Art. 140 » ou « condition de travail, exclu de l'assiette SMH »).
 
+═══════════════════════════════════════════════════════════════
 TÂCHE
+═══════════════════════════════════════════════════════════════
 À partir du texte d'accord d'entreprise fourni ci-dessous, produis le contenu COMPLET d'un fichier JavaScript pour le dossier `accords/` du projet. Le fichier doit :
 1. Importer validateAgreement depuis '../src/agreements/AgreementInterface.js'
 2. Exporter un objet unique (ex. export const MonAccord = { ... })
-3. Contenir toutes les propriétés obligatoires listées ci-dessus, en les déduisant du texte
-4. Terminer par : if (!validateAgreement(NomAccord)) { console.error('...'); }
-5. Être prêt à être enregistré tel quel dans accords/NomAccord.js (nom du fichier à déduire du nom de l'accord)
+3. Contenir TOUTES les propriétés obligatoires listées ci-dessus, en les déduisant du texte
+4. Pour chaque prime et pour l'ancienneté : inclure inclusDansSMH avec un commentaire justificatif
+5. Pour chaque moisVersement : le déduire du texte de l'accord (ne pas copier d'un autre accord)
+6. Terminer par : if (!validateAgreement(NomAccord)) { console.error('...'); }
+7. Être prêt à être enregistré tel quel dans accords/NomAccord.js (nom du fichier à déduire du nom de l'accord)
 
-Réponds UNIQUEMENT avec le code JavaScript du fichier, sans commentaire avant/après le code, sauf les commentaires dans le code pour préciser les choix lorsque le texte est ambigu.
+Réponds UNIQUEMENT avec le code JavaScript du fichier, sans commentaire avant/après le code, sauf les commentaires dans le code pour préciser les choix lorsque le texte est ambigu ou pour justifier les flags inclusDansSMH.
 
 TEXTE DE L'ACCORD :
 ```

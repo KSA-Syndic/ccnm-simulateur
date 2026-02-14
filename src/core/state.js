@@ -21,7 +21,7 @@ export const state = {
     ruptureContratArretees: false,
     dateRuptureArretees: null,
     accordEcritArretees: false,
-    arretesSurSMHSeul: true,     // true = salaire dû = assiette SMH (base + forfait ; exclut primes, pénibilité, nuit/dim/équipe)
+    arretesSurSMHSeul: true,     // true = salaire dû = assiette SMH (base + forfait). Primes avec inclusDansSMH (Art. 140 CCNM) gérées dans la distribution mensuelle.
     
     // === CLASSIFICATION ===
     scores: [1, 1, 1, 1, 1, 1],  // Scores des 6 critères (1-10)

@@ -19,7 +19,7 @@
     <div class="simulator-container">
         <!-- En-tête -->
         <header class="simulator-header">
-            <h1>🏭 Simulateur Métallurgie 2024</h1>
+            <h1>Simulateur Métallurgie 2024</h1>
             <p class="subtitle">
                 <span id="header-subtitle-text">Classification et Rémunération</span>
                 <span id="header-info-icon" class="header-info tooltip-trigger__light" data-tippy-content="" title="Aide"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
@@ -297,13 +297,8 @@
                             <span>Appliquer l'accord d'entreprise</span>
                             <span class="tooltip-trigger" id="accord-actif-tooltip" data-tippy-content="Si votre entreprise applique un accord d'entreprise, cochez cette case pour inclure ses règles dans le calcul (primes, ancienneté, majorations).">?</span>
                         </label>
-                        <!-- Options accord (primes, etc.) -->
-                        <div class="sub-options hidden" id="accord-options">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="prime-vacances" class="book-checkbox" checked>
-                                <span>Prime de vacances (525€/an)</span>
-                            </label>
-                        </div>
+                        <!-- Options accord — construit dynamiquement par buildAccordOptionsUI() -->
+                        <div class="sub-options hidden" id="accord-options"></div>
                         <!-- Message lorsque l'accord est désactivé : modalités qui ne sont plus prises en compte (hors primes page 3, évidentes) -->
                         <div class="accord-desactive-message hidden" id="accord-desactive-message" role="status" aria-live="polite"></div>
                     </div>
@@ -454,9 +449,9 @@
                                     <span>Calculer les arriérés sur le SMH seul</span>
                                     <span
                                         class="tooltip-trigger"
-                                        data-tippy-content="Si coché : salaire dû = assiette SMH (base + majorations forfaits).<br>
-                                                            <strong>Inclus :</strong> <br>• forfaits heures/jours, <br>• 13e mois, <br>• heures sup.<br>
-                                                            <strong>Exclus :</strong> <br>• primes ancienneté/vacances, <br>• majorations pénibilité, <br>• nuit/dimanche/équipe.<br>
+                                        data-tippy-content="Si coché : salaire dû = assiette SMH (Art. 140 CCNM).<br>
+                                                            <strong>Inclus :</strong> <br>• base + forfaits heures/jours, <br>• 13e mois, <br>• heures sup, <br>• primes incluses dans le SMH (ex. prime de vacances).<br>
+                                                            <strong>Exclus :</strong> <br>• prime d'ancienneté, <br>• majorations pénibilité, <br>• nuit/dimanche/équipe.<br>
                                                             Décochez pour comparer à la rémunération complète."
                                     >?</span>
                                 </label>
@@ -470,7 +465,7 @@
                     <h3>Saisie de vos salaires par mois</h3>
                     <p class="curve-help">Saisissez votre salaire mensuel brut pour chaque mois. Le graphique ci-dessous montre l'évolution du salaire dû au fil du temps.</p>
                     <div class="book-hint warning arretees-salaire-hint" id="arretees-salaire-hint">
-                        <p><strong>Attention :</strong> Lorsque « SMH seul » est coché, saisissez le <strong>salaire mensuel brut hors primes</strong> (sans prime vacances, prime ancienneté, majorations pénibilité, nuit/dimanche/équipe). Le 13e mois et les majorations forfaits font partie du SMH. Sinon, indiquez le total brut du bulletin (y compris primes si vous comparez à la rémunération complète).</p>
+                        <p><!-- Contenu dynamique généré par buildSmhHintHtml() --></p>
                     </div>
                     
                     <!-- Message quand pas de date (le canvas n'est jamais supprimé) -->

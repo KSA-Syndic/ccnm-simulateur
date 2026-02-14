@@ -123,13 +123,15 @@ window.genererPDFArreteesFromModules = function(data, infosPersonnelles, appStat
  * Montant annuel des primes à versement unique (type montant) de l'accord actif.
  * Utilisé pour l'évolution salariale (ne pas appliquer l'inflation sur cette part).
  * @param {Object} appState - State de app.js
+ * @param {Object} [options] - Options de filtrage
+ * @param {boolean} [options.smhOnly=false] - Si true, ne retient que les primes inclusDansSMH (Art. 140)
  * @returns {number}
  */
-window.getMontantPrimesFixesAnnuelFromModules = function(appState) {
+window.getMontantPrimesFixesAnnuelFromModules = function(appState, options) {
     syncStateToModules(appState);
     const agreement = getActiveAgreement();
     if (!agreement || !appState.accordActif) return 0;
-    return getMontantPrimesFixesAnnuel(moduleState, agreement);
+    return getMontantPrimesFixesAnnuel(moduleState, agreement, options);
 };
 
 /**
@@ -137,13 +139,15 @@ window.getMontantPrimesFixesAnnuelFromModules = function(appState) {
  * Utilisé pour la répartition mensuelle (courbe, arriérés).
  * @param {Object} appState - State de app.js
  * @param {number} mois - Mois (1-12)
+ * @param {Object} [options] - Options de filtrage
+ * @param {boolean} [options.smhOnly=false] - Si true, ne retient que les primes inclusDansSMH (Art. 140)
  * @returns {number}
  */
-window.getMontantPrimesVerseesCeMoisFromModules = function(appState, mois) {
+window.getMontantPrimesVerseesCeMoisFromModules = function(appState, mois, options) {
     syncStateToModules(appState);
     const agreement = getActiveAgreement();
     if (!agreement || !appState.accordActif || !mois || mois < 1 || mois > 12) return 0;
-    return getMontantPrimesVerseesCeMois(moduleState, agreement, mois);
+    return getMontantPrimesVerseesCeMois(moduleState, agreement, mois, options);
 };
 
 /**

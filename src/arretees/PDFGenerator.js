@@ -390,17 +390,30 @@ export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = 
     doc.setFontSize(9);
     doc.setFont(undefined, 'normal');
     
-    const methodologyText = hasAccord
-        ? [
-            'Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, le rapport PDF est établi uniquement sur la base du SMH (option « SMH seul » obligatoire).',
-            'SMH de base, majoration forfait, répartition 12/13 mois (13e mois en novembre si accord d\'entreprise). Accord d\'entreprise : prime ancienneté, prime vacances, 13e mois — mentionnés pour contexte, mais le salaire dû retenu dans le PDF = assiette SMH uniquement (base + forfait, hors primes). L\'ancienneté n\'affecte pas l\'assiette SMH.',
-            'Calcul rétrospectif mois par mois : pour chaque mois, le salaire dû = assiette SMH ; comparé au salaire perçu (hors primes). Sources et références : CCN Métallurgie (IDCC 3248), SMH et assiette ; Code du travail art. L.3245-1 ; accord d\'entreprise si pertinent.'
-          ]
-        : [
-            'Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives aux SMH et à leur assiette, le rapport PDF est établi uniquement sur la base du SMH (option « SMH seul » obligatoire).',
-            'SMH de base, majoration forfait, répartition 12 mois. Le salaire dû retenu dans le PDF = assiette SMH uniquement (base + forfait, hors primes). L\'ancienneté n\'affecte pas l\'assiette SMH.',
-            'Calcul rétrospectif mois par mois : pour chaque mois, le salaire dû = assiette SMH ; comparé au salaire perçu (hors primes). Sources et références : CCN Métallurgie (IDCC 3248), SMH et assiette ; Code du travail art. L.3245-1.'
-          ];
+    // Texte méthodologie dynamique selon les primes de l'accord
+    const moisNomsPDF = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    let methodologyText;
+    if (hasAccord) {
+        const agr = getActiveAgreement();
+        const agrPrimes = agr ? getPrimes(agr) : [];
+        const primesSmh = agrPrimes.filter(p => p.inclusDansSMH === true);
+        const moisVers13e = agr?.repartition13Mois?.moisVersement;
+        const mois13eStr = moisVers13e ? moisNomsPDF[moisVers13e - 1] : 'selon accord';
+        const incluesStr = primesSmh.length > 0
+            ? primesSmh.map(p => p.label.toLowerCase()).join(', ') + ', 13e mois'
+            : '13e mois';
+        methodologyText = [
+            'Conformément à la CCN Métallurgie (IDCC 3248), Art. 140 relatif à l\'assiette des SMH, le rapport PDF est établi sur la base du SMH (option « SMH seul » obligatoire).',
+            `Assiette SMH : base + forfait cadres + primes incluses (Art. 140 : ${incluesStr}). Répartition 12/13 mois (13e mois en ${mois13eStr} si accord d'entreprise). Exclues de l'assiette : prime d'ancienneté, majorations nuit/dimanche/équipe/pénibilité.`,
+            'Calcul rétrospectif mois par mois : salaire dû = assiette SMH avec primes incluses versées dans leur mois ; comparé au salaire perçu (incluant les mêmes éléments). Sources : CCN Métallurgie (IDCC 3248), Art. 140 ; Code du travail art. L.3245-1 ; accord d\'entreprise si pertinent.'
+        ];
+    } else {
+        methodologyText = [
+            'Conformément à la CCN Métallurgie (IDCC 3248), Art. 140 relatif à l\'assiette des SMH, le rapport PDF est établi sur la base du SMH (option « SMH seul » obligatoire).',
+            'Assiette SMH : base + forfait cadres. Répartition 12 mois. Exclues : prime d\'ancienneté, majorations nuit/dimanche/pénibilité.',
+            'Calcul rétrospectif mois par mois : salaire dû = assiette SMH ; comparé au salaire perçu. Sources : CCN Métallurgie (IDCC 3248), Art. 140 ; Code du travail art. L.3245-1.'
+        ];
+    }
     
     methodologyText.forEach(text => {
         checkPageBreak(20);
@@ -425,16 +438,21 @@ export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = 
     doc.setFontSize(9);
     doc.setFont(undefined, 'normal');
     
-    // Principe
+    // Principe (texte dynamique selon les primes incluses dans le SMH)
     doc.setFont(undefined, 'bold');
-    const principeLines = doc.splitTextToSize('Principe : Conformément à la convention collective nationale de la métallurgie (IDCC 3248), dispositions relatives aux salaires minima hiérarchiques et à leur assiette, ce rapport est établi uniquement sur la base du SMH (assiette conventionnelle hors primes).', pageWidth - margin * 2 - 10);
+    const agrPrincipe = hasAccord ? getActiveAgreement() : null;
+    const primesSmhPrincipe = agrPrincipe ? getPrimes(agrPrincipe).filter(p => p.inclusDansSMH === true) : [];
+    const incluesPrincipeStr = primesSmhPrincipe.length > 0
+        ? primesSmhPrincipe.map(p => p.label.toLowerCase()).join(', ') + ', 13e mois'
+        : '13e mois';
+    const principeLines = doc.splitTextToSize(`Principe : Conformément à la CCN Métallurgie (IDCC 3248), Art. 140, ce rapport est établi sur la base du SMH. L'assiette SMH inclut les compléments salariaux annuels (${incluesPrincipeStr}) et exclut la prime d'ancienneté et les majorations de conditions de travail.`, pageWidth - margin * 2 - 10);
     principeLines.forEach(line => {
         doc.text(line, margin + 5, yPos);
         yPos += 5;
     });
     yPos += 2;
     doc.setFont(undefined, 'normal');
-    const principeDetailLines = doc.splitTextToSize('Pour chaque mois, le salaire dû = assiette SMH (base + majorations forfait), comparé au salaire perçu (hors primes). L\'assiette SMH ne dépend pas de l\'ancienneté.', pageWidth - margin * 2 - 10);
+    const principeDetailLines = doc.splitTextToSize('Pour chaque mois, le salaire dû = assiette SMH (base + forfait + primes incluses Art. 140), comparé au salaire perçu (incluant les mêmes éléments). L\'ancienneté est exclue de l\'assiette et s\'ajoute au minimum garanti.', pageWidth - margin * 2 - 10);
     principeDetailLines.forEach(line => {
         doc.text(line, margin + 5, yPos);
         yPos += 5;
@@ -458,9 +476,23 @@ export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = 
     doc.text('Calcul du salaire mensuel dû :', margin + 5, yPos);
     yPos += 6;
     doc.setFont(undefined, 'normal');
-    const calculSalaireText = hasAccord
-        ? 'Le salaire dû retenu dans ce rapport = assiette SMH uniquement (base + forfait ; inclus : base, forfaits cadres, 13e mois ; exclus : primes ancienneté, prime vacances, majorations pénibilité/nuit/dimanche/équipe). Répartition 12 ou 13 mois (13e mois en novembre si accord d\'entreprise).'
-        : 'Le salaire dû retenu dans ce rapport = assiette SMH uniquement (base + forfait ; inclus : base, forfaits cadres ; exclus : primes ancienneté, prime vacances, majorations pénibilité/nuit/dimanche/équipe). Répartition 12 mois.';
+    let calculSalaireText;
+    if (hasAccord) {
+        const agrCalc = getActiveAgreement();
+        const agrPrimesCalc = agrCalc ? getPrimes(agrCalc) : [];
+        const primesSmhCalc = agrPrimesCalc.filter(p => p.inclusDansSMH === true);
+        const moisVers13eCalc = agrCalc?.repartition13Mois?.moisVersement;
+        const mois13eStrCalc = moisVers13eCalc ? moisNomsPDF[moisVers13eCalc - 1] : 'selon accord';
+        const incluesCalc = primesSmhCalc.length > 0
+            ? primesSmhCalc.map(p => p.label.toLowerCase()).join(', ') + ', 13e mois'
+            : '13e mois';
+        // Exemple dynamique : primes avec moisVersement
+        const exempleMois = primesSmhCalc.filter(p => p.moisVersement).map(p => `${p.label.toLowerCase()} en ${moisNomsPDF[p.moisVersement - 1]}`).join(', ');
+        const exempleStr = exempleMois ? ` Primes incluses versées dans leur mois (${exempleMois}).` : '';
+        calculSalaireText = `Salaire dû = assiette SMH Art. 140 (inclus : base, forfaits cadres, ${incluesCalc} ; exclus : prime d'ancienneté, majorations pénibilité/nuit/dimanche/équipe).${exempleStr} Répartition 12 ou 13 mois (13e mois en ${mois13eStrCalc} si accord d'entreprise).`;
+    } else {
+        calculSalaireText = 'Salaire dû = assiette SMH Art. 140 (inclus : base, forfaits cadres ; exclus : prime d\'ancienneté, majorations pénibilité/nuit/dimanche/équipe). Répartition 12 mois.';
+    }
     const calculSalaireLines = doc.splitTextToSize(calculSalaireText, pageWidth - margin * 2 - 10);
     calculSalaireLines.forEach(line => {
         doc.text(line, margin + 5, yPos);
@@ -487,7 +519,7 @@ export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = 
     });
     yPos += 2;
     doc.setFont(undefined, 'normal');
-    const baseCalculLines = doc.splitTextToSize('Conformément à la CCN Métallurgie (IDCC 3248), dispositions relatives à l\'assiette SMH (inclus / exclus). Ce rapport retient uniquement l\'assiette SMH comme salaire dû. Les salaires saisis pour la comparaison sont les salaires mensuels bruts hors primes.', pageWidth - margin * 2 - 10);
+    const baseCalculLines = doc.splitTextToSize('Conformément à la CCN Métallurgie (IDCC 3248), Art. 140 relatif à l\'assiette SMH. Ce rapport retient l\'assiette SMH comme salaire dû, incluant les compléments salariaux annuels (Art. 140) et excluant la prime d\'ancienneté et les majorations de conditions de travail. Les salaires saisis incluent les mêmes éléments.', pageWidth - margin * 2 - 10);
     baseCalculLines.forEach(line => {
         doc.text(line, margin + 5, yPos);
         yPos += 5;

@@ -319,14 +319,22 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                 } else {
                     label = `${r.label} ${agreement.nomCourt}`;
                 }
+                const isSMHIncluded = def.config?.inclusDansSMH === true;
                 details.push({
                     label,
                     value: r.amount,
-                    isPositive: true,
+                    isPositive: !isSMHIncluded, // SMH inclus = informatif (pas additif), sinon positif
                     isAgreement: true,
-                    agreementId: agreement.id
+                    isSMHIncluded,
+                    agreementId: agreement.id,
+                    moisVersement: def.config?.moisVersement ?? null
                 });
-                total += r.amount;
+                // Les primes incluses dans le SMH (Art. 140 CCNM) ne s'ajoutent PAS au total :
+                // elles constituent une distribution du salaire permettant d'atteindre le SMH grille,
+                // pas un supplément. Seules les primes exclues du SMH s'ajoutent au-dessus.
+                if (!isSMHIncluded) {
+                    total += r.amount;
+                }
             }
         }
     }
