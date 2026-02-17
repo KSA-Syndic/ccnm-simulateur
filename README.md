@@ -140,7 +140,7 @@ L'outil peut être intégré dans n'importe quel site via **iframe** :
 
 ```html
 <iframe 
-    src="https://votre-domaine.com/simulateur?accord=kuhn&iframe=true&bgcolor=#ffffff" 
+    src="https://simulateur.cfdt-kuhn.fr?accord=kuhn&iframe=true&bgcolor=#ffffff" 
     width="100%" 
     height="800px"
     frameborder="0">
