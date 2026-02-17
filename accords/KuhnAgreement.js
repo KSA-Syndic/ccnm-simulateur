@@ -95,7 +95,7 @@ export const KuhnAgreement = {
         },
         {
             id: 'majorationNuitPosteMatin',
-            label: 'Majoration nuit poste matin / Après-Midi',
+            label: 'Majoration heures de nuit (poste matin/AM)',
             sourceValeur: 'accord',
             valueType: 'majorationHoraire',
             unit: '%',
@@ -105,7 +105,7 @@ export const KuhnAgreement = {
             defaultHeures: 0,
             inclusDansSMH: false,   // Exclue de l'assiette SMH (majoration condition de travail)
             conditionAnciennete: { type: 'aucune', description: 'Aucune' },
-            tooltip: 'Heures entre 20h-6h hors poste de nuit (≥2h). En plus du poste de nuit (+20 %).'
+            tooltip: 'Poste matin ou après-midi débordant sur la plage 20h-6h (moins de 2h dans cette plage). +15 % du taux horaire. Ne pas cumuler avec « Travail de nuit » (+20 %) qui concerne les postes de nuit (≥ 2h en plage nocturne).'
         }
     ],
 
@@ -174,11 +174,11 @@ export const KuhnAgreement = {
         {
             id: 'majorationNuitPosteMatin',
             type: 'prime',
-            label: 'Majoration nuit poste matin / Après-Midi',
-            source: 'Accord Kuhn (majorations nuit)',
+            label: 'Majoration heures de nuit (poste matin/AM)',
+            source: 'Accord Kuhn Art. 2 (majorations nuit)',
             conditionAnciennete: { type: 'aucune', description: 'Aucune' },
-            dateCle: 'Heures entre 20h-6h hors poste de nuit (≥2h)',
-            note: '+15 % (en plus du poste de nuit +20 %).'
+            dateCle: 'Heures entre 20h-6h hors poste de nuit (< 2h en plage nocturne)',
+            note: '+15 % du taux horaire. Distinct du poste de nuit (+20 % si ≥ 2h).'
         }
     ],
 
