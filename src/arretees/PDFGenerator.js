@@ -185,8 +185,10 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(0, 0, 0);
 
     const classInfo = getActiveClassification(state);
+    const agreement = hasAccord ? getActiveAgreement() : null;
+
+    // ── Tableau identité / contrat ──
     const contractRows = [];
-    contractRows.push(['Classification', `${classInfo.groupe}${classInfo.classe}`]);
     if (infos.nomPrenom) contractRows.push(['Salarié', infos.nomPrenom]);
     if (infos.poste) contractRows.push(['Poste', infos.poste]);
     if (infos.employeur) contractRows.push(['Employeur', infos.employeur]);
@@ -198,24 +200,96 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     } else {
         contractRows.push(['Statut du contrat', 'En cours']);
     }
+    if (hasAccord && agreement) {
+        contractRows.push(['Accord d\'entreprise', `${agreement.nomCourt || agreement.nom} (${agreement.dateSignature || ''})`]);
+    }
+
+    if (contractRows.length > 0) {
+        doc.autoTable({
+            startY: y,
+            body: contractRows,
+            theme: 'plain',
+            styles: { fontSize: 8, cellPadding: 1.2 },
+            columnStyles: { 0: { fontStyle: 'bold', cellWidth: 52 } },
+            margin: { left: MARGIN, right: MARGIN }
+        });
+        y = doc.lastAutoTable.finalY + 6;
+    }
+
+    // ── Tableau paramètres de calcul du SMH ──
+    y = checkPageBreak(doc, y, 30);
+    doc.setFont(undefined, 'bold'); doc.setFontSize(9);
+    doc.text('Paramètres de calcul du SMH :', MARGIN, y); y += 5;
+    doc.setFont(undefined, 'normal');
 
     const isCadreDebutant = (classInfo.classe === 11 || classInfo.classe === 12) && state.experiencePro < 6;
-    let smhLabel = 'SMH annuel brut';
+    const isCadre = classInfo.classe >= 9;
+
+    // Forfait & base de calcul
+    const isForfaitJours = state.forfait === 'jours';
+    const isForfaitHeures = state.forfait === 'heures';
+    let forfaitLabel = 'Horaire collectif (35h/sem.)';
+    let baseLabel = 'Temps plein 35h/sem. (151,67h/mois)';
+    if (isForfaitHeures) {
+        forfaitLabel = 'Forfait heures (+15 %)';
+        baseLabel = 'Temps plein 35h/sem. (151,67h/mois)';
+    } else if (isForfaitJours) {
+        forfaitLabel = 'Forfait jours (+30 %)';
+        baseLabel = '218 jours/an';
+    }
+
+    // SMH label
+    let smhLabel = 'SMH annuel grille';
     if (isCadreDebutant) {
         let t = '< 2 ans';
         if (state.experiencePro >= 4) t = '4 à 6 ans';
         else if (state.experiencePro >= 2) t = '2 à 4 ans';
-        smhLabel = `SMH annuel brut (barème débutants ${t})`;
+        smhLabel = `SMH barème débutants (${t})`;
     }
-    contractRows.push([smhLabel, formatMoneyPDF(salaireDu)]);
-    contractRows.push(['Base de calcul', 'Temps plein 35h/semaine (151,67h/mois)']);
+
+    const smhRows = [];
+    smhRows.push(['Classification', `${classInfo.groupe}${classInfo.classe}${isCadre ? ' (cadre)' : ''}`]);
+    smhRows.push([smhLabel, formatMoneyPDF(salaireDu)]);
+    smhRows.push(['Type de forfait', forfaitLabel]);
+    smhRows.push(['Base de calcul', baseLabel]);
+    smhRows.push(['Répartition mensuelle', `${state.nbMois ?? 12} mois`]);
+    if (isCadreDebutant) {
+        smhRows.push(['Expérience professionnelle', `${state.experiencePro ?? 0} an(s)`]);
+    }
+
+    // Primes incluses dans le SMH (Art. 140)
+    const agrPrimes = agreement ? getPrimes(agreement) : [];
+    const primesSmh = agrPrimes.filter(p => p.inclusDansSMH === true);
+    if (primesSmh.length > 0) {
+        const moisNoms = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+        primesSmh.forEach(p => {
+            const moisStr = p.moisVersement ? ` (${moisNoms[p.moisVersement - 1]})` : '';
+            const valStr = p.valeurAccord != null ? `${p.valeurAccord} ${p.unit}` : '';
+            smhRows.push([`Incluse SMH : ${p.label}${moisStr}`, valStr]);
+        });
+    }
+    if (agreement?.repartition13Mois?.actif) {
+        const moisNoms13 = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+        const mois13 = agreement.repartition13Mois.moisVersement;
+        smhRows.push(['Inclus SMH : 13e mois', mois13 ? `versé en ${moisNoms13[mois13 - 1]}` : 'oui']);
+    }
+
+    // Éléments exclus du SMH
+    const primesHorsSMH = agrPrimes.filter(p => p.inclusDansSMH === false);
+    if (primesHorsSMH.length > 0 || (agreement?.anciennete)) {
+        const exclus = [];
+        if (agreement?.anciennete) exclus.push('Prime d\'ancienneté');
+        primesHorsSMH.forEach(p => exclus.push(p.label));
+        smhRows.push(['Exclues du SMH', exclus.join(', ')]);
+    }
 
     doc.autoTable({
         startY: y,
-        body: contractRows,
-        theme: 'plain',
-        styles: { fontSize: 8, cellPadding: 1.2 },
+        body: smhRows,
+        theme: 'striped',
+        styles: { fontSize: 7.5, cellPadding: 1.5 },
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 52 } },
+        headStyles: { fillColor: [249, 250, 251] },
         margin: { left: MARGIN, right: MARGIN }
     });
     y = doc.lastAutoTable.finalY + 4;
@@ -236,13 +310,16 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     doc.text('2. Méthodologie de calcul', MARGIN, y); y += 8;
     doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(0, 0, 0);
 
-    const moisNoms = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
-    const agreement = hasAccord ? getActiveAgreement() : null;
-    const agrPrimes = agreement ? getPrimes(agreement) : [];
-    const primesSmh = agrPrimes.filter(p => p.inclusDansSMH === true);
+    const moisNomsLongs = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
     const incluesStr = primesSmh.length > 0 ? primesSmh.map(p => p.label.toLowerCase()).join(', ') + ', 13e mois' : '13e mois';
+    const exclusStr = [];
+    if (agreement?.anciennete) exclusStr.push('prime d\'ancienneté');
+    const primesHorsSMH2 = agrPrimes.filter(p => p.inclusDansSMH === false);
+    primesHorsSMH2.forEach(p => exclusStr.push(p.label.toLowerCase()));
+    exclusStr.push('majorations (nuit, dimanche, équipe, pénibilité)');
+    const exclusTxt = exclusStr.join(', ');
 
-    y = wrappedText(doc, `Principe (Art. 140 CCNM) : Le SMH s'apprécie sur l'année civile. L'assiette SMH inclut : base, forfaits cadres, ${incluesStr}. Éléments exclus : prime d'ancienneté, majorations nuit/dimanche/équipe/pénibilité.`, MARGIN, y, cw);
+    y = wrappedText(doc, `Principe (Art. 140 CCNM) : Le SMH s'apprécie sur l'année civile. L'assiette SMH inclut : salaire de base, forfaits cadres le cas échéant, ${incluesStr}. Éléments exclus : ${exclusTxt}.`, MARGIN, y, cw);
     y += 4;
     doc.setFont(undefined, 'bold');
     y = wrappedText(doc, 'Formule : Arriérés(année) = max(0 ; total SMH dû - total perçu).', MARGIN, y, cw);
@@ -253,8 +330,8 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
 
     if (hasAccord && agreement) {
         const moisVers13e = agreement.repartition13Mois?.moisVersement;
-        const mois13eStr = moisVers13e ? moisNoms[moisVers13e - 1] : 'selon accord';
-        const exempleMois = primesSmh.filter(p => p.moisVersement).map(p => `${p.label.toLowerCase()} en ${moisNoms[p.moisVersement - 1]}`).join(', ');
+        const mois13eStr = moisVers13e ? moisNomsLongs[moisVers13e - 1] : 'selon accord';
+        const exempleMois = primesSmh.filter(p => p.moisVersement).map(p => `${p.label.toLowerCase()} en ${moisNomsLongs[p.moisVersement - 1]}`).join(', ');
         const exempleStr = exempleMois ? ` Primes incluses versées dans leur mois (${exempleMois}).` : '';
         y = wrappedText(doc, `Distribution mensuelle : répartition 12/13 mois (13e mois en ${mois13eStr}).${exempleStr}`, MARGIN, y, cw);
     } else {
@@ -367,7 +444,9 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(0, 0, 0);
 
     const refs = [
-        'CCN Métallurgie (IDCC 3248), Art. 140 — Salaires minima hiérarchiques et assiette.',
+        'CCN Métallurgie (IDCC 3248), Art. 140 — Salaires minima hiérarchiques, assiette et périodicité annuelle.',
+        'CCN Métallurgie (IDCC 3248), Art. 141 — Forfaits cadres (heures / jours).',
+        'Code du travail, Art. L.3121-58 et s. — Conventions de forfait en jours et en heures.',
         'Code du travail, Art. L.3245-1 — Prescription triennale des salaires.',
         'Code du travail, Art. L.2254-2 — Principe de faveur.'
     ];
