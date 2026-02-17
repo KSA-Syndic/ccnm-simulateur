@@ -55,8 +55,8 @@ export const LABELS = {
     tooltipPrefixAccordOnly: "Spécifique à l'accord d'entreprise. <br>",
 
     // Résultat
-    resultatAnnuel: 'par an',
-    resultatMensuel: 'par mois',
+    resultatAnnuel: '/ an',
+    resultatMensuel: '/ mois',
     detailCalcul: 'Détail du calcul',
     evolutionInflation: 'Évolution vs inflation',
     

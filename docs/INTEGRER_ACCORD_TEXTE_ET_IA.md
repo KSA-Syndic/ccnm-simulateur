@@ -117,6 +117,13 @@ Concrètement dans le simulateur :
 - Les primes inclusDansSMH: true n'augmentent pas ce total ; elles sont affichées en sous-lignes informatives rattachées au SMH (préfixe « dont »).
 - Elles sont TOUJOURS actives (pas de checkbox) et influencent uniquement la distribution mensuelle (le mois de leur versement a un montant attendu différent).
 
+PÉRIODICITÉ DE VÉRIFICATION DU SMH — ANNÉE CIVILE
+Le SMH s'apprécie sur l'ANNÉE CIVILE (Art. 140 CCNM), pas mois par mois.
+Le calcul des arriérés compare, pour chaque année civile :
+  Arriérés(année) = max(0, ΣsalaireDû(mois) − ΣsalairePerçu(mois))
+Le détail mois par mois est conservé pour la transparence mais n'est pas la base de comparaison effective.
+Base de calcul : temps plein 35h/semaine (151,67h/mois).
+
 MOIS DE VERSEMENT — TOUT EST DYNAMIQUE
 Aucun mois ne doit être déduit d'un autre accord ou d'une convention par défaut. Chaque accord définit ses propres mois de versement :
 - repartition13Mois.moisVersement : le mois où le 13e mois est versé (déduit du texte de l'accord)

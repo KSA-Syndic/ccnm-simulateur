@@ -1761,6 +1761,20 @@ function updateAll() {
  * Mettre à jour l'affichage de la rémunération
  */
 function updateRemunerationDisplay(remuneration) {
+    // Ligne contextuelle sous le sous-titre (forfait + base horaire)
+    const ctxNotice = document.getElementById('result-context-notice');
+    if (ctxNotice) {
+        let base;
+        if (state.forfait === 'jours') {
+            base = 'Forfait jours · 218 j/an';
+        } else if (state.forfait === 'heures') {
+            base = 'Forfait heures';
+        } else {
+            base = 'Temps plein · 35h/sem.';
+        }
+        ctxNotice.textContent = base;
+    }
+
     // Total annuel
     document.getElementById('result-smh').textContent = formatMoney(remuneration.total);
     
@@ -3646,9 +3660,9 @@ function calculerArreteesFinal() {
         datePrescription.getTime()
     ));
 
-    // Calculer les arriérés mois par mois avec ancienneté progressive
-    let totalArretees = 0;
-    const detailsArretees = []; // Uniquement les mois avec arriérés (difference > 0) pour total et PDF
+    // ═══════════════════════════════════════════════════
+    // PASSE 1 : calcul mois par mois (données granulaires)
+    // ═══════════════════════════════════════════════════
     const detailsTousMois = []; // Tous les mois saisis pour affichage (rouge/vert)
     let currentDate = new Date(dateDebut);
     
@@ -3707,26 +3721,54 @@ function calculerArreteesFinal() {
             const salaireMensuelReel = salaireReel;
             const difference = salaireMensuelDu - salaireMensuelReel;
             
-            const row = {
+            detailsTousMois.push({
                 periode: currentDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
                 periodeKey: periodKey,
                 dateMois: new Date(currentDate),
+                year: year,
                 salaireReel: salaireReel,
                 salaireMensuelReel: salaireMensuelReel,
                 salaireDu: salaireAnnuelDuMois,
                 salaireMensuelDu: salaireMensuelDu,
                 difference: difference
-            };
-            detailsTousMois.push(row);
-            if (difference > 0) {
-                totalArretees += difference;
-                detailsArretees.push(row);
-            }
+            });
         }
 
         // Passer au mois suivant
         currentDate.setMonth(currentDate.getMonth() + 1);
     }
+
+    // ═══════════════════════════════════════════════════
+    // PASSE 2 : regroupement par année civile
+    // Le SMH s'apprécie sur l'année civile (Art. 140 CCNM).
+    // Arriérés(année) = max(0, totalDû - totalPerçu)
+    // ═══════════════════════════════════════════════════
+    const anneeMap = {};
+    for (const row of detailsTousMois) {
+        const y = row.year;
+        if (!anneeMap[y]) anneeMap[y] = { annee: y, totalDu: 0, totalReel: 0, mois: [] };
+        anneeMap[y].totalDu += row.salaireMensuelDu;
+        anneeMap[y].totalReel += row.salaireMensuelReel;
+        anneeMap[y].mois.push(row);
+    }
+    const detailsParAnnee = [];
+    let totalArretees = 0;
+    for (const y of Object.keys(anneeMap).sort()) {
+        const entry = anneeMap[y];
+        const ecart = Math.max(0, entry.totalDu - entry.totalReel);
+        detailsParAnnee.push({
+            annee: entry.annee,
+            totalDu: Math.round(entry.totalDu * 100) / 100,
+            totalReel: Math.round(entry.totalReel * 100) / 100,
+            ecart: Math.round(ecart * 100) / 100,
+            nbMoisSaisis: entry.mois.length,
+            mois: entry.mois
+        });
+        totalArretees += ecart;
+    }
+    totalArretees = Math.round(totalArretees);
+    // Rétrocompatibilité : mois individuels avec différence > 0
+    const detailsArretees = detailsTousMois.filter(d => d.difference > 0);
 
     if (totalArretees <= 0) {
         showToast('✅ Aucun arriéré détecté. Votre salaire est conforme.', 'success', 4000);
@@ -3747,7 +3789,7 @@ function calculerArreteesFinal() {
             if (btnPdf) btnPdf.style.display = '';
         }
         if (legalSec) legalSec.classList.add('hidden');
-        // Stocker les données pour le PDF même en cas « conforme » (0 arriérés) – même structure que totalArretees > 0
+        // Stocker les données pour le PDF même en cas « conforme » (0 arriérés)
         const dateEmbaucheInput = document.getElementById('date-embauche-arretees')?.value;
         const dateChangementInput = document.getElementById('date-changement-classification-arretees')?.value;
         const dateRuptureInput = document.getElementById('date-rupture-arretees')?.value;
@@ -3756,6 +3798,7 @@ function calculerArreteesFinal() {
             totalArretees: 0,
             detailsArretees: [],
             detailsTousMois,
+            detailsParAnnee,
             dateDebut,
             dateFin: dateRuptureObj,
             datePrescription,
@@ -3772,12 +3815,13 @@ function calculerArreteesFinal() {
         return;
     }
 
-    // Afficher les résultats (detailsTousMois pour le tableau, detailsArretees pour total et PDF)
+    // Afficher les résultats (comparaison par année civile + détail mensuel)
     afficherResultatsArreteesFinal({
         salaireDu,
         totalArretees,
         detailsArretees,
         detailsTousMois,
+        detailsParAnnee,
         dateDebut,
         dateFin: dateRuptureObj,
         datePrescription
@@ -3825,43 +3869,63 @@ function afficherResultatsArreteesFinal(data) {
     const btnPdf = document.getElementById('btn-generer-pdf-arretees');
     if (btnPdf) btnPdf.style.display = '';
 
-    // Résumé amélioré
+    // Résumé par année civile (Art. 140 CCNM : le SMH s'apprécie sur l'année civile)
     const summaryDiv = document.getElementById('arretees-summary');
     if (summaryDiv) {
-        const nombreMois = data.detailsArretees.length;
-        const moyenneMensuelle = nombreMois > 0 ? data.totalArretees / nombreMois : 0;
-        
+        const annees = data.detailsParAnnee || [];
+        const anneesAvecEcart = annees.filter(a => a.ecart > 0);
         const detailsPourTableau = data.detailsTousMois || data.detailsArretees || [];
+
+        // Tableau résumé par année civile
+        let anneeTableHTML = '';
+        if (annees.length > 0) {
+            anneeTableHTML = `
+            <div class="arretees-details-table result-details">
+                <div class="arretees-detail-header">
+                    <span class="detail-col-periode">Année</span>
+                    <span class="detail-col-montants">Perçu → Dû</span>
+                    <span class="detail-col-diff">Écart</span>
+                </div>
+                ${annees.map(a => {
+                    const rowClass = a.ecart > 0 ? 'arretees-detail-row-elegant detail-row-arretees' : 'arretees-detail-row-elegant detail-row-positif';
+                    const ecartStr = a.ecart > 0 ? `- ${formatMoney(a.ecart)}` : formatMoney(0);
+                    return `
+                    <div class="${rowClass}">
+                        <span class="detail-periode">${a.annee} (${a.nbMoisSaisis} mois)</span>
+                        <span class="detail-montants-inline">${formatMoney(a.totalReel)} → ${formatMoney(a.totalDu)}</span>
+                        <span class="detail-diff-value">${ecartStr}</span>
+                    </div>`;
+                }).join('')}
+            </div>`;
+        }
+
         summaryDiv.innerHTML = `
             <details class="arretees-accordion-summary result-details-toggle" open>
-                <summary class="arretees-accordion-summary-title">Résumé du calcul</summary>
+                <summary class="arretees-accordion-summary-title">Résumé par année civile</summary>
                 <div class="arretees-summary result-details">
                     <div class="result-detail-item">
                         <span class="result-detail-label">Période</span>
                         <span class="result-detail-value">${data.dateDebut.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })} → ${data.dateFin.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                     </div>
                     <div class="result-detail-item">
-                        <span class="result-detail-label">Mois avec arriérés</span>
-                        <span class="result-detail-value">${nombreMois}</span>
-                    </div>
-                    <div class="result-detail-item">
-                        <span class="result-detail-label">Arriérés moy./mois</span>
-                        <span class="result-detail-value">${formatMoney(moyenneMensuelle)}</span>
+                        <span class="result-detail-label">Années avec écart</span>
+                        <span class="result-detail-value">${anneesAvecEcart.length} sur ${annees.length}</span>
                     </div>
                     <div class="result-detail-item total-row">
                         <span class="result-detail-label">Total des arriérés</span>
                         <span class="result-detail-value">${formatMoney(data.totalArretees)}</span>
                     </div>
                 </div>
+                ${anneeTableHTML}
             </details>
             ${detailsPourTableau.length > 0 ? `
             <details class="arretees-accordion-detail result-details-toggle">
-                <summary class="arretees-accordion-detail-title">Détail par période</summary>
+                <summary class="arretees-accordion-detail-title">Détail mois par mois</summary>
                 <div class="arretees-details-table result-details">
                     <div class="arretees-detail-header">
                         <span class="detail-col-periode">Période</span>
                         <span class="detail-col-montants">Réel → Dû</span>
-                        <span class="detail-col-diff">Arriérés</span>
+                        <span class="detail-col-diff">Écart mensuel</span>
                     </div>
                     ${detailsPourTableau.map(detail => {
                         const rowClass = detail.difference > 0 ? 'arretees-detail-row-elegant detail-row-arretees' : 'arretees-detail-row-elegant detail-row-positif';
@@ -3992,20 +4056,54 @@ function openPdfInfosModal() {
         overlay.className = 'modal-overlay';
         overlay.innerHTML = `
             <div class="modal pdf-infos-modal" onclick="event.stopPropagation()">
-                <h3>Informations pour le dossier</h3>
-                <p class="modal-subtitle">Ces informations seront incluses dans le rapport PDF. Tous les champs sont facultatifs.</p>
-                <p class="pdf-smh-only-notice"><strong>Le rapport PDF est établi sur la base du SMH</strong> (assiette conventionnelle Art. 140 CCNM). Vérifiez que « SMH seul » est coché et que les salaires saisis respectent l'assiette SMH (incluant les primes intégrées, hors ancienneté et majorations).</p>
+                <h3>Informations pour la lettre de mise en demeure</h3>
+                <p class="modal-subtitle">Ces informations seront incluses dans la lettre et l'annexe technique. Tous les champs sont facultatifs — vous pourrez compléter à la main après téléchargement.</p>
+                <p class="pdf-smh-only-notice"><strong>Le rapport est établi sur la base du SMH</strong> (assiette conventionnelle Art. 140 CCNM).</p>
+
+                <h4 class="modal-section-title">Salarié</h4>
                 <div class="form-group">
-                    <label for="pdf-infos-nom">Nom et prénom</label>
-                    <input type="text" id="pdf-infos-nom" class="book-input" placeholder="Ex. Dupont Jean">
+                    <label for="pdf-infos-nom">Prénom et nom</label>
+                    <input type="text" id="pdf-infos-nom" class="book-input" placeholder="Ex. Jean Dupont">
+                </div>
+                <div class="form-group">
+                    <label for="pdf-infos-adresse-salarie">Adresse</label>
+                    <input type="text" id="pdf-infos-adresse-salarie" class="book-input" placeholder="Ex. 12 rue de la Paix">
+                </div>
+                <div class="form-group">
+                    <label for="pdf-infos-cp-ville-salarie">Code postal + Ville</label>
+                    <input type="text" id="pdf-infos-cp-ville-salarie" class="book-input" placeholder="Ex. 67000 Strasbourg">
+                </div>
+
+                <h4 class="modal-section-title">Employeur</h4>
+                <div class="form-group">
+                    <label for="pdf-infos-employeur">Société / raison sociale</label>
+                    <input type="text" id="pdf-infos-employeur" class="book-input" placeholder="Ex. Société ABC">
+                </div>
+                <div class="form-group">
+                    <label for="pdf-infos-representant">Prénom et nom du représentant</label>
+                    <input type="text" id="pdf-infos-representant" class="book-input" placeholder="Ex. Marie Martin">
+                </div>
+                <div class="form-group">
+                    <label for="pdf-infos-fonction">Fonction</label>
+                    <input type="text" id="pdf-infos-fonction" class="book-input" placeholder="Ex. DRH, Directeur général">
+                </div>
+                <div class="form-group">
+                    <label for="pdf-infos-adresse-employeur">Adresse</label>
+                    <input type="text" id="pdf-infos-adresse-employeur" class="book-input" placeholder="Ex. Zone industrielle Nord">
+                </div>
+                <div class="form-group">
+                    <label for="pdf-infos-cp-ville-employeur">Code postal + Ville</label>
+                    <input type="text" id="pdf-infos-cp-ville-employeur" class="book-input" placeholder="Ex. 67000 Strasbourg">
+                </div>
+
+                <h4 class="modal-section-title">Document</h4>
+                <div class="form-group">
+                    <label for="pdf-infos-lieu">Lieu de rédaction</label>
+                    <input type="text" id="pdf-infos-lieu" class="book-input" placeholder="Ex. Strasbourg">
                 </div>
                 <div class="form-group">
                     <label for="pdf-infos-poste">Poste / intitulé du poste</label>
                     <input type="text" id="pdf-infos-poste" class="book-input" placeholder="Ex. Soudeur, Technicien maintenance">
-                </div>
-                <div class="form-group">
-                    <label for="pdf-infos-employeur">Employeur / raison sociale</label>
-                    <input type="text" id="pdf-infos-employeur" class="book-input" placeholder="Ex. Société ABC">
                 </div>
                 <div class="form-group">
                     <label for="pdf-infos-matricule">Matricule ou N° interne <span class="label-optional">(optionnel)</span></label>
@@ -4017,7 +4115,7 @@ function openPdfInfosModal() {
                 </div>
                 <div class="modal-actions">
                     <button class="book-btn btn-secondary" id="pdf-infos-cancel">Annuler</button>
-                    <button class="book-btn btn-primary" id="pdf-infos-generate">Générer le PDF</button>
+                    <button class="book-btn btn-primary" id="pdf-infos-generate">Générer les PDF</button>
                 </div>
             </div>
         `;
@@ -4034,8 +4132,15 @@ function openPdfInfosModal() {
             }
             const infos = {
                 nomPrenom: (document.getElementById('pdf-infos-nom')?.value || '').trim(),
-                poste: (document.getElementById('pdf-infos-poste')?.value || '').trim(),
+                adresseSalarie: (document.getElementById('pdf-infos-adresse-salarie')?.value || '').trim(),
+                cpVilleSalarie: (document.getElementById('pdf-infos-cp-ville-salarie')?.value || '').trim(),
                 employeur: (document.getElementById('pdf-infos-employeur')?.value || '').trim(),
+                representant: (document.getElementById('pdf-infos-representant')?.value || '').trim(),
+                fonction: (document.getElementById('pdf-infos-fonction')?.value || '').trim(),
+                adresseEmployeur: (document.getElementById('pdf-infos-adresse-employeur')?.value || '').trim(),
+                cpVilleEmployeur: (document.getElementById('pdf-infos-cp-ville-employeur')?.value || '').trim(),
+                lieu: (document.getElementById('pdf-infos-lieu')?.value || '').trim(),
+                poste: (document.getElementById('pdf-infos-poste')?.value || '').trim(),
                 matricule: (document.getElementById('pdf-infos-matricule')?.value || '').trim(),
                 observations: (document.getElementById('pdf-infos-observations')?.value || '').trim()
             };
@@ -4096,8 +4201,8 @@ function genererPDFArreteesFinal(infosPersonnelles, dataPrevalide) {
 }
 
 /** Sujet et corps du mail syndicat (réutilisés pour mailto, Gmail, Outlook.com). */
-const SYNDICAT_MAIL_SUBJECT = `Rapport arriérés de salaire – demande d'accompagnement`;
-const SYNDICAT_MAIL_BODY = `Bonjour,\n\nJe viens de générer un rapport d'arriérés avec le simulateur CCN Métallurgie. Veuillez trouver le rapport PDF en pièce jointe (à ajouter après ouverture du mail).\n\nMerci de me recontacter pour poursuivre les démarches ensemble.\n\nCordialement`;
+const SYNDICAT_MAIL_SUBJECT = `Arriérés de salaire – demande d'accompagnement`;
+const SYNDICAT_MAIL_BODY = `Bonjour,\n\nJ'ai constaté un écart entre mon salaire et le minimum conventionnel (SMH) de la CCN Métallurgie.\n\nVous trouverez en pièces jointes :\n- Un projet de lettre de mise en demeure (à vérifier avant envoi)\n- Une annexe technique avec le détail des calculs et références\n\nCes documents sont indicatifs. Pourriez-vous les vérifier et m'accompagner dans les démarches si nécessaire ?\n\nCordialement`;
 
 /**
  * Construit l’URL Gmail pour ouvrir une rédaction (to, sujet, corps). Pas de pièce jointe possible via URL.
@@ -4134,7 +4239,7 @@ function showPostPdfSyndicatModal(agreement) {
             <div class="modal pdf-infos-modal post-pdf-syndicat-modal" onclick="event.stopPropagation()">
                 <h3 class="modal-title">L'union fait la force 💪</h3>
                 <p><strong id="post-pdf-syndicat-nom">${nom}</strong> peut donner du poids à votre dossier — seul, c’est plus léger. Envoyez-lui le rapport (mail ou visite) et il se fera un plaisir de vous aider.</p>
-                <p class="post-pdf-syndicat-notice">Une fois le mail ouvert, <strong>ajoutez le PDF en pièce jointe</strong> (fichier que vous venez de télécharger). Les liens ci-dessous ne peuvent pas joindre le fichier à votre place.</p>
+                <p class="post-pdf-syndicat-notice">Une fois le mail ouvert, <strong>ajoutez les 2 PDF en pièces jointes</strong> (lettre de mise en demeure + annexe technique). Les liens ci-dessous ne peuvent pas joindre les fichiers à votre place.</p>
                 <div class="modal-actions modal-actions-spaced">
                     <button type="button" class="book-btn btn-secondary" id="post-pdf-syndicat-close">Je gère</button>
                     <button type="button" class="book-btn btn-primary" id="post-pdf-syndicat-mailto">Ouvrir ma messagerie</button>

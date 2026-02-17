@@ -292,102 +292,76 @@ Le formulaire demande :
 * Valider avec la touche "Entrée" ou via un bouton "Valider"
 * Validation : Montant > 0 requis
 
-##### 3.9.4. Calcul des Arriérés (Mois par Mois avec Paramètres Complets)
+##### 3.9.4. Calcul des Arriérés (Comparaison par Année Civile — Art. 140 CCNM)
+
+**Principe fondamental :** Le SMH s'apprécie sur l'**année civile** (Art. 140 CCNM). La comparaison s'effectue par année civile, pas mois par mois.
+
+**Base de calcul :** temps plein 35h/semaine (151,67h/mois).
 
 **Option « SMH seul » (état `arretesSurSMHSeul`) — Art. 140 CCNM**  
 Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
-* **Salaire dû annuel** = base SMH + **majorations forfaits** (heures/jours). Les primes d'accord avec `inclusDansSMH: true` (ex. prime de vacances) ne modifient pas le total annuel dû mais sont **gérées dans la distribution mensuelle** (concentrées dans leur mois de versement). **Exclues** : prime d'ancienneté (Art. 140), majorations nuit/dimanche/équipe, pénibilité. Les majorations heures sup et le 13e mois sont **inclus** (voir § 3.4.1).
-* **Distribution mensuelle :** Base de répartition = annuel − primes fixes SMH. Si 13 mois : novembre = 2 × (base / 13), autres = base / 13 ; sinon base / 12. Primes SMH ajoutées dans leur mois (ex. vacances en juillet). Les salaires saisis incluent les primes SMH (ex. vacances quand versées) mais **excluent** ancienneté et majorations.
+* **Salaire dû annuel** = base SMH + **majorations forfaits** (heures/jours). Les primes d'accord avec `inclusDansSMH: true` (ex. prime de vacances) ne modifient pas le total annuel dû mais sont **gérées dans la distribution mensuelle** (concentrées dans leur mois de versement). **Exclues** : prime d'ancienneté (Art. 140), majorations nuit/dimanche/équipe, pénibilité.
+* **Distribution mensuelle :** Base de répartition = annuel − primes fixes SMH. Si 13 mois : mois du 13e = 2 × (base / 13), autres = base / 13 ; sinon base / 12. Primes SMH ajoutées dans leur mois de versement.
 
-**Logique de calcul précise et exhaustive :**
+**Logique de calcul en deux passes :**
+
+**Passe 1 — Calcul mois par mois (données granulaires) :**
 * **Pour chaque mois** de la période réclamable :
-  * Si un salaire réel a été saisi pour ce mois :
-    * **Calcul rétrospectif du SMH dû** : Pour chaque mois, le système recalcule le SMH dû :
-* **En mode SMH seul** : `getMontantAnnuelSMHSeul()` puis répartition mensuelle (annuel − primes fixes SMH, divisé par 12 ou 13 ; primes SMH ajoutées dans leur mois de versement ; 13e mois en novembre si accord).
-* **En mode rémunération complète** : ancienneté progressive, expérience pro, forfait, accord d'entreprise, conditions de travail, versements spécifiques :
-      * **Ancienneté progressive** : L'ancienneté au moment de ce mois précis (depuis la date d'embauche)
-      * **Expérience professionnelle** : Utilisée telle quelle (déjà remplie à l'étape 2 du simulateur)
-      * **Type de forfait** : Forfait heures, forfait jours, ou horaire collectif (selon l'état actuel)
-* **Accord d'entreprise** : Appliqué si activé (impact sur primes d'ancienneté, majorations, etc.)
-* **Conditions de travail** : Majorations nuit/dimanche, prime d'équipe (selon l'état actuel)
-* **Versements mensuels spécifiques (accord)** :
-        * **Prime de vacances** : Versée **en une fois** un mois donné (ex. juillet ; défini par l'accord, pas étalée sur l'année). Répartition : salaire mensuel dû en juillet = (salaire annuel hors prime)/12 + prime ; les autres mois = (salaire annuel hors prime)/12. Si 13e mois : idem avec dénominateur 13, et juillet = base/13 + prime.
-        * **13e mois** : **Fait partie du SMH** (modalité de versement, pas une prime). Versé **un mois donné** (ex. novembre ; défini par l'accord, si répartition sur 13 mois activée). En novembre, salaire mensuel dû = 2 × (salaire annuel / 13) ; les autres mois = salaire annuel / 13. S'applique aussi en mode « SMH seul ».
-      * **Toutes les autres primes** : Prime d'ancienneté (CCN ou accord), etc.
-    * Le calcul utilise, selon le mode, `getMontantAnnuelSMHSeul()` (SMH seul) ou la fonction `calculateRemuneration()` principale avec les paramètres temporairement ajustés pour ce mois spécifique
-    * Salaire mensuel réel = Salaire mensuel saisi
-    * Salaire mensuel dû = SMH calculé pour ce mois
-    * Différence = Salaire mensuel dû - Salaire mensuel réel
-    * Si différence > 0 → Ajout aux arriérés totaux
-* **Total** : Somme de toutes les différences mensuelles positives
+  * Calcul du salaire mensuel dû (ancienneté progressive, forfait, accord, primes, etc.)
+  * Salaire mensuel réel = salaire saisi par l'utilisateur
+  * Écart mensuel = salaire dû − salaire réel (informatif)
+* Ce détail mensuel est conservé pour la **transparence** (affichage et annexe PDF)
+
+**Passe 2 — Regroupement par année civile (base de comparaison) :**
+* Pour chaque année civile de la période :
+  * `totalDû(année)` = somme des salaires mensuels dus de cette année
+  * `totalPerçu(année)` = somme des salaires réels de cette année
+  * `arriérés(année)` = max(0, totalDû − totalPerçu)
+* **Total des arriérés** = somme des arriérés par année
+* Les années incomplètes (entrée/sortie en cours d'année) comparent les mois présents
+
+**Formule :**
+* `Arriérés(année) = max(0 ; ΣsalaireDû(mois) − ΣsalairePerçu(mois))` pour chaque année civile
+* `Total = Σ Arriérés(année)`
 
 **Avantages de cette approche :**
-* **Précision maximale** : Chaque mois est calculé individuellement avec tous les paramètres pertinents
-* **Cohérence** : Réutilise le moteur de calcul principal (`calculateRemuneration()`) pour garantir la cohérence
-* **Prise en compte complète** : Tous les éléments de rémunération sont pris en compte (forfait, accord, majorations, primes)
-* **Ancienneté progressive** : L'ancienneté augmente naturellement mois par mois, impactant les primes d'ancienneté
-* **Respect de la prescription** : Chaque mois est une échéance de paiement distincte (Art. L.3245-1)
-* **Transparence** : L'utilisateur voit exactement quels mois génèrent des arriérés et pourquoi
-* **Rétrospective précise** : Le calcul rétrospectif reflète fidèlement l'évolution du salaire dû dans le temps
+* **Conformité CCN** : le SMH s'apprécie sur l'année civile, pas mois par mois
+* **Pas de surestimation** : la compensation entre mois au sein d'une même année est prise en compte
+* **Transparence** : le détail mois par mois est conservé en annexe
+* **Ancienneté progressive** : l'ancienneté augmente mois par mois dans la passe 1
+* **Respect de la prescription** : période limitée à 3 ans (Art. L.3245-1)
 
-##### 3.9.5. Génération du Rapport PDF
+##### 3.9.5. Génération des Rapports PDF (Lettre + Annexe)
+
+**Deux fichiers PDF distincts :**
+1. **Lettre de mise en demeure** — modèle officiel (code.travail.gouv.fr/modeles-de-courriers/demande-de-paiement-de-salaire)
+2. **Annexe technique** — détail des calculs, méthodologie, références juridiques
 
 **Règle : PDF uniquement sur la base du SMH (Art. 140 CCNM)**
-* **Conformément à la CCN Métallurgie (IDCC 3248), Art. 140 relatif à l'assiette des SMH**, le rapport PDF est **toujours** établi sur la base du SMH. L'assiette inclut les compléments salariaux annuels (`inclusDansSMH: true`, ex. prime de vacances) et exclut la prime d'ancienneté et les majorations de conditions de travail.
-* La génération du PDF n'est possible **qu'en mode « SMH seul »** : si la case n'est pas cochée, l'ouverture du modal est bloquée avec avertissement.
-* L'utilisateur est **prévenu** :
-  * Par un **toast** à l'ouverture du modal.
-  * Par une **notice visible dans le modal** (avant les champs) rappelant l'assiette SMH Art. 140 (primes incluses et éléments exclus).
+* La génération n'est possible **qu'en mode « SMH seul »** : bloquée sinon avec avertissement.
+* L'utilisateur est prévenu par un toast et une notice dans le modal de saisie.
 
-**Contenu exhaustif du PDF :**
+**PDF 1 — Lettre de mise en demeure :**
+* Bloc expéditeur (salarié : nom, adresse, CP+ville)
+* Bloc destinataire (société, représentant, fonction, adresse, CP+ville)
+* Lieu et date, mention « Lettre recommandée avec AR »
+* Objet : « Demande de régularisation de salaire »
+* Corps : constat de l'écart, tableau par année civile (SMH dû, total perçu, écart), mise en demeure (8 jours), mention Conseil de Prud'hommes
+* Mention facultative : copie à l'inspection du travail
+* Référence à l'annexe technique en pièce jointe
+* Disclaimer : document indicatif, montants à vérifier
+* Formule de politesse et signature
 
-**Section 1 : Informations du contrat**
-* Date d'embauche (format complet : jour mois année)
-* Date de changement de classification (si applicable)
-* Date de rupture du contrat (si applicable)
-* Statut du contrat (en cours ou rompu)
-* Accord écrit avec l'employeur (si applicable)
+**PDF 2 — Annexe technique :**
+* Section 1 : Informations du contrat (classification, dates, employeur, SMH annuel, mention base 35h)
+* Section 2 : Méthodologie (Art. 140, assiette SMH, formule de comparaison par année civile)
+* Section 3 : Résumé par année civile (tableau avec totaux annuels et écarts)
+* Section 4 : Détail mois par mois (informatif, avec mention que la comparaison effective est annuelle)
+* Section 5 : Accord d'entreprise (si applicable, avec tag [incluse SMH] / [hors SMH])
+* Section 6 : Références juridiques (CCNM Art. 140, Code du travail L.3245-1, L.2254-2)
+* Disclaimer en pied de page
 
-**Section 2 : Résumé du calcul**
-* Période concernée (date de début et date de fin)
-* Nombre de mois avec arriérés
-* Salaire Minimum Hiérarchique (SMH) calculé
-* **Total des arriérés** (mis en évidence)
-
-**Section 3 : Détail des arriérés par période**
-* Tableau détaillé avec colonnes :
-  * Période (mois et année)
-  * Salaire réel (rémunération mensuelle totale brut)
-  * Salaire dû (rémunération mensuelle totale brut)
-  * Arriérés (différence mensuelle)
-* Formatage des montants : Espaces comme séparateurs de milliers (ex: "35 000 €" au lieu de "35/000€")
-
-**Section 4 : Points d'attention juridiques**
-* Prescription : Article L.3245-1 du Code du travail (délai par échéance, ex. 3 ans)
-* Convention Collective : Limitation aux arriérés postérieurs au 1er janvier 2024
-* Points favorables : Accord écrit, changement de classification documenté (si applicable)
-
-**Section 5 : Méthodologie de calcul** (résumé)
-* **Conformément à la CCN Métallurgie (IDCC 3248), Art. 140**, le rapport PDF n'est généré **qu'en mode « SMH seul »** (génération bloquée sinon, avec avertissement).
-* Assiette SMH : base + forfait + primes incluses Art. 140 (ex. prime de vacances, 13e mois). Répartition 12/13 mois. Exclues : prime d'ancienneté, majorations nuit/dimanche/équipe/pénibilité.
-* Calcul rétrospectif mois par mois : salaire dû = assiette SMH avec primes incluses dans leur mois de versement ; comparé au salaire perçu (incluant les mêmes éléments). Sources : CCN (IDCC 3248), Art. 140 ; Code du travail art. L.3245-1 ; accord d'entreprise si pertinent.
-
-**Section 6 : Méthodes de calcul détaillées**
-* **Principe :** Rapport établi sur la base du SMH (assiette Art. 140, § 3.4.1). Pour chaque mois : salaire dû = assiette SMH (primes incluses dans leur mois) ; comparé au salaire perçu. L'ancienneté est exclue de l'assiette et s'ajoute au minimum garanti. Référence : CCN (IDCC 3248), Art. 140 ; Code du travail art. L.3245-1.
-* **Période :** Date de début (embauche / changement de classification / entrée en vigueur CCNM / prescription), date de fin (rupture ou aujourd'hui).
-* **Salaire mensuel dû :** Base de répartition = annuel SMH − primes fixes incluses SMH, divisée par 12 ou 13 mois. Primes SMH ajoutées dans leur mois de versement (ex. vacances en juillet). Exclues : ancienneté, majorations nuit/dimanche/équipe, pénibilité.
-* **Formule :** `Arriérés(mois) = max(0 ; Salaire mensuel dû(mois) − Salaire mensuel perçu(mois))` ; total = somme sur tous les mois.
-
-**Formatage et lisibilité :**
-* **Formatage des nombres** : Utilisation de `formatMoneyPDF()` qui utilise des espaces comme séparateurs de milliers (conforme aux standards français)
-* **Hiérarchie visuelle** : Titres en gras, sections numérotées, mise en évidence du total
-* **Couleurs** : Utilisation discrète de couleurs pour mettre en évidence les montants importants
-* **Espacement** : Marges cohérentes, espacement entre sections
-* **Pagination** : Numérotation des pages en bas de chaque page
-
-**Format :** PDF professionnel généré avec jsPDF, téléchargeable avec nom de fichier : `Rapport_arriérés_[Classification]_[Date].pdf`
-
-**Gestion multi-pages :** Le PDF gère automatiquement les sauts de page si le contenu dépasse une page, avec réaffichage des en-têtes et pieds de page appropriés.
+**Format :** PDF générés avec jsPDF, noms de fichiers : `mise_en_demeure_[date].pdf` et `annexe_technique_[date].pdf`
 
 ##### 3.9.6. Instructions Juridiques Interactives (Version avec Onglets)
 

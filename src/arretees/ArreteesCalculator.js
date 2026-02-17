@@ -3,7 +3,9 @@
  * ARRETEES CALCULATOR - Calcul des Arriérés
  * ============================================
  * 
- * Calcul des arriérés de salaire mois par mois.
+ * Calcul des arriérés de salaire.
+ * Passe 1 : calcul mois par mois (données granulaires pour transparence).
+ * Passe 2 : regroupement par année civile (le SMH s'apprécie sur l'année civile, Art. 140 CCNM).
  * Utilise le calculateur de rémunération unifié pour cohérence.
  */
 
@@ -33,7 +35,13 @@ export function calculateSalaireDuPourMois(dateMois, dateEmbauche, stateSnapshot
 }
 
 /**
- * Calculer les arriérés mois par mois
+ * Calculer les arriérés avec comparaison par année civile
+ * 
+ * Passe 1 : calcul du salaire mensuel dû et réel pour chaque mois (granularité fine).
+ * Passe 2 : regroupement par année civile — le SMH s'apprécie sur l'année civile (Art. 140 CCNM).
+ *   Arriérés(année) = max(0, totalDû(année) - totalPerçu(année))
+ *   Total = somme des arriérés par année.
+ * 
  * @param {Object} params - Paramètres de calcul
  * @param {Date} params.dateDebut - Date de début de la période
  * @param {Date} params.dateFin - Date de fin de la période
@@ -44,7 +52,7 @@ export function calculateSalaireDuPourMois(dateMois, dateEmbauche, stateSnapshot
  * @param {Object|null} params.agreement - Accord d'entreprise actif ou null
  * @param {boolean} params.smhSeul - Mode SMH seul
  * @param {number} params.nbMois - Nombre de mois (12 ou 13)
- * @returns {Object} { totalArretees, detailsArretees, detailsTousMois }
+ * @returns {Object} { totalArretees, detailsArretees, detailsTousMois, detailsParAnnee }
  */
 export function calculerArreteesMoisParMois(params) {
     const {
@@ -59,12 +67,13 @@ export function calculerArreteesMoisParMois(params) {
         nbMois
     } = params;
     
-    let totalArretees = 0;
-    const detailsArretees = []; // Uniquement les mois avec arriérés
-    const detailsTousMois = []; // Tous les mois saisis
+    const detailsTousMois = []; // Tous les mois saisis (passe 1)
     
     let currentDate = new Date(dateDebut);
     
+    // ═══════════════════════════════════════════════════
+    // PASSE 1 : calcul mois par mois (données granulaires)
+    // ═══════════════════════════════════════════════════
     while (currentDate <= dateFin) {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth() + 1;
@@ -93,7 +102,6 @@ export function calculerArreteesMoisParMois(params) {
             
             // Calculer le salaire mensuel dû avec répartition 12/13 mois
             let salaireMensuelDu;
-            // Mois de versement du 13e mois : défini par l'accord (ex. novembre = 11), pas hardcodé
             const moisVersement13e = agreement?.repartition13Mois?.moisVersement ?? 11;
             const estMois13eMois = month === moisVersement13e;
             
@@ -110,7 +118,6 @@ export function calculerArreteesMoisParMois(params) {
                 } else {
                     salaireMensuelDu = baseAnnuellePourRepartition / 12;
                 }
-                // Ajouter les primes SMH versées ce mois-là (dynamique via moisVersement de chaque prime)
                 const primesCeMoisSMH = agreement ? getMontantPrimesVerseesCeMois(stateMois, agreement, month, { smhOnly: true }) : 0;
                 if (primesCeMoisSMH > 0) salaireMensuelDu += primesCeMoisSMH;
             } else {
@@ -130,7 +137,7 @@ export function calculerArreteesMoisParMois(params) {
                 if (primesCeMois > 0) salaireMensuelDu += primesCeMois;
             }
 
-            // Proratisation premier mois (CCNM Art. 139, 103.5.1, 103.5.2) : salaire au prorata des jours ouvrés (config CCN)
+            // Proratisation premier mois (CCNM Art. 139, 103.5.1, 103.5.2)
             const estPremierMois = currentDate.getFullYear() === dateEmbauche.getFullYear() &&
                 currentDate.getMonth() === dateEmbauche.getMonth();
             if (estPremierMois) {
@@ -138,36 +145,66 @@ export function calculerArreteesMoisParMois(params) {
                 salaireMensuelDu = computeSalaireProrataEntree(salaireMensuelDu, dateEmbauche, dernierJourMois);
             }
             
-            // Le salaire réel saisi est en mensuel brut
             const salaireMensuelReel = salaireReel;
             const difference = salaireMensuelDu - salaireMensuelReel;
             
-            const row = {
+            detailsTousMois.push({
                 periode: currentDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
                 periodeKey: periodKey,
                 dateMois: new Date(currentDate),
+                year: year,
                 salaireReel: salaireReel,
                 salaireMensuelReel: salaireMensuelReel,
                 salaireDu: salaireAnnuelDuMois,
                 salaireMensuelDu: salaireMensuelDu,
                 difference: difference
-            };
-            
-            detailsTousMois.push(row);
-            
-            if (difference > 0) {
-                totalArretees += difference;
-                detailsArretees.push(row);
-            }
+            });
         }
         
         // Passer au mois suivant
         currentDate.setMonth(currentDate.getMonth() + 1);
     }
     
+    // ═══════════════════════════════════════════════════
+    // PASSE 2 : regroupement par année civile
+    // Le SMH s'apprécie sur l'année civile (Art. 140 CCNM).
+    // Arriérés(année) = max(0, totalDû - totalPerçu)
+    // ═══════════════════════════════════════════════════
+    const anneeMap = {};
+    for (const row of detailsTousMois) {
+        const y = row.year;
+        if (!anneeMap[y]) {
+            anneeMap[y] = { annee: y, totalDu: 0, totalReel: 0, mois: [] };
+        }
+        anneeMap[y].totalDu += row.salaireMensuelDu;
+        anneeMap[y].totalReel += row.salaireMensuelReel;
+        anneeMap[y].mois.push(row);
+    }
+    
+    const detailsParAnnee = [];
+    let totalArretees = 0;
+    for (const y of Object.keys(anneeMap).sort()) {
+        const entry = anneeMap[y];
+        const ecart = Math.max(0, entry.totalDu - entry.totalReel);
+        const anneeResult = {
+            annee: entry.annee,
+            totalDu: Math.round(entry.totalDu * 100) / 100,
+            totalReel: Math.round(entry.totalReel * 100) / 100,
+            ecart: Math.round(ecart * 100) / 100,
+            nbMoisSaisis: entry.mois.length,
+            mois: entry.mois
+        };
+        detailsParAnnee.push(anneeResult);
+        totalArretees += ecart;
+    }
+    
+    // detailsArretees : mois individuels avec différence > 0 (conservé pour rétrocompatibilité UI)
+    const detailsArretees = detailsTousMois.filter(d => d.difference > 0);
+    
     return {
         totalArretees: Math.round(totalArretees),
         detailsArretees,
-        detailsTousMois
+        detailsTousMois,
+        detailsParAnnee
     };
 }

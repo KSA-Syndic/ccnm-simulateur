@@ -246,6 +246,14 @@ body.iframe-mode .simulator-container.iframe-container {
     font-size: 0.95rem;
 }
 
+.result-card-caption {
+    display: block;
+    margin-top: 10px;
+    color: var(--gray-400);
+    font-size: 0.78rem;
+    letter-spacing: 0.02em;
+}
+
 /* Cartes de choix (Étape 1A) */
 .choice-cards {
     display: grid;
@@ -1106,6 +1114,15 @@ body.iframe-mode .simulator-container.iframe-container {
     border-left: 4px solid var(--primary);
     border-radius: 0;
     color: var(--body-font-color);
+}
+
+.modal .modal-section-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin: 18px 0 8px 0;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--gray-200);
 }
 
 .modal .form-group {

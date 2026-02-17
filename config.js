@@ -32,6 +32,13 @@
  * Total annuel affiché = SMH grille + forfait + éléments EXCLUS uniquement.
  * Les primes inclusDansSMH: true n'augmentent pas ce total ; elles sont informationnelles.
  *
+ * PÉRIODICITÉ DE VÉRIFICATION : le SMH s'apprécie sur l'ANNÉE CIVILE (Art. 140 CCNM).
+ * Les arriérés sont calculés par année civile :
+ *   Arriérés(année) = max(0, totalDû(année) - totalPerçu(année))
+ * Le détail mois par mois est conservé pour la transparence mais n'est pas la base de comparaison.
+ *
+ * BASE DE CALCUL : temps plein 35h/semaine (151,67h/mois). Pas de prorata temps partiel.
+ *
  * Distribution mensuelle (arriérés) : les primes SMH sont soustraites du total annuel pour
  * répartition uniforme, puis rajoutées dans leur mois de versement.
  * Saisie utilisateur = brut incluant primes SMH (Art. 140), excluant ancienneté et majorations.
