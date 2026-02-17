@@ -243,11 +243,13 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     const incluesStr = primesSmh.length > 0 ? primesSmh.map(p => p.label.toLowerCase()).join(', ') + ', 13e mois' : '13e mois';
 
     y = wrappedText(doc, `Principe (Art. 140 CCNM) : Le SMH s'apprécie sur l'année civile. L'assiette SMH inclut : base, forfaits cadres, ${incluesStr}. Éléments exclus : prime d'ancienneté, majorations nuit/dimanche/équipe/pénibilité.`, MARGIN, y, cw);
-    y += 3;
+    y += 4;
     doc.setFont(undefined, 'bold');
-    y = wrappedText(doc, 'Formule : Arriérés(année) = max(0 ; total SMH dû − total perçu). Total = somme par année civile.', MARGIN, y, cw);
+    y = wrappedText(doc, 'Formule : Arriérés(année) = max(0 ; total SMH dû - total perçu).', MARGIN, y, cw);
+    doc.setFont(undefined, 'italic');
+    y = wrappedText(doc, 'Total = somme par année civile.', MARGIN + 5, y, cw - 5); // Décalage de 5 pour indenter légèrement
     doc.setFont(undefined, 'normal');
-    y += 3;
+    y += 4;
 
     if (hasAccord && agreement) {
         const moisVers13e = agreement.repartition13Mois?.moisVersement;
