@@ -62,7 +62,7 @@ export function updateHeaderAgreement(agreement) {
 
     if (headerInfoIcon) {
         let tooltipContent = LABELS.headerInfoTooltip +
-            `<br><br>📋 <a href="${CONVENTION_URL}" target="_blank" rel="noopener">${LABELS.headerInfoTooltipLinkText}</a>`;
+            `<br><br><a href="${CONVENTION_URL}" target="_blank" rel="noopener">${LABELS.headerInfoTooltipLinkText}</a>`;
         if (agreement) {
             const nom = agreement.nomCourt || agreement.nom;
             const labels = agreement.labels || {};
@@ -71,7 +71,7 @@ export function updateHeaderAgreement(agreement) {
                 ? escapeHtml(tooltipAccord)
                 : `Si votre entreprise applique l'accord ${nom}, cochez l'option en page Résultat pour inclure ses règles dans le calcul.`;
             tooltipContent += `<br><br>🏢 <strong>${escapeHtml(nom)}</strong><br>${descAccord}`;
-            if (agreement.url) tooltipContent += `<br><br>📋 <a href="${escapeAttr(agreement.url)}" target="_blank" rel="noopener">Voir le texte de l'accord</a>`;
+            if (agreement.url) tooltipContent += `<br><br><a href="${escapeAttr(agreement.url)}" target="_blank" rel="noopener">Voir le texte de l'accord</a>`;
         }
         headerInfoIcon.setAttribute('data-tippy-content', tooltipContent);
         if (headerInfoIcon._tippy) headerInfoIcon._tippy.setContent(tooltipContent);
