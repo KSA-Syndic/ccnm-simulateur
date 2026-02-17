@@ -4115,7 +4115,7 @@ function openPdfInfosModal() {
                 </div>
                 <div class="modal-actions">
                     <button class="book-btn btn-secondary" id="pdf-infos-cancel">Annuler</button>
-                    <button class="book-btn btn-primary" id="pdf-infos-generate">Générer les PDF</button>
+                    <button class="book-btn btn-primary" id="pdf-infos-generate">Générer les documents</button>
                 </div>
             </div>
         `;
@@ -4202,7 +4202,7 @@ function genererPDFArreteesFinal(infosPersonnelles, dataPrevalide) {
 
 /** Sujet et corps du mail syndicat (réutilisés pour mailto, Gmail, Outlook.com). */
 const SYNDICAT_MAIL_SUBJECT = `Arriérés de salaire – demande d'accompagnement`;
-const SYNDICAT_MAIL_BODY = `Bonjour,\n\nJ'ai constaté un écart entre mon salaire et le minimum conventionnel (SMH) de la CCN Métallurgie.\n\nVous trouverez en pièces jointes :\n- Un projet de lettre de mise en demeure (à vérifier avant envoi)\n- Une annexe technique avec le détail des calculs et références\n\nCes documents sont indicatifs. Pourriez-vous les vérifier et m'accompagner dans les démarches si nécessaire ?\n\nCordialement`;
+const SYNDICAT_MAIL_BODY = `Bonjour,\n\nJ'ai constaté un écart entre mon salaire et le minimum conventionnel (SMH) de la CCN Métallurgie.\n\nVous trouverez en pièces jointes :\n- Un projet de lettre de mise en demeure (Word éditable)\n- Une annexe technique avec le détail des calculs et références (PDF)\n\nCes documents sont indicatifs. Pourriez-vous les vérifier et m'accompagner dans les démarches si nécessaire ?\n\nCordialement`;
 
 /**
  * Construit l’URL Gmail pour ouvrir une rédaction (to, sujet, corps). Pas de pièce jointe possible via URL.
@@ -4239,7 +4239,7 @@ function showPostPdfSyndicatModal(agreement) {
             <div class="modal pdf-infos-modal post-pdf-syndicat-modal" onclick="event.stopPropagation()">
                 <h3 class="modal-title">L'union fait la force 💪</h3>
                 <p><strong id="post-pdf-syndicat-nom">${nom}</strong> peut donner du poids à votre dossier — seul, c’est plus léger. Envoyez-lui le rapport (mail ou visite) et il se fera un plaisir de vous aider.</p>
-                <p class="post-pdf-syndicat-notice">Une fois le mail ouvert, <strong>ajoutez les 2 PDF en pièces jointes</strong> (lettre de mise en demeure + annexe technique). Les liens ci-dessous ne peuvent pas joindre les fichiers à votre place.</p>
+                <p class="post-pdf-syndicat-notice">Une fois le mail ouvert, <strong>ajoutez les documents en pièces jointes</strong> (lettre Word + annexe technique PDF). Les liens ci-dessous ne peuvent pas joindre les fichiers à votre place.</p>
                 <div class="modal-actions modal-actions-spaced">
                     <button type="button" class="book-btn btn-secondary" id="post-pdf-syndicat-close">Je gère</button>
                     <button type="button" class="book-btn btn-primary" id="post-pdf-syndicat-mailto">Ouvrir ma messagerie</button>

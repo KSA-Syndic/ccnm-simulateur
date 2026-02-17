@@ -1,11 +1,11 @@
 /**
  * ============================================
- * PDF GENERATOR - Génération PDF Arriérés
+ * PDF GENERATOR - Génération documents arriérés
  * ============================================
  * 
- * Deux documents PDF distincts :
- * 1. Lettre de mise en demeure (modèle officiel code.travail.gouv.fr)
- * 2. Annexe technique (détail des calculs, méthodologie, références)
+ * Documents générés :
+ * 1. Lettre de mise en demeure — Word (.doc) éditable
+ * 2. Annexe technique — PDF (jsPDF + autoTable)
  * 
  * La comparaison s'effectue par année civile (Art. 140 CCNM).
  */
@@ -18,7 +18,7 @@ import { getActiveAgreement } from '../agreements/AgreementLoader.js';
 import { getPrimes } from '../agreements/AgreementInterface.js';
 
 // ═══════════════════════════════════════════════════════════════
-// Utilitaires PDF communs
+// Utilitaires communs
 // ═══════════════════════════════════════════════════════════════
 
 function getJsPDF() {
@@ -26,222 +26,132 @@ function getJsPDF() {
         (window.jspdf && (window.jspdf.jsPDF || window.jspdf.default?.jsPDF));
 }
 
-function addFooter(doc, extraText) {
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const totalPages = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
+const MARGIN = 20;
+const DISCLAIMER = 'Document indicatif généré automatiquement — ne remplace pas un conseil juridique professionnel.';
+
+function addFooter(doc) {
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+    const total = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= total; i++) {
         doc.setPage(i);
         doc.setFontSize(7);
         doc.setTextColor(140, 140, 140);
-        if (extraText) {
-            doc.text(extraText, pageWidth / 2, pageHeight - 14, { align: 'center' });
-        }
-        doc.text(`Page ${i} / ${totalPages}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
+        doc.text(DISCLAIMER, pw / 2, ph - 14, { align: 'center' });
+        doc.text(`Page ${i} / ${total}`, pw / 2, ph - 8, { align: 'center' });
     }
 }
 
-function wrappedText(doc, text, x, y, maxWidth, lineHeight = 5) {
+function wrappedText(doc, text, x, y, maxWidth, lh = 5) {
     const lines = doc.splitTextToSize(text, maxWidth);
-    lines.forEach(line => {
-        doc.text(line, x, y);
-        y += lineHeight;
-    });
+    lines.forEach(l => { doc.text(l, x, y); y += lh; });
     return y;
 }
 
+function checkPageBreak(doc, y, space = 20) {
+    if (y + space > doc.internal.pageSize.getHeight() - 25) {
+        doc.addPage();
+        return MARGIN;
+    }
+    return y;
+}
+
+// Style commun pour autoTable — compact pour tenir en ~1 page
+const TABLE_STYLES = {
+    theme: 'grid',
+    styles: { fontSize: 7.5, cellPadding: 1.5, lineColor: [200, 200, 200], lineWidth: 0.2, overflow: 'linebreak' },
+    headStyles: { fillColor: [55, 65, 81], textColor: 255, fontStyle: 'bold', fontSize: 7.5, cellPadding: 2 },
+    alternateRowStyles: { fillColor: [249, 250, 251] },
+    margin: { left: MARGIN, right: MARGIN },
+    tableWidth: 'auto'
+};
+
 // ═══════════════════════════════════════════════════════════════
-// PDF 1 : LETTRE DE MISE EN DEMEURE
-// Modèle officiel : code.travail.gouv.fr/modeles-de-courriers/demande-de-paiement-de-salaire
+// PDF 1 : LETTRE DE MISE EN DEMEURE (conservée pour référence mais non téléchargée)
 // ═══════════════════════════════════════════════════════════════
 
-/**
- * Générer le PDF de la lettre de mise en demeure
- * @param {Object} data - Données des arriérés (dont detailsParAnnee)
- * @param {Object} infos - Informations personnelles saisies dans le modal
- * @param {Object} stateParam - State de l'application
- * @returns {jsPDF}
- */
 export function genererPDFLettreMiseEnDemeure(data, infos = {}, stateParam = null) {
     const jsPDF = getJsPDF();
     if (!jsPDF) throw new Error('Bibliothèque PDF non chargée');
 
-    const state = stateParam || defaultState;
     const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
-    const contentWidth = pageWidth - margin * 2;
-    let y = margin;
+    const pw = doc.internal.pageSize.getWidth();
+    const cw = pw - MARGIN * 2;
+    let y = MARGIN;
 
-    const checkPageBreak = (space = 20) => {
-        if (y + space > pageHeight - 25) { doc.addPage(); y = margin; }
-    };
-
-    // ─── Bloc expéditeur (haut gauche) ───
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
     doc.setTextColor(0, 0, 0);
-    const expediteur = [
-        infos.nomPrenom || '« Prénom Nom du salarié »',
-        infos.adresseSalarie || '« Adresse »',
-        infos.cpVilleSalarie || '« Code postal + Ville »'
-    ];
-    expediteur.forEach(line => { doc.text(line, margin, y); y += 5; });
+
+    // Expéditeur
+    [infos.nomPrenom || '« Prénom Nom du salarié »', infos.adresseSalarie || '« Adresse »', infos.cpVilleSalarie || '« Code postal + Ville »']
+        .forEach(l => { doc.text(l, MARGIN, y); y += 5; });
     y += 5;
 
-    // ─── Bloc destinataire (aligné à droite) ───
-    const destX = pageWidth / 2 + 10;
-    const destinataire = [
-        infos.employeur || '« Société »',
-        infos.representant || '« Prénom Nom du représentant »',
-        infos.fonction || '« Fonction (DRH, etc.) »',
-        infos.adresseEmployeur || '« Adresse »',
-        infos.cpVilleEmployeur || '« Code postal + Ville »'
-    ];
-    destinataire.forEach(line => { doc.text(line, destX, y); y += 5; });
+    // Destinataire (droite)
+    const dx = pw / 2 + 10;
+    [infos.employeur || '« Société »', infos.representant || '« Prénom Nom du représentant »', infos.fonction || '« Fonction »', infos.adresseEmployeur || '« Adresse »', infos.cpVilleEmployeur || '« Code postal + Ville »']
+        .forEach(l => { doc.text(l, dx, y); y += 5; });
     y += 10;
 
-    // ─── Lieu et date ───
     const todayStr = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-    const lieuStr = infos.lieu ? `À ${infos.lieu}, le ${todayStr}` : `Le ${todayStr}`;
-    doc.text(lieuStr, margin, y);
-    y += 10;
-
-    // ─── Mode d'envoi ───
+    doc.text(infos.lieu ? `À ${infos.lieu}, le ${todayStr}` : `Le ${todayStr}`, MARGIN, y); y += 10;
     doc.setFont(undefined, 'bold');
-    doc.text('Lettre recommandée avec accusé de réception n° _______________', margin, y);
-    y += 10;
+    doc.text('Lettre recommandée avec accusé de réception n° _______________', MARGIN, y); y += 10;
+    doc.text('Objet : Demande de régularisation de salaire', MARGIN, y); y += 10;
     doc.setFont(undefined, 'normal');
+    doc.text('Madame, Monsieur,', MARGIN, y); y += 8;
 
-    // ─── Objet ───
-    doc.setFont(undefined, 'bold');
-    doc.text('Objet : Demande de régularisation de salaire', margin, y);
-    y += 10;
-    doc.setFont(undefined, 'normal');
-
-    // ─── Corps de la lettre ───
-    doc.text('Madame, Monsieur,', margin, y);
-    y += 8;
-
-    const intro = 'Par la présente, je vous signale que ma rémunération n\'a pas atteint le Salaire Minimum Hiérarchique (SMH) défini par la Convention Collective Nationale de la Métallurgie (IDCC 3248) pour les périodes suivantes :';
-    y = wrappedText(doc, intro, margin, y, contentWidth);
+    y = wrappedText(doc, 'Par la présente, je vous signale que ma rémunération n\'a pas atteint le Salaire Minimum Hiérarchique (SMH) défini par la Convention Collective Nationale de la Métallurgie (IDCC 3248) pour les périodes suivantes :', MARGIN, y, cw);
     y += 5;
 
-    // ─── Tableau par année civile ───
+    // Tableau par année (autoTable)
     const annees = data.detailsParAnnee || [];
     if (annees.length > 0) {
-        checkPageBreak(15 + annees.length * 7);
-        doc.setFontSize(9);
-        doc.setFont(undefined, 'bold');
+        const body = annees.map(a => [
+            `${a.annee} (${a.nbMoisSaisis} mois)`,
+            formatMoneyPDF(a.totalDu),
+            formatMoneyPDF(a.totalReel),
+            a.ecart > 0 ? formatMoneyPDF(a.ecart) : '—'
+        ]);
+        body.push([{ content: 'TOTAL', styles: { fontStyle: 'bold' } }, '', '', { content: formatMoneyPDF(data.totalArretees), styles: { fontStyle: 'bold' } }]);
 
-        const col1 = margin + 5;
-        const col2 = margin + 45;
-        const col3 = margin + 90;
-        const col4 = margin + 135;
-
-        doc.text('Année', col1, y);
-        doc.text('SMH annuel dû', col2, y);
-        doc.text('Total perçu', col3, y);
-        doc.text('Écart', col4, y);
-        y += 2;
-        doc.setDrawColor(180, 180, 180);
-        doc.line(margin, y, pageWidth - margin, y);
-        y += 5;
-
-        doc.setFont(undefined, 'normal');
-        annees.forEach(a => {
-            doc.text(`${a.annee} (${a.nbMoisSaisis} mois)`, col1, y);
-            doc.text(formatMoneyPDF(a.totalDu), col2, y);
-            doc.text(formatMoneyPDF(a.totalReel), col3, y);
-            if (a.ecart > 0) {
-                doc.setFont(undefined, 'bold');
-                doc.text(formatMoneyPDF(a.ecart), col4, y);
-                doc.setFont(undefined, 'normal');
-            } else {
-                doc.text('—', col4, y);
-            }
-            y += 6;
+        doc.autoTable({
+            startY: y,
+            head: [['Année', 'SMH annuel dû', 'Total perçu', 'Écart']],
+            body,
+            ...TABLE_STYLES,
+            columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 35 }, 2: { cellWidth: 35 }, 3: { cellWidth: 30, fontStyle: 'bold' } }
         });
-
-        // Ligne total
-        doc.line(margin, y, pageWidth - margin, y);
-        y += 5;
-        doc.setFont(undefined, 'bold');
-        doc.text('TOTAL', col1, y);
-        doc.text(formatMoneyPDF(data.totalArretees), col4, y);
-        doc.setFont(undefined, 'normal');
-        y += 10;
-        doc.setFontSize(10);
+        y = doc.lastAutoTable.finalY + 8;
     }
 
-    // ─── Mise en demeure ───
-    checkPageBreak(40);
-    const miseEnDemeure = 'Ce manquement constitue une violation de vos obligations conventionnelles (Convention Collective Nationale de la Métallurgie, IDCC 3248, Art. 140).';
-    y = wrappedText(doc, miseEnDemeure, margin, y, contentWidth);
-    y += 3;
+    y = checkPageBreak(doc, y, 40);
+    y = wrappedText(doc, 'Ce manquement constitue une violation de vos obligations conventionnelles (Convention Collective Nationale de la Métallurgie, IDCC 3248, Art. 140).', MARGIN, y, cw); y += 3;
+    y = wrappedText(doc, 'Je vous mets donc en demeure de procéder à la régularisation des salaires qui me sont dus dans un délai de 8 jours à compter de la date du présent courrier.', MARGIN, y, cw); y += 3;
+    y = wrappedText(doc, 'À défaut, je me verrai dans l\'obligation de saisir le Conseil de Prud\'hommes pour obtenir régularisation et réparation du préjudice subi.', MARGIN, y, cw); y += 5;
 
-    const demande = 'Je vous mets donc en demeure de procéder à la régularisation des salaires qui me sont dus dans un délai de 8 jours à compter de la date du présent courrier.';
-    y = wrappedText(doc, demande, margin, y, contentWidth);
-    y += 3;
+    doc.setTextColor(100, 100, 100); doc.setFontSize(9);
+    y = wrappedText(doc, '[Facultatif] Je vous informe que copie de ce courrier est transmise à l\'inspection du travail.', MARGIN, y, cw); y += 5;
+    y = wrappedText(doc, 'Pièce jointe : Annexe technique — détail des calculs et références conventionnelles.', MARGIN, y, cw); y += 8;
+    doc.setTextColor(0, 0, 0); doc.setFontSize(10);
 
-    const aDefaut = 'À défaut, je me verrai dans l\'obligation de saisir le Conseil de Prud\'hommes pour obtenir régularisation et réparation du préjudice subi.';
-    y = wrappedText(doc, aDefaut, margin, y, contentWidth);
-    y += 5;
+    y = checkPageBreak(doc, y, 20);
+    doc.text('Veuillez agréer, Madame, Monsieur, l\'expression de ma considération distinguée.', MARGIN, y); y += 15;
+    doc.text(infos.nomPrenom || '« Prénom Nom »', MARGIN, y); y += 5;
+    doc.text('« Signature »', MARGIN, y); y += 10;
+    doc.setFontSize(9); doc.setTextColor(100, 100, 100);
+    y = wrappedText(doc, '[En cas de courrier remis en main propre] Fait en deux exemplaires.', MARGIN, y, cw); y += 3;
+    wrappedText(doc, '« Prénom Nom du représentant de la société » — « Signature »', MARGIN, y, cw);
 
-    // ─── Facultatif : inspection du travail ───
-    doc.setTextColor(100, 100, 100);
-    doc.setFontSize(9);
-    y = wrappedText(doc, '[Facultatif] Je vous informe que copie de ce courrier est transmise à l\'inspection du travail, à qui je sollicite par ailleurs l\'intervention dans ce dossier.', margin, y, contentWidth);
-    y += 8;
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10);
-
-    // ─── Annexe ───
-    checkPageBreak(15);
-    doc.setFontSize(9);
-    doc.setTextColor(80, 80, 80);
-    y = wrappedText(doc, 'Pièce jointe : Annexe technique — détail des calculs et références conventionnelles.', margin, y, contentWidth);
-    y += 8;
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10);
-
-    // ─── Formule de politesse ───
-    checkPageBreak(20);
-    doc.text('Veuillez agréer, Madame, Monsieur, l\'expression de ma considération distinguée.', margin, y);
-    y += 15;
-
-    // ─── Signature ───
-    doc.text(infos.nomPrenom || '« Prénom Nom »', margin, y);
-    y += 5;
-    doc.text('« Signature »', margin, y);
-    y += 10;
-
-    // ─── Remis en main propre ───
-    doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
-    y = wrappedText(doc, '[En cas de courrier remis en main propre] Fait en deux exemplaires.', margin, y, contentWidth);
-    y += 3;
-    y = wrappedText(doc, '« Prénom Nom du représentant de la société » — « Signature »', margin, y, contentWidth);
-    doc.setTextColor(0, 0, 0);
-
-    // ─── Disclaimer ───
-    addFooter(doc, 'Attention : document généré par un outil indicatif. Les montants sont à vérifier. Ne remplace pas un conseil juridique professionnel.');
-
+    addFooter(doc);
     return doc;
 }
 
 // ═══════════════════════════════════════════════════════════════
-// PDF 2 : ANNEXE TECHNIQUE
+// PDF 2 : ANNEXE TECHNIQUE (jsPDF + autoTable)
 // ═══════════════════════════════════════════════════════════════
 
-/**
- * Générer le PDF de l'annexe technique
- * @param {Object} data - Données des arriérés
- * @param {Object} infos - Informations personnelles
- * @param {Object} stateParam - State de l'application
- * @returns {jsPDF}
- */
 export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     const jsPDF = getJsPDF();
     if (!jsPDF) throw new Error('Bibliothèque PDF non chargée');
@@ -251,339 +161,340 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     const salaireDu = getMontantAnnuelSMHSeul(state);
 
     const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
-    const marginRight = pageWidth - margin;
-    const contentWidth = pageWidth - margin * 2;
-    let y = margin;
-
-    const checkPageBreak = (space = 20) => {
-        if (y + space > pageHeight - 25) { doc.addPage(); y = margin; }
-    };
+    const pw = doc.internal.pageSize.getWidth();
+    const cw = pw - MARGIN * 2;
+    let y = MARGIN;
 
     // ─── En-tête ───
-    doc.setFontSize(14);
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(30, 30, 30);
-    doc.text('Annexe technique — Détail du calcul des arriérés', pageWidth / 2, y, { align: 'center' });
-    y += 7;
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    doc.setTextColor(80, 80, 80);
-    doc.text('Convention Collective Nationale de la Métallurgie (CCNM) 2024', pageWidth / 2, y, { align: 'center' });
-    y += 6;
+    doc.setFontSize(14); doc.setFont(undefined, 'bold'); doc.setTextColor(30, 30, 30);
+    doc.text('Annexe technique', pw / 2, y, { align: 'center' }); y += 6;
+    doc.setFontSize(11); doc.setFont(undefined, 'normal'); doc.setTextColor(80, 80, 80);
+    doc.text('Détail du calcul des arriérés de salaire', pw / 2, y, { align: 'center' }); y += 5;
     doc.setFontSize(9);
+    doc.text('Convention Collective Nationale de la Métallurgie (CCNM) 2024 — IDCC 3248', pw / 2, y, { align: 'center' }); y += 6;
     doc.setTextColor(0, 0, 0);
     const todayStr = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-    doc.text(`Document établi le ${todayStr}`, margin, y);
-    y += 8;
-    doc.setDrawColor(200, 200, 200);
-    doc.line(margin, y, marginRight, y);
-    y += 10;
+    doc.text(`Document établi le ${todayStr}`, MARGIN, y); y += 4;
+    doc.setDrawColor(200, 200, 200); doc.line(MARGIN, y, pw - MARGIN, y); y += 10;
 
-    // ═══════════════════════════════════════════════════
+    // ═══════════════════════════════════════
     // Section 1 : Informations du contrat
-    // ═══════════════════════════════════════════════════
-    checkPageBreak(30);
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text('1. Informations du contrat', margin, y);
-    y += 8;
-    doc.setFontSize(9);
-    doc.setFont(undefined, 'normal');
+    // ═══════════════════════════════════════
+    doc.setFontSize(12); doc.setFont(undefined, 'bold'); doc.setTextColor(55, 65, 81);
+    doc.text('1. Informations du contrat', MARGIN, y); y += 8;
+    doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(0, 0, 0);
 
-    const classificationInfo = getActiveClassification(state);
-    y = wrappedText(doc, `Classification : ${classificationInfo.groupe}${classificationInfo.classe}`, margin + 5, y, contentWidth - 10);
-    y += 1;
-
-    if (infos.nomPrenom) { y = wrappedText(doc, `Salarié : ${infos.nomPrenom}`, margin + 5, y, contentWidth - 10); y += 1; }
-    if (infos.poste) { y = wrappedText(doc, `Poste : ${infos.poste}`, margin + 5, y, contentWidth - 10); y += 1; }
-    if (infos.employeur) { y = wrappedText(doc, `Employeur : ${infos.employeur}`, margin + 5, y, contentWidth - 10); y += 1; }
-    if (infos.matricule) { y = wrappedText(doc, `Matricule : ${infos.matricule}`, margin + 5, y, contentWidth - 10); y += 1; }
-
-    const dateEmbaucheInput = data.dateEmbauche || '';
-    const dateChangementInput = data.dateChangementClassification || '';
-    const dateRuptureInput = data.dateRuptureInput || '';
-    if (dateEmbaucheInput) {
-        const d = new Date(dateEmbaucheInput).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-        y = wrappedText(doc, `Date d'embauche : ${d}`, margin + 5, y, contentWidth - 10); y += 1;
-    }
-    if (dateChangementInput) {
-        const d = new Date(dateChangementInput).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-        y = wrappedText(doc, `Changement de classification : ${d}`, margin + 5, y, contentWidth - 10); y += 1;
-    }
-    if (data.ruptureContrat && dateRuptureInput) {
-        const d = new Date(dateRuptureInput).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-        y = wrappedText(doc, `Rupture du contrat : ${d}`, margin + 5, y, contentWidth - 10); y += 1;
-    } else if (!data.ruptureContrat) {
-        doc.text('Statut du contrat : En cours', margin + 5, y); y += 5;
+    const classInfo = getActiveClassification(state);
+    const contractRows = [];
+    contractRows.push(['Classification', `${classInfo.groupe}${classInfo.classe}`]);
+    if (infos.nomPrenom) contractRows.push(['Salarié', infos.nomPrenom]);
+    if (infos.poste) contractRows.push(['Poste', infos.poste]);
+    if (infos.employeur) contractRows.push(['Employeur', infos.employeur]);
+    if (infos.matricule) contractRows.push(['Matricule', infos.matricule]);
+    if (data.dateEmbauche) contractRows.push(['Date d\'embauche', new Date(data.dateEmbauche).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })]);
+    if (data.dateChangementClassification) contractRows.push(['Changement de classification', new Date(data.dateChangementClassification).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })]);
+    if (data.ruptureContrat && data.dateRuptureInput) {
+        contractRows.push(['Rupture du contrat', new Date(data.dateRuptureInput).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })]);
+    } else {
+        contractRows.push(['Statut du contrat', 'En cours']);
     }
 
-    const isCadreDebutant = (classificationInfo.classe === 11 || classificationInfo.classe === 12) && state.experiencePro < 6;
-    let smhAnnuelLabel = 'SMH annuel brut';
+    const isCadreDebutant = (classInfo.classe === 11 || classInfo.classe === 12) && state.experiencePro < 6;
+    let smhLabel = 'SMH annuel brut';
     if (isCadreDebutant) {
-        let trancheLabel = '< 2 ans';
-        if (state.experiencePro >= 4) trancheLabel = '4 à 6 ans';
-        else if (state.experiencePro >= 2) trancheLabel = '2 à 4 ans';
-        smhAnnuelLabel = `SMH annuel brut (barème débutants ${trancheLabel})`;
+        let t = '< 2 ans';
+        if (state.experiencePro >= 4) t = '4 à 6 ans';
+        else if (state.experiencePro >= 2) t = '2 à 4 ans';
+        smhLabel = `SMH annuel brut (barème débutants ${t})`;
     }
-    y += 3;
-    doc.setFont(undefined, 'bold');
-    y = wrappedText(doc, `${smhAnnuelLabel} : ${formatMoneyPDF(salaireDu)}`, margin + 5, y, contentWidth - 10);
-    y += 1;
-    y = wrappedText(doc, `Base temps plein : 35h/semaine (151,67h/mois)`, margin + 5, y, contentWidth - 10);
-    doc.setFont(undefined, 'normal');
+    contractRows.push([smhLabel, formatMoneyPDF(salaireDu)]);
+    contractRows.push(['Base de calcul', 'Temps plein 35h/semaine (151,67h/mois)']);
+
+    doc.autoTable({
+        startY: y,
+        body: contractRows,
+        theme: 'plain',
+        styles: { fontSize: 8, cellPadding: 1.2 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 52 } },
+        margin: { left: MARGIN, right: MARGIN }
+    });
+    y = doc.lastAutoTable.finalY + 4;
 
     if (infos.observations) {
-        y += 3;
-        doc.text('Observations :', margin + 5, y); y += 5;
-        y = wrappedText(doc, infos.observations, margin + 5, y, contentWidth - 10);
+        doc.setFontSize(9); doc.setFont(undefined, 'bold');
+        doc.text('Observations :', MARGIN, y); y += 5;
+        doc.setFont(undefined, 'normal');
+        y = wrappedText(doc, infos.observations, MARGIN, y, cw);
     }
     y += 8;
 
-    // ═══════════════════════════════════════════════════
+    // ═══════════════════════════════════════
     // Section 2 : Méthodologie
-    // ═══════════════════════════════════════════════════
-    checkPageBreak(50);
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text('2. Méthodologie de calcul', margin, y);
-    y += 8;
-    doc.setFontSize(9);
-    doc.setFont(undefined, 'normal');
+    // ═══════════════════════════════════════
+    y = checkPageBreak(doc, y, 50);
+    doc.setFontSize(12); doc.setFont(undefined, 'bold'); doc.setTextColor(55, 65, 81);
+    doc.text('2. Méthodologie de calcul', MARGIN, y); y += 8;
+    doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(0, 0, 0);
 
-    const moisNomsPDF = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    const moisNoms = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
     const agreement = hasAccord ? getActiveAgreement() : null;
     const agrPrimes = agreement ? getPrimes(agreement) : [];
     const primesSmh = agrPrimes.filter(p => p.inclusDansSMH === true);
-
-    // Principe
-    doc.setFont(undefined, 'bold');
     const incluesStr = primesSmh.length > 0 ? primesSmh.map(p => p.label.toLowerCase()).join(', ') + ', 13e mois' : '13e mois';
-    y = wrappedText(doc, `Principe : Conformément à la CCN Métallurgie (IDCC 3248), Art. 140, le SMH s'apprécie sur l'année civile. L'assiette SMH inclut : base, forfaits cadres, ${incluesStr}. Exclues : prime d'ancienneté, majorations nuit/dimanche/équipe/pénibilité.`, margin + 5, y, contentWidth - 10);
-    doc.setFont(undefined, 'normal');
-    y += 3;
 
-    // Formule
+    y = wrappedText(doc, `Principe (Art. 140 CCNM) : Le SMH s'apprécie sur l'année civile. L'assiette SMH inclut : base, forfaits cadres, ${incluesStr}. Éléments exclus : prime d'ancienneté, majorations nuit/dimanche/équipe/pénibilité.`, MARGIN, y, cw);
+    y += 3;
     doc.setFont(undefined, 'bold');
-    doc.text('Formule (comparaison par année civile) :', margin + 5, y); y += 6;
+    y = wrappedText(doc, 'Formule : Arriérés(année) = max(0 ; total SMH dû − total perçu). Total = somme par année civile.', MARGIN, y, cw);
     doc.setFont(undefined, 'normal');
-    doc.text('Arriérés(année) = max(0 ; Total SMH dû(année) − Total perçu(année))', margin + 5, y); y += 5;
-    doc.text('Total arriérés = somme des arriérés par année civile.', margin + 5, y); y += 5;
     y += 3;
 
-    // Distribution mensuelle
     if (hasAccord && agreement) {
         const moisVers13e = agreement.repartition13Mois?.moisVersement;
-        const mois13eStr = moisVers13e ? moisNomsPDF[moisVers13e - 1] : 'selon accord';
-        const exempleMois = primesSmh.filter(p => p.moisVersement).map(p => `${p.label.toLowerCase()} en ${moisNomsPDF[p.moisVersement - 1]}`).join(', ');
+        const mois13eStr = moisVers13e ? moisNoms[moisVers13e - 1] : 'selon accord';
+        const exempleMois = primesSmh.filter(p => p.moisVersement).map(p => `${p.label.toLowerCase()} en ${moisNoms[p.moisVersement - 1]}`).join(', ');
         const exempleStr = exempleMois ? ` Primes incluses versées dans leur mois (${exempleMois}).` : '';
-        y = wrappedText(doc, `Distribution mensuelle : répartition 12/13 mois (13e mois en ${mois13eStr}).${exempleStr}`, margin + 5, y, contentWidth - 10);
+        y = wrappedText(doc, `Distribution mensuelle : répartition 12/13 mois (13e mois en ${mois13eStr}).${exempleStr}`, MARGIN, y, cw);
     } else {
-        y = wrappedText(doc, 'Distribution mensuelle : répartition 12 mois.', margin + 5, y, contentWidth - 10);
+        y = wrappedText(doc, 'Distribution mensuelle : répartition 12 mois.', MARGIN, y, cw);
     }
-    y += 8;
+    y += 10;
 
-    // ═══════════════════════════════════════════════════
+    // ═══════════════════════════════════════
     // Section 3 : Résumé par année civile
-    // ═══════════════════════════════════════════════════
+    // ═══════════════════════════════════════
     const annees = data.detailsParAnnee || [];
     if (annees.length > 0) {
-        checkPageBreak(20 + annees.length * 7);
-        doc.setFontSize(12);
-        doc.setFont(undefined, 'bold');
-        doc.text('3. Résumé par année civile', margin, y);
-        y += 8;
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'bold');
-
-        const col1 = margin + 5;
-        const col2 = margin + 40;
-        const col3 = margin + 80;
-        const col4 = margin + 120;
-
-        doc.text('Année', col1, y);
-        doc.text('SMH annuel dû', col2, y);
-        doc.text('Total perçu', col3, y);
-        doc.text('Écart (arriérés)', col4, y);
-        y += 2;
-        doc.setDrawColor(200, 200, 200);
-        doc.line(margin, y, marginRight, y);
-        y += 5;
-        doc.setFont(undefined, 'normal');
-
-        annees.forEach(a => {
-            checkPageBreak(8);
-            doc.text(`${a.annee} (${a.nbMoisSaisis} mois)`, col1, y);
-            doc.text(formatMoneyPDF(a.totalDu), col2, y);
-            doc.text(formatMoneyPDF(a.totalReel), col3, y);
-            if (a.ecart > 0) {
-                doc.setTextColor(9, 105, 218);
-                doc.setFont(undefined, 'bold');
-                doc.text(formatMoneyPDF(a.ecart), col4, y);
-                doc.setFont(undefined, 'normal');
-                doc.setTextColor(0, 0, 0);
-            } else {
-                doc.text('Conforme', col4, y);
-            }
-            y += 6;
-        });
-
-        doc.line(margin, y, marginRight, y); y += 5;
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(9, 105, 218);
-        doc.text('TOTAL ARRIÉRÉS', col1, y);
-        doc.text(formatMoneyPDF(data.totalArretees), col4, y);
+        y = checkPageBreak(doc, y, 30);
+        doc.setFontSize(12); doc.setFont(undefined, 'bold'); doc.setTextColor(55, 65, 81);
+        doc.text('3. Résumé par année civile', MARGIN, y); y += 8;
         doc.setTextColor(0, 0, 0);
-        doc.setFont(undefined, 'normal');
-        y += 10;
+
+        const body = annees.map(a => [
+            `${a.annee} (${a.nbMoisSaisis} mois)`,
+            formatMoneyPDF(a.totalDu),
+            formatMoneyPDF(a.totalReel),
+            a.ecart > 0 ? formatMoneyPDF(a.ecart) : 'Conforme'
+        ]);
+        body.push([
+            { content: 'TOTAL ARRIÉRÉS', styles: { fontStyle: 'bold' } },
+            '', '',
+            { content: formatMoneyPDF(data.totalArretees), styles: { fontStyle: 'bold', textColor: [9, 105, 218] } }
+        ]);
+
+        doc.autoTable({
+            startY: y,
+            head: [['Année', 'SMH annuel dû', 'Total perçu', 'Écart (arriérés)']],
+            body,
+            ...TABLE_STYLES,
+            columnStyles: { 0: { cellWidth: 40 }, 1: { cellWidth: 35 }, 2: { cellWidth: 35 }, 3: { cellWidth: 35 } }
+        });
+        y = doc.lastAutoTable.finalY + 8;
     }
 
-    // ═══════════════════════════════════════════════════
+    // ═══════════════════════════════════════
     // Section 4 : Détail mois par mois
-    // ═══════════════════════════════════════════════════
+    // ═══════════════════════════════════════
     const detailsMois = data.detailsTousMois || data.detailsArretees || [];
     if (detailsMois.length > 0) {
-        checkPageBreak(30);
-        doc.setFontSize(12);
-        doc.setFont(undefined, 'bold');
-        doc.text('4. Détail mois par mois (informatif)', margin, y);
-        y += 3;
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'italic');
-        doc.setTextColor(100, 100, 100);
-        y = wrappedText(doc, 'Ce détail est fourni à titre de transparence. La comparaison effective s\'effectue par année civile (section 3).', margin + 5, y, contentWidth - 10);
-        doc.setFont(undefined, 'normal');
-        doc.setTextColor(0, 0, 0);
-        y += 3;
-
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'bold');
-
-        const colP = margin + 5;
-        const colR = margin + 52;
-        const colD = margin + 102;
-        const colA = margin + 152;
-
-        doc.text('Période', colP, y);
-        doc.text('Salaire perçu', colR, y);
-        doc.text('SMH mensuel dû', colD, y);
-        doc.text('Écart mensuel', colA, y);
+        y = checkPageBreak(doc, y, 30);
+        doc.setFontSize(12); doc.setFont(undefined, 'bold'); doc.setTextColor(55, 65, 81);
+        doc.text('4. Détail mois par mois (informatif)', MARGIN, y); y += 3;
+        doc.setFontSize(8); doc.setFont(undefined, 'italic'); doc.setTextColor(100, 100, 100);
+        y = wrappedText(doc, 'Ce détail est fourni à titre de transparence. La comparaison effective s\'effectue par année civile (section 3).', MARGIN, y, cw);
+        doc.setFont(undefined, 'normal'); doc.setTextColor(0, 0, 0);
         y += 2;
-        doc.setDrawColor(200, 200, 200);
-        doc.line(margin, y, marginRight, y);
-        y += 5;
-        doc.setFont(undefined, 'normal');
 
-        detailsMois.forEach(detail => {
-            checkPageBreak(8);
-            doc.text(detail.periode, colP, y);
-            doc.text(formatMoneyPDF(detail.salaireMensuelReel), colR, y);
-            doc.text(formatMoneyPDF(detail.salaireMensuelDu), colD, y);
-            if (detail.difference > 0) {
-                doc.setTextColor(200, 50, 50);
-                doc.text(`- ${formatMoneyPDF(detail.difference)}`, colA, y);
-                doc.setTextColor(0, 0, 0);
-            } else {
-                doc.setTextColor(50, 150, 50);
-                doc.text('OK', colA, y);
-                doc.setTextColor(0, 0, 0);
-            }
-            y += 6;
+        const body = detailsMois.map(d => [
+            d.periode,
+            formatMoneyPDF(d.salaireMensuelReel),
+            formatMoneyPDF(d.salaireMensuelDu),
+            d.difference > 0 ? { content: `- ${formatMoneyPDF(d.difference)}`, styles: { textColor: [200, 50, 50] } } : { content: 'OK', styles: { textColor: [50, 150, 50] } }
+        ]);
+
+        doc.autoTable({
+            startY: y,
+            head: [['Période', 'Perçu', 'Dû', 'Écart']],
+            body,
+            ...TABLE_STYLES,
+            styles: { ...TABLE_STYLES.styles, fontSize: 7 },
+            columnStyles: { 0: { cellWidth: 38 }, 1: { cellWidth: 28 }, 2: { cellWidth: 28 }, 3: { cellWidth: 28 } }
         });
-        y += 8;
+        y = doc.lastAutoTable.finalY + 8;
     }
 
-    // ═══════════════════════════════════════════════════
-    // Section 5 : Accord d'entreprise (si applicable)
-    // ═══════════════════════════════════════════════════
+    // ═══════════════════════════════════════
+    // Section 5 : Accord d'entreprise
+    // ═══════════════════════════════════════
     if (hasAccord && agreement) {
-        checkPageBreak(40);
-        doc.setFontSize(12);
-        doc.setFont(undefined, 'bold');
-        doc.text(`5. Accord d'entreprise (${agreement.nomCourt})`, margin, y);
-        y += 8;
-        doc.setFontSize(9);
-        doc.setFont(undefined, 'normal');
+        y = checkPageBreak(doc, y, 40);
+        doc.setFontSize(12); doc.setFont(undefined, 'bold'); doc.setTextColor(55, 65, 81);
+        doc.text(`5. Accord d'entreprise (${agreement.nomCourt})`, MARGIN, y); y += 8;
+        doc.setTextColor(0, 0, 0);
 
         const primes = getPrimes(agreement);
         if (primes && primes.length > 0) {
-            doc.setFont(undefined, 'bold');
-            doc.text('Primes :', margin + 5, y); y += 5;
-            doc.setFont(undefined, 'normal');
-            primes.forEach(p => {
-                const smhTag = p.inclusDansSMH ? ' [incluse SMH]' : ' [hors SMH]';
-                const desc = `• ${p.label}${p.valeurAccord != null ? ` (+${p.valeurAccord} ${p.unit})` : ''}${smhTag}`;
-                y = wrappedText(doc, desc, margin + 5, y, contentWidth - 10);
+            const body = primes.map(p => {
+                const smhTag = p.inclusDansSMH ? 'Incluse SMH' : 'Hors SMH';
+                const valeur = p.valeurAccord != null ? `+${p.valeurAccord} ${p.unit}` : '—';
+                return [p.label, valeur, smhTag];
             });
-            y += 3;
+            doc.autoTable({
+                startY: y,
+                head: [['Prime', 'Valeur', 'Assiette SMH']],
+                body,
+                ...TABLE_STYLES,
+                columnStyles: { 0: { cellWidth: 55 }, 1: { cellWidth: 30 }, 2: { cellWidth: 30 } }
+            });
+            y = doc.lastAutoTable.finalY + 4;
         }
         if (agreement.anciennete) {
-            y = wrappedText(doc, `Ancienneté : seuil ${agreement.anciennete.seuil ?? '—'} ans ; barème selon accord.`, margin + 5, y, contentWidth - 10);
+            doc.setFontSize(9); doc.setFont(undefined, 'normal');
+            y = wrappedText(doc, `Ancienneté : seuil ${agreement.anciennete.seuil ?? '—'} ans ; barème selon accord.`, MARGIN, y, cw);
         }
-        y += 8;
+        y += 10;
     }
 
-    // ═══════════════════════════════════════════════════
+    // ═══════════════════════════════════════
     // Section 6 : Références juridiques
-    // ═══════════════════════════════════════════════════
-    checkPageBreak(30);
-    const refSectionNum = hasAccord ? '6' : '5';
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text(`${refSectionNum}. Références juridiques`, margin, y);
-    y += 8;
-    doc.setFontSize(9);
-    doc.setFont(undefined, 'normal');
+    // ═══════════════════════════════════════
+    const refNum = hasAccord ? '6' : '5';
+    y = checkPageBreak(doc, y, 30);
+    doc.setFontSize(12); doc.setFont(undefined, 'bold'); doc.setTextColor(55, 65, 81);
+    doc.text(`${refNum}. Références juridiques`, MARGIN, y); y += 8;
+    doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(0, 0, 0);
 
     const refs = [
-        'Convention collective nationale de la métallurgie (IDCC 3248), Art. 140 — Salaires minima hiérarchiques et assiette.',
+        'CCN Métallurgie (IDCC 3248), Art. 140 — Salaires minima hiérarchiques et assiette.',
         'Code du travail, Art. L.3245-1 — Prescription triennale des salaires.',
-        'Code du travail, Art. L.2254-2 — Principe de faveur (accord d\'entreprise plus favorable).'
+        'Code du travail, Art. L.2254-2 — Principe de faveur.'
     ];
-    if (hasAccord && agreement) {
-        refs.push(`Accord d'entreprise ${agreement.nomCourt || ''} — dispositions relatives aux primes et majorations.`);
-    }
+    if (hasAccord && agreement) refs.push(`Accord d'entreprise ${agreement.nomCourt || ''}.`);
     refs.forEach(ref => {
-        checkPageBreak(10);
-        y = wrappedText(doc, `• ${ref}`, margin + 5, y, contentWidth - 10);
-        y += 2;
+        y = checkPageBreak(doc, y, 10);
+        y = wrappedText(doc, `• ${ref}`, MARGIN, y, cw); y += 2;
     });
 
-    // ─── Pied de page ───
-    addFooter(doc, 'Document indicatif généré automatiquement — ne remplace pas un conseil juridique professionnel.');
-
+    addFooter(doc);
     return doc;
 }
 
 // ═══════════════════════════════════════════════════════════════
-// ORCHESTRATEUR : génère et télécharge les 2 PDF
+// WORD : LETTRE DE MISE EN DEMEURE (.doc éditable)
+// ═══════════════════════════════════════════════════════════════
+
+export function genererWordLettreMiseEnDemeure(data, infos = {}) {
+    const todayStr = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    const lieuDate = infos.lieu ? `À ${infos.lieu}, le ${todayStr}` : `Le ${todayStr}`;
+
+    const annees = data.detailsParAnnee || [];
+    let tableauHTML = '';
+    
+    if (annees.length > 0) {
+        const rows = annees.map(a => {
+            const ecartCell = a.ecart > 0 ? `<b>${formatMoneyPDF(a.ecart)}</b>` : '—';
+            return `<tr><td>${a.annee} (${a.nbMoisSaisis} mois)</td><td>${formatMoneyPDF(a.totalDu)}</td><td>${formatMoneyPDF(a.totalReel)}</td><td>${ecartCell}</td></tr>`;
+        }).join('');
+        
+        tableauHTML = `
+        <table border="1" cellspacing="0" cellpadding="1" style="border-collapse:collapse;width:100%;font-size:9pt;margin:4pt 0;">
+            <tr style="background:#f5f5f5;"><th>Année</th><th>SMH annuel dû</th><th>Total perçu</th><th>Écart</th></tr>
+            ${rows}
+            <tr style="font-weight:bold;border-top:1.5px solid #333;"><td>TOTAL</td><td></td><td></td><td>${formatMoneyPDF(data.totalArretees)}</td></tr>
+        </table>`;
+    }
+
+    // Attention : on utilise bien des backticks (`) ci-dessous pour ouvrir la chaîne HTML
+    const html = `
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><style>
+    @page { margin: 1.25cm 1.5cm; }
+    body { font-family: 'Calibri', 'Arial', sans-serif; font-size: 11pt; line-height: 1.2; }
+    p { margin: 6pt 0; }
+    .right { text-align: right; }
+    .gray { color: #555; font-size: 9pt; }
+    .disclaimer { margin-top: 10pt; padding: 4pt; border: 1px solid #ddd; font-size: 8pt; color: #666; font-style: italic; }
+    table th, table td { text-align: left; padding: 1.5pt 3pt; }
+</style></head>
+<body>
+    <p>${esc(infos.nomPrenom || '« Prénom Nom du salarié »')}<br>
+    ${esc(infos.adresseSalarie || '« Adresse »')}<br>
+    ${esc(infos.cpVilleSalarie || '« Code postal + Ville »')}</p>
+
+    <p class="right">${esc(infos.employeur || '« Société »')}<br>
+    ${esc(infos.representant || '« Prénom Nom du représentant »')}<br>
+    ${esc(infos.fonction || '« Fonction (DRH, etc.) »')}<br>
+    ${esc(infos.adresseEmployeur || '« Adresse »')}<br>
+    ${esc(infos.cpVilleEmployeur || '« Code postal + Ville »')}</p>
+
+    <p>${esc(lieuDate)}</p>
+
+    <p><b>Lettre recommandée avec accusé de réception n° _______________</b></p>
+
+    <p><b>Objet : Demande de régularisation de salaire</b></p>
+
+    <p>Madame, Monsieur,</p>
+
+    <p>Par la présente, je vous signale que ma rémunération n'a pas atteint le Salaire Minimum Hiérarchique (SMH) défini par la Convention Collective Nationale de la Métallurgie (IDCC 3248) pour les périodes suivantes :</p>
+
+    ${tableauHTML}
+
+    <p>Ce manquement constitue une violation de vos obligations conventionnelles (Convention Collective Nationale de la Métallurgie, IDCC 3248, Art. 140).</p>
+
+    <p>Je vous mets donc en demeure de procéder à la régularisation des salaires qui me sont dus dans un délai de 8 jours à compter de la date du présent courrier.</p>
+
+    <p>À défaut, je me verrai dans l'obligation de saisir le Conseil de Prud'hommes pour obtenir régularisation et réparation du préjudice subi.</p>
+
+    <p class="gray">[Facultatif] Je vous informe que copie de ce courrier est transmise à l'inspection du travail, à qui je sollicite par ailleurs l'intervention dans ce dossier.</p>
+
+    <p class="gray">Pièce jointe : Annexe technique — détail des calculs et références conventionnelles.</p>
+
+    <p>Veuillez agréer, Madame, Monsieur, l'expression de ma considération distinguée.</p>
+
+    <p>${esc(infos.nomPrenom || '« Prénom Nom »')}<br>« Signature »</p>
+
+    <p class="gray">[En cas de courrier remis en main propre] Fait en deux exemplaires.<br>
+    « Prénom Nom du représentant de la société » — « Signature »</p>
+
+    <div class="disclaimer">Attention : ce document est généré par un outil indicatif. Les montants sont à vérifier. Ce document ne remplace pas un conseil juridique professionnel.</div>
+</body></html>`;
+    // Attention : on utilise bien un backtick (`) ci-dessus pour fermer la chaîne HTML
+
+    const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mise_en_demeure_${new Date().toISOString().split('T')[0]}.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function esc(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ORCHESTRATEUR
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Générer les deux PDF (lettre + annexe) et les télécharger
- * @param {Object} data - Données des arriérés
- * @param {Object} infosPersonnelles - Informations saisies dans le modal
- * @param {boolean} forceSmhSeul - Ignoré (mode SMH seul exigé)
- * @param {Object} stateParam - State de l'application
+ * Générer et télécharger les documents (Word lettre + PDF annexe)
  */
 export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = false, stateParam = null) {
     const state = stateParam || defaultState;
 
     if (!state.arretesSurSMHSeul) {
-        throw new Error('Le rapport PDF ne peut être généré qu\'en mode « SMH seul ».');
+        throw new Error('Le rapport ne peut être généré qu\'en mode « SMH seul ».');
     }
 
-    const dateStr = new Date().toISOString().split('T')[0];
+    // 1. Word : Lettre de mise en demeure (éditable)
+    genererWordLettreMiseEnDemeure(data, infosPersonnelles);
 
-    // PDF 1 : Lettre de mise en demeure
-    const docLettre = genererPDFLettreMiseEnDemeure(data, infosPersonnelles, state);
-    docLettre.save(`mise_en_demeure_${dateStr}.pdf`);
-
-    // PDF 2 : Annexe technique
+    // 2. PDF : Annexe technique (autoTable)
     const docAnnexe = genererPDFAnnexeTechnique(data, infosPersonnelles, state);
-    docAnnexe.save(`annexe_technique_${dateStr}.pdf`);
+    docAnnexe.save(`annexe_technique_${new Date().toISOString().split('T')[0]}.pdf`);
 
-    return { docLettre, docAnnexe };
+    return { docAnnexe };
 }
