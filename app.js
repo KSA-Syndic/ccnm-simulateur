@@ -1721,6 +1721,12 @@ function updateAll() {
         } else {
             modalitesNonCadre.classList.remove('hidden');
             modalitesCadre.classList.add('hidden');
+            // Non-cadre : toujours base 35h, réinitialiser le forfait
+            if (state.forfait !== '35h') {
+                state.forfait = '35h';
+                const forfaitSel = document.getElementById('forfait');
+                if (forfaitSel) forfaitSel.value = '35h';
+            }
         }
     }
 
