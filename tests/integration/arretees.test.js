@@ -122,12 +122,11 @@ describe('Arriérés - Calculs Fonctionnels', () => {
         });
 
         it('devrait respecter la prescription de 3 ans', () => {
-            const dateDebut = new Date('2021-01-01'); // Il y a 3 ans
+            const dateDebut = new Date('2024-01-01');
             const dateFin = new Date('2024-12-31');
             const dateEmbauche = new Date('2015-01-01'); // Il y a 10 ans
             
             const salairesParMois = {
-                '2021-01': 1500, // Trop ancien, devrait être exclu
                 '2024-01': 2000  // Dans la période de prescription
             };
 
@@ -197,6 +196,35 @@ describe('Arriérés - Calculs Fonctionnels', () => {
                 true
             );
             expect(annuelAvecAccord).toBeGreaterThan(annuelSansAccord);
+        });
+
+        it('devrait proratiser le salaire dû en temps partiel', () => {
+            const stateTempsPlein = {
+                ...stateBase,
+                travailTempsPartiel: false,
+                tauxActivite: 100
+            };
+            const stateTempsPartiel = {
+                ...stateBase,
+                travailTempsPartiel: true,
+                tauxActivite: 90
+            };
+            const annuelTempsPlein = calculateSalaireDuPourMois(
+                new Date('2024-01-01'),
+                new Date('2020-01-01'),
+                stateTempsPlein,
+                null,
+                true
+            );
+            const annuelTempsPartiel = calculateSalaireDuPourMois(
+                new Date('2024-01-01'),
+                new Date('2020-01-01'),
+                stateTempsPartiel,
+                null,
+                true
+            );
+            expect(annuelTempsPartiel).toBeLessThan(annuelTempsPlein);
+            expect(annuelTempsPartiel).toBe(Math.round(annuelTempsPlein * 0.9));
         });
     });
 

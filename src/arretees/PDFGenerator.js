@@ -284,6 +284,10 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     // Forfait & base de calcul
     const isForfaitJours = state.forfait === 'jours';
     const isForfaitHeures = state.forfait === 'heures';
+    const isTempsPartiel = state.travailTempsPartiel === true;
+    const tauxActivitePct = isTempsPartiel
+        ? Math.round((Number(state.tauxActivite) || (CONFIG.TAUX_ACTIVITE_DEFAUT ?? 100)) * 100) / 100
+        : 100;
     let forfaitLabel = 'Horaire collectif (35h/sem.)';
     let baseLabel = 'Temps plein 35h/sem. (151,67h/mois)';
     if (isForfaitHeures) {
@@ -307,6 +311,10 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     smhRows.push(['Classification', `${classInfo.groupe}${classInfo.classe}${isCadre ? ' (cadre)' : ''}`]);
     smhRows.push([smhLabel, formatMoneyPDF(salaireDu)]);
     smhRows.push(['Type de forfait', forfaitLabel]);
+    smhRows.push(['Temps de travail', isTempsPartiel ? `Temps partiel (${String(tauxActivitePct).replace('.', ',')}%)` : 'Temps plein (100%)']);
+    if (isTempsPartiel) {
+        baseLabel = `${baseLabel} au prorata ${String(tauxActivitePct).replace('.', ',')}%`;
+    }
     smhRows.push(['Base de calcul', baseLabel]);
     smhRows.push(['Répartition mensuelle', `${state.nbMois ?? 12} mois`]);
     if (isCadreDebutant) {
@@ -346,19 +354,6 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     smhRows.push(['Inclus SMH (actifs)', inclusSmhLabel]);
     smhRows.push(['Exclus du SMH (actifs)', exclusSmhLabel]);
     smhRows.push(['Lecture', 'Le SMH correspond à la base SMH + éléments inclus actifs. Les éléments exclus s’ajoutent au-dessus du minimum.']);
-
-    const modalitesActivesHorsSMH = [];
-    const primeEquipeLabel = getPrimeEquipeModaliteLabel(state, agreement);
-    if (primeEquipeLabel) modalitesActivesHorsSMH.push(primeEquipeLabel);
-    if ((state.typeNuit !== 'aucun') && Number(state.heuresNuit || 0) > 0) {
-        modalitesActivesHorsSMH.push(`Majoration nuit (${state.heuresNuit} h/mois)`);
-    }
-    if (state.travailDimanche && Number(state.heuresDimanche || 0) > 0) {
-        modalitesActivesHorsSMH.push(`Majoration dimanche (${state.heuresDimanche} h/mois)`);
-    }
-    if (modalitesActivesHorsSMH.length > 0) {
-        smhRows.push(['Modalités hors SMH actives', modalitesActivesHorsSMH.join(', ')]);
-    }
 
     addAutoTable(doc, {
         startY: y,
@@ -496,21 +491,49 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
         if (primes && primes.length > 0) {
             const body = primes.map(p => {
                 const smhTag = p.inclusDansSMH ? 'Incluse SMH' : 'Hors SMH';
+                const type = p.valueType || '—';
                 const valeur = p.valeurAccord != null ? `+${p.valeurAccord} ${p.unit}` : '—';
-                return [p.label, valeur, smhTag];
+                const cond = p.conditionAnciennete?.description
+                    || (p.conditionAnciennete?.type === 'annees_revolues' && typeof p.conditionAnciennete?.annees === 'number'
+                        ? `${p.conditionAnciennete.annees} an(s)`
+                        : 'Aucune');
+                return [p.label, type, valeur, smhTag, cond];
             });
             addAutoTable(doc, {
                 startY: y,
-                head: [['Prime', 'Valeur', 'Assiette SMH']],
+                head: [['Prime / modalité', 'Type', 'Valeur', 'Assiette SMH', 'Condition']],
                 body,
                 ...TABLE_STYLES,
-                columnStyles: { 0: { cellWidth: 55 }, 1: { cellWidth: 30 }, 2: { cellWidth: 30 } }
+                columnStyles: { 0: { cellWidth: 48 }, 1: { cellWidth: 20 }, 2: { cellWidth: 24 }, 3: { cellWidth: 24 }, 4: { cellWidth: 34 } }
             });
             y = (doc.lastAutoTable?.finalY ?? y) + 4;
         }
         if (agreement.anciennete) {
             doc.setFontSize(9); doc.setFont(undefined, 'normal');
-            y = wrappedText(doc, `Ancienneté : seuil ${agreement.anciennete.seuil ?? '—'} ans ; barème selon accord.`, MARGIN, y, cw);
+            const anc = agreement.anciennete;
+            const statuts = anc.tousStatuts === true ? 'Cadres et non-cadres' : 'Non-cadres';
+            const inclusion = typeof anc.inclusDansSMH === 'boolean'
+                ? (anc.inclusDansSMH ? 'Incluse dans l\'assiette SMH' : 'Exclue de l\'assiette SMH')
+                : 'Inclusion SMH selon paramétrage';
+            let baremeResume = 'Barème non détaillé';
+            if (anc.barème && typeof anc.barème === 'object') {
+                const paliers = Object.entries(anc.barème)
+                    .map(([annee, taux]) => ({ annee: Number(annee), taux: Number(taux) }))
+                    .filter(item => Number.isFinite(item.annee) && Number.isFinite(item.taux))
+                    .sort((a, b) => a.annee - b.annee);
+                if (paliers.length > 0) {
+                    const extrait = paliers
+                        .slice(0, 6)
+                        .map(item => `${item.annee} ans: ${Math.round(item.taux * 10000) / 100}%`)
+                        .join(' ; ');
+                    baremeResume = paliers.length > 6 ? `${extrait} ; ...` : extrait;
+                }
+            } else if (typeof anc.barème === 'function') {
+                baremeResume = 'Barème défini par fonction (dynamique)';
+            }
+            y = wrappedText(doc, `Ancienneté (accord) : seuil ${anc.seuil ?? '—'} an(s) ; plafond ${anc.plafond ?? '—'} an(s) ; bénéficiaires : ${statuts}.`, MARGIN, y, cw);
+            y = wrappedText(doc, `Assiette SMH : ${inclusion}. Base de calcul : ${anc.baseCalcul || '—'}.`, MARGIN, y, cw);
+            y = wrappedText(doc, `Barème : ${baremeResume}.`, MARGIN, y, cw);
         }
         y += 10;
     }
