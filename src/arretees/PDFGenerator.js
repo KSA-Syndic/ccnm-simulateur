@@ -72,7 +72,7 @@ function getPrimeEquipeModaliteLabel(state, agreement) {
     const primeAccord = agreement?.primes?.find(p => p.id === 'primeEquipe');
     if (primeAccord) {
         const taux = primeAccord.valeurAccord != null ? String(primeAccord.valeurAccord).replace('.', ',') : '?';
-        return `Prime d'équipe ${agreement?.nomCourt || 'accord'} (base horaire auto 151,67h × +${taux} €/h)`;
+        return `Prime d'équipe ${agreement?.nomCourt || 'accord'} (base horaire auto 151,67h × ${taux} €/h)`;
     }
     return `Prime d'équipe CCN (base horaire auto 151,67h × 30 min du SMH horaire de base)`;
 }

@@ -203,7 +203,7 @@ function resolveAnciennetePrime(state, context, convPrimeDefs, agreement, isCadr
                 result: rCCN,
                 isAgreement: false,
                 isSMHIncluded: resolveAncienneteSmhInclusion(defAncienneteCCN.config?.inclusDansSMH, 'ccn'),
-                label: `Prime ancienneté CCN (${state.pointTerritorial}€ × ${rCCN.meta?.taux ?? 0}% × ${rCCN.meta?.annees ?? 0} ans × 12)`
+                label: `Prime d'ancienneté conventionnelle (${state.pointTerritorial}€ × ${rCCN.meta?.taux ?? 0}% × ${rCCN.meta?.annees ?? 0} ans × 12)`
             });
         }
     }
@@ -233,7 +233,7 @@ function resolveAnciennetePrime(state, context, convPrimeDefs, agreement, isCadr
     return {
         ...selected,
         note: hasAlternative
-            ? (selected.isAgreement ? 'Plus avantageux que CCN' : 'Plus avantageux que l\'accord')
+            ? (selected.isAgreement ? 'Plus avantageux que la convention' : 'Plus avantageux que l\'accord')
             : ''
     };
 }
@@ -358,14 +358,14 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         let totalSmh = baseSMH + forfaitMontant;
         const tauxActivitePct = Math.round(activityRate * 10000) / 100;
         const baseLabel = activityRate < 1
-            ? `SMH Base (${groupe}${classe}) au prorata ${tauxActivitePct}%`
-            : `SMH Base (${groupe}${classe})`;
+            ? `Salaire de base (${groupe}${classe}) au prorata ${tauxActivitePct}%`
+            : `Salaire de base (${groupe}${classe})`;
         const detailsSmh = [{ label: baseLabel, value: baseSMH, isBase: true }];
 
         const ancienneteRetenue = resolveAnciennetePrime(state, context, convPrimeDefs, agreement, isCadreValue);
         if (ancienneteRetenue && ancienneteRetenue.isSMHIncluded) {
             detailsSmh.push({
-                label: 'Prime ancienneté assiette SMH',
+                label: 'Prime d\'ancienneté assiette salaire minima',
                 value: ancienneteRetenue.result.amount,
                 isPositive: true,
                 isSMHIncluded: true,
@@ -392,7 +392,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                 const rHs25 = computeMajoration(defHs25, context);
                 if (rHs25.amount > 0) {
                     detailsSmh.push({
-                        label: `Heures supplémentaires assiette SMH (+${rHs25.meta?.taux ?? 0}%) (${Math.round((rHs25.meta?.heures ?? 0) * 100) / 100}h/mois)`,
+                        label: `Heures supplémentaires assiette salaire minima (+${rHs25.meta?.taux ?? 0}%) (${Math.round((rHs25.meta?.heures ?? 0) * 100) / 100}h/mois)`,
                         value: rHs25.amount,
                         isPositive: true,
                         isSMHIncluded: true,
@@ -405,7 +405,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                 const rHs50 = computeMajoration(defHs50, context);
                 if (rHs50.amount > 0) {
                     detailsSmh.push({
-                        label: `Heures supplémentaires assiette SMH (+${rHs50.meta?.taux ?? 0}%) (${Math.round((rHs50.meta?.heures ?? 0) * 100) / 100}h/mois)`,
+                        label: `Heures supplémentaires assiette salaire minima (+${rHs50.meta?.taux ?? 0}%) (${Math.round((rHs50.meta?.heures ?? 0) * 100) / 100}h/mois)`,
                         value: rHs50.amount,
                         isPositive: true,
                         isSMHIncluded: true,
@@ -431,8 +431,8 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         scenario = 'non-cadre';
         const tauxActivitePct = Math.round(activityRate * 10000) / 100;
         const baseLabel = activityRate < 1
-            ? `SMH Base (${groupe}${classe}) au prorata ${tauxActivitePct}%`
-            : `SMH Base (${groupe}${classe})`;
+            ? `Salaire de base (${groupe}${classe}) au prorata ${tauxActivitePct}%`
+            : `Salaire de base (${groupe}${classe})`;
         details.push({ label: baseLabel, value: baseSMH, isBase: true });
     } else if (isGroupeF && state.experiencePro < 6) {
         scenario = 'cadre-debutant';
@@ -462,8 +462,8 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         scenario = 'cadre';
         const tauxActivitePct = Math.round(activityRate * 10000) / 100;
         const baseLabel = activityRate < 1
-            ? `SMH Base (${groupe}${classe}) au prorata ${tauxActivitePct}%`
-            : `SMH Base (${groupe}${classe})`;
+            ? `Salaire de base (${groupe}${classe}) au prorata ${tauxActivitePct}%`
+            : `Salaire de base (${groupe}${classe})`;
         details.push({ label: baseLabel, value: baseSMH, isBase: true });
 
         const forfaitDefs = getConventionForfaitDefs();
@@ -522,7 +522,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
             const heures = equipeRetenue.meta?.heures ?? (state.heuresEquipe ?? 0);
             const suffixAccord = agreement ? ` ${agreement.nomCourt}` : '';
             details.push({
-                label: `Prime d'équipe${equipeRetenue.source === SOURCE_ACCORD ? suffixAccord : ' CCN'} (${heures}h × +${taux}€)`,
+                label: `Prime d'équipe${equipeRetenue.source === SOURCE_ACCORD ? suffixAccord : ' conventionnelle'} (${heures}h × ${taux}€)`,
                 value: equipeRetenue.amount,
                 isPositive: true,
                 isAgreement: equipeRetenue.source === SOURCE_ACCORD,
@@ -643,7 +643,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
             let label = r.label;
             if (def.valueKind === 'horaire' && r.meta?.heures != null) {
                 const taux = r.meta.tauxHoraire ?? 0;
-                label = `${r.label} (${r.meta.heures}h × +${taux}€ ${agreement.nomCourt})`;
+                label = `${r.label} (${r.meta.heures}h × ${taux}€ ${agreement.nomCourt})`;
             } else if (def.valueKind === 'majorationHoraire' && r.meta?.heures != null) {
                 label = `${r.label} (+${r.meta.taux ?? 0}%) (${r.meta.heures}h/mois)`;
             } else if (def.valueKind === 'montant' && def.config?.moisVersement != null) {

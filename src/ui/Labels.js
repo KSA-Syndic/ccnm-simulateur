@@ -67,11 +67,11 @@ export const LABELS = {
     travailEquipe: 'Travail en équipes postées',
     heuresEquipe: 'Heures équipe/mois',
     /** Préfixe des tooltips pour les modalités spécifiques à l'accord d'entreprise (nuit, dimanche, primes). */
-    tooltipPrefixAccordOnly: "Spécifique à l'accord d'entreprise. <br>",
+    tooltipPrefixAccordOnly: "<strong>Spécifique à l'accord d'entreprise.</strong> <br>",
 
     // Résultat
     resultPageTitle: 'Votre salaire',
-    resultPageSubtitle: 'Rémunération globale due par votre employeur (Salaire Minimum Hiérarchique, primes et majorations).',
+    resultPageSubtitle: 'Rémunération globale due par votre employeur (salaire minima, primes et majorations).',
     resultAccordToggle: 'Appliquer l\'accord d\'entreprise',
     resultatAnnuel: 'bruts / an',
     resultatMensuel: 'bruts / mois',
@@ -90,7 +90,7 @@ export const LABELS = {
     arreteesOptionsTitle: 'Options et autres informations',
     ruptureContratLabel: 'Le contrat est rompu',
     accordEcritLabel: 'Un accord écrit existe avec l\'employeur concernant la classification',
-    arreteesSmhSeulLabel: 'Calculer les arriérés sur le SMH seul',
+    arreteesSmhSeulLabel: 'Calculer les arriérés sur le salaire minima seul',
     arreteesSmhSeulTooltipHtml: 'Salaire dû : assiette SMH (Art. 140 CCNM). Inclus : base, forfaits, 13e mois, heures supplémentaires, primes incluses. Exclus : prime d\'ancienneté, majorations de contraintes (nuit, dimanche, équipe). Décochez pour la rémunération complète.',
     salaryCurveTitle: 'Saisie de vos salaires par mois',
     salaryCurveHelp: 'Saisissez votre salaire mensuel brut pour chaque mois. Le graphique ci-dessous montre l\'évolution du salaire dû au fil du temps.',
@@ -99,7 +99,7 @@ export const LABELS = {
     timelineChartMissingText: 'Affichage temporairement indisponible. Veuillez recharger la page.',
     arreteesSalaireBrutFullHintHtml: '<strong>Attention :</strong> Indiquez le <strong>total brut</strong> du bulletin (y compris primes) pour comparer à la rémunération complète.',
     accordDesactiveMessagePrefix: 'Les éléments suivants ne sont plus pris en compte dans le calcul : ',
-    floatingSalaryPlaceholder: 'Salaire mensuel brut',
+    floatingSalaryPlaceholder: 'Salaire brut total du mois',
     floatingHintText: 'Appuyez sur Entrée pour valider',
     curveProgressReopenHint: '— cliquer pour rouvrir la saisie',
     calculerArretees: 'Calculer mes arriérés',
@@ -108,10 +108,10 @@ export const LABELS = {
     ruptureContrat: 'Le contrat est rompu',
     dateRupture: 'Date de rupture du contrat',
     accordEcrit: 'Un accord écrit existe avec l\'employeur concernant la classification',
-    smhSeul: 'Calculer les arriérés sur le SMH seul',
+    smhSeul: 'Calculer les arriérés sur le salaire minima seul',
     
     // Footer
-    footerText: `Convention Collective Nationale de la Métallurgie (CCNM) ${CURRENT_DATA_YEAR}`,
+    footerText: `Convention collective de la métallurgie (CCN) ${CURRENT_DATA_YEAR}`,
     footerDisclaimer: 'Outil indicatif',
     footerCredit: 'Réalisé par CFDT Kuhn',
     footerPrivacyLink: 'Politique de confidentialité'

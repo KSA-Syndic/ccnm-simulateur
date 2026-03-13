@@ -184,7 +184,7 @@ const CONFIG = {
     ANCIENNETE: {
         seuil: 3,       // Déclenchement à 3 ans
         plafond: 15,    // Plafonné à 15 ans
-        inclusDansSMH: true // Paramétrable: true pour inclure dans l'assiette SMH
+        inclusDansSMH: false // Paramétrable: true pour inclure dans l'assiette SMH
     },
 
     // Majorations Forfaits Cadres – INCLUSES dans l'assiette SMH (font partie du SMH)

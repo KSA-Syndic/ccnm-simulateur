@@ -1724,8 +1724,7 @@ function buildAccordOptionsUI() {
         ? window.AgreementHelpers.getPrimes(agreement) : [];
     // Ne prendre que les primes non-horaires (montant, etc.) — les horaires sont dans conditions de travail
     const primesNonHoraires = primes.filter(p => p.valueType !== 'horaire' && p.valueType !== 'majorationHoraire');
-    // Seules les primes hors-SMH et hors-horaires méritent une checkbox ici.
-    // Les primes inclusDansSMH: true sont déjà visibles en sous-ligne « dont ... » dans les résultats.
+    // Primes hors-SMH : checkbox.
     const primesTogglables = primesNonHoraires.filter(p => p.inclusDansSMH !== true);
     if (primesTogglables.length === 0) {
         container.innerHTML = '';
@@ -3166,7 +3165,7 @@ function getSmhScopeDynamic(options = {}) {
     }
 
     // Base SMH : toujours présente dans l'assiette.
-    addUnique(included, 'base SMH');
+    addUnique(included, 'salaire de base');
     if (state.travailTempsPartiel === true) {
         const taux = Math.round((Number(state.tauxActivite) || (CONFIG.TAUX_ACTIVITE_DEFAUT ?? 100)) * 100) / 100;
         addUnique(included, `prorata temps partiel (${String(taux).replace('.', ',')}%)`);
@@ -3252,7 +3251,7 @@ function buildSmhHintHtml() {
     const { included, excluded } = getSmhScopeDynamic();
     const includedLabel = included.length ? included.join(', ') : 'aucun élément additionnel actif';
     const excludedLabel = excluded.length ? excluded.join(', ') : 'aucun';
-    return `<strong>Comment saisir votre brut (Art. 140 CCNM)</strong><br><strong>Pris en compte</strong> : base SMH + éléments inclus.<br><strong>À inclure</strong> : ${includedLabel}.<br><strong>À exclure</strong> : ${excludedLabel}.`;
+    return `<strong>Comment saisir votre brut (Art. 140 CCN)</strong><br><strong>Pris en compte</strong> : salaire minima + éléments inclus.<br><strong>À inclure</strong> : ${includedLabel}.<br><strong>À exclure</strong> : ${excludedLabel}.`;
 }
 
 /**
@@ -3261,15 +3260,20 @@ function buildSmhHintHtml() {
  */
 function buildSmhTooltipText() {
     const { included, excluded } = getSmhScopeDynamic({ includeOnlyActivePrimes: false });
-    const includedLabel = included.length ? included.join(', ') : 'aucun élément défini';
-    const excludedLabel = excluded.length ? excluded.join(', ') : 'aucun';
-    return `Salaire dû (SMH seul) : assiette SMH. À inclure : ${includedLabel}. À exclure : ${excludedLabel}.`;
+    const includedLines = included.length
+        ? included.map((item) => `• ${item}`).join('<br>')
+        : '• aucun élément défini';
+    const excludedLines = excluded.length
+        ? excluded.map((item) => `• ${item}`).join('<br>')
+        : '• aucun';
+    return `<strong>Salaire dû (salaire minima seul)</strong> : assiette salaire minima.<br><strong>À inclure :</strong><br>${includedLines}<br><strong>À exclure :</strong><br>${excludedLines}`;
 }
 
 function updateArreteesSmhTooltip() {
-    const tooltipEl = document.querySelector('#arretees-smh-seul + span.tooltip-trigger');
+    const tooltipEl = document.getElementById('arretees-smh-seul-tooltip')
+        || document.querySelector('#arretees-smh-seul + span.tooltip-trigger');
     if (!tooltipEl) return;
-    const html = `Art. 140 CCNM.<br>${buildSmhTooltipText()}<br>Décochez pour comparer à la rémunération complète.`;
+    const html = `Art. 140 CCN.<br>${buildSmhTooltipText()}<br>Décochez pour comparer à la rémunération complète.`;
     tooltipEl.setAttribute('data-tippy-content', html);
     if (tooltipEl._tippy) tooltipEl._tippy.setContent(html);
 }
@@ -3717,12 +3721,13 @@ function updateCurveControls(options) {
     // Synchroniser le hint arriérés avec les mêmes éléments dynamiques que le tooltip.
     updateArreteesSalaireHint();
 
-    // Tooltip "?" : rappeler quels éléments inclure/exclure selon le mode
+    // Tooltip "?" : message court, le détail métier reste dans le hint au-dessus.
     if (floatingInfoIcon) {
-        const tooltipSMHSeul = state.arretesSurSMHSeul
-            ? ' ' + buildSmhTooltipText()
-            : ' Indiquez le « Total brut » de votre fiche de paie pour ce mois.';
-        floatingInfoIcon.setAttribute('data-tippy-content', 'Salaire mensuel brut :' + tooltipSMHSeul);
+        const tooltipHtml = state.arretesSurSMHSeul
+            ? 'Indiquez le <strong>Salaire brut total du mois</strong> selon l\'assiette salaire minima.<br>Voir l\'<strong>encadré d\'aide juste au-dessus</strong> pour le détail des éléments à inclure/exclure.'
+            : 'Indiquez le <strong>Salaire brut total du mois</strong> pour comparer à la rémunération complète.<br>Voir l\'<strong>encadré d\'aide juste au-dessus</strong> pour le détail.';
+        floatingInfoIcon.setAttribute('data-tippy-content', tooltipHtml);
+        if (floatingInfoIcon._tippy) floatingInfoIcon._tippy.setContent(tooltipHtml);
     }
 
     const saisis = periodsData.filter(p => p.salaireReel).length;
@@ -3956,7 +3961,7 @@ function openSalaryModal(periodKey, periodLabel, currentSalary) {
                 <rect x="280" y="85" width="100" height="20" fill="rgba(225,92,18,0.08)" opacity="0.5" stroke="#E15C12" stroke-width="2" stroke-dasharray="3,3"/>
                 
                 <!-- Note en bas -->
-                <text x="20" y="170" font-family="Arial" font-size="9" fill="#666">* Indiquez le Total brut du mois sur votre fiche de paie</text>
+                <text x="20" y="170" font-family="Arial" font-size="9" fill="#666">* Indiquez le salaire brut total du mois sur votre fiche de paie</text>
             </svg>
         `;
         

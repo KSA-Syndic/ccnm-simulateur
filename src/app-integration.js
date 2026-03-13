@@ -54,18 +54,35 @@ export function initAppIntegration() {
     const pctDimancheCCN = Math.round((CONFIG.MAJORATIONS_CCN?.dimanche ?? 1) * 100);
     const pctHs25CCN = Math.round((CONFIG.MAJORATIONS_CCN?.heuresSup25 ?? 0.25) * 100);
     const pctHs50CCN = Math.round((CONFIG.MAJORATIONS_CCN?.heuresSup50 ?? 0.50) * 100);
+    const formatConventionAccordTooltip = (conventionHtml, accordHtml = '', accordName = '') => {
+        const accordTitle = accordName ? `Accord ${accordName}` : 'Accord';
+        const accordBlock = accordHtml ? `<br><strong>${accordTitle} :</strong><br>${accordHtml}` : '';
+        return `<strong>Convention :</strong><br>${conventionHtml}${accordBlock}`;
+    };
     if (typeNuitTooltip) {
-        // Ce bloc (select) n'est visible que sans accord ou accord à un seul taux ; un seul taux CCN ou accord
-        typeNuitTooltip.setAttribute('data-tippy-content', `+${pctNuitCCN}%.`);
+        const pctNuitAccord = agreement?.majorations?.nuit?.posteNuit != null
+            ? Math.round(agreement.majorations.nuit.posteNuit * 100)
+            : null;
+        const convention = `+${pctNuitCCN}%.`;
+        const accord = pctNuitAccord != null
+            ? `+${pctNuitAccord}%.`
+            : '';
+        typeNuitTooltip.setAttribute('data-tippy-content', formatConventionAccordTooltip(convention, accord, getAccordNomCourt(agreement)));
         if (typeNuitTooltip._tippy) typeNuitTooltip._tippy.setContent(typeNuitTooltip.getAttribute('data-tippy-content'));
     }
     if (travailDimancheTooltip) {
         if (agreement && agreement.majorations?.dimanche != null) {
             const pct = Math.round(agreement.majorations.dimanche * 100);
-            const nom = getAccordNomCourt(agreement);
-            travailDimancheTooltip.setAttribute('data-tippy-content', `Taux CCN : +${pctDimancheCCN}%. Avec accord ${nom} : +${pct}%.`);
+            travailDimancheTooltip.setAttribute(
+                'data-tippy-content',
+                formatConventionAccordTooltip(
+                    `+${pctDimancheCCN}%.`,
+                    `+${pct}%.`,
+                    getAccordNomCourt(agreement)
+                )
+            );
         } else {
-            travailDimancheTooltip.setAttribute('data-tippy-content', `+${pctDimancheCCN}%.`);
+            travailDimancheTooltip.setAttribute('data-tippy-content', formatConventionAccordTooltip(`+${pctDimancheCCN}%.`));
         }
         if (travailDimancheTooltip._tippy) travailDimancheTooltip._tippy.setContent(travailDimancheTooltip.getAttribute('data-tippy-content'));
     }
@@ -78,12 +95,18 @@ export function initAppIntegration() {
             const repos = hs.reposCompensateur === true ? ' Repos compensateur possible selon accord.' : '';
             travailHeuresSupTooltip.setAttribute(
                 'data-tippy-content',
-                `CCN : +${pctHs25CCN}% (36e-43e) puis +${pctHs50CCN}% (>=44e). Accord ${getAccordNomCourt(agreement)} : +${pct25}% puis +${pct50}%.${contingent}${repos}`
+                formatConventionAccordTooltip(
+                    `+${pctHs25CCN}% (36e-43e), puis +${pctHs50CCN}% (>=44e).`,
+                    `+${pct25}% (36e-43e), puis +${pct50}% (>=44e).${contingent}${repos}`,
+                    getAccordNomCourt(agreement)
+                )
             );
         } else {
             travailHeuresSupTooltip.setAttribute(
                 'data-tippy-content',
-                `CCN : +${pctHs25CCN}% (36e-43e) puis +${pctHs50CCN}% (>=44e). Durée légale : 35h/semaine (151,67h/mois).`
+                formatConventionAccordTooltip(
+                    `Heures supplémentaires : +${pctHs25CCN}% (36e-43e), puis +${pctHs50CCN}% (>=44e).<br>Durée légale : 35h/semaine (151,67h/mois).`
+                )
             );
         }
         if (travailHeuresSupTooltip._tippy) travailHeuresSupTooltip._tippy.setContent(travailHeuresSupTooltip.getAttribute('data-tippy-content'));
@@ -164,11 +187,6 @@ export function initAppIntegration() {
     setText('label-rupture-contrat-arretees', LABELS.ruptureContratLabel);
     setText('label-accord-ecrit-arretees', LABELS.accordEcritLabel);
     setText('label-arretees-smh-seul', LABELS.arreteesSmhSeulLabel);
-    const arreteesSmhSeulTooltip = document.querySelector('#arretees-smh-seul + span.tooltip-trigger');
-    if (arreteesSmhSeulTooltip && LABELS.arreteesSmhSeulTooltipHtml) {
-        arreteesSmhSeulTooltip.setAttribute('data-tippy-content', LABELS.arreteesSmhSeulTooltipHtml);
-        if (arreteesSmhSeulTooltip._tippy) arreteesSmhSeulTooltip._tippy.setContent(LABELS.arreteesSmhSeulTooltipHtml);
-    }
     setText('salary-curve-title', LABELS.salaryCurveTitle);
     setText('salary-curve-help', LABELS.salaryCurveHelp);
     setText('timeline-help-text', LABELS.timelineHelpText);

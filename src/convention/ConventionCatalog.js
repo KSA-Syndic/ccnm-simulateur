@@ -31,7 +31,7 @@ export function getConventionPrimeDefs() {
             kind: ELEMENT_KIND_PRIME,
             source: SOURCE_CONVENTION,
             valueKind: VALUE_KIND_POURCENTAGE,
-            label: 'Prime ancienneté CCN',
+            label: 'Prime d\'ancienneté conventionnelle',
             config: {
                 seuil: CONFIG.ANCIENNETE.seuil,
                 plafond: CONFIG.ANCIENNETE.plafond,
@@ -45,7 +45,7 @@ export function getConventionPrimeDefs() {
             kind: ELEMENT_KIND_PRIME,
             source: SOURCE_CONVENTION,
             valueKind: VALUE_KIND_HORAIRE,
-            label: 'Prime d\'équipe CCN',
+            label: 'Prime d\'équipe conventionnelle',
             config: {
                 stateKeyActif: 'travailEquipe',
                 stateKeyHeures: 'heuresEquipe',
@@ -70,7 +70,7 @@ export function getConventionMajorationDefs() {
             kind: ELEMENT_KIND_MAJORATION,
             source: SOURCE_CONVENTION,
             valueKind: VALUE_KIND_POURCENTAGE,
-            label: 'Majoration nuit CCN',
+            label: 'Majoration de nuit conventionnelle',
             config: {
                 taux: CONFIG.MAJORATIONS_CCN.nuit,
                 typeUnique: true
@@ -82,7 +82,7 @@ export function getConventionMajorationDefs() {
             kind: ELEMENT_KIND_MAJORATION,
             source: SOURCE_CONVENTION,
             valueKind: VALUE_KIND_POURCENTAGE,
-            label: 'Majoration dimanche CCN',
+            label: 'Majoration du dimanche conventionnelle',
             config: {
                 taux: CONFIG.MAJORATIONS_CCN.dimanche
             }
@@ -93,7 +93,7 @@ export function getConventionMajorationDefs() {
             kind: ELEMENT_KIND_MAJORATION,
             source: SOURCE_CONVENTION,
             valueKind: VALUE_KIND_POURCENTAGE,
-            label: 'Majoration heures supplémentaires (+25%) CCN',
+            label: 'Majoration heures supplémentaires (+25%) conventionnelle',
             config: {
                 taux: CONFIG.MAJORATIONS_CCN.heuresSup25,
                 stateKeyActif: 'travailHeuresSup',
@@ -107,7 +107,7 @@ export function getConventionMajorationDefs() {
             kind: ELEMENT_KIND_MAJORATION,
             source: SOURCE_CONVENTION,
             valueKind: VALUE_KIND_POURCENTAGE,
-            label: 'Majoration heures supplémentaires (+50%) CCN',
+            label: 'Majoration heures supplémentaires (+50%) conventionnelle',
             config: {
                 taux: CONFIG.MAJORATIONS_CCN.heuresSup50,
                 stateKeyActif: 'travailHeuresSup',
