@@ -972,6 +972,36 @@ function initControls() {
         input.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
+    function getStepFromInput(input) {
+        const explicitStep = Number.parseFloat(String(input?.getAttribute('step') || ''));
+        if (Number.isFinite(explicitStep) && explicitStep > 0) return explicitStep;
+        const raw = String(input?.value ?? '').replace(',', '.');
+        const dec = raw.includes('.') ? (raw.split('.')[1] || '').length : 0;
+        if (dec > 0) {
+            return 10 ** (-Math.min(dec, 4));
+        }
+        return 1;
+    }
+
+    function roundToStep(value, step) {
+        const precision = Math.min(6, Math.max(0, Math.ceil(-Math.log10(step || 1))));
+        return Number(value.toFixed(precision));
+    }
+
+    function nudgeInputValue(input, direction) {
+        const step = getStepFromInput(input);
+        const current = parseDecimalInput(input.value, 0);
+        const minAttr = Number.parseFloat(String(input.getAttribute('min') || ''));
+        const maxAttr = Number.parseFloat(String(input.getAttribute('max') || ''));
+        let next = current + (direction * step);
+        next = roundToStep(next, step);
+        if (Number.isFinite(minAttr)) next = Math.max(minAttr, next);
+        if (Number.isFinite(maxAttr)) next = Math.min(maxAttr, next);
+        input.value = String(next).replace('.', ',');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        try { input.select(); } catch (_) { /* no-op */ }
+    }
+
     // Mobile/IME: intercepter avant insertion de "," ou "." dans les inputs number.
     document.addEventListener('beforeinput', (e) => {
         const input = e.target && e.target.closest
@@ -1009,6 +1039,12 @@ function initControls() {
             ? e.target.closest('input[type="number"], input[data-decimal-input="true"]')
             : null;
         if (!input) return;
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            e.preventDefault();
+            nudgeInputValue(input, e.key === 'ArrowUp' ? 1 : -1);
+            return;
+        }
         const isDecimalKey = e.key === ',' || e.key === '.' || e.key === 'Decimal' || e.code === 'NumpadDecimal';
         if (!isDecimalKey) return;
         if (e.ctrlKey || e.metaKey || e.altKey) return;
