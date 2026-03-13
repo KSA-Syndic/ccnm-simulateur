@@ -81,8 +81,10 @@ export function updateHeaderAgreement(agreement) {
             : '';
 
         const blocks = [];
-        blocks.push(escapeHtml(LABELS.headerInfoTooltip));
-        blocks.push(`<a class="tooltip-link" href="${CONVENTION_URL}" target="_blank" rel="noopener">${escapeHtml(LABELS.headerInfoTooltipLinkText)}</a>`);
+        blocks.push(
+            `${escapeHtml(LABELS.headerInfoTooltip)}<br>` +
+            `<a class="tooltip-link" href="${CONVENTION_URL}" target="_blank" rel="noopener">${escapeHtml(LABELS.headerInfoTooltipLinkText)}</a>`
+        );
         if (year || effectiveDate || updatedAt || yearly) {
             const lines = [];
             if (year) lines.push(`Grille SMH : ${year}`);
