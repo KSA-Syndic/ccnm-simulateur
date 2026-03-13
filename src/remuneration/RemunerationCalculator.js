@@ -14,23 +14,20 @@ import { computePrime } from './PrimeCalculator.js';
 import { computeMajoration } from './MajorationCalculator.js';
 import { computeForfait } from './ForfaitCalculator.js';
 import { formatMoney } from '../utils/formatters.js';
-import { getAccordInput, getAccordPrimeDefsAsElements } from '../agreements/AgreementInterface.js';
+import { getAccordInput, getAccordPrimeDefsAsElements, resolvePrimeSemanticId } from '../agreements/AgreementInterface.js';
 import { getConventionPrimeDefs, getConventionMajorationDefs, getConventionForfaitDefs } from '../convention/ConventionCatalog.js';
 import { SEMANTIC_ID, SOURCE_ACCORD } from '../core/RemunerationTypes.js';
 
 function resolveReferenceYear(date) {
-    const requestedYear = date instanceof Date && !Number.isNaN(date.getTime())
+    const selectedYear = date instanceof Date && !Number.isNaN(date.getTime())
         ? date.getFullYear()
-        : (CONFIG.SMH_UPDATE?.referenceYear ?? new Date().getFullYear());
-    const years = Object.keys(CONFIG.SMH_BY_YEAR || {}).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
-    if (!years.length) return requestedYear;
-    if (requestedYear <= years[0]) return years[0];
-    if (requestedYear >= years[years.length - 1]) return years[years.length - 1];
-    let selected = years[0];
-    for (const y of years) {
-        if (y <= requestedYear) selected = y;
+        : (CONFIG.CURRENT_DATA_YEAR ?? CONFIG.SMH_UPDATE?.referenceYear ?? new Date().getFullYear());
+    const hasSmhYear = CONFIG.SMH_BY_YEAR?.[selectedYear] != null;
+    const hasBaremeYear = CONFIG.BAREME_DEBUTANTS_BY_YEAR?.[selectedYear] != null;
+    if (!hasSmhYear || !hasBaremeYear) {
+        throw new Error(`[CONFIG] Données annuelles incomplètes pour ${selectedYear}. Vérifier SMH_BY_YEAR et BAREME_DEBUTANTS_BY_YEAR.`);
     }
-    return selected;
+    return selectedYear;
 }
 
 function getSmhForClasse(classe, date) {
@@ -136,18 +133,37 @@ function computeForfaitJoursRachat(state, baseSMH, agreement) {
  */
 function buildAccordPrimeAncienneteDef(agreement) {
     if (!agreement?.anciennete) return null;
+    const primeAncienneteAccord = getAccordAnciennetePrimeConfig(agreement);
+    const inclusDansSMH = resolveAccordAncienneteSmhInclusion(agreement, primeAncienneteAccord);
     return {
         id: 'primeAnciennete',
         semanticId: SEMANTIC_ID.PRIME_ANCIENNETE,
         kind: 'prime',
         source: SOURCE_ACCORD,
         valueKind: 'pourcentage',
-        label: `Prime ancienneté ${agreement.nomCourt}`,
+        label: primeAncienneteAccord?.label || `Prime ancienneté ${agreement.nomCourt}`,
         config: {
             barème: agreement.anciennete.barème,
-            inclusDansSMH: agreement.anciennete.inclusDansSMH === true
+            inclusDansSMH
         }
     };
+}
+
+function getAccordAnciennetePrimeConfig(agreement) {
+    const primes = Array.isArray(agreement?.primes) ? agreement.primes : [];
+    return primes.find((prime) => resolvePrimeSemanticId(prime) === SEMANTIC_ID.PRIME_ANCIENNETE) ?? null;
+}
+
+function resolveAccordAncienneteSmhInclusion(agreement, primeAncienneteAccord = null) {
+    // Priorité explicite accord :
+    // 1) surcharge via prime sémantique primeAnciennete
+    // 2) agreement.anciennete.inclusDansSMH
+    // 3) défaut CCNM (exclue du SMH) => false
+    const primeOverride = primeAncienneteAccord?.inclusDansSMH;
+    if (typeof primeOverride === 'boolean') return primeOverride;
+    const accordOverride = agreement?.anciennete?.inclusDansSMH;
+    if (typeof accordOverride === 'boolean') return accordOverride;
+    return false;
 }
 
 function getAncienneteConfigInclusion() {
@@ -161,11 +177,13 @@ function getAncienneteConfigInclusion() {
 
 function resolveAncienneteSmhInclusion(explicitInclusion, source) {
     // Règle de priorité :
-    // 1) Accord explicite (surcharge)
-    // 2) Paramètre global config
-    // 3) false
+    // - Accord: surcharge explicite, sinon défaut CCNM (false)
+    // - CCN: explicite puis paramètre global config
     if (source === 'accord' && typeof explicitInclusion === 'boolean') {
         return explicitInclusion;
+    }
+    if (source === 'accord') {
+        return false;
     }
     if (source === 'ccn' && typeof explicitInclusion === 'boolean') {
         return explicitInclusion;
@@ -590,43 +608,65 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         }
     }
 
-    // Primes accord : liste générique (horaire + montant) — on itère sur toutes les primes de l'accord, sans filtre par type
+    // Primes accord : liste générique (horaire + montant).
+    // Les primes incluses dans le SMH sont toujours actives (distribution du SMH).
+    // En cas de doublon sémantique dans un accord, on retient la plus favorable.
     if (agreement) {
         const accordPrimeDefs = getAccordPrimeDefsAsElements(agreement);
+        const groupedBySemantic = new Map();
         for (const def of accordPrimeDefs) {
             if (def.semanticId === SEMANTIC_ID.PRIME_ANCIENNETE || def.semanticId === SEMANTIC_ID.PRIME_EQUIPE) continue; // déjà traitées au-dessus
-            const actif = getAccordInput(state, def.config?.stateKeyActif);
-            if (actif !== true && actif !== 'true') continue;
-            const r = computePrime(def, context);
-            if (r.amount > 0) {
-                let label = r.label;
-                if (def.valueKind === 'horaire' && r.meta?.heures != null) {
-                    const taux = r.meta.tauxHoraire ?? 0;
-                    label = `${r.label} (${r.meta.heures}h × +${taux}€ ${agreement.nomCourt})`;
-                } else if (def.valueKind === 'majorationHoraire' && r.meta?.heures != null) {
-                    label = `${r.label} (+${r.meta.taux ?? 0}%) (${r.meta.heures}h/mois)`;
-                } else if (def.valueKind === 'montant' && def.config?.moisVersement != null) {
-                    const moisNom = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'][def.config.moisVersement - 1];
-                    label = `${r.label} ${agreement.nomCourt} (${moisNom})`;
-                } else {
-                    label = `${r.label} ${agreement.nomCourt}`;
-                }
+            const key = def.semanticId || def.id;
+            if (!groupedBySemantic.has(key)) groupedBySemantic.set(key, []);
+            groupedBySemantic.get(key).push(def);
+        }
+
+        for (const defs of groupedBySemantic.values()) {
+            const candidates = [];
+            for (const def of defs) {
                 const isSMHIncluded = def.config?.inclusDansSMH === true;
-                details.push({
-                    label,
-                    value: r.amount,
-                    isPositive: !isSMHIncluded, // SMH inclus = informatif (pas additif), sinon positif
-                    isAgreement: true,
-                    isSMHIncluded,
-                    agreementId: agreement.id,
-                    moisVersement: def.config?.moisVersement ?? null
-                });
-                // Les primes incluses dans le SMH (Art. 140 CCNM) ne s'ajoutent PAS au total :
-                // elles constituent une distribution du salaire permettant d'atteindre le SMH grille,
-                // pas un supplément. Seules les primes exclues du SMH s'ajoutent au-dessus.
-                if (!isSMHIncluded) {
-                    total += r.amount;
-                }
+                const actif = isSMHIncluded
+                    ? true
+                    : getAccordInput(state, def.config?.stateKeyActif);
+                if (actif !== true && actif !== 'true') continue;
+                const r = computePrime(def, context);
+                if (!(r.amount > 0)) continue;
+                candidates.push({ def, r, isSMHIncluded });
+            }
+            if (!candidates.length) continue;
+
+            const selected = candidates.reduce((best, cur) => (cur.r.amount > best.r.amount ? cur : best), candidates[0]);
+            const def = selected.def;
+            const r = selected.r;
+            const isSMHIncluded = selected.isSMHIncluded;
+
+            let label = r.label;
+            if (def.valueKind === 'horaire' && r.meta?.heures != null) {
+                const taux = r.meta.tauxHoraire ?? 0;
+                label = `${r.label} (${r.meta.heures}h × +${taux}€ ${agreement.nomCourt})`;
+            } else if (def.valueKind === 'majorationHoraire' && r.meta?.heures != null) {
+                label = `${r.label} (+${r.meta.taux ?? 0}%) (${r.meta.heures}h/mois)`;
+            } else if (def.valueKind === 'montant' && def.config?.moisVersement != null) {
+                const moisNom = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'][def.config.moisVersement - 1];
+                label = `${r.label} ${agreement.nomCourt} (${moisNom})`;
+            } else {
+                label = `${r.label} ${agreement.nomCourt}`;
+            }
+            details.push({
+                label,
+                value: r.amount,
+                isPositive: !isSMHIncluded, // SMH inclus = informatif (pas additif), sinon positif
+                isAgreement: true,
+                isSMHIncluded,
+                agreementId: agreement.id,
+                semanticId: def.semanticId || def.id,
+                moisVersement: def.config?.moisVersement ?? null
+            });
+            // Les primes incluses dans le SMH (Art. 140 CCNM) ne s'ajoutent PAS au total :
+            // elles constituent une distribution du salaire permettant d'atteindre le SMH grille,
+            // pas un supplément. Seules les primes exclues du SMH s'ajoutent au-dessus.
+            if (!isSMHIncluded) {
+                total += r.amount;
             }
         }
     }

@@ -34,7 +34,7 @@ export const KuhnAgreement = {
         plafond: 25,        // Plafonné à 25 ans (CCN: 15 ans)
         tousStatuts: true,  // Cadres ET Non-Cadres (CCN: Non-Cadres seuls)
         baseCalcul: 'salaire', // Base = rémunération de base brute (salaire réel, pas valeur du point)
-        inclusDansSMH: false,   // Art. 140 CCNM : la prime d'ancienneté est formellement exclue de l'assiette SMH
+        inclusDansSMH: true,   // Art. 140 CCNM : la prime d'ancienneté est formellement exclue de l'assiette SMH
         barème: {
             2: 0.02, 3: 0.03, 4: 0.04, 5: 0.05, 6: 0.06,
             7: 0.07, 8: 0.08, 9: 0.09, 10: 0.10, 11: 0.11,
@@ -188,7 +188,7 @@ export const KuhnAgreement = {
     // ─────────────────────────────────────────────────────────────
     labels: {
         nomCourt: 'Kuhn',
-        description: 'Accord d\'entreprise qui améliore la convention : prime d\'ancienneté dès 2 ans (au lieu de 3), prime vacances, prime équipe, 13e mois et majorations (nuit, dimanche).'
+        description: 'Accord d\'entreprise qui est censée améliorer la convention : prime d\'ancienneté dès 2 ans (au lieu de 3), prime vacances, prime équipe, 13e mois et majorations (nuit, dimanche).'
     },
 
     // ─────────────────────────────────────────────────────────────

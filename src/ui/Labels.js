@@ -7,6 +7,9 @@
  */
 
 import { formatAcronym, resetAcronymsRegistry } from '../utils/textHelpers.js';
+import { CONFIG } from '../core/config.js';
+
+const CURRENT_DATA_YEAR = CONFIG.CURRENT_DATA_YEAR;
 
 /** URL des textes conventionnels (source officielle UIMM). Centraliser ici pour tooltip header et autres liens. */
 export const CONVENTION_URL = 'https://uimm.lafabriquedelavenir.fr/textes-conventionnels-metallurgie/';
@@ -17,7 +20,7 @@ export const CONVENTION_URL = 'https://uimm.lafabriquedelavenir.fr/textes-conven
 
 export const LABELS = {
     // Header
-    headerTitle: 'Simulateur Métallurgie 2026',
+    headerTitle: `Simulateur Métallurgie ${CURRENT_DATA_YEAR}`,
     headerSubtitle: 'Classification et Rémunération',
     headerInfoTooltip: 'Ce simulateur vous aide à estimer votre niveau de classification et à vérifier que votre salaire respecte au minimum les barèmes de la convention collective de la métallurgie (CCN).',
     headerInfoTooltipLinkText: 'Voir les textes de la convention',
@@ -108,7 +111,7 @@ export const LABELS = {
     smhSeul: 'Calculer les arriérés sur le SMH seul',
     
     // Footer
-    footerText: 'Convention Collective Nationale de la Métallurgie (CCNM) 2026',
+    footerText: `Convention Collective Nationale de la Métallurgie (CCNM) ${CURRENT_DATA_YEAR}`,
     footerDisclaimer: 'Outil indicatif',
     footerCredit: 'Réalisé par CFDT Kuhn',
     footerPrivacyLink: 'Politique de confidentialité'

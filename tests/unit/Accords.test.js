@@ -16,7 +16,8 @@ import {
     getPrimeHeures,
     isPrimeActive,
     primeDefToElementDef,
-    getAccordPrimeDefsAsElements
+    getAccordPrimeDefsAsElements,
+    resolvePrimeSemanticId
 } from '../../src/agreements/AgreementInterface.js';
 import { KuhnAgreement } from '../../accords/KuhnAgreement.js';
 import { computePrime } from '../../src/remuneration/PrimeCalculator.js';
@@ -175,6 +176,25 @@ describe('Accords - Interface (primeDefToElementDef, getAccordPrimeDefsAsElement
         expect(elements.length).toBe(3);
         expect(elements.every(e => e.source === SOURCE_ACCORD && e.kind === 'prime')).toBe(true);
     });
+
+    it('devrait respecter semanticId explicite pour la surcharge', () => {
+        const accord = accordMinimal([{
+            id: 'primeAncienneteSociete',
+            semanticId: 'primeAnciennete',
+            label: 'Prime ancienneté société',
+            sourceValeur: 'accord',
+            valueType: 'pourcentage',
+            unit: '%',
+            valeurAccord: 0.02,
+            stateKeyActif: 'primeAncienneteSociete'
+        }]);
+        const element = getAccordPrimeDefsAsElements(accord)[0];
+        expect(element.semanticId).toBe('primeAnciennete');
+    });
+
+    it('devrait inférer la sémantique depuis id/label si semanticId absent', () => {
+        expect(resolvePrimeSemanticId({ id: 'primeEquipeNuit', label: 'Prime équipe de nuit' })).toBe('primeEquipe');
+    });
 });
 
 describe('Accords - Kuhn (calculs spécifiques)', () => {
@@ -198,11 +218,11 @@ describe('Accords - Kuhn (calculs spécifiques)', () => {
         expect(result.amount).toBe(525);
     });
 
-    it('devrait ne pas verser la prime vacances si non activée', () => {
+    it('devrait verser la prime vacances même décochée car inclusDansSMH=true', () => {
         const def = getAccordPrimeDefsAsElements(KuhnAgreement).find(e => e.id === 'primeVacances');
-        const state = { accordInputs: { primeVacances: false } };
+        const state = { accordInputs: { primeVacances: false }, anciennete: 2 };
         const result = computePrime(def, { state, agreement: KuhnAgreement });
-        expect(result.amount).toBe(0);
+        expect(result.amount).toBe(525);
     });
 
     it('devrait ne pas verser la prime équipe si travail équipe non coché', () => {

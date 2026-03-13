@@ -29,6 +29,15 @@ function resolvePrimeHeures(def, context) {
     return (heuresRaw == null || heuresRaw === '') ? defaultHeures : (Number(heuresRaw) || 0);
 }
 
+function isAccordPrimeActive(cfg, state) {
+    // Les primes incluses dans le SMH sont toujours actives :
+    // elles décrivent une distribution du SMH, pas un opt-in utilisateur.
+    if (cfg?.inclusDansSMH === true) return true;
+    if (!cfg?.stateKeyActif) return false;
+    const value = getAccordInput(state, cfg.stateKeyActif);
+    return value === true || value === 'true' || state?.[cfg.stateKeyActif] === true;
+}
+
 /**
  * Calcule le montant annuel d'une prime à partir de sa définition (convention ou accord).
  * @param {import('../core/RemunerationTypes.js').ElementDef} def - Définition de la prime (convention ou accord)
@@ -160,7 +169,7 @@ function computePrimeAccord(def, context) {
     }
 
     if (def.valueKind === 'majorationHoraire') {
-        const actif = (cfg.stateKeyActif && (getAccordInput(state, cfg.stateKeyActif) === true || state[cfg.stateKeyActif] === true));
+        const actif = isAccordPrimeActive(cfg, state);
         if (!actif) {
             return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
         }
@@ -184,7 +193,7 @@ function computePrimeAccord(def, context) {
     }
 
     if (def.valueKind === 'horaire') {
-        const actif = (cfg.stateKeyActif && (getAccordInput(state, cfg.stateKeyActif) === true || state[cfg.stateKeyActif] === true));
+        const actif = isAccordPrimeActive(cfg, state);
         if (!actif) {
             return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
         }
@@ -208,7 +217,7 @@ function computePrimeAccord(def, context) {
     }
 
     if (def.valueKind === 'montant') {
-        const actif = (cfg.stateKeyActif && (getAccordInput(state, cfg.stateKeyActif) === true || state[cfg.stateKeyActif] === true));
+        const actif = isAccordPrimeActive(cfg, state);
         if (!actif) {
             return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
         }

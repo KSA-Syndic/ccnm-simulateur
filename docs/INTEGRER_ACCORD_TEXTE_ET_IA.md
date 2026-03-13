@@ -117,10 +117,22 @@ Concrètement dans le simulateur :
 - Les primes inclusDansSMH: true n'augmentent pas ce total ; elles sont affichées en sous-lignes informatives rattachées au SMH (préfixe « dont »).
 - Elles sont TOUJOURS actives (pas de checkbox) et influencent uniquement la distribution mensuelle (le mois de leur versement a un montant attendu différent).
 
+PRIORITÉ SPÉCIFIQUE PRIME D'ANCIENNETÉ (accord actif) :
+- Par défaut, la prime d'ancienneté suit la règle courante définie par la convention et/ou la configuration du projet.
+- Pour la surcharger, il faut un booléen explicite :
+  1. `primes[].semanticId: 'primeAnciennete'` + `inclusDansSMH` (priorité la plus haute),
+  2. sinon `anciennete.inclusDansSMH`,
+  3. sinon fallback sur le comportement par défaut actuellement paramétré.
+- Ne jamais déduire ce choix d'un paramètre global lorsque l'accord est actif.
+
 RÈGLE D'ÉCRITURE D'UN ACCORD DANS CE PROJET :
 - Ne modéliser que les écarts réels à la CCN.
 - Ne pas ajouter dans `primes`/`majorations` un élément identique à la CCN.
 - Si un élément est cité sans changer le calcul, le laisser en informatif (`elements`) plutôt qu'en logique de calcul.
+- Pour une surcharge d'un élément CCN existant, conserver le même sens métier :
+  - soit en gardant le même `id` (ex. `primeEquipe`, `primeAnciennete`),
+  - soit en renseignant explicitement `semanticId` avec la valeur canonique (`primeEquipe`, `primeAnciennete`, `primeVacances`).
+  Sans cela, la surcharge CCN/accord peut être ambiguë ou ignorée.
 
 PÉRIODICITÉ DE VÉRIFICATION DU SMH — ANNÉE CIVILE
 Le SMH s'apprécie sur l'ANNÉE CIVILE (Art. 140 CCNM), pas mois par mois.
@@ -153,6 +165,9 @@ MAJORATIONS :
 
 PRIMES (TABLEAU d'objets) : chaque prime doit avoir au minimum :
   - id (string, ex. 'primeEquipe', 'primeVacances', 'primeNoel')
+  - semanticId (string, recommandé) : identifiant métier de surcharge.
+    Exemples : `primeEquipe`, `primeAnciennete`, `primeVacances`.
+    Obligatoire dès que l'id technique diffère du nom canonique.
   - label (string)
   - sourceValeur ('accord' ou 'modalite')
   - valueType ('horaire', 'montant', 'pourcentage', ou 'majorationHoraire')
@@ -188,6 +203,7 @@ CONVENTIONS DE CODAGE
 - Les taux sont en décimaux : 20% → 0.20, 50% → 0.50.
 - Les primes avec valueType 'montant' et un mois de versement unique doivent avoir moisVersement (1-12).
 - Chaque prime activable par l'utilisateur doit avoir un stateKeyActif unique (camelCase) ; si une nouvelle prime (ex. prime Noël), inventer une clé cohérente (ex. primeNoel) et l'ajouter dans la liste des stateKeyActif à documenter pour le développeur.
+- Pour toute prime qui remplace/améliore une prime CCN existante, utiliser le même nom canonique (`id`) ou renseigner `semanticId` pour garantir la surcharge dynamique dans le calcul et l'affichage.
 - Pour la prime d'équipe, préférer `autoHeures: true` (base auto 151,67h, sans HS) et éviter la saisie manuelle d'heures.
 - Si le texte ne précise pas une valeur, mettre une valeur par défaut raisonnable ou null et indiquer en commentaire.
 - Le flag inclusDansSMH est OBLIGATOIRE pour chaque prime et pour anciennete. Ne l'oublie jamais.

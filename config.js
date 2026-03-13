@@ -44,37 +44,61 @@
  * Saisie utilisateur = brut incluant primes SMH (Art. 140), excluant ancienneté et majorations.
  */
 
+const CURRENT_DATA_YEAR = 2024;
+
+const SMH_BY_YEAR = {
+    2024: {
+        1: 21700, 2: 21850, 3: 22450, 4: 23400, 5: 24250, 6: 25550,
+        7: 26400, 8: 28450, 9: 30500, 10: 33700, 11: 34900, 12: 36700,
+        13: 40000, 14: 43900, 15: 47000, 16: 52000, 17: 59300, 18: 68000
+    },
+    2025: {
+        1: 21700, 2: 21850, 3: 22450, 4: 23400, 5: 24250, 6: 25550,
+        7: 26400, 8: 28450, 9: 30500, 10: 33700, 11: 34900, 12: 36700,
+        13: 40000, 14: 43900, 15: 47000, 16: 52000, 17: 59300, 18: 68000
+    },
+    2026: {
+        1: 21980, 2: 22100, 3: 22710, 4: 23620, 5: 24510, 6: 25780,
+        7: 26680, 8: 28700, 9: 30760, 10: 33970, 11: 35200, 12: 37000,
+        13: 40350, 14: 44250, 15: 47380, 16: 52370, 17: 59720, 18: 68450
+    }
+};
+
+const BAREME_DEBUTANTS_BY_YEAR = {
+    2024: {
+        11: { 0: 28200, 2: 29610, 4: 31979, 6: 34900 },
+        12: { 0: 29700, 2: 31185, 4: 33680, 6: 36700 }
+    },
+    2025: {
+        11: { 0: 28200, 2: 29610, 4: 31979, 6: 34900 },
+        12: { 0: 29700, 2: 31185, 4: 33680, 6: 36700 }
+    },
+    2026: {
+        11: { 0: 28430, 2: 29852, 4: 32240, 6: 35200 },
+        12: { 0: 29940, 2: 31437, 4: 33952, 6: 37000 }
+    }
+};
+
+if (!SMH_BY_YEAR[CURRENT_DATA_YEAR] || !BAREME_DEBUTANTS_BY_YEAR[CURRENT_DATA_YEAR]) {
+    throw new Error(`[CONFIG] Données annuelles incomplètes pour ${CURRENT_DATA_YEAR}. Mettre à jour SMH_BY_YEAR et BAREME_DEBUTANTS_BY_YEAR.`);
+}
+
 const CONFIG = {
+    CURRENT_DATA_YEAR,
 
     // ╔════════════════════════════════════════════════════════════════╗
     // ║         CONVENTION COLLECTIVE NATIONALE (CCN) - MAJ 2026       ║
     // ╚════════════════════════════════════════════════════════════════╝
 
-    // Salaires Minimum Hiérarchiques (annuels bruts) - Grille 2026 (effet 01/01/2026)
-    SMH: {
-        1: 21980,   // A1
-        2: 22100,   // A2
-        3: 22710,   // B3
-        4: 23620,   // B4
-        5: 24510,   // C5
-        6: 25780,   // C6
-        7: 26680,   // D7
-        8: 28700,   // D8
-        9: 30760,   // E9
-        10: 33970,  // E10
-        11: 35200,  // F11
-        12: 37000,  // F12
-        13: 40350,  // G13
-        14: 44250,  // G14
-        15: 47380,  // H15
-        16: 52370,  // H16
-        17: 59720,  // I17
-        18: 68450   // I18
-    },
+    // Salaires Minimum Hiérarchiques (annuels bruts) - Grille active
+    SMH: SMH_BY_YEAR[CURRENT_DATA_YEAR],
+    
+    SMH_BY_YEAR,
+
 
     // Métadonnées de mise à jour des SMH (affichage tooltip/rapport)
     SMH_UPDATE: {
-        referenceYear: 2026,
+        referenceYear: CURRENT_DATA_YEAR,
         updatedAt: '2026-03-12',
         years: {
             2024: {
@@ -101,58 +125,13 @@ const CONFIG = {
         }
     },
 
-    // Grilles par année (utilisées par les arriérés pour appliquer la bonne base selon la période)
-    SMH_BY_YEAR: {
-        2024: {
-            1: 21700, 2: 21850, 3: 22450, 4: 23400, 5: 24250, 6: 25550,
-            7: 26400, 8: 28450, 9: 30500, 10: 33700, 11: 34900, 12: 36700,
-            13: 40000, 14: 43900, 15: 47000, 16: 52000, 17: 59300, 18: 68000
-        },
-        2025: {
-            1: 21700, 2: 21850, 3: 22450, 4: 23400, 5: 24250, 6: 25550,
-            7: 26400, 8: 28450, 9: 30500, 10: 33700, 11: 34900, 12: 36700,
-            13: 40000, 14: 43900, 15: 47000, 16: 52000, 17: 59300, 18: 68000
-        },
-        2026: {
-            1: 21980, 2: 22100, 3: 22710, 4: 23620, 5: 24510, 6: 25780,
-            7: 26680, 8: 28700, 9: 30760, 10: 33970, 11: 35200, 12: 37000,
-            13: 40350, 14: 44250, 15: 47380, 16: 52370, 17: 59720, 18: 68450
-        }
-    },
-
     // Barème salariés débutants (Groupe F : Classes 11 et 12)
     // Barème progressif selon l'expérience professionnelle
     // Tranches : < 2 ans, 2-4 ans, 4-6 ans, ≥ 6 ans
     // Inclut les majorations de 5% (2 ans) ou 8% (4 ans) prévues par l'Art. 139
-    BAREME_DEBUTANTS: {
-        11: {   // F11
-            0: 28430,   // < 2 ans
-            2: 29852,   // 2 à < 4 ans
-            4: 32240,   // 4 à 6 ans
-            6: 35200    // ≥ 6 ans = SMH F11 standard
-        },
-        12: {   // F12
-            0: 29940,   // < 2 ans
-            2: 31437,   // 2 à < 4 ans
-            4: 33952,   // 4 à 6 ans
-            6: 37000    // ≥ 6 ans = SMH F12 standard
-        }
-    },
-
-    BAREME_DEBUTANTS_BY_YEAR: {
-        2024: {
-            11: { 0: 28200, 2: 29610, 4: 31979, 6: 34900 },
-            12: { 0: 29700, 2: 31185, 4: 33680, 6: 36700 }
-        },
-        2025: {
-            11: { 0: 28200, 2: 29610, 4: 31979, 6: 34900 },
-            12: { 0: 29700, 2: 31185, 4: 33680, 6: 36700 }
-        },
-        2026: {
-            11: { 0: 28430, 2: 29852, 4: 32240, 6: 35200 },
-            12: { 0: 29940, 2: 31437, 4: 33952, 6: 37000 }
-        }
-    },
+    BAREME_DEBUTANTS: BAREME_DEBUTANTS_BY_YEAR[CURRENT_DATA_YEAR],
+    
+    BAREME_DEBUTANTS_BY_YEAR,
 
     // Taux pour calcul Prime d'ancienneté (non-cadres uniquement, CCNM Art. 142)
     // Formule : Point territorial × Taux (classe) × Années = montant mensuel ; annuel = mensuel × 12

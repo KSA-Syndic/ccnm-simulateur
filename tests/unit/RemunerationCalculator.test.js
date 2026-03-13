@@ -360,6 +360,57 @@ describe('RemunerationCalculator', () => {
             }
         });
 
+        it('doit garder ancienneté exclue du SMH par défaut avec accord actif si aucune surcharge explicite', () => {
+            const previous = CONFIG.ANCIENNETE.inclusDansSMH;
+            CONFIG.ANCIENNETE.inclusDansSMH = true;
+            try {
+                const state = {
+                    ...stateBase,
+                    scores: [3, 3, 3, 3, 3, 3],
+                    anciennete: 5,
+                    accordActif: true
+                };
+                const result = calculateAnnualRemuneration(state, accordKuhn, { mode: 'full' });
+                const primeAnc = result.details.find(d => d.semanticId === 'primeAnciennete');
+                expect(primeAnc).toBeDefined();
+                expect(primeAnc.isSMHIncluded).toBe(false);
+                expect(result.total).toBeGreaterThan(CONFIG.SMH[5]);
+            } finally {
+                CONFIG.ANCIENNETE.inclusDansSMH = previous;
+            }
+        });
+
+        it('doit permettre la surcharge ancienneté via prime accord sémantique', () => {
+            const state = {
+                ...stateBase,
+                scores: [3, 3, 3, 3, 3, 3],
+                anciennete: 5,
+                accordActif: true
+            };
+            const accordAvecPrimeAnciennete = {
+                ...accordKuhn,
+                primes: [
+                    ...accordKuhn.primes,
+                    {
+                        id: 'primeAncienneteSociete',
+                        semanticId: 'primeAnciennete',
+                        label: 'Prime ancienneté société',
+                        sourceValeur: 'accord',
+                        valueType: 'pourcentage',
+                        unit: '%',
+                        valeurAccord: null,
+                        stateKeyActif: 'primeAncienneteSociete',
+                        inclusDansSMH: true
+                    }
+                ]
+            };
+            const result = calculateAnnualRemuneration(state, accordAvecPrimeAnciennete, { mode: 'full' });
+            const primeAnc = result.details.find(d => d.semanticId === 'primeAnciennete');
+            expect(primeAnc).toBeDefined();
+            expect(primeAnc.isSMHIncluded).toBe(true);
+            expect(result.total).toBe(CONFIG.SMH[5]);
+        });
+
         it('devrait appliquer la prime CCN si plus avantageuse que l\'accord (cas limite)', () => {
             // Cas où la prime CCN devient supérieure à l'accord après plusieurs années
             // Exemple : C5, 15 ans, point territorial élevé
@@ -422,6 +473,30 @@ describe('RemunerationCalculator', () => {
             const primeVacances = result.details.find(d => d.label.includes('vacances'));
             expect(primeVacances).toBeDefined();
             expect(primeVacances.value).toBe(525);
+        });
+
+        it('doit traiter une prime accord inclusDansSMH comme toujours active et informative', () => {
+            const accordAvecPrimeSmh = {
+                ...accordKuhn,
+                primes: accordKuhn.primes.map(p => p.id === 'primeVacances'
+                    ? { ...p, inclusDansSMH: true }
+                    : p)
+            };
+            const state = {
+                ...stateBase,
+                scores: [3, 3, 3, 3, 3, 3],
+                accordInputs: { ...stateBase.accordInputs, primeVacances: false },
+                accordActif: true,
+                anciennete: 2
+            };
+            const result = calculateAnnualRemuneration(state, accordAvecPrimeSmh, { mode: 'full' });
+            const primeVacances = result.details.find(d => String(d.label).includes('vacances'));
+            const primeAnc = result.details.find(d => d.semanticId === 'primeAnciennete');
+            expect(primeVacances).toBeDefined();
+            expect(primeVacances.isSMHIncluded).toBe(true);
+            expect(primeVacances.isPositive).toBe(false);
+            const attenduTotal = CONFIG.SMH[5] + (primeAnc && primeAnc.isSMHIncluded !== true ? primeAnc.value : 0);
+            expect(result.total).toBe(attenduTotal);
         });
 
         it('ne devrait PAS inclure la prime de vacances si ancienneté < 1 an', () => {
@@ -572,6 +647,20 @@ describe('RemunerationCalculator', () => {
             const smhBase = CONFIG.SMH[11];
             const forfaitMontant = Math.round(smhBase * 0.15);
             expect(result).toBe(smhBase + forfaitMontant);
+        });
+
+        it('doit lever une erreur si l\'année sélectionnée n\'est pas présente dans les grilles', () => {
+            const previousCurrentYear = CONFIG.CURRENT_DATA_YEAR;
+            const previousReferenceYear = CONFIG.SMH_UPDATE.referenceYear;
+            CONFIG.CURRENT_DATA_YEAR = 2099;
+            CONFIG.SMH_UPDATE.referenceYear = 2099;
+            try {
+                const state = { ...stateBase, scores: [3, 3, 3, 3, 3, 3] };
+                expect(() => getMontantAnnuelSMHSeul(state)).toThrow(/Données annuelles incomplètes/);
+            } finally {
+                CONFIG.CURRENT_DATA_YEAR = previousCurrentYear;
+                CONFIG.SMH_UPDATE.referenceYear = previousReferenceYear;
+            }
         });
     });
 });

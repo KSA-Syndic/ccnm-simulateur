@@ -8,6 +8,7 @@
  * « elements » sans connaître les noms de propriétés de chaque accord.
  * Condition d'ancienneté réutilisable pour tout élément.
  */
+import { SEMANTIC_ID } from '../core/RemunerationTypes.js';
 
 /**
  * Condition d'ancienneté pour l'attribution d'un élément (prime, garantie, etc.)
@@ -45,6 +46,8 @@
  * Permet à l'UI et aux calculs de s'adapter sans accéder à des propriétés spécifiques (ex. primes.equipe.montantHoraire).
  * @typedef {Object} PrimeDef
  * @property {string} id - Identifiant unique (ex: 'primeEquipe', 'primeVacances')
+ * @property {string} [semanticId] - Identifiant sémantique de surcharge (ex: 'primeEquipe', 'primeAnciennete').
+ *   Recommandé pour garantir une surcharge robuste CCN/accord quand l'id technique diffère.
  * @property {string} label - Libellé affiché (ex: "Prime d'équipe")
  * @property {'accord'|'modalite'} sourceValeur - Valeur fixée par l'accord ou à compléter par l'utilisateur (modalité)
  * @property {PrimeValueType} valueType - Type de la valeur (horaire, montant, pourcentage)
@@ -127,6 +130,23 @@ export function validateAgreement(agreement) {
     if (!Array.isArray(agreement.primes)) {
         console.warn('Champ primes doit être un tableau (PrimeDef[])');
         return false;
+    }
+
+    const ids = new Set();
+    for (const prime of agreement.primes) {
+        if (!prime || typeof prime !== 'object' || typeof prime.id !== 'string' || prime.id.trim() === '') {
+            console.warn('Chaque prime doit définir un id non vide (string).');
+            return false;
+        }
+        if (ids.has(prime.id)) {
+            console.warn(`id de prime dupliqué dans l'accord: ${prime.id}`);
+            return false;
+        }
+        ids.add(prime.id);
+        if (prime.semanticId != null && (typeof prime.semanticId !== 'string' || prime.semanticId.trim() === '')) {
+            console.warn(`semanticId invalide pour la prime ${prime.id}`);
+            return false;
+        }
     }
     
     return true;
@@ -317,9 +337,10 @@ export function isPrimeActive(agreement, primeId, state) {
  * @returns {import('../core/RemunerationTypes.js').ElementDef}
  */
 export function primeDefToElementDef(primeDef, agreement) {
+    const semanticId = resolvePrimeSemanticId(primeDef);
     return {
         id: primeDef.id,
-        semanticId: primeDef.id,
+        semanticId,
         kind: 'prime',
         source: 'accord',
         valueKind: primeDef.valueType,
@@ -339,4 +360,31 @@ export function primeDefToElementDef(primeDef, agreement) {
 export function getAccordPrimeDefsAsElements(agreement) {
     const primes = getPrimes(agreement);
     return primes.map(p => primeDefToElementDef(p, agreement));
+}
+
+function normalizePrimeKey(value) {
+    return String(value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * Résout l'identifiant sémantique d'une prime d'accord.
+ * Priorité: semanticId explicite > heuristique id/label > id technique.
+ * @param {PrimeDef} primeDef
+ * @returns {string}
+ */
+export function resolvePrimeSemanticId(primeDef) {
+    const explicit = typeof primeDef?.semanticId === 'string' ? primeDef.semanticId.trim() : '';
+    if (explicit) return explicit;
+
+    const idKey = normalizePrimeKey(primeDef?.id);
+    const labelKey = normalizePrimeKey(primeDef?.label);
+    const key = `${idKey} ${labelKey}`;
+    if (key.includes('anciennete')) return SEMANTIC_ID.PRIME_ANCIENNETE;
+    if (key.includes('equipe')) return SEMANTIC_ID.PRIME_EQUIPE;
+    if (key.includes('vacances')) return SEMANTIC_ID.PRIME_VACANCES;
+    return primeDef?.id || '';
 }
