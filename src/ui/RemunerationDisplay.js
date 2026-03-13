@@ -90,7 +90,7 @@ export function updateHeaderAgreement(agreement) {
             if (selectedYear?.sourceLabel) lines.push(`Source: ${escapeHtml(selectedYear.sourceLabel)}`);
             if (yearlyRates.length) {
                 const ratesLabel = yearlyRates
-                    .map(entry => `${entry.year}: ${Math.round(entry.indicativeRate * 10000) / 100}%`)
+                    .map(entry => `${entry.year}: +${Math.round(entry.indicativeRate * 10000) / 100}%`)
                     .join(' · ');
                 lines.push(`Repères (informatif): ${ratesLabel}`);
                 lines.push('Calcul: grilles annuelles.');
