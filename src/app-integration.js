@@ -78,12 +78,12 @@ export function initAppIntegration() {
             const repos = hs.reposCompensateur === true ? ' Repos compensateur possible selon accord.' : '';
             travailHeuresSupTooltip.setAttribute(
                 'data-tippy-content',
-                `CCN : +${pctHs25CCN}% (36e-43e) puis +${pctHs50CCN}% (>=44e). Accord ${getAccordNomCourt(agreement)} : +${pct25}% puis +${pct50}%.${contingent}${repos} Non applicable en forfait jours.`
+                `CCN : +${pctHs25CCN}% (36e-43e) puis +${pctHs50CCN}% (>=44e). Accord ${getAccordNomCourt(agreement)} : +${pct25}% puis +${pct50}%.${contingent}${repos}`
             );
         } else {
             travailHeuresSupTooltip.setAttribute(
                 'data-tippy-content',
-                `CCN : +${pctHs25CCN}% (36e-43e) puis +${pctHs50CCN}% (>=44e). Durée légale : 35h/semaine (151,67h/mois). Non applicable en forfait jours.`
+                `CCN : +${pctHs25CCN}% (36e-43e) puis +${pctHs50CCN}% (>=44e). Durée légale : 35h/semaine (151,67h/mois).`
             );
         }
         if (travailHeuresSupTooltip._tippy) travailHeuresSupTooltip._tippy.setContent(travailHeuresSupTooltip.getAttribute('data-tippy-content'));
