@@ -56,28 +56,28 @@
             
             <!-- 1A: Choix du mode -->
             <div class="step-content" id="step-1a">
-                <h2>Connaissez-vous votre classification ?</h2>
-                <p class="step-subtitle">Elle figure sur votre fiche de paie (ex: F11, D7, A1...)</p>
+                <h2 id="step-1a-page-title"></h2>
+                <p class="step-subtitle" id="step-1a-page-subtitle"></p>
                 
                 <div class="choice-cards">
                     <button class="choice-card" id="btn-connais-classe">
                         <span class="choice-icon">✓</span>
-                        <span class="choice-title">Oui, je la connais</span>
-                        <span class="choice-desc">Je saisis directement ma classification</span>
+                        <span class="choice-title" id="choice-connais-title"></span>
+                        <span class="choice-desc" id="choice-connais-desc"></span>
                     </button>
                     
                     <button class="choice-card" id="btn-estimer-classe">
                         <span class="choice-icon">?</span>
-                        <span class="choice-title">Non, je veux l'estimer</span>
-                        <span class="choice-desc">Je réponds aux 6 critères classants</span>
+                        <span class="choice-title" id="choice-estime-title"></span>
+                        <span class="choice-desc" id="choice-estime-desc"></span>
                     </button>
                 </div>
             </div>
 
             <!-- 1B: Saisie directe de la classe -->
             <div class="step-content hidden" id="step-1b">
-                <h2>Votre classification</h2>
-                <p class="step-subtitle">Sélectionnez votre groupe et classe</p>
+                <h2 id="step-1b-page-title"></h2>
+                <p class="step-subtitle" id="step-1b-page-subtitle"></p>
                 
                 <div class="classification-direct">
                     <div class="select-group-large">
@@ -122,8 +122,8 @@
 
             <!-- 1C: Estimation par critères -->
             <div class="step-content hidden" id="step-1c">
-                <h2>Estimation de votre classification</h2>
-                <p class="step-subtitle">Évaluez votre poste sur les 6 critères (de 1 à 10)</p>
+                <h2 id="step-1c-page-title"></h2>
+                <p class="step-subtitle" id="step-1c-page-subtitle"></p>
                 
                 <div class="roulettes-container" id="roulettes-container">
                     <!-- Les roulettes seront générées dynamiquement -->
@@ -158,8 +158,8 @@
         <!-- ═══════════════════════════════════════════════════════════════ -->
         <section class="wizard-step hidden" id="step-2">
             <div class="step-content">
-                <h2>Votre situation</h2>
-                <p class="step-subtitle">Renseignez vos informations pour affiner le calcul</p>
+                <h2 id="step-2-page-title"></h2>
+                <p class="step-subtitle" id="step-2-page-subtitle"></p>
 
                 <!-- Récap classification -->
                 <div class="recap-classification">
@@ -227,14 +227,14 @@
 
                 <!-- Conditions de travail (collapsible) -->
                 <details class="conditions-details" id="conditions-travail">
-                    <summary>Conditions de travail particulières</summary>
+                    <summary id="conditions-travail-summary"></summary>
                     
                     <div class="conditions-content">
                         <!-- Temps partiel -->
                         <div class="form-group" id="group-temps-partiel">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="travail-temps-partiel" class="book-checkbox">
-                                <span>Temps partiel</span>
+                                <span id="label-travail-temps-partiel"></span>
                                 <span class="tooltip-trigger" data-tippy-content="Code du travail (L3123-5) : la rémunération à temps partiel est proportionnelle à celle d'un temps complet, à qualification égale.">?</span>
                             </label>
                             <div class="sub-field sub-field-inline hidden" id="taux-activite-field">
@@ -248,7 +248,7 @@
                         <div class="form-group" id="group-nuit">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="travail-nuit" class="book-checkbox">
-                                <span>Travail de nuit</span>
+                                <span id="label-travail-nuit"></span>
                                 <span class="tooltip-trigger" id="type-nuit-tooltip" data-tippy-content="" aria-label="Taux">?</span>
                             </label>
                             <div class="sub-field sub-field-inline hidden" id="heures-nuit-field">
@@ -263,7 +263,7 @@
                         <div class="form-group" id="group-dimanche">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="travail-dimanche" class="book-checkbox">
-                                <span>Travail le dimanche</span>
+                                <span id="label-travail-dimanche"></span>
                                 <span class="tooltip-trigger" id="travail-dimanche-tooltip" data-tippy-content="" aria-label="Taux">?</span>
                             </label>
                             <div class="sub-field sub-field-inline hidden" id="heures-dimanche-field">
@@ -278,7 +278,7 @@
                         <div class="form-group" id="group-heures-sup">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="travail-heures-sup" class="book-checkbox">
-                                <span>Heures supplémentaires</span>
+                                <span id="label-travail-heures-sup"></span>
                                 <span
                                     class="tooltip-trigger"
                                     id="travail-heures-sup-tooltip"
@@ -298,7 +298,7 @@
                         <div class="form-group hidden" id="group-jours-sup-forfait">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="travail-jours-sup-forfait" class="book-checkbox">
-                                <span>Jours supplémentaires</span>
+                                <span id="label-travail-jours-sup-forfait"></span>
                                 <span
                                     class="tooltip-trigger"
                                     id="travail-jours-sup-forfait-tooltip"
@@ -335,8 +335,8 @@
         <!-- ═══════════════════════════════════════════════════════════════ -->
         <section class="wizard-step hidden" id="step-3">
             <div class="step-content">
-                <h2 id="result-page-title">Rémunération globale due</h2>
-                <p class="step-subtitle" id="result-page-subtitle">Rémunération globale due par votre employeur (SMH, primes et majorations).</p>
+                <h2 id="result-page-title"></h2>
+                <p class="step-subtitle" id="result-page-subtitle"></p>
 
                 <!-- Options de calcul (visible seulement si un accord est chargé depuis l'URL) -->
                 <div class="result-options" id="result-accord-options-block">
@@ -344,7 +344,7 @@
                     <div class="option-group">
                         <label class="checkbox-label checkbox-highlight">
                             <input type="checkbox" id="accord-actif" class="book-checkbox">
-                            <span id="result-accord-toggle-label">Appliquer l'accord d'entreprise</span>
+                            <span id="result-accord-toggle-label"></span>
                             <span class="tooltip-trigger" id="accord-actif-tooltip" data-tippy-content="Si votre entreprise applique un accord d'entreprise, cochez cette case pour inclure ses règles dans le calcul (primes, ancienneté, majorations).">?</span>
                         </label>
                         <!-- Options accord — construit dynamiquement par buildAccordOptionsUI() -->
@@ -358,12 +358,12 @@
                 <div class="result-card">
                     <div class="result-main">
                         <span class="result-value" id="result-smh">21 500 €</span>
-                        <span class="result-label" id="result-label-annuel">par an</span>
+                        <span class="result-label" id="result-label-annuel"></span>
                     </div>
 
                     <div class="result-monthly">
                         <span class="result-value-secondary" id="result-mensuel">1 792 €</span>
-                        <span class="result-label" id="result-label-mensuel">par mois</span>
+                        <span class="result-label" id="result-label-mensuel"></span>
                         <div class="months-toggle">
                             <button type="button" class="month-btn active" data-months="12">12 mois</button>
                             <button type="button" class="month-btn" data-months="13">13 mois</button>
@@ -374,7 +374,7 @@
 
                 <!-- Détails -->
                 <details class="result-details-toggle" open>
-                    <summary id="result-details-summary">Détail du calcul</summary>
+                    <summary id="result-details-summary"></summary>
                     <div class="result-details" id="result-details">
                         <!-- Généré dynamiquement -->
                     </div>
@@ -387,7 +387,7 @@
 
                 <!-- Évolution -->
                 <details class="evolution-details">
-                    <summary id="evolution-details-summary">📈 Évolution vs inflation</summary>
+                    <summary id="evolution-details-summary"></summary>
                     <div class="evolution-panel" id="evolution-section">
                         <div class="evolution-controls">
                             <label>
@@ -423,8 +423,8 @@
 
                 <!-- Bouton pour vérifier les arriérés -->
                 <div class="arretees-check-card" id="arretees-check-card">
-                    <p class="arretees-check-text"><strong id="result-arretees-prompt-title">💡 Vous pensez gagner moins que la rémunération affichée ?</strong></p>
-                    <p class="arretees-check-text" id="result-arretees-prompt-body">Calculez vos arriérés de salaire et générez un rapport PDF pour les réclamer.</p>
+                    <p class="arretees-check-text"><strong id="result-arretees-prompt-title"></strong></p>
+                    <p class="arretees-check-text" id="result-arretees-prompt-body"></p>
                     <button class="book-btn btn-primary" id="btn-check-arretees">
                         Calculer mes arriérés
                     </button>
@@ -446,16 +446,16 @@
         <!-- ═══════════════════════════════════════════════════════════════ -->
         <section class="wizard-step hidden" id="step-4">
             <div class="step-content">
-                <h2>Calcul des arriérés de salaire</h2>
-                <p class="step-subtitle">Saisissez vos salaires réels mois par mois pour calculer précisément vos arriérés</p>
+                <h2 id="step-4-page-title"></h2>
+                <p class="step-subtitle" id="step-4-page-subtitle"></p>
 
                 <div class="book-hint warning" id="arretees-warning">
-                    <p><strong>⚠️ Important :</strong> Ce calcul est un outil d'aide. Pour toute action juridique, consultez un avocat spécialisé en droit du travail ou votre syndicat.</p>
+                    <p id="arretees-warning-text"></p>
                 </div>
 
                 <!-- Informations de base -->
                 <div class="arretees-base-info">
-                    <h3>Informations nécessaires</h3>
+                    <h3 id="arretees-base-info-title"></h3>
                     <div class="form-group">
                         <label for="date-embauche-arretees">
                             Date d'embauche
@@ -465,7 +465,7 @@
                     </div>
 
                     <details class="arretees-options-accordion result-details-toggle" id="arretees-options-accordion">
-                        <summary class="arretees-options-accordion-title">Options et autres informations</summary>
+                        <summary class="arretees-options-accordion-title" id="arretees-options-title"></summary>
                         <div class="arretees-options-accordion-body">
                             <div class="form-group">
                                 <label for="date-changement-classification-arretees">
@@ -478,7 +478,7 @@
                             <div class="form-group">
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="rupture-contrat-arretees" class="book-checkbox">
-                                    <span>Le contrat est rompu</span>
+                                    <span id="label-rupture-contrat-arretees"></span>
                                 </label>
                             </div>
 
@@ -490,14 +490,14 @@
                             <div class="form-group">
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="accord-ecrit-arretees" class="book-checkbox">
-                                    <span>Un accord écrit existe avec l'employeur concernant la classification</span>
+                                    <span id="label-accord-ecrit-arretees"></span>
                                 </label>
                             </div>
 
                             <div class="form-group">
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="arretees-smh-seul" class="book-checkbox" checked>
-                                    <span>Calculer les arriérés sur le SMH seul</span>
+                                    <span id="label-arretees-smh-seul"></span>
                                     <span
                                         class="tooltip-trigger"
                                         data-tippy-content="Si coché : salaire dû = assiette SMH (Art. 140 CCNM).<br>
@@ -513,15 +513,15 @@
 
                 <!-- Interface de saisie avec graphique et bloc flottant (affichée uniquement quand la date d'embauche est renseignée) -->
                 <div class="salary-curve-container hidden" id="salary-curve-container">
-                    <h3>Saisie de vos salaires par mois</h3>
-                    <p class="curve-help">Saisissez votre salaire mensuel brut pour chaque mois. Le graphique ci-dessous montre l'évolution du salaire dû au fil du temps.</p>
+                    <h3 id="salary-curve-title"></h3>
+                    <p class="curve-help" id="salary-curve-help"></p>
                     <div class="book-hint warning arretees-salaire-hint" id="arretees-salaire-hint">
                         <p><!-- Contenu dynamique généré par buildSmhHintHtml() --></p>
                     </div>
                     
                     <!-- Message quand pas de date (le canvas n'est jamais supprimé) -->
                     <div class="timeline-no-date-message" id="timeline-no-date-message">
-                        <p class="timeline-help">Veuillez renseigner la date d'embauche pour générer la courbe.</p>
+                        <p class="timeline-help" id="timeline-help-text"></p>
                     </div>
                     
                     <!-- Canvas pour la courbe (toujours présent dans le DOM) -->
@@ -535,10 +535,10 @@
                                 <span class="tooltip-trigger" id="floating-info-icon" data-tippy-content="Salaire mensuel brut : indiquez le « Total brut » de votre fiche de paie pour ce mois.">?</span>
                             </div>
                             <div class="input-with-unit floating-input">
-                                <input type="text" id="floating-salary-input" class="book-input" placeholder="Salaire mensuel brut" inputmode="decimal" data-decimal-input="true" autocomplete="off">
+                                <input type="text" id="floating-salary-input" class="book-input" placeholder="" inputmode="decimal" data-decimal-input="true" autocomplete="off">
                                 <span class="input-unit">€</span>
                             </div>
-                            <p class="floating-hint">Appuyez sur <kbd>Entrée</kbd> pour valider</p>
+                            <p class="floating-hint" id="floating-hint-text"></p>
                         </div>
                     </div>
                     
@@ -610,13 +610,15 @@
         <!-- Footer -->
         <footer class="simulator-footer">
             <div class="footer-line">
-                <span class="footer-item">Convention Collective Nationale de la Métallurgie (CCNM) 2024</span>
+                <span class="footer-item" id="footer-main-text"></span>
                 <span class="footer-sep" aria-hidden="true"></span>
-                <span class="footer-item footer-disclaimer">Outil indicatif</span>
-                <span class="footer-sep" aria-hidden="true"></span>
-                <a href="#" id="footer-privacy-link" class="footer-item footer-privacy-link">Politique de confidentialité</a>
+                <span class="footer-item footer-disclaimer" id="footer-disclaimer-text"></span>
             </div>
-            <p class="footer-credit"><a href="https://cfdt-kuhn.fr" target="_blank" rel="noopener">Réalisé par CFDT Kuhn</a></p>
+            <div class="footer-line">
+                <a href="#" id="footer-privacy-link" class="footer-item footer-privacy-link"></a>
+                <span class="footer-sep" aria-hidden="true"></span>
+                <p class="footer-credit"><a href="https://cfdt-kuhn.fr" target="_blank" rel="noopener">Réalisé par CFDT Kuhn</a></p>
+            </div>
         </footer>
     </div>
 

@@ -29,12 +29,20 @@ export const LABELS = {
     step4Title: 'Arriérés',
     
     // Classification
+    step1aPageTitle: 'Connaissez-vous votre classification ?',
+    step1aPageSubtitle: 'Elle figure sur votre fiche de paie (ex: F11, D7, A1...)',
+    step1bPageTitle: 'Votre classification',
+    step1bPageSubtitle: 'Sélectionnez votre groupe et classe',
+    step1cPageTitle: 'Estimation de votre classification',
+    step1cPageSubtitle: 'Évaluez votre poste sur les 6 critères (de 1 à 10)',
     connaisClasse: 'Oui, je la connais',
     connaisClasseDesc: 'Je saisis directement ma classification',
     estimerClasse: 'Non, je veux l\'estimer',
     estimerClasseDesc: 'Je réponds aux 6 critères classants',
     
     // Situation
+    step2PageTitle: 'Votre situation',
+    step2PageSubtitle: 'Renseignez vos informations pour affiner le calcul',
     anciennete: 'Ancienneté dans l\'entreprise',
     ancienneteUnit: 'ans',
     pointTerritorial: 'Valeur du Point Territorial',
@@ -45,12 +53,14 @@ export const LABELS = {
     
     // Conditions de travail
     conditionsTravail: 'Conditions de travail particulières',
+    travailTempsPartiel: 'Temps partiel',
     travailNuit: 'Travail de nuit',
     heuresNuit: 'Heures de nuit/mois',
     travailDimanche: 'Travail le dimanche',
     heuresDimanche: 'Heures dimanche/mois',
     travailHeuresSup: 'Heures supplémentaires',
     heuresSup: 'Heures supplémentaires/mois',
+    joursSupForfait: 'Jours supplémentaires',
     travailEquipe: 'Travail en équipes postées',
     heuresEquipe: 'Heures équipe/mois',
     /** Préfixe des tooltips pour les modalités spécifiques à l'accord d'entreprise (nuit, dimanche, primes). */
@@ -69,6 +79,22 @@ export const LABELS = {
     inflationLoading: 'Inflation : chargement...',
     
     // Arriérés
+    step4PageTitle: 'Calcul des arriérés de salaire',
+    step4PageSubtitle: 'Saisissez vos salaires réels mois par mois pour calculer précisément vos arriérés',
+    arreteesWarningText: '<strong>⚠️ Important :</strong> Ce calcul est un outil d\'aide. Pour toute action juridique, consultez un avocat spécialisé en droit du travail ou votre syndicat.',
+    arreteesBaseInfoTitle: 'Informations nécessaires',
+    arreteesOptionsTitle: 'Options et autres informations',
+    ruptureContratLabel: 'Le contrat est rompu',
+    accordEcritLabel: 'Un accord écrit existe avec l\'employeur concernant la classification',
+    arreteesSmhSeulLabel: 'Calculer les arriérés sur le SMH seul',
+    salaryCurveTitle: 'Saisie de vos salaires par mois',
+    salaryCurveHelp: 'Saisissez votre salaire mensuel brut pour chaque mois. Le graphique ci-dessous montre l\'évolution du salaire dû au fil du temps.',
+    timelineHelpText: 'Veuillez renseigner la date d\'embauche pour générer la courbe.',
+    timelineNoPeriodText: 'Aucune période à afficher.',
+    arreteesSalaireBrutFullHintHtml: '<strong>Attention :</strong> Indiquez le <strong>total brut</strong> du bulletin (y compris primes) pour comparer à la rémunération complète.',
+    accordDesactiveMessagePrefix: 'Les éléments suivants ne sont plus pris en compte dans le calcul : ',
+    floatingSalaryPlaceholder: 'Salaire mensuel brut',
+    floatingHintText: 'Appuyez sur Entrée pour valider',
     calculerArretees: 'Calculer mes arriérés',
     dateEmbauche: 'Date d\'embauche',
     dateChangementClassification: 'Date de changement de classification',
@@ -80,7 +106,8 @@ export const LABELS = {
     // Footer
     footerText: 'Convention Collective Nationale de la Métallurgie (CCNM) 2026',
     footerDisclaimer: 'Outil indicatif',
-    footerCredit: 'Réalisé par CFDT Kuhn'
+    footerCredit: 'Réalisé par CFDT Kuhn',
+    footerPrivacyLink: 'Politique de confidentialité'
 };
 
 /**

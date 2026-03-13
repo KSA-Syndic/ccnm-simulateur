@@ -100,8 +100,34 @@ export function initAppIntegration() {
         const el = document.getElementById(id);
         if (el && typeof text === 'string' && text.length) el.textContent = text;
     };
+    const setHtml = (id, html) => {
+        const el = document.getElementById(id);
+        if (el && typeof html === 'string' && html.length) el.innerHTML = html;
+    };
+    const setPlaceholder = (id, text) => {
+        const el = document.getElementById(id);
+        if (el && typeof text === 'string' && text.length) el.setAttribute('placeholder', text);
+    };
 
     // Hydrater les libellés depuis LABELS (éviter doublons avec index.html)
+    setText('step-1a-page-title', LABELS.step1aPageTitle);
+    setText('step-1a-page-subtitle', LABELS.step1aPageSubtitle);
+    setText('choice-connais-title', LABELS.connaisClasse);
+    setText('choice-connais-desc', LABELS.connaisClasseDesc);
+    setText('choice-estime-title', LABELS.estimerClasse);
+    setText('choice-estime-desc', LABELS.estimerClasseDesc);
+    setText('step-1b-page-title', LABELS.step1bPageTitle);
+    setText('step-1b-page-subtitle', LABELS.step1bPageSubtitle);
+    setText('step-1c-page-title', LABELS.step1cPageTitle);
+    setText('step-1c-page-subtitle', LABELS.step1cPageSubtitle);
+    setText('step-2-page-title', LABELS.step2PageTitle);
+    setText('step-2-page-subtitle', LABELS.step2PageSubtitle);
+    setText('conditions-travail-summary', LABELS.conditionsTravail);
+    setText('label-travail-temps-partiel', LABELS.travailTempsPartiel);
+    setText('label-travail-nuit', LABELS.travailNuit);
+    setText('label-travail-dimanche', LABELS.travailDimanche);
+    setText('label-travail-heures-sup', LABELS.travailHeuresSup);
+    setText('label-travail-jours-sup-forfait', LABELS.joursSupForfait);
     setText('result-page-title', LABELS.resultPageTitle);
     setText('result-page-subtitle', LABELS.resultPageSubtitle);
     setText('result-details-summary', LABELS.detailCalcul);
@@ -111,6 +137,22 @@ export function initAppIntegration() {
     setText('btn-check-arretees', LABELS.calculerArretees);
     setText('inflation-source', LABELS.inflationLoading);
     setText('result-accord-toggle-label', LABELS.resultAccordToggle);
+    setText('step-4-page-title', LABELS.step4PageTitle);
+    setText('step-4-page-subtitle', LABELS.step4PageSubtitle);
+    setHtml('arretees-warning-text', LABELS.arreteesWarningText);
+    setText('arretees-base-info-title', LABELS.arreteesBaseInfoTitle);
+    setText('arretees-options-title', LABELS.arreteesOptionsTitle);
+    setText('label-rupture-contrat-arretees', LABELS.ruptureContratLabel);
+    setText('label-accord-ecrit-arretees', LABELS.accordEcritLabel);
+    setText('label-arretees-smh-seul', LABELS.arreteesSmhSeulLabel);
+    setText('salary-curve-title', LABELS.salaryCurveTitle);
+    setText('salary-curve-help', LABELS.salaryCurveHelp);
+    setText('timeline-help-text', LABELS.timelineHelpText);
+    setPlaceholder('floating-salary-input', LABELS.floatingSalaryPlaceholder);
+    setText('floating-hint-text', LABELS.floatingHintText);
+    setText('footer-main-text', LABELS.footerText);
+    setText('footer-disclaimer-text', LABELS.footerDisclaimer);
+    setText('footer-privacy-link', LABELS.footerPrivacyLink);
 
     // Page 3 : n'afficher l'option "Appliquer l'accord d'entreprise" que si un accord a été chargé depuis l'URL
     const resultAccordBlock = document.getElementById('result-accord-options-block');

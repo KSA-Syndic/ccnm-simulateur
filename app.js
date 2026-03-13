@@ -1417,7 +1417,10 @@ function updateAccordDesactiveMessage() {
         return;
     }
     block.classList.remove('hidden');
-    block.textContent = 'Les éléments suivants ne sont plus pris en compte dans le calcul : ' + modalites.join(', ') + '.';
+    const prefix = (window.LABELS && window.LABELS.accordDesactiveMessagePrefix)
+        ? window.LABELS.accordDesactiveMessagePrefix
+        : 'Les éléments suivants ne sont plus pris en compte dans le calcul : ';
+    block.textContent = prefix + modalites.join(', ') + '.';
 }
 
 /**
@@ -3121,7 +3124,9 @@ function updateArreteesSalaireHint() {
     if (state.arretesSurSMHSeul) {
         p.innerHTML = buildSmhHintHtml();
     } else {
-        p.innerHTML = '<strong>Attention :</strong> Indiquez le <strong>total brut</strong> du bulletin (y compris primes) pour comparer à la rémunération complète.';
+        p.innerHTML = (window.LABELS && window.LABELS.arreteesSalaireBrutFullHintHtml)
+            ? window.LABELS.arreteesSalaireBrutFullHintHtml
+            : '<strong>Attention :</strong> Indiquez le <strong>total brut</strong> du bulletin (y compris primes) pour comparer à la rémunération complète.';
     }
 }
 
@@ -3245,7 +3250,11 @@ function initTimeline() {
     if (!dateEmbauche) {
         if (noDateMsg) {
             const p = noDateMsg.querySelector('.timeline-help');
-            if (p) p.textContent = "Veuillez renseigner la date d'embauche pour générer la courbe.";
+            if (p) {
+                p.textContent = (window.LABELS && window.LABELS.timelineHelpText)
+                    ? window.LABELS.timelineHelpText
+                    : "Veuillez renseigner la date d'embauche pour générer la courbe.";
+            }
             noDateMsg.classList.remove('hidden');
         }
         if (chartWrapper) chartWrapper.classList.add('hidden');
@@ -3356,7 +3365,11 @@ function initTimeline() {
     if (periodsData.length === 0) {
         if (noDateMsg) {
             const p = noDateMsg.querySelector('.timeline-help');
-            if (p) p.textContent = 'Aucune période à afficher.';
+            if (p) {
+                p.textContent = (window.LABELS && window.LABELS.timelineNoPeriodText)
+                    ? window.LABELS.timelineNoPeriodText
+                    : 'Aucune période à afficher.';
+            }
             noDateMsg.classList.remove('hidden');
         }
         if (chartWrapper) chartWrapper.classList.add('hidden');
