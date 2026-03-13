@@ -8,6 +8,7 @@
 
 import { formatMoney } from '../utils/formatters.js';
 import { getActiveAgreement } from '../agreements/AgreementLoader.js';
+import { CONFIG } from '../core/config.js';
 import { LABELS, CONVENTION_URL } from './Labels.js';
 
 /**
@@ -61,8 +62,44 @@ export function updateHeaderAgreement(agreement) {
     }
 
     if (headerInfoIcon) {
+        const smhUpdate = CONFIG?.SMH_UPDATE;
+        const year = smhUpdate?.referenceYear;
+        const yearEntries = smhUpdate?.years && typeof smhUpdate.years === 'object'
+            ? Object.entries(smhUpdate.years)
+                .map(([y, info]) => ({ year: Number(y), ...(info || {}) }))
+                .filter(entry => Number.isFinite(entry.year))
+                .sort((a, b) => a.year - b.year)
+            : [];
+        const selectedYear = yearEntries.find(entry => entry.year === year) || yearEntries[yearEntries.length - 1];
+        const effectiveDate = selectedYear?.effectiveDate ? new Date(selectedYear.effectiveDate).toLocaleDateString('fr-FR') : null;
+        const updatedAt = smhUpdate?.updatedAt ? new Date(smhUpdate.updatedAt).toLocaleDateString('fr-FR') : null;
+        const yearlyRates = yearEntries
+            .filter(entry => Number.isFinite(entry?.indicativeRate))
+            .map(entry => ({ year: entry.year, indicativeRate: Number(entry.indicativeRate) }));
+        const yearly = yearEntries.length
+            ? yearEntries.map(entry => `${entry.year}: ${entry.change || ''}`).join('<br>')
+            : '';
+
         let tooltipContent = LABELS.headerInfoTooltip +
             `<br><br><a href="${CONVENTION_URL}" target="_blank" rel="noopener">${LABELS.headerInfoTooltipLinkText}</a>`;
+        if (year || effectiveDate || updatedAt || yearly) {
+            const lines = [];
+            if (year) lines.push(`SMH: grille ${year}`);
+            if (effectiveDate) lines.push(`Effet: ${effectiveDate}`);
+            if (updatedAt) lines.push(`MAJ appli: ${updatedAt}`);
+            if (selectedYear?.sourceLabel) lines.push(`Source: ${escapeHtml(selectedYear.sourceLabel)}`);
+            if (yearlyRates.length) {
+                const ratesLabel = yearlyRates
+                    .map(entry => `${entry.year}: ${Math.round(entry.indicativeRate * 10000) / 100}%`)
+                    .join(' · ');
+                lines.push(`Repères (informatif): ${ratesLabel}`);
+                lines.push('Calcul: grilles annuelles.');
+            }
+            tooltipContent += `<br><br>📅 <strong>MAJ salaires minima</strong><br>${lines.join('<br>')}`;
+            if (selectedYear?.sourceUrl) {
+                tooltipContent += `<br><a href="${escapeAttr(selectedYear.sourceUrl)}" target="_blank" rel="noopener">Voir la source de revalorisation (${selectedYear.year})</a>`;
+            }
+        }
         if (agreement) {
             const nom = agreement.nomCourt || agreement.nom;
             const labels = agreement.labels || {};

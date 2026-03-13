@@ -27,7 +27,7 @@ export function calculateSalaireDuPourMois(dateMois, dateEmbauche, stateSnapshot
     // Les primes marquées inclusDansSMH (Art. 140 CCNM, ex. prime de vacances)
     // ne changent pas le total annuel dû mais sont gérées dans la distribution mensuelle.
     if (smhSeul) {
-        return getMontantAnnuelSMHSeul(stateSnapshot);
+        return getMontantAnnuelSMHSeul(stateSnapshot, agreement ?? null, { date: dateMois });
     }
     
     // Mode rémunération complète : utiliser le calculateur unifié avec l'état ajusté pour ce mois

@@ -10,44 +10,107 @@
  */
 
 /**
- * Configuration CCN Métallurgie 2024
+ * Configuration CCN Métallurgie (mise à jour 2026)
  */
 export const CONFIG = {
-    // Salaires Minimum Hiérarchiques (annuels bruts) - Grille 2024
+    // Salaires Minimum Hiérarchiques (annuels bruts) - Grille 2026 (effet 01/01/2026)
     SMH: {
-        1: 21700,   // A1
-        2: 21850,   // A2
-        3: 22450,   // B3
-        4: 23400,   // B4
-        5: 24250,   // C5
-        6: 25550,   // C6
-        7: 26400,   // D7
-        8: 28450,   // D8
-        9: 30500,   // E9
-        10: 33700,  // E10
-        11: 34900,  // F11
-        12: 36700,  // F12
-        13: 40000,  // G13
-        14: 43900,  // G14
-        15: 47000,  // H15
-        16: 52000,  // H16
-        17: 59300,  // I17
-        18: 68000   // I18
+        1: 21980,   // A1
+        2: 22100,   // A2
+        3: 22710,   // B3
+        4: 23620,   // B4
+        5: 24510,   // C5
+        6: 25780,   // C6
+        7: 26680,   // D7
+        8: 28700,   // D8
+        9: 30760,   // E9
+        10: 33970,  // E10
+        11: 35200,  // F11
+        12: 37000,  // F12
+        13: 40350,  // G13
+        14: 44250,  // G14
+        15: 47380,  // H15
+        16: 52370,  // H16
+        17: 59720,  // I17
+        18: 68450   // I18
     },
 
-    // Barème salariés débutants (Groupe F : Classes 11 et 12)
+    // Métadonnées de mise à jour des SMH (affichage tooltip/rapport)
+    SMH_UPDATE: {
+        referenceYear: 2026,
+        updatedAt: '2026-03-12',
+        years: {
+            2024: {
+                effectiveDate: '2024-01-01',
+                indicativeRate: 0,
+                change: 'Base CCNM 2024 (grille d\'origine du simulateur)',
+                sourceLabel: 'Convention collective métallurgie (grille de base 2024)',
+                sourceUrl: ''
+            },
+            2025: {
+                effectiveDate: '2025-01-01',
+                indicativeRate: 0,
+                change: 'Pas de revalorisation nationale consolidée (grille 2024 reconduite)',
+                sourceLabel: 'Négociation annuelle de branche 2025 sans avenant national étendu',
+                sourceUrl: ''
+            },
+            2026: {
+                effectiveDate: '2026-01-01',
+                indicativeRate: 0.0086,
+                change: 'Revalorisation moyenne annoncée +0,86% (information de contexte, non utilisée comme logique de calcul)',
+                sourceLabel: 'Avenant du 20 février 2026 à la CCN Métallurgie',
+                sourceUrl: 'https://uimm.lafabriquedelavenir.fr/wp-content/uploads/2026/03/Avenant-accord-SMH-2026-a-la-CCN-du-07.02.2022_VA.pdf'
+            }
+        }
+    },
+
+    // Grilles par année (utilisées par les arriérés pour appliquer la bonne base selon la période)
+    SMH_BY_YEAR: {
+        2024: {
+            1: 21700, 2: 21850, 3: 22450, 4: 23400, 5: 24250, 6: 25550,
+            7: 26400, 8: 28450, 9: 30500, 10: 33700, 11: 34900, 12: 36700,
+            13: 40000, 14: 43900, 15: 47000, 16: 52000, 17: 59300, 18: 68000
+        },
+        2025: {
+            1: 21700, 2: 21850, 3: 22450, 4: 23400, 5: 24250, 6: 25550,
+            7: 26400, 8: 28450, 9: 30500, 10: 33700, 11: 34900, 12: 36700,
+            13: 40000, 14: 43900, 15: 47000, 16: 52000, 17: 59300, 18: 68000
+        },
+        2026: {
+            1: 21980, 2: 22100, 3: 22710, 4: 23620, 5: 24510, 6: 25780,
+            7: 26680, 8: 28700, 9: 30760, 10: 33970, 11: 35200, 12: 37000,
+            13: 40350, 14: 44250, 15: 47380, 16: 52370, 17: 59720, 18: 68450
+        }
+    },
+
+    // Barème salariés débutants (Groupe F : Classes 11 et 12) - Grille 2026
     BAREME_DEBUTANTS: {
         11: {   // F11
-            0: 28200,   // < 2 ans
-            2: 29610,   // 2 à < 4 ans
-            4: 31979,   // 4 à 6 ans
-            6: 34900    // ≥ 6 ans = SMH F11 standard
+            0: 28430,   // < 2 ans
+            2: 29852,   // 2 à < 4 ans
+            4: 32240,   // 4 à 6 ans
+            6: 35200    // ≥ 6 ans = SMH F11 standard
         },
         12: {   // F12
-            0: 29700,   // < 2 ans
-            2: 31185,   // 2 à < 4 ans
-            4: 33680,   // 4 à 6 ans
-            6: 36700    // ≥ 6 ans = SMH F12 standard
+            0: 29940,   // < 2 ans
+            2: 31437,   // 2 à < 4 ans
+            4: 33952,   // 4 à 6 ans
+            6: 37000    // ≥ 6 ans = SMH F12 standard
+        }
+    },
+
+    BAREME_DEBUTANTS_BY_YEAR: {
+        2024: {
+            11: { 0: 28200, 2: 29610, 4: 31979, 6: 34900 },
+            12: { 0: 29700, 2: 31185, 4: 33680, 6: 36700 }
+        },
+        2025: {
+            11: { 0: 28200, 2: 29610, 4: 31979, 6: 34900 },
+            12: { 0: 29700, 2: 31185, 4: 33680, 6: 36700 }
+        },
+        2026: {
+            11: { 0: 28430, 2: 29852, 4: 32240, 6: 35200 },
+            12: { 0: 29940, 2: 31437, 4: 33952, 6: 37000 }
         }
     },
 
@@ -110,7 +173,8 @@ export const CONFIG = {
     // Prime d'ancienneté Non-Cadres CCN
     ANCIENNETE: {
         seuil: 3,       // Déclenchement à 3 ans
-        plafond: 15     // Plafonné à 15 ans
+        plafond: 15,    // Plafonné à 15 ans
+        inclusDansSMH: false // Paramétrable: true pour inclure dans l'assiette SMH
     },
 
     // Majorations Forfaits Cadres – INCLUSES dans l'assiette SMH
@@ -131,6 +195,8 @@ export const CONFIG = {
     // Proratisation entrée en cours de mois (CCNM Art. 139, 103.5.1, 103.5.2)
     // Valeur d'un jour = 1/22 de la rémunération mensuelle ; demi-journée = 1/44
     JOURS_OUVRES_CCN: 22,
+    DUREE_LEGALE_HEURES_MOIS: 151.67,
+    HEURES_SUP_TRANCHE_1_MENSUELLES: Math.round((8 * 52 / 12) * 100) / 100,
 
     // Définitions des 6 critères classants
     CRITERES: [

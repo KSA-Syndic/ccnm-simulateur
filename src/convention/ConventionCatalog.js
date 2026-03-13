@@ -38,6 +38,22 @@ export function getConventionPrimeDefs() {
                 tauxParClasse: CONFIG.TAUX_ANCIENNETE,
                 formule: 'Point × Taux × Années × 12'
             }
+        },
+        {
+            id: 'primeEquipe',
+            semanticId: SEMANTIC_ID.PRIME_EQUIPE,
+            kind: ELEMENT_KIND_PRIME,
+            source: SOURCE_CONVENTION,
+            valueKind: VALUE_KIND_HORAIRE,
+            label: 'Prime d\'équipe CCN',
+            config: {
+                stateKeyActif: 'travailEquipe',
+                stateKeyHeures: 'heuresEquipe',
+                autoHeures: true,
+                defaultHeures: CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67,
+                ratioSMHHoraire: 0.5,
+                formule: '151,67h/mois × (0,5 × SMH horaire de base 35h) × 12'
+            }
         }
     ];
 }
@@ -69,6 +85,34 @@ export function getConventionMajorationDefs() {
             label: 'Majoration dimanche CCN',
             config: {
                 taux: CONFIG.MAJORATIONS_CCN.dimanche
+            }
+        },
+        {
+            id: 'majorationHeuresSup25',
+            semanticId: SEMANTIC_ID.MAJORATION_HEURES_SUP_25,
+            kind: ELEMENT_KIND_MAJORATION,
+            source: SOURCE_CONVENTION,
+            valueKind: VALUE_KIND_POURCENTAGE,
+            label: 'Majoration heures supplémentaires (+25%) CCN',
+            config: {
+                taux: CONFIG.MAJORATIONS_CCN.heuresSup25,
+                stateKeyActif: 'travailHeuresSup',
+                stateKeyHeures: 'heuresSup',
+                seuilMensuel: CONFIG.HEURES_SUP_TRANCHE_1_MENSUELLES ?? 34.67
+            }
+        },
+        {
+            id: 'majorationHeuresSup50',
+            semanticId: SEMANTIC_ID.MAJORATION_HEURES_SUP_50,
+            kind: ELEMENT_KIND_MAJORATION,
+            source: SOURCE_CONVENTION,
+            valueKind: VALUE_KIND_POURCENTAGE,
+            label: 'Majoration heures supplémentaires (+50%) CCN',
+            config: {
+                taux: CONFIG.MAJORATIONS_CCN.heuresSup50,
+                stateKeyActif: 'travailHeuresSup',
+                stateKeyHeures: 'heuresSup',
+                seuilMensuel: CONFIG.HEURES_SUP_TRANCHE_1_MENSUELLES ?? 34.67
             }
         }
     ];

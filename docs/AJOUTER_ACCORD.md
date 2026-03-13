@@ -2,6 +2,14 @@
 
 Ce guide explique comment ajouter un nouvel accord d'entreprise au simulateur. Le schéma détaillé est défini dans `src/agreements/AgreementInterface.js`.
 
+## Règle prioritaire : modéliser uniquement les écarts à la CCN
+
+Ne mettez dans l'accord que ce qui change réellement la règle CCN.
+
+- Si un taux/une prime/une condition est identique à la CCN, ne pas le dupliquer dans l'accord.
+- Éviter les "copier-coller CCN" dans `primes` et `majorations` : cela crée des faux écarts et complexifie la maintenance.
+- Si un point est utile uniquement en commentaire juridique, placez-le dans `elements` (informatif), pas dans la logique de calcul.
+
 ## Emplacement des accords
 
 Les **définitions** des accords se trouvent dans le répertoire **`accords/`** à la racine du projet (séparé du code applicatif `src/`). Le moteur (registre, chargement, schéma) est dans `src/agreements/`.
@@ -17,7 +25,7 @@ Un accord doit respecter le schéma validé par `validateAgreement()` dans `Agre
 | `nomCourt` | string | Nom court (badges, tooltips) |
 | `url` | string | Lien vers le texte officiel |
 | `dateEffet` | string | Date d'entrée en vigueur (ISO `YYYY-MM-DD`) |
-| `anciennete` | object | **Prime d'ancienneté** : seuil, plafond, barème, `tousStatuts`, `baseCalcul`, `inclusDansSMH` (toujours `false`). Entièrement piloté par l'instance d'accord. |
+| `anciennete` | object | **Prime d'ancienneté** : seuil, plafond, barème, `tousStatuts`, `baseCalcul`, `inclusDansSMH` (paramétrable selon position juridique retenue). Entièrement piloté par l'instance d'accord. |
 | `majorations` | object | `nuit` (posteNuit, posteMatin, plage…), `dimanche` (taux) |
 | `primes` | **array** | Liste de primes (voir ci-dessous) |
 | `repartition13Mois` | object | `actif`, `moisVersement` (1-12), `inclusDansSMH` |
@@ -36,6 +44,7 @@ Chaque prime est un objet avec au minimum :
 - **`valeurAccord`** : nombre (ou `null` si modalité)
 - **`stateKeyActif`** : clé dans `state.accordInputs` pour activer/désactiver (ex. `'travailEquipe'`, `'primeVacances'`)
 - **`stateKeyHeures`** : (si horaire/majorationHoraire) clé pour les heures **mensuelles** (ex. `'heuresEquipe'`)
+- **`autoHeures`** : (optionnel) `true` pour utiliser une base horaire calculée automatiquement (sans champ heures côté utilisateur)
 - **`moisVersement`** : (si montant) mois 1-12 du versement — **déduit du texte de l'accord**, pas copié d'un autre accord
 - **`inclusDansSMH`** : **(OBLIGATOIRE)** `true` si la prime est un complément salarial annuel inclus dans l'assiette SMH (Art. 140 CCNM) ; `false` si c'est une contrepartie de conditions de travail exclue de l'assiette. Voir section « Assiette SMH » ci-dessous.
 - **`conditionAnciennete`** : (optionnel) `{ type: 'annees_revolues'|'aucune', annees?, description? }` — condition d'ancienneté pour ouvrir droit
@@ -49,11 +58,19 @@ La CCN Métallurgie définit quels éléments entrent dans l'assiette de vérifi
 |---------|-----------------|----------|
 | Complément salarial annuel (modalité de versement) | `true` | Prime de vacances, 13e mois, prime de fin d'année |
 | Contrepartie conditions de travail / sujétion | `false` | Prime d'équipe, majorations nuit/dimanche, pénibilité |
-| Prime d'ancienneté | **toujours `false`** | Exclue par la CCN et la jurisprudence |
+| Prime d'ancienneté | `false` par défaut, `true` possible si position juridique explicitement retenue | Doit être justifiée (texte conventionnel/jurisprudence/stratégie contentieuse) |
 
 **Comportement dans l'app :**
 - `inclusDansSMH: true` → prime **toujours active** (pas de checkbox). C'est une distribution du salaire permettant d'atteindre le SMH grille, **pas un supplément**. Elle **ne s'ajoute pas** au total annuel affiché. Affichée comme sous-ligne informative du SMH (préfixe « dont »). Influence uniquement la distribution mensuelle.
 - `inclusDansSMH: false` → prime **activable/désactivable** par l'utilisateur, **s'ajoute** au-dessus du SMH garanti.
+
+#### Spécificité prime d'équipe (recommandé)
+
+La prime d'équipe peut être modélisée avec une base horaire automatique :
+
+- `autoHeures: true`
+- assiette horaire automatique = `151,67 h/mois` (base 35h, sans inclusion des HS)
+- pas de saisie manuelle `heuresEquipe` nécessaire côté UI (l'information est portée dans le tooltip)
 
 Exemple minimal pour deux primes :
 
@@ -67,7 +84,8 @@ primes: [
         unit: '€/h',
         valeurAccord: 0.82,
         stateKeyActif: 'travailEquipe',
-        stateKeyHeures: 'heuresEquipe',
+        stateKeyHeures: 'heuresEquipe', // conservé pour compatibilité, ignoré si autoHeures=true
+        autoHeures: true,
         defaultHeures: 151.67,
         inclusDansSMH: false,   // Condition de travail → exclu de l'assiette SMH
         conditionAnciennete: { type: 'aucune', description: 'Aucune' }
@@ -138,6 +156,10 @@ function initializeRegistry() {
 ### 3. Déclarer les entrées d'accord (optionnel)
 
 Si l'accord utilise de nouvelles clés (ex. `primeNoel`), ajouter les valeurs par défaut dans **`src/core/state.js`** et **`app.js`** dans `state.accordInputs` (ex. `primeNoel: false`), et prévoir les champs/options dans l'UI (étape 3 du wizard).
+
+Important :
+- Pour une prime horaire avec `autoHeures: true`, ne pas ajouter de saisie d'heures en UI.
+- Les HS sont traitées dans la logique horaire ; en forfait jours, ne pas tenter d'appliquer les majorations HS de ce flux.
 
 **Note :** les primes avec `inclusDansSMH: true` sont automatiquement forcées à `true` dans `hydrateAccordInputs()` et ne nécessitent pas de checkbox — l'UI les affiche comme label informatif non-togglable.
 

@@ -43,8 +43,21 @@ function syncStateToModules(appState) {
     moduleState.heuresNuit = appState.heuresNuit !== undefined ? appState.heuresNuit : moduleState.heuresNuit;
     moduleState.travailDimanche = appState.travailDimanche !== undefined ? appState.travailDimanche : moduleState.travailDimanche;
     moduleState.heuresDimanche = appState.heuresDimanche !== undefined ? appState.heuresDimanche : moduleState.heuresDimanche;
+    moduleState.travailHeuresSup = appState.travailHeuresSup !== undefined ? appState.travailHeuresSup : moduleState.travailHeuresSup;
+    moduleState.heuresSup = appState.heuresSup !== undefined ? appState.heuresSup : moduleState.heuresSup;
     if (appState.accordInputs && typeof appState.accordInputs === 'object') {
         moduleState.accordInputs = { ...(moduleState.accordInputs || {}), ...appState.accordInputs };
+    }
+    // Compatibilité historique : certaines vues/tests renseignent encore les clés à la racine.
+    // On les recopie dans accordInputs pour que les calculs modulaires les voient toujours.
+    if (!moduleState.accordInputs || typeof moduleState.accordInputs !== 'object') {
+        moduleState.accordInputs = {};
+    }
+    if (!('travailEquipe' in moduleState.accordInputs) && appState.travailEquipe !== undefined) {
+        moduleState.accordInputs.travailEquipe = appState.travailEquipe;
+    }
+    if (!('heuresEquipe' in moduleState.accordInputs) && appState.heuresEquipe !== undefined) {
+        moduleState.accordInputs.heuresEquipe = appState.heuresEquipe;
     }
     // Synchroniser accordActif (app.js) vers accordActif/accordId (modules)
     const accordActif = appState.accordActif;
@@ -67,7 +80,9 @@ function syncStateToModules(appState) {
  */
 window.getMontantAnnuelSMHSeulFromModules = function(appState) {
     syncStateToModules(appState);
-    return getMontantAnnuelSMHSeul(moduleState);
+    const agreement = getActiveAgreement();
+    const activeAgreement = (moduleState.accordActif && agreement) ? agreement : null;
+    return getMontantAnnuelSMHSeul(moduleState, activeAgreement);
 };
 
 /**

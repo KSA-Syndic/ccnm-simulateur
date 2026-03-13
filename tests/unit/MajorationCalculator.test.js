@@ -95,4 +95,54 @@ describe('MajorationCalculator', () => {
             expect(['Kuhn', 'Accord']).toContain(sourceLabel(r, accordKuhn));
         });
     });
+
+    describe('computeMajoration - heures supplémentaires', () => {
+        const defHs25CCN = getConventionMajorationDefs().find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_25);
+        const defHs50CCN = getConventionMajorationDefs().find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_50);
+        const accordKuhn = {
+            id: 'kuhn',
+            nomCourt: 'Kuhn',
+            majorations: {
+                heuresSupplementaires: { majoration25: 0.25, majoration50: 0.50, contingent: 370 }
+            }
+        };
+        const defHs25Accord = {
+            semanticId: SEMANTIC_ID.MAJORATION_HEURES_SUP_25,
+            kind: 'majoration',
+            source: SOURCE_ACCORD,
+            label: 'Majoration HS 25',
+            config: { stateKeyActif: 'travailHeuresSup', stateKeyHeures: 'heuresSup' }
+        };
+        const defHs50Accord = {
+            semanticId: SEMANTIC_ID.MAJORATION_HEURES_SUP_50,
+            kind: 'majoration',
+            source: SOURCE_ACCORD,
+            label: 'Majoration HS 50',
+            config: { stateKeyActif: 'travailHeuresSup', stateKeyHeures: 'heuresSup' }
+        };
+
+        it('devrait découper les heures sup entre tranche 25% et 50% en CCN', () => {
+            const state = { travailHeuresSup: true, heuresSup: 40 };
+            const r25 = computeMajoration(defHs25CCN, { state, tauxHoraire: 20, agreement: null });
+            const r50 = computeMajoration(defHs50CCN, { state, tauxHoraire: 20, agreement: null });
+            expect(r25.meta?.heures).toBeCloseTo(34.67, 1);
+            expect(r50.meta?.heures).toBeCloseTo(5.33, 1);
+            expect(r25.amount).toBeGreaterThan(0);
+            expect(r50.amount).toBeGreaterThan(0);
+        });
+
+        it('devrait retourner 0 si heures sup inactives', () => {
+            const state = { travailHeuresSup: false, heuresSup: 40 };
+            const r25 = computeMajoration(defHs25CCN, { state, tauxHoraire: 20, agreement: null });
+            expect(r25.amount).toBe(0);
+        });
+
+        it('devrait utiliser les taux accord pour les heures sup', () => {
+            const state = { travailHeuresSup: true, heuresSup: 20 };
+            const r25 = computeMajoration(defHs25Accord, { state, tauxHoraire: 20, agreement: accordKuhn });
+            const r50 = computeMajoration(defHs50Accord, { state, tauxHoraire: 20, agreement: accordKuhn });
+            expect(r25.meta?.taux).toBe(25);
+            expect(r50.amount).toBe(0);
+        });
+    });
 });

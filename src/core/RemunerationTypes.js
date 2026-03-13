@@ -34,6 +34,8 @@ export const SEMANTIC_ID = {
     PRIME_VACANCES: 'primeVacances',
     MAJORATION_NUIT: 'majorationNuit',
     MAJORATION_DIMANCHE: 'majorationDimanche',
+    MAJORATION_HEURES_SUP_25: 'majorationHeuresSup25',
+    MAJORATION_HEURES_SUP_50: 'majorationHeuresSup50',
     FORFAIT_HEURES: 'forfaitHeures',
     FORFAIT_JOURS: 'forfaitJours'
 };

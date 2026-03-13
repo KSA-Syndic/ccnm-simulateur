@@ -37,6 +37,8 @@ const state = {
     heuresNuit: 0,               // Heures de nuit mensuelles (CCN)
     travailDimanche: false,      // Travail le dimanche
     heuresDimanche: 0,           // Heures dimanche mensuelles
+    travailHeuresSup: false,     // Heures supplémentaires
+    heuresSup: 0,                // Heures supplémentaires mensuelles
     
     // === ACCORD ENTREPRISE (générique, listable) ===
     accordActif: false,           // Accord d'entreprise activé (générique)
@@ -54,6 +56,38 @@ let arreteesPdfStore = null;
 const ANALYTICS_CONSENT_KEY = 'simulator_analytics_consent';
 /** Envoi unique de l’événement "Resultat salaire" par chargement de page. */
 let umamiResultatSalaireSent = false;
+
+/**
+ * Parse robuste des champs numériques (accepte virgule et point).
+ * @param {string|number|null|undefined} value
+ * @param {number} fallback
+ * @returns {number}
+ */
+function sanitizeDecimalString(value) {
+    const raw = String(value ?? '').replace(/\s+/g, '').replace(/,/g, '.');
+    if (!raw) return '';
+    let out = '';
+    let hasDot = false;
+    for (const ch of raw) {
+        if (ch >= '0' && ch <= '9') {
+            out += ch;
+            continue;
+        }
+        if (ch === '.' && !hasDot) {
+            hasDot = true;
+            out += ch;
+        }
+    }
+    if (out.startsWith('.')) out = `0${out}`;
+    return out;
+}
+
+function parseDecimalInput(value, fallback = 0) {
+    const normalized = sanitizeDecimalString(value);
+    if (!normalized || normalized === '.') return fallback;
+    const n = Number.parseFloat(normalized);
+    return Number.isFinite(n) ? n : fallback;
+}
 
 /**
  * Indique si l’app tourne en local (aucun analytics envoyé).
@@ -432,7 +466,7 @@ function saveCurrentSalaryAndNext() {
 
     const floatingInput = document.getElementById('floating-salary-input');
     const floatingBlock = document.getElementById('floating-input-block');
-    const amount = parseFloat(floatingInput?.value) || 0;
+    const amount = parseDecimalInput(floatingInput?.value, 0);
 
     if (amount > 0) {
         const currentPeriod = periodsData[currentPeriodIndex];
@@ -892,11 +926,79 @@ function initControls() {
     // Amélioration UX : sélectionner automatiquement le contenu au focus
     function setupNumberInputUX(input) {
         if (!input) return;
+        if (input.type === 'number' && (!input.getAttribute('step') || input.getAttribute('step') === '1')) {
+            input.setAttribute('step', 'any');
+        }
+        input.setAttribute('inputmode', 'decimal');
+        input.setAttribute('data-decimal-input', 'true');
         input.addEventListener('focus', function() {
             // Sélectionner tout le contenu pour faciliter la modification
             this.select();
         });
     }
+
+    function insertDotDecimal(input) {
+        if (!input) return;
+        const v = input.value || '';
+        const start = input.selectionStart ?? v.length;
+        const end = input.selectionEnd ?? start;
+        let next = v.slice(0, start) + '.' + v.slice(end);
+        if (next === '.') next = '0.';
+        // Empêcher plusieurs séparateurs décimaux hors sélection
+        if ((next.match(/\./g) || []).length > 1) return;
+        input.value = next;
+        const nextPos = start + 1;
+        try {
+            input.setSelectionRange(nextPos, nextPos);
+        } catch (_) {
+            // Certains navigateurs ne permettent pas setSelectionRange sur type=number.
+        }
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    // Mobile/IME: intercepter avant insertion de "," ou "." dans les inputs number.
+    document.addEventListener('beforeinput', (e) => {
+        const input = e.target && e.target.closest
+            ? e.target.closest('input[type="number"], input[data-decimal-input="true"]')
+            : null;
+        if (!input) return;
+        if (e.inputType !== 'insertText') return;
+        if (e.data !== ',' && e.data !== '.') return;
+        e.preventDefault();
+        insertDotDecimal(input);
+    }, true);
+
+    // Sécurise toute saisie/paste : autoriser uniquement chiffres + un séparateur décimal.
+    document.addEventListener('input', (e) => {
+        const input = e.target && e.target.closest
+            ? e.target.closest('input[data-decimal-input="true"]')
+            : null;
+        if (!input) return;
+        const current = input.value ?? '';
+        const sanitized = sanitizeDecimalString(current);
+        if (current === sanitized) return;
+        const caret = input.selectionStart ?? sanitized.length;
+        input.value = sanitized;
+        const nextCaret = Math.min(caret, sanitized.length);
+        try {
+            input.setSelectionRange(nextCaret, nextCaret);
+        } catch (_) {
+            // no-op
+        }
+    }, true);
+
+    // Délégation globale pour les champs number créés dynamiquement (ex: modale saisie salaire)
+    document.addEventListener('keydown', (e) => {
+        const input = e.target && e.target.closest
+            ? e.target.closest('input[type="number"], input[data-decimal-input="true"]')
+            : null;
+        if (!input) return;
+        const isDecimalKey = e.key === ',' || e.key === '.' || e.key === 'Decimal' || e.code === 'NumpadDecimal';
+        if (!isDecimalKey) return;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        e.preventDefault();
+        insertDotDecimal(input);
+    }, true);
 
     // Appliquer à tous les champs numériques
     setupNumberInputUX(ancienneteInput);
@@ -904,11 +1006,13 @@ function initControls() {
     setupNumberInputUX(experienceProInput);
     setupNumberInputUX(document.getElementById('heures-nuit'));
     setupNumberInputUX(document.getElementById('heures-dimanche'));
+    setupNumberInputUX(document.getElementById('heures-sup'));
     setupNumberInputUX(document.getElementById('age-actuel'));
     setupNumberInputUX(document.getElementById('augmentation-annuelle'));
+    setupNumberInputUX(document.getElementById('floating-salary-input'));
 
     ancienneteInput.addEventListener('input', (e) => {
-        state.anciennete = parseInt(e.target.value) || 0;
+        state.anciennete = Math.max(0, parseDecimalInput(e.target.value, 0));
         // L'expérience pro ne peut pas être inférieure à l'ancienneté
         if (state.experiencePro < state.anciennete) {
             state.experiencePro = state.anciennete;
@@ -920,7 +1024,7 @@ function initControls() {
     });
 
     pointTerritorialInput.addEventListener('input', (e) => {
-        state.pointTerritorial = parseFloat(e.target.value) || CONFIG.POINT_TERRITORIAL_DEFAUT;
+        state.pointTerritorial = parseDecimalInput(e.target.value, CONFIG.POINT_TERRITORIAL_DEFAUT);
         updateAll();
     });
 
@@ -932,15 +1036,15 @@ function initControls() {
 
     // Saisie libre pendant la frappe (ex. taper "14" sans que le "1" soit bloqué sur mobile)
     experienceProInput.addEventListener('input', (e) => {
-        const value = parseInt(e.target.value, 10);
-        state.experiencePro = Number.isNaN(value) ? 0 : Math.max(0, value);
+        const value = parseDecimalInput(e.target.value, 0);
+        state.experiencePro = Math.max(0, value);
         updateExperienceProValidation();
         updateAll();
     });
 
     // Contrainte (exp. pro >= ancienneté) appliquée uniquement au blur
     experienceProInput.addEventListener('blur', () => {
-        const raw = parseInt(experienceProInput.value, 10) || 0;
+        const raw = parseDecimalInput(experienceProInput.value, 0);
         const minVal = state.anciennete;
         if (minVal > 0 && raw < minVal) {
             const attempted = raw;
@@ -974,8 +1078,7 @@ function initControls() {
     });
     
     heuresNuitInput.addEventListener('input', (e) => {
-        const raw = String(e.target.value).replace(',', '.');
-        state.heuresNuit = parseFloat(raw) || 0;
+        state.heuresNuit = parseDecimalInput(e.target.value, 0);
         updateAll();
     });
 
@@ -992,10 +1095,26 @@ function initControls() {
     });
     
     heuresDimancheInput.addEventListener('input', (e) => {
-        const raw = String(e.target.value).replace(',', '.');
-        state.heuresDimanche = parseFloat(raw) || 0;
+        state.heuresDimanche = parseDecimalInput(e.target.value, 0);
         updateAll();
     });
+
+    // Heures supplémentaires
+    const travailHeuresSupCheckbox = document.getElementById('travail-heures-sup');
+    const heuresSupField = document.getElementById('heures-sup-field');
+    const heuresSupInput = document.getElementById('heures-sup');
+    if (travailHeuresSupCheckbox && heuresSupField && heuresSupInput) {
+        travailHeuresSupCheckbox.addEventListener('change', (e) => {
+            state.travailHeuresSup = e.target.checked;
+            heuresSupField.classList.toggle('hidden', !e.target.checked);
+            updateTauxInfo();
+            updateAll();
+        });
+        heuresSupInput.addEventListener('input', (e) => {
+            state.heuresSup = parseDecimalInput(e.target.value, 0);
+            updateAll();
+        });
+    }
 
     // Primes horaires accord (délégation sur le conteneur dynamique)
     const accordPrimesHorairesContainer = document.getElementById('accord-primes-horaires-container');
@@ -1004,7 +1123,8 @@ function initControls() {
             const keyActif = e.target.dataset?.stateKeyActif;
             if (e.target.type === 'checkbox' && keyActif) {
                 const isChecked = e.target.checked;
-                if (isChecked && !state.accordActif) {
+                const primeSource = e.target.dataset?.primeSource || 'accord';
+                if (isChecked && !state.accordActif && primeSource === 'accord') {
                     state.accordActif = true;
                     const accordCheckbox = document.getElementById('accord-actif');
                     if (accordCheckbox) accordCheckbox.checked = true;
@@ -1023,9 +1143,8 @@ function initControls() {
         });
         accordPrimesHorairesContainer.addEventListener('input', (e) => {
             const keyHeures = e.target.dataset?.stateKeyHeures;
-            if (e.target.type === 'number' && keyHeures) {
-                const raw = String(e.target.value).replace(',', '.');
-                state.accordInputs[keyHeures] = parseFloat(raw) || 0;
+            if (keyHeures) {
+                state.accordInputs[keyHeures] = parseDecimalInput(e.target.value, 0);
                 updateAll();
             }
         });
@@ -1211,7 +1330,9 @@ function getModalitesHorsPrimesPage3(agreement) {
         items.push('Majoration dimanche (+' + pct + '%)');
     }
     if (agreement.primes && Array.isArray(agreement.primes)) {
-        const primesHoraires = agreement.primes.filter(p => (p.valueType === 'horaire' || p.valueType === 'majorationHoraire') && p.stateKeyHeures);
+        const primesHoraires = agreement.primes.filter(p =>
+            ((p.valueType === 'horaire' && (p.stateKeyHeures || p.autoHeures === true))
+                || (p.valueType === 'majorationHoraire' && p.stateKeyHeures)));
         primesHoraires.forEach(p => {
             const taux = p.valeurAccord != null ? String(p.valeurAccord).replace('.', ',') : '';
             const prefix = taux ? '+' : '';
@@ -1221,7 +1342,8 @@ function getModalitesHorsPrimesPage3(agreement) {
                 items.push(lib);
             } else {
                 const unit = p.unit || '€/h';
-                const lib = p.label ? `${p.label} (${prefix}${taux} ${unit})` : `Prime horaire (${prefix}${taux} ${unit})`;
+                const auto = p.autoHeures === true ? ' · base horaire auto (151,67h)' : '';
+                const lib = p.label ? `${p.label} (${prefix}${taux} ${unit}${auto})` : `Prime horaire (${prefix}${taux} ${unit}${auto})`;
                 items.push(lib);
             }
         });
@@ -1261,16 +1383,42 @@ function updateConditionsTravailDisplay() {
     const { classe } = getActiveClassification();
     const isCadre = classe >= CONFIG.SEUIL_CADRE;
     const isForfaitJours = state.forfait === 'jours';
+    const hsAllowed = !(isCadre && isForfaitJours);
     
     const hintForfaitJours = document.getElementById('hint-forfait-jours');
     const groupNuit = document.getElementById('group-nuit');
     const groupDimanche = document.getElementById('group-dimanche');
+    const groupHeuresSup = document.getElementById('group-heures-sup');
     const container = document.getElementById('accord-primes-horaires-container');
     
     const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
-    const primesHoraires = agreement && typeof window.AgreementHelpers?.getPrimes === 'function'
-        ? window.AgreementHelpers.getPrimes(agreement).filter(p => (p.valueType === 'horaire' || p.valueType === 'majorationHoraire') && p.stateKeyHeures)
+    const ccnPrimeEquipeDef = {
+        id: 'primeEquipe',
+        label: 'Prime d\'équipe',
+        source: 'convention',
+        valueType: 'horaire',
+        stateKeyActif: 'travailEquipe',
+        stateKeyHeures: 'heuresEquipe',
+        autoHeures: true,
+        min: 0,
+        max: 200,
+        step: 0.01,
+        defaultHeures: CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67,
+        tooltip: 'CCNM : prime d\'équipe = 30 minutes du taux horaire de base. Base de calcul : 151,67 h/mois (35 h/semaine).'
+    };
+    const accordPrimesHoraires = agreement && typeof window.AgreementHelpers?.getPrimes === 'function'
+        ? window.AgreementHelpers.getPrimes(agreement).filter(p =>
+            ((p.valueType === 'horaire' && (p.stateKeyHeures || p.autoHeures === true))
+                || (p.valueType === 'majorationHoraire' && p.stateKeyHeures)))
         : [];
+    let primesHoraires = [];
+    if (state.accordActif && agreement) {
+        primesHoraires = [...accordPrimesHoraires];
+        const hasPrimeEquipeAccord = primesHoraires.some(p => p.id === 'primeEquipe');
+        if (!hasPrimeEquipeAccord) primesHoraires.push(ccnPrimeEquipeDef);
+    } else {
+        primesHoraires = [ccnPrimeEquipeDef];
+    }
     const hasPrimeHeures = primesHoraires.length > 0;
     
     // Cadres au forfait jours : pas de majorations financières (repos uniquement)
@@ -1278,46 +1426,84 @@ function updateConditionsTravailDisplay() {
         hintForfaitJours.classList.remove('hidden');
         groupNuit.classList.add('hidden');
         groupDimanche.classList.add('hidden');
+        if (groupHeuresSup) groupHeuresSup.classList.add('hidden');
         if (container) {
             container.innerHTML = '';
             container.classList.add('hidden');
         }
         state.typeNuit = 'aucun';
         state.travailDimanche = false;
+        state.travailHeuresSup = false;
+        state.heuresSup = 0;
         primesHoraires.forEach(p => {
             if (p.stateKeyActif) state.accordInputs[p.stateKeyActif] = false;
         });
         document.getElementById('travail-nuit').checked = false;
         document.getElementById('travail-dimanche').checked = false;
+        const hsCb = document.getElementById('travail-heures-sup');
+        const hsInput = document.getElementById('heures-sup');
+        if (hsCb) hsCb.checked = false;
+        if (hsInput) hsInput.value = '0';
         document.getElementById('heures-nuit-field').classList.add('hidden');
         document.getElementById('heures-dimanche-field').classList.add('hidden');
+        const hsField = document.getElementById('heures-sup-field');
+        if (hsField) hsField.classList.add('hidden');
     } else {
         hintForfaitJours.classList.add('hidden');
         groupDimanche.classList.remove('hidden');
         groupNuit.classList.remove('hidden');
+        if (groupHeuresSup) groupHeuresSup.classList.toggle('hidden', !hsAllowed);
         const travailNuitCheckbox = document.getElementById('travail-nuit');
         const heuresNuitEl = document.getElementById('heures-nuit');
         if (travailNuitCheckbox) travailNuitCheckbox.checked = state.typeNuit !== 'aucun';
-        if (heuresNuitEl) heuresNuitEl.value = String(state.heuresNuit ?? 0);
+        if (heuresNuitEl && document.activeElement !== heuresNuitEl) {
+            heuresNuitEl.value = String(state.heuresNuit ?? 0);
+        }
         const hnf = document.getElementById('heures-nuit-field');
         if (hnf) hnf.classList.toggle('hidden', state.typeNuit === 'aucun');
+        const hsCb = document.getElementById('travail-heures-sup');
+        const hsInput = document.getElementById('heures-sup');
+        const hsField = document.getElementById('heures-sup-field');
+        if (!hsAllowed) {
+            state.travailHeuresSup = false;
+            state.heuresSup = 0;
+            if (hsCb) hsCb.checked = false;
+            if (hsInput && document.activeElement !== hsInput) hsInput.value = '0';
+            if (hsField) hsField.classList.add('hidden');
+        } else {
+            if (hsCb) hsCb.checked = !!state.travailHeuresSup;
+            if (hsInput && document.activeElement !== hsInput) {
+                hsInput.value = String(state.heuresSup ?? 0);
+            }
+            if (hsField) hsField.classList.toggle('hidden', !state.travailHeuresSup);
+        }
         
         if (!container) return;
-        const accordPrimesSignature = (agreement?.id ?? '') + '-' + (primesHoraires.length || 0);
+        const accordPrimesSignature = (state.accordActif ? 'accord' : 'ccn') + '-' + (agreement?.id ?? 'none') + '-' + (primesHoraires.map(p => p.id).join('|'));
         const alreadyBuilt = container.children.length > 0 && container.dataset.accordPrimesBuilt === accordPrimesSignature;
         if (!isCadre && hasPrimeHeures) {
             container.classList.remove('hidden');
             if (alreadyBuilt) {
                 primesHoraires.forEach(prime => {
+                    if (prime.stateKeyActif && !(prime.stateKeyActif in state.accordInputs)) {
+                        state.accordInputs[prime.stateKeyActif] = false;
+                    }
+                    if (!prime.autoHeures && prime.stateKeyHeures && !(prime.stateKeyHeures in state.accordInputs)) {
+                        state.accordInputs[prime.stateKeyHeures] = prime.defaultHeures ?? (CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67);
+                    }
                     const actif = state.accordInputs[prime.stateKeyActif] === true;
-                    const heures = state.accordInputs[prime.stateKeyHeures] != null ? state.accordInputs[prime.stateKeyHeures] : (prime.defaultHeures ?? 151.67);
+                    const heures = prime.stateKeyHeures
+                        ? (state.accordInputs[prime.stateKeyHeures] != null ? state.accordInputs[prime.stateKeyHeures] : (prime.defaultHeures ?? 151.67))
+                        : (prime.defaultHeures ?? 151.67);
                     const formGroup = container.querySelector(`[data-state-key-actif="${prime.stateKeyActif}"]`);
                     if (formGroup) {
                         const cb = formGroup.querySelector('input[type="checkbox"]');
                         const inputHeures = formGroup.querySelector('input[data-state-key-heures]');
                         const subField = formGroup.querySelector('.sub-field');
                         if (cb) cb.checked = actif;
-                        if (inputHeures) inputHeures.value = String(heures);
+                        if (inputHeures && !prime.autoHeures && document.activeElement !== inputHeures) {
+                            inputHeures.value = String(heures);
+                        }
                         if (subField) subField.classList.toggle('hidden', !actif);
                     }
                 });
@@ -1326,8 +1512,16 @@ function updateConditionsTravailDisplay() {
             container.dataset.accordPrimesBuilt = accordPrimesSignature;
             container.innerHTML = '';
             primesHoraires.forEach(prime => {
+                if (prime.stateKeyActif && !(prime.stateKeyActif in state.accordInputs)) {
+                    state.accordInputs[prime.stateKeyActif] = false;
+                }
+                if (!prime.autoHeures && prime.stateKeyHeures && !(prime.stateKeyHeures in state.accordInputs)) {
+                    state.accordInputs[prime.stateKeyHeures] = prime.defaultHeures ?? (CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67);
+                }
                 const actif = state.accordInputs[prime.stateKeyActif] === true;
-                const heures = state.accordInputs[prime.stateKeyHeures] != null ? state.accordInputs[prime.stateKeyHeures] : (prime.defaultHeures ?? 151.67);
+                const heures = prime.stateKeyHeures
+                    ? (state.accordInputs[prime.stateKeyHeures] != null ? state.accordInputs[prime.stateKeyHeures] : (prime.defaultHeures ?? 151.67))
+                    : (prime.defaultHeures ?? 151.67);
                 const formGroup = document.createElement('div');
                 formGroup.className = 'form-group';
                 formGroup.dataset.stateKeyActif = prime.stateKeyActif;
@@ -1338,6 +1532,7 @@ function updateConditionsTravailDisplay() {
                 cb.type = 'checkbox';
                 cb.className = 'book-checkbox';
                 cb.dataset.stateKeyActif = prime.stateKeyActif;
+                cb.dataset.primeSource = prime.source || 'accord';
                 cb.checked = actif;
                 const spanLabel = document.createElement('span');
                 spanLabel.textContent = prime.label || "Prime horaire (accord d'entreprise)";
@@ -1348,7 +1543,10 @@ function updateConditionsTravailDisplay() {
                 }
                 labelCheck.appendChild(cb);
                 labelCheck.appendChild(spanLabel);
-                const prefixAccordOnly = (typeof window.LABELS !== 'undefined' && window.LABELS.tooltipPrefixAccordOnly) || '';
+                const isAccordPrime = (prime.source || 'accord') === 'accord';
+                const prefixAccordOnly = isAccordPrime && (typeof window.LABELS !== 'undefined' && window.LABELS.tooltipPrefixAccordOnly)
+                    ? window.LABELS.tooltipPrefixAccordOnly
+                    : '';
                 const tooltipContent = (() => {
                     const baseTooltip = prime.tooltip ? String(prime.tooltip) : '';
                     if (prime.valueType === 'majorationHoraire' && prime.valeurAccord != null) {
@@ -1369,29 +1567,33 @@ function updateConditionsTravailDisplay() {
                     tooltipSpan.textContent = '?';
                     labelCheck.appendChild(tooltipSpan);
                 }
-                const subField = document.createElement('div');
-                subField.className = 'sub-field sub-field-inline' + (actif ? '' : ' hidden');
-                subField.dataset.heuresFieldFor = prime.stateKeyActif;
-                const inputWithUnit = document.createElement('div');
-                inputWithUnit.className = 'input-with-unit';
-                const inputHeures = document.createElement('input');
-                inputHeures.type = 'number';
-                inputHeures.className = 'book-input';
-                inputHeures.min = prime.min ?? 0;
-                inputHeures.max = prime.max ?? 200;
-                inputHeures.step = prime.step ?? 0.01;
-                inputHeures.value = heures;
-                inputHeures.dataset.stateKeyHeures = prime.stateKeyHeures;
-                inputHeures.setAttribute('aria-label', 'Heures par mois');
-                inputHeures.addEventListener('focus', function () { this.select(); });
-                const spanUnit = document.createElement('span');
-                spanUnit.className = 'input-unit';
-                spanUnit.textContent = 'heures/mois';
-                inputWithUnit.appendChild(inputHeures);
-                inputWithUnit.appendChild(spanUnit);
-                subField.appendChild(inputWithUnit);
-                formGroup.appendChild(labelCheck);
-                formGroup.appendChild(subField);
+                if (!prime.autoHeures) {
+                    const subField = document.createElement('div');
+                    subField.className = 'sub-field sub-field-inline' + (actif ? '' : ' hidden');
+                    subField.dataset.heuresFieldFor = prime.stateKeyActif;
+                    const inputWithUnit = document.createElement('div');
+                    inputWithUnit.className = 'input-with-unit';
+                    const inputHeures = document.createElement('input');
+                    inputHeures.type = 'text';
+                    inputHeures.className = 'book-input';
+                    inputHeures.value = heures;
+                    inputHeures.dataset.stateKeyHeures = prime.stateKeyHeures;
+                    inputHeures.setAttribute('inputmode', 'decimal');
+                    inputHeures.setAttribute('data-decimal-input', 'true');
+                    inputHeures.setAttribute('autocomplete', 'off');
+                    inputHeures.setAttribute('aria-label', 'Heures par mois');
+                    inputHeures.addEventListener('focus', function () { this.select(); });
+                    const spanUnit = document.createElement('span');
+                    spanUnit.className = 'input-unit';
+                    spanUnit.textContent = 'heures/mois';
+                    inputWithUnit.appendChild(inputHeures);
+                    inputWithUnit.appendChild(spanUnit);
+                    subField.appendChild(inputWithUnit);
+                    formGroup.appendChild(labelCheck);
+                    formGroup.appendChild(subField);
+                } else {
+                    formGroup.appendChild(labelCheck);
+                }
                 container.appendChild(formGroup);
             });
             // Initialiser Tippy sur les nouveaux "?" (sans réinitialiser toute la page)
@@ -1477,22 +1679,47 @@ function buildAccordOptionsUI() {
 /**
  * Mettre à jour les informations de taux appliqués (CCN vs accord)
  */
+function getTauxHoraireReferenceUI(agreement) {
+    const heuresBase = CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67;
+    const hsAccord = agreement?.majorations?.heuresSupplementaires;
+    const { classe } = getActiveClassification();
+    const isCadre = classe >= CONFIG.SEUIL_CADRE;
+    const isForfaitJoursCadre = isCadre && state.forfait === 'jours';
+    const hsActif = !isForfaitJoursCadre && !!state.travailHeuresSup && (Number(state.heuresSup) || 0) > 0;
+    const heuresSup = hsActif ? (Number(state.heuresSup) || 0) : 0;
+    const seuil = CONFIG.HEURES_SUP_TRANCHE_1_MENSUELLES ?? 34.67;
+    const h25 = Math.min(Math.max(heuresSup, 0), seuil);
+    const h50 = Math.max(heuresSup - seuil, 0);
+    const t25 = (state.accordActif && hsAccord?.majoration25 != null) ? hsAccord.majoration25 : (CONFIG.MAJORATIONS_CCN?.heuresSup25 ?? 0.25);
+    const t50 = (state.accordActif && hsAccord?.majoration50 != null) ? hsAccord.majoration50 : (CONFIG.MAJORATIONS_CCN?.heuresSup50 ?? 0.50);
+    const coeff = hsActif
+        ? ((heuresBase + h25 * (1 + t25) + h50 * (1 + t50)) / (heuresBase + h25 + h50))
+        : 1;
+    return {
+        isMajoreHS: hsActif,
+        coeff: Math.round(coeff * 1000) / 1000
+    };
+}
+
 function updateTauxInfo() {
     const tauxNuitInfo = document.getElementById('taux-nuit-info');
     const tauxDimancheInfo = document.getElementById('taux-dimanche-info');
+    const tauxHeuresSupInfo = document.getElementById('taux-heures-sup-info');
     const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
     const nomAccord = getAccordNomCourt(agreement) || 'accord';
+    const tauxRef = getTauxHoraireReferenceUI(agreement);
+    const suffixTauxRef = tauxRef.isMajoreHS ? ` · Base horaire majorée HS (x${String(tauxRef.coeff).replace('.', ',')})` : ' · Base 35h';
 
     // Taux de nuit (taux accord si présent, sinon CCN)
     if (tauxNuitInfo) {
         if (state.typeNuit !== 'aucun') {
             if (state.accordActif && agreement && agreement.majorations?.nuit?.posteNuit != null) {
                 const pct = Math.round(agreement.majorations.nuit.posteNuit * 100);
-                tauxNuitInfo.textContent = `Taux ${nomAccord} : +${pct}%`;
+                tauxNuitInfo.textContent = `Taux ${nomAccord} : +${pct}%${suffixTauxRef}`;
                 tauxNuitInfo.className = 'taux-applique accord';
             } else {
                 const pctCCN = Math.round((CONFIG.MAJORATIONS_CCN?.nuit ?? 0.15) * 100);
-                tauxNuitInfo.textContent = `Taux CCN : +${pctCCN}%`;
+                tauxNuitInfo.textContent = `Taux CCN : +${pctCCN}%${suffixTauxRef}`;
                 tauxNuitInfo.className = 'taux-applique';
             }
         } else {
@@ -1505,20 +1732,23 @@ function updateTauxInfo() {
         if (state.travailDimanche) {
             if (state.accordActif && agreement && agreement.majorations?.dimanche != null) {
                 const pct = Math.round(agreement.majorations.dimanche * 100);
-                tauxDimancheInfo.textContent = `Taux ${nomAccord} : +${pct}%`;
+                tauxDimancheInfo.textContent = `Taux ${nomAccord} : +${pct}%${suffixTauxRef}`;
                 tauxDimancheInfo.className = 'taux-applique accord';
             } else if (state.accordActif && agreement) {
-                tauxDimancheInfo.textContent = `Taux ${nomAccord} : +50%`;
+                tauxDimancheInfo.textContent = `Taux ${nomAccord} : +50%${suffixTauxRef}`;
                 tauxDimancheInfo.className = 'taux-applique accord';
             } else {
                 const pctCCN = Math.round((CONFIG.MAJORATIONS_CCN?.dimanche ?? 1) * 100);
-                tauxDimancheInfo.textContent = `Taux CCN : +${pctCCN}%`;
+                tauxDimancheInfo.textContent = `Taux CCN : +${pctCCN}%${suffixTauxRef}`;
                 tauxDimancheInfo.className = 'taux-applique';
             }
         } else {
             tauxDimancheInfo.textContent = '';
         }
     }
+
+    // Bloc texte sous la saisie HS volontairement retiré : l'information est portée par le tooltip.
+    if (tauxHeuresSupInfo) tauxHeuresSupInfo.textContent = '';
 }
 
 /**
@@ -1639,7 +1869,7 @@ function calculateRemuneration() {
  * INCLUT : base SMH (ou barème débutants F11/F12 avec < 6 ans) + majorations forfaits cadres (heures/jours).
  * Les majorations forfaits font partie du SMH. Les majorations heures sup sont incluses dans l'assiette SMH
  * (non calculées ici tant que l'app ne simule pas les HS).
- * EXCLUT : primes ancienneté, majorations pénibilité, majorations nuit/dimanche, prime d'équipe.
+ * EXCLUT : majorations pénibilité, majorations nuit/dimanche, prime d'équipe, et prime d'ancienneté si non incluseDansSMH.
  * NOTE : Les primes d'accord avec inclusDansSMH === true (ex. prime de vacances, Art. 140 CCNM)
  * sont une distribution du salaire permettant d'atteindre le SMH grille, pas un supplément.
  * Elles ne modifient pas le total annuel mais sont prises en compte dans la distribution mensuelle.
@@ -1748,6 +1978,7 @@ function updateAll() {
 
     // Mise à jour des taux affichés (CCN vs accord)
     updateTauxInfo();
+    updateArreteesSalaireHint();
 
     // Calcul et affichage rémunération
     const remuneration = calculateRemuneration();
@@ -1858,12 +2089,9 @@ function aggregateRemunerationDetails(details) {
     let majorationsAccord = 0;
     const majorationsBreakdownCCN = [];
     const majorationsBreakdownAccord = [];
-    let primesCCN = 0;
-    let primesAccord = 0;
-    const primesBreakdownCCN = [];
-    const primesBreakdownAccord = [];
     const smhSubLines = []; // Primes incluses dans le SMH (Art. 140) — sous-lignes rattachées à la base
     const isAccordDetail = (d) => !!d.isAgreement;
+    let baseLineIndex = -1;
 
     details.forEach(detail => {
         // SMH de base toujours affiché (avec origine pour tooltip)
@@ -1873,6 +2101,9 @@ function aggregateRemunerationDetails(details) {
                 tooltipOrigin: 'CCN Métallurgie 2024',
                 tooltipDetail: detail.label
             });
+            if (baseLineIndex === -1) {
+                baseLineIndex = aggregated.length - 1;
+            }
         }
         // Primes incluses dans le SMH (Art. 140) : sous-lignes rattachées à la base SMH
         else if (detail.isSMHIncluded) {
@@ -1899,21 +2130,38 @@ function aggregateRemunerationDetails(details) {
                 majorationsBreakdownCCN.push({ label: detail.label, value: detail.value, isAgreement: false });
             }
         }
-        // Agréger les primes en CCN vs accord (exclues du SMH)
+        // Primes hors SMH : afficher une ligne par prime (CCN et accord)
         else if (detail.isPositive && !detail.isBase) {
-            if (isAccordDetail(detail)) {
-                primesAccord += detail.value;
-                primesBreakdownAccord.push({ label: detail.label, value: detail.value, isAgreement: true });
+            const isPrimeDetail = (detail.semanticId && String(detail.semanticId).startsWith('prime'))
+                || /prime/i.test(detail.label || '');
+            if (isPrimeDetail) {
+                aggregated.push({
+                    ...detail,
+                    tooltipOrigin: isAccordDetail(detail)
+                        ? `Accord d'entreprise ${getAccordNomCourt(typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null) || 'accord'}`
+                        : 'Convention collective (CCN)',
+                    tooltipDetail: detail.label
+                });
             } else {
-                primesCCN += detail.value;
-                primesBreakdownCCN.push({ label: detail.label, value: detail.value, isAgreement: false });
+                aggregated.push({
+                    ...detail,
+                    tooltipOrigin: isAccordDetail(detail)
+                        ? `Accord d'entreprise ${getAccordNomCourt(typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null) || 'accord'}`
+                        : 'Convention collective (CCN)',
+                    tooltipDetail: detail.label
+                });
             }
         }
     });
 
-    // Insérer les sous-lignes SMH juste après la ligne de base (rattachées visuellement)
+    // Insérer les sous-lignes SMH juste après la ligne de base (rattachées visuellement).
+    // Important: éviter qu'elles apparaissent sous une autre prime (ex: prime d'équipe).
     if (smhSubLines.length > 0) {
-        aggregated.push(...smhSubLines);
+        if (baseLineIndex >= 0) {
+            aggregated.splice(baseLineIndex + 1, 0, ...smhSubLines);
+        } else {
+            aggregated.unshift(...smhSubLines);
+        }
     }
 
     const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
@@ -1938,27 +2186,6 @@ function aggregateRemunerationDetails(details) {
             isAgreement: true,
             tooltipOrigin: `Accord d'entreprise ${nomAccord}`,
             breakdown: majorationsBreakdownAccord
-        });
-    }
-
-    if (primesCCN > 0) {
-        aggregated.push({
-            label: 'Primes (ancienneté, etc.)',
-            value: primesCCN,
-            isPositive: true,
-            isAgreement: false,
-            tooltipOrigin: 'Convention collective (CCN)',
-            breakdown: primesBreakdownCCN
-        });
-    }
-    if (primesAccord > 0) {
-        aggregated.push({
-            label: 'Primes (ancienneté, etc.)',
-            value: primesAccord,
-            isPositive: true,
-            isAgreement: true,
-            tooltipOrigin: `Accord d'entreprise ${nomAccord}`,
-            breakdown: primesBreakdownAccord
         });
     }
 
@@ -2384,7 +2611,7 @@ async function updateEvolutionChart(years) {
     
     // Lire le taux d'augmentation annuelle
     const augmentationInput = document.getElementById('augmentation-annuelle');
-    const augmentationAnnuelle = augmentationInput ? parseFloat(augmentationInput.value) || 0 : 0;
+    const augmentationAnnuelle = augmentationInput ? parseDecimalInput(augmentationInput.value, 0) : 0;
     
     const avgInflation = getAverageInflation(inflationData);
     const salaryEvolution = calculateSalaryEvolution(years, augmentationAnnuelle);
@@ -2818,37 +3045,81 @@ function updateArreteesSalaireHint() {
     }
 }
 
+function getSmhScopeDynamic() {
+    const agreement = (typeof window.AgreementLoader?.getActiveAgreement === 'function')
+        ? window.AgreementLoader.getActiveAgreement() : null;
+    const isAccordActif = !!(state.accordActif && agreement);
+    const classification = getActiveClassification();
+    const isCadre = classification.classe >= CONFIG.SEUIL_CADRE;
+    const isForfaitJoursCadre = isCadre && state.forfait === 'jours';
+    const primes = isAccordActif && Array.isArray(agreement?.primes) ? agreement.primes : [];
+    const included = [];
+    const excluded = [];
+
+    const addUnique = (arr, label) => {
+        if (!label) return;
+        if (!arr.includes(label)) arr.push(label);
+    };
+
+    // Primes accord dynamiques selon inclusDansSMH.
+    for (const p of primes) {
+        const actif = p.stateKeyActif ? (state.accordInputs?.[p.stateKeyActif] === true || state[p.stateKeyActif] === true) : true;
+        if (!actif) continue;
+        if (p.inclusDansSMH === true) addUnique(included, p.label.toLowerCase());
+        else addUnique(excluded, p.label.toLowerCase());
+    }
+
+    // Base SMH : toujours présente dans l'assiette.
+    addUnique(included, 'base SMH');
+
+    // 13e mois et forfaits font partie du SMH.
+    if (isAccordActif && agreement?.repartition13Mois?.actif && agreement?.repartition13Mois?.inclusDansSMH === true) {
+        addUnique(included, '13e mois');
+    }
+    if (state.forfait === 'heures') addUnique(included, 'majoration forfait heures (+15%)');
+    if (state.forfait === 'jours') addUnique(included, 'majoration forfait jours (+30%)');
+
+    // Heures supplémentaires (si actives).
+    if (!isForfaitJoursCadre && state.travailHeuresSup === true && Number(state.heuresSup || 0) > 0) {
+        addUnique(included, 'majorations d\'heures supplémentaires');
+    }
+
+    // Ancienneté dynamiquement incluse/exclue selon paramétrage.
+    const ancienneteCfg = (isAccordActif && agreement?.anciennete) ? agreement.anciennete : CONFIG.ANCIENNETE;
+    const accordOverrideAnciennete = isAccordActif && typeof agreement?.anciennete?.inclusDansSMH === 'boolean'
+        ? agreement.anciennete.inclusDansSMH === true
+        : null;
+    const ancienneteIncluse = accordOverrideAnciennete !== null
+        ? accordOverrideAnciennete
+        : (CONFIG?.ANCIENNETE?.inclusDansSMH === true);
+    const seuilAnciennete = ancienneteCfg?.seuil ?? CONFIG.ANCIENNETE.seuil;
+    const eligibleAnciennete = isAccordActif
+        ? ((agreement?.anciennete?.tousStatuts === true || !isCadre) && state.anciennete >= seuilAnciennete)
+        : (!isCadre && state.anciennete >= seuilAnciennete);
+    if (eligibleAnciennete) {
+        if (ancienneteIncluse) addUnique(included, 'prime d\'ancienneté');
+        else addUnique(excluded, 'prime d\'ancienneté');
+    }
+
+    // Majorations de pénibilité / contraintes (si actives) hors SMH.
+    if (state.typeNuit !== 'aucun' && Number(state.heuresNuit || 0) > 0) addUnique(excluded, 'majoration nuit');
+    if (state.travailDimanche === true && Number(state.heuresDimanche || 0) > 0) addUnique(excluded, 'majoration dimanche');
+    const travailEquipeActif = (state.accordInputs?.travailEquipe === true || state.travailEquipe === true);
+    if (travailEquipeActif) addUnique(excluded, 'prime d\'équipe');
+
+    return { included, excluded };
+}
+
 /**
  * Construit dynamiquement le texte d'avertissement SMH en fonction des primes
  * de l'accord actif et de leur flag inclusDansSMH (Art. 140 CCNM).
  * @returns {string} HTML du hint
  */
 function buildSmhHintHtml() {
-    const agreement = (typeof window.AgreementLoader?.getActiveAgreement === 'function')
-        ? window.AgreementLoader.getActiveAgreement() : null;
-    const primes = (state.accordActif && agreement?.primes) ? agreement.primes : [];
-    const primesIncluses = primes.filter(p => p.inclusDansSMH === true);
-    const primesExclues = primes.filter(p => !p.inclusDansSMH);
-
-    let msg = '<strong>Attention (Art. 140 CCNM) :</strong> ';
-    if (primesIncluses.length > 0) {
-        const noms = primesIncluses.map(p => p.label.toLowerCase()).join(', ');
-        msg += `Saisissez le <strong>salaire mensuel brut incluant ${noms}</strong> (lorsque versée(s) ce mois-là). `;
-    } else {
-        msg += 'Saisissez le <strong>salaire mensuel brut</strong>. ';
-    }
-
-    // Éléments toujours exclus : ancienneté + majorations + primes hors SMH
-    const exclusions = [];
-    if (agreement?.anciennete) exclusions.push('prime d\'ancienneté');
-    primesExclues.forEach(p => exclusions.push(p.label.toLowerCase()));
-    // Majorations CCN (nuit, dimanche) sont toujours exclues
-    exclusions.push('majorations nuit/dimanche', 'majorations pénibilité');
-    if (exclusions.length > 0) {
-        msg += `<strong>Excluez</strong> : ${exclusions.join(', ')}. `;
-    }
-    msg += 'Le 13e mois et les majorations forfaits font partie du SMH.';
-    return msg;
+    const { included, excluded } = getSmhScopeDynamic();
+    const includedLabel = included.length ? included.join(', ') : 'aucun élément additionnel actif';
+    const excludedLabel = excluded.length ? excluded.join(', ') : 'aucun';
+    return `<strong>Comment saisir votre brut (Art. 140 CCNM)</strong><br><strong>Pris en compte</strong> : base SMH + éléments inclus.<br><strong>À inclure</strong> : ${includedLabel}.<br><strong>À exclure</strong> : ${excludedLabel}.`;
 }
 
 /**
@@ -2856,26 +3127,10 @@ function buildSmhHintHtml() {
  * @returns {string}
  */
 function buildSmhTooltipText() {
-    const agreement = (typeof window.AgreementLoader?.getActiveAgreement === 'function')
-        ? window.AgreementLoader.getActiveAgreement() : null;
-    const primes = (state.accordActif && agreement?.primes) ? agreement.primes : [];
-    const primesIncluses = primes.filter(p => p.inclusDansSMH === true);
-    const primesExclues = primes.filter(p => !p.inclusDansSMH);
-
-    let msg = '';
-    if (primesIncluses.length > 0) {
-        const noms = primesIncluses.map(p => p.label.toLowerCase()).join(', ');
-        msg += `Brut incluant ${noms} (si versée(s) ce mois). `;
-    } else {
-        msg += 'Brut hors primes. ';
-    }
-    const exclusions = [];
-    if (agreement?.anciennete) exclusions.push('prime d\'ancienneté');
-    primesExclues.forEach(p => exclusions.push(p.label.toLowerCase()));
-    exclusions.push('majorations nuit/dimanche', 'pénibilité');
-    msg += `Excluez : ${exclusions.join(', ')}. `;
-    msg += 'Le 13e mois et les majorations forfaits font partie du SMH.';
-    return msg;
+    const { included, excluded } = getSmhScopeDynamic();
+    const includedLabel = included.length ? included.join(', ') : 'aucun élément additionnel actif';
+    const excludedLabel = excluded.length ? excluded.join(', ') : 'aucun';
+    return `Pris en compte : base SMH + éléments inclus. À inclure : ${includedLabel}. À exclure : ${excludedLabel}.`;
 }
 
 /**
@@ -3308,6 +3563,9 @@ function updateCurveControls(options) {
         }
     }
 
+    // Synchroniser le hint arriérés avec les mêmes éléments dynamiques que le tooltip.
+    updateArreteesSalaireHint();
+
     // Tooltip "?" : rappeler quels éléments inclure/exclure selon le mode
     if (floatingInfoIcon) {
         const tooltipSMHSeul = state.arretesSurSMHSeul
@@ -3561,7 +3819,7 @@ function openSalaryModal(periodKey, periodLabel, currentSalary) {
                         <p>Le salaire mensuel brut correspond au « Total brut » de votre fiche de paie pour ce mois.</p>
                     </div>
                     <div class="input-with-unit" style="margin-top: 15px;">
-                        <input type="number" id="modal-salary-amount" class="book-input" min="0" step="100" value="0">
+                        <input type="text" id="modal-salary-amount" class="book-input" value="0" inputmode="decimal" data-decimal-input="true" autocomplete="off">
                         <span class="input-unit">€</span>
                     </div>
                 </div>
@@ -3583,7 +3841,7 @@ function openSalaryModal(periodKey, periodLabel, currentSalary) {
         
         document.getElementById('modal-save').addEventListener('click', () => {
             const currentPeriodKey = modal.dataset.periodKey;
-            const amount = parseFloat(document.getElementById('modal-salary-amount').value) || 0;
+            const amount = parseDecimalInput(document.getElementById('modal-salary-amount').value, 0);
             if (amount > 0) {
                 state.salairesParMois[currentPeriodKey] = amount;
                 initTimeline();

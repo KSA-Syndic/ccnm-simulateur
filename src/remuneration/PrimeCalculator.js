@@ -12,6 +12,23 @@ import { CONFIG } from '../core/config.js';
 import { getPrimeValue, getAccordInput } from '../agreements/AgreementInterface.js';
 import { SEMANTIC_ID, SOURCE_CONVENTION, SOURCE_ACCORD } from '../core/RemunerationTypes.js';
 
+function resolvePrimeHeures(def, context) {
+    const cfg = def.config || {};
+    const state = context?.state ?? {};
+    const defaultHeures = Number(cfg.defaultHeures ?? CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67);
+
+    // Prime d'équipe : assiette horaire automatique sur base légale 35h uniquement.
+    const autoFromHs = cfg.autoHeures === true || def.semanticId === SEMANTIC_ID.PRIME_EQUIPE;
+    if (autoFromHs) {
+        return Math.round(defaultHeures * 100) / 100;
+    }
+
+    const heuresRaw = cfg.stateKeyHeures
+        ? (getAccordInput(state, cfg.stateKeyHeures) ?? state[cfg.stateKeyHeures])
+        : 0;
+    return (heuresRaw == null || heuresRaw === '') ? defaultHeures : (Number(heuresRaw) || 0);
+}
+
 /**
  * Calcule le montant annuel d'une prime à partir de sa définition (convention ou accord).
  * @param {import('../core/RemunerationTypes.js').ElementDef} def - Définition de la prime (convention ou accord)
@@ -37,29 +54,58 @@ export function computePrime(def, context) {
  * @private
  */
 function computePrimeConvention(def, context) {
-    if (def.semanticId !== SEMANTIC_ID.PRIME_ANCIENNETE) {
-        return { amount: 0, label: def.label, source: SOURCE_CONVENTION };
-    }
-    const { seuil, plafond, tauxParClasse } = def.config || {};
-    const pointTerritorial = context.pointTerritorial ?? 0;
-    const classe = context.classe ?? 0;
-    const anciennete = (context.state && context.state.anciennete) ?? 0;
+    if (def.semanticId === SEMANTIC_ID.PRIME_ANCIENNETE) {
+        const { seuil, plafond, tauxParClasse } = def.config || {};
+        const pointTerritorial = context.pointTerritorial ?? 0;
+        const classe = context.classe ?? 0;
+        const anciennete = (context.state && context.state.anciennete) ?? 0;
 
-    if (anciennete < (seuil ?? CONFIG.ANCIENNETE.seuil)) {
-        return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
-    }
-    const anneesPrime = Math.min(anciennete, plafond ?? CONFIG.ANCIENNETE.plafond);
-    const tauxClasse = (tauxParClasse && tauxParClasse[classe]) ?? CONFIG.TAUX_ANCIENNETE[classe] ?? 0;
-    const montantMensuel = pointTerritorial * tauxClasse * anneesPrime;
-    const montant = Math.round(montantMensuel * 12);
+        if (anciennete < (seuil ?? CONFIG.ANCIENNETE.seuil)) {
+            return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
+        }
+        const anneesPrime = Math.min(anciennete, plafond ?? CONFIG.ANCIENNETE.plafond);
+        const tauxClasse = (tauxParClasse && tauxParClasse[classe]) ?? CONFIG.TAUX_ANCIENNETE[classe] ?? 0;
+        const montantMensuel = pointTerritorial * tauxClasse * anneesPrime;
+        const montant = Math.round(montantMensuel * 12);
 
-    return {
-        amount: montant,
-        label: def.label,
-        source: SOURCE_CONVENTION,
-        semanticId: def.semanticId,
-        meta: { taux: tauxClasse, annees: anneesPrime }
-    };
+        return {
+            amount: montant,
+            label: def.label,
+            source: SOURCE_CONVENTION,
+            semanticId: def.semanticId,
+            meta: { taux: tauxClasse, annees: anneesPrime }
+        };
+    }
+
+    if (def.semanticId === SEMANTIC_ID.PRIME_EQUIPE) {
+        const cfg = def.config || {};
+        const state = context?.state ?? {};
+        const actif = cfg.stateKeyActif
+            ? (state[cfg.stateKeyActif] === true || getAccordInput(state, cfg.stateKeyActif) === true)
+            : false;
+        if (!actif) {
+            return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
+        }
+        const heures = resolvePrimeHeures(def, context);
+        // CCN : 30 min du SMH horaire de base (35h), sans impact HS.
+        const tauxHoraire = context.tauxHoraireBase ?? context.tauxHoraire ?? 0;
+        const ratio = Number(cfg.ratioSMHHoraire) || 0;
+        if (!heures || !tauxHoraire || !ratio) {
+            return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
+        }
+        const tauxPrimeHoraire = tauxHoraire * ratio;
+        const montantMensuel = Math.round(heures * tauxPrimeHoraire * 100) / 100;
+        const montantAnnuel = Math.round(montantMensuel * 12);
+        return {
+            amount: montantAnnuel,
+            label: def.label,
+            source: SOURCE_CONVENTION,
+            semanticId: def.semanticId,
+            meta: { tauxHoraire: Math.round(tauxPrimeHoraire * 100) / 100, heures, ratio }
+        };
+    }
+
+    return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
 }
 
 /**
@@ -118,7 +164,8 @@ function computePrimeAccord(def, context) {
         }
         const taux = getPrimeValue(agreement, def.id, state);
         const heuresRaw = cfg.stateKeyHeures ? (getAccordInput(state, cfg.stateKeyHeures) ?? state[cfg.stateKeyHeures]) : 0;
-        const heures = Number(heuresRaw) || 0;
+        const defaultHeures = Number(cfg.defaultHeures ?? CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67);
+        const heures = (heuresRaw == null || heuresRaw === '') ? defaultHeures : (Number(heuresRaw) || 0);
         const tauxHoraire = context.tauxHoraire ?? 0;
         if (taux == null || !heures || !tauxHoraire) {
             return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
@@ -140,8 +187,7 @@ function computePrimeAccord(def, context) {
             return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
         }
         const valeur = getPrimeValue(agreement, def.id, state);
-        const heuresRaw = cfg.stateKeyHeures ? (getAccordInput(state, cfg.stateKeyHeures) ?? state[cfg.stateKeyHeures]) : 0;
-        const heures = Number(heuresRaw) || 0;
+        const heures = resolvePrimeHeures(def, context);
         if (!valeur || !heures) {
             return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
         }

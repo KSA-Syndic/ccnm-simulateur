@@ -17,7 +17,7 @@ export const CONVENTION_URL = 'https://uimm.lafabriquedelavenir.fr/textes-conven
 
 export const LABELS = {
     // Header
-    headerTitle: 'Simulateur Métallurgie 2024',
+    headerTitle: 'Simulateur Métallurgie 2026',
     headerSubtitle: 'Classification et Rémunération',
     headerInfoTooltip: 'Ce simulateur vous aide à estimer votre niveau de classification et à vérifier que votre salaire respecte au minimum les barèmes de la convention collective de la métallurgie (CCN).',
     headerInfoTooltipLinkText: 'Voir les textes de la convention',
@@ -49,16 +49,24 @@ export const LABELS = {
     heuresNuit: 'Heures de nuit/mois',
     travailDimanche: 'Travail le dimanche',
     heuresDimanche: 'Heures dimanche/mois',
+    travailHeuresSup: 'Heures supplémentaires',
+    heuresSup: 'Heures supplémentaires/mois',
     travailEquipe: 'Travail en équipes postées',
     heuresEquipe: 'Heures équipe/mois',
     /** Préfixe des tooltips pour les modalités spécifiques à l'accord d'entreprise (nuit, dimanche, primes). */
     tooltipPrefixAccordOnly: "Spécifique à l'accord d'entreprise. <br>",
 
     // Résultat
-    resultatAnnuel: '/ an',
-    resultatMensuel: '/ mois',
+    resultPageTitle: 'Votre salaire',
+    resultPageSubtitle: 'Rémunération globale due par votre employeur (Salaire Minimum Hiérarchique, primes et majorations).',
+    resultAccordToggle: 'Appliquer l\'accord d\'entreprise',
+    resultatAnnuel: 'bruts / an',
+    resultatMensuel: 'bruts / mois',
     detailCalcul: 'Détail du calcul',
-    evolutionInflation: 'Évolution vs inflation',
+    evolutionInflation: '📈 Évolution vs inflation',
+    resultArreteesPromptTitle: '💡 Vous pensez gagner moins que la rémunération affichée ?',
+    resultArreteesPromptBody: 'Calculez vos arriérés de salaire et générez un rapport PDF pour les réclamer.',
+    inflationLoading: 'Inflation : chargement...',
     
     // Arriérés
     calculerArretees: 'Calculer mes arriérés',
@@ -70,7 +78,7 @@ export const LABELS = {
     smhSeul: 'Calculer les arriérés sur le SMH seul',
     
     // Footer
-    footerText: 'Convention Collective Nationale de la Métallurgie (CCNM) 2024',
+    footerText: 'Convention Collective Nationale de la Métallurgie (CCNM) 2026',
     footerDisclaimer: 'Outil indicatif',
     footerCredit: 'Réalisé par CFDT Kuhn'
 };

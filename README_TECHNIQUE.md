@@ -3,7 +3,7 @@
 ## Conformité Juridique
 
 **Sources Juridiques de Référence :**
-- **CCNM 2024 :** Convention Collective Nationale de la Métallurgie (IDCC 3248) - Entrée en vigueur 01/01/2024
+- **CCNM (IDCC 3248) :** base 2024 + grilles annuelles intégrées jusqu'en 2026 (SMH/Baremes par année pour arriérés)
 - **Code du Travail :** Art. L2254-2 (Principe de faveur)
 - **Accords d'entreprise :** Définis dans le dossier `accords/` (ex. KuhnAgreement.js), chargés à l'exécution
 
@@ -64,8 +64,8 @@ projet/
    - Accord d'entreprise actif (ou `null` pour CCN seule)
    - Options (`mode: 'full'` ou `'smh-only'`)
 2. Le calculateur utilise les modules spécialisés :
-   - `PrimeCalculator` pour les primes d'ancienneté
-   - `MajorationCalculator` pour nuit/dimanche
+   - `PrimeCalculator` pour les primes (CCN + accord), dont prime d'équipe sur base 35h (151,67h/mois)
+   - `MajorationCalculator` pour nuit/dimanche/heures supplémentaires
    - `ForfaitCalculator` pour les forfaits cadres
 3. Retourne un objet avec `total`, `details`, `scenario`
 
@@ -165,9 +165,9 @@ L'application est déployée sur GitHub Pages. Voir `.github/workflows/deploy.ym
 ### Mise à Jour des SMH
 
 1. Modifier `src/core/config.js`
-2. Mettre à jour `CONFIG.SMH` avec les nouvelles valeurs
-3. Vérifier les barèmes débutants si nécessaire
-4. Tester les calculs avec les nouvelles valeurs
+2. Mettre à jour les grilles annuelles (`SMH_BY_YEAR`, `BAREME_DEBUTANTS_BY_YEAR`)
+3. Mettre à jour `SMH_UPDATE.years[année]` avec date/source et `indicativeRate` (informatif uniquement)
+4. Tester les calculs avec les nouvelles valeurs (rémunération + arriérés + PDF)
 
 ### Ajout d'un Nouvel Accord
 

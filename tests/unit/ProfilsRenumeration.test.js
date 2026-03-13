@@ -238,7 +238,7 @@ describe('Profils rémunération - CCN (multi-classes)', () => {
             const state = stateCCN({ scores: scoresForClasse(1) });
             const result = calculateAnnualRemuneration(state, null, { mode: 'full' });
             expect(result.total).toBe(CONFIG.SMH[1]);
-            expect(result.total).toBe(21700);
+            expect(result.total).toBe(21980);
         });
 
         it('I18 : SMH maximum (cadre)', () => {
@@ -249,7 +249,7 @@ describe('Profils rémunération - CCN (multi-classes)', () => {
             });
             const result = calculateAnnualRemuneration(state, null, { mode: 'full' });
             expect(result.total).toBe(CONFIG.SMH[18]);
-            expect(result.total).toBe(68000);
+            expect(result.total).toBe(68450);
         });
     });
 });

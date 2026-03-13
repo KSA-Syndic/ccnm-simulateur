@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { genererPDFArretees } from '../../src/arretees/PDFGenerator.js';
+import { genererPDFArretees, genererPDFAnnexeTechnique } from '../../src/arretees/PDFGenerator.js';
 import { CONFIG } from '../../src/core/config.js';
 import { getMontantAnnuelSMHSeul } from '../../src/remuneration/RemunerationCalculator.js';
 
@@ -206,6 +206,7 @@ describe('PDF - Génération', () => {
         });
 
         it('devrait utiliser le barème débutants pour F11 avec 4 ans d\'expérience et forfait jours', () => {
+            const autoTableCalls = [];
             const mockDoc = {
                 internal: {
                     pageSize: { getWidth: () => 210, getHeight: () => 297 },
@@ -226,7 +227,13 @@ describe('PDF - Génération', () => {
                 }),
                 save: vi.fn(),
                 setDrawColor: vi.fn().mockReturnThis(),
-                setPage: vi.fn().mockReturnThis()
+                setPage: vi.fn().mockReturnThis(),
+                autoTable: vi.fn((cfg) => {
+                    autoTableCalls.push(cfg);
+                    mockDoc.lastAutoTable = { finalY: (cfg.startY || 20) + 10 };
+                    return mockDoc;
+                }),
+                lastAutoTable: { finalY: 30 }
             };
             
             global.jsPDF = vi.fn(() => mockDoc);
@@ -276,12 +283,10 @@ describe('PDF - Génération', () => {
 
             genererPDFArretees(data, {}, false, stateF11Debutant);
             
-            // Vérifier que le texte contient "barème débutants" ou "4 à 6 ans"
-            const textCalls = mockDoc.text.mock.calls;
-            const smhText = textCalls.find(call => 
-                call[0] && (call[0].includes('barème débutants') || call[0].includes('4 à 6 ans') || call[0].includes('31979'))
-            );
-            expect(smhText).toBeDefined();
+            // Vérifier que le tableau paramètres contient bien la tranche "4 à 6 ans"
+            const allRows = autoTableCalls.map(c => c.body || []).flat();
+            const hasBareme = allRows.some(row => Array.isArray(row) && row.join(' ').includes('SMH barème débutants (4 à 6 ans)'));
+            expect(hasBareme).toBe(true);
         });
 
         it('devrait gérer les informations personnelles optionnelles', () => {
@@ -377,6 +382,65 @@ describe('PDF - Génération', () => {
     });
 
     describe('PDF - Structure et Formatage', () => {
+        it('doit mentionner la prime d\'équipe CCN active sans accord dans l\'annexe', () => {
+            const autoTableCalls = [];
+            const mockDoc = {
+                internal: {
+                    pageSize: { getWidth: () => 210, getHeight: () => 297 },
+                    getNumberOfPages: () => 1
+                },
+                setFontSize: vi.fn().mockReturnThis(),
+                setFont: vi.fn().mockReturnThis(),
+                setTextColor: vi.fn().mockReturnThis(),
+                text: vi.fn().mockReturnThis(),
+                line: vi.fn().mockReturnThis(),
+                addPage: vi.fn().mockReturnThis(),
+                splitTextToSize: vi.fn((text) => [text]),
+                save: vi.fn(),
+                setDrawColor: vi.fn().mockReturnThis(),
+                setPage: vi.fn().mockReturnThis(),
+                autoTable: vi.fn((cfg) => {
+                    autoTableCalls.push(cfg);
+                    mockDoc.lastAutoTable = { finalY: (cfg.startY || 20) + 10 };
+                    return mockDoc;
+                }),
+                lastAutoTable: { finalY: 30 }
+            };
+            global.window = {
+                jsPDF: vi.fn(() => mockDoc),
+                jspdf: { jsPDF: vi.fn(() => mockDoc) }
+            };
+
+            const stateSansAccord = {
+                modeManuel: false,
+                groupeManuel: 'C',
+                classeManuel: 5,
+                scores: [3, 3, 3, 3, 3, 3],
+                anciennete: 0,
+                pointTerritorial: 5.90,
+                forfait: '35h',
+                experiencePro: 0,
+                typeNuit: 'aucun',
+                heuresNuit: 0,
+                travailDimanche: false,
+                heuresDimanche: 0,
+                accordActif: false,
+                accordInputs: { travailEquipe: true, heuresEquipe: 151.67 },
+                nbMois: 12,
+                arretesSurSMHSeul: true
+            };
+            const data = {
+                detailsParAnnee: [],
+                detailsTousMois: [],
+                totalArretees: 0
+            };
+
+            genererPDFAnnexeTechnique(data, {}, stateSansAccord);
+            const bodies = autoTableCalls.map(c => c.body || []).flat();
+            const hasPrimeEquipeCCN = bodies.some(row => Array.isArray(row) && row.join(' ').includes('Prime d\'équipe CCN'));
+            expect(hasPrimeEquipeCCN).toBe(true);
+        });
+
         it('devrait créer les sections principales du PDF', () => {
             const data = {
                 dateDebut: new Date('2024-01-01'),
@@ -471,7 +535,14 @@ describe('PDF - Génération', () => {
                     }),
                     save: vi.fn(),
                     setDrawColor: vi.fn().mockReturnThis(),
-                    setPage: vi.fn().mockReturnThis()
+                    setPage: vi.fn().mockReturnThis(),
+                    autoTable: vi.fn((cfg) => {
+                        mockDoc._tables = mockDoc._tables || [];
+                        mockDoc._tables.push(cfg);
+                        mockDoc.lastAutoTable = { finalY: (cfg.startY || 20) + 10 };
+                        return mockDoc;
+                    }),
+                    lastAutoTable: { finalY: 30 }
                 };
                 
                 global.jsPDF = vi.fn(() => mockDoc);
@@ -515,18 +586,11 @@ describe('PDF - Génération', () => {
 
                 genererPDFArretees(data, {}, false, stateF11);
                 
-                // Vérifier que le SMH affiché correspond à la tranche (montant formaté "31 979 €" ou brut)
-                const textCalls = mockDoc.text.mock.calls;
-                const expectedStr = expectedSMH.toString();
-                const smhCall = textCalls.find(call => 
-                    call[0] && (
-                        call[0].includes(expectedStr) ||
-                        call[0].replace(/\s/g, '').includes(expectedStr) ||
-                        call[0].includes(label) ||
-                        (experiencePro < 6 && call[0].includes('barème débutants'))
-                    )
-                );
-                expect(smhCall).toBeDefined();
+                // Vérifier que la table "Paramètres de calcul du SMH" contient la bonne tranche/libellé
+                const rows = (mockDoc._tables || []).map(t => t.body || []).flat();
+                const hasExpectedLabel = rows.some(row => Array.isArray(row) && row.join(' ').includes(label))
+                    || (experiencePro >= 6 && rows.some(row => Array.isArray(row) && row.join(' ').includes('SMH annuel grille')));
+                expect(hasExpectedLabel).toBe(true);
             });
         });
     });

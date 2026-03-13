@@ -1,6 +1,6 @@
-# 🏭 Simulateur de Classification et Rémunération - Métallurgie 2024
+# 🏭 Simulateur de Classification et Rémunération - Métallurgie 2026
 
-> **Un outil simple et gratuit** pour connaître votre classification et vérifier votre salaire minimum conventionnel selon la Convention Collective Nationale de la Métallurgie (CCNM) 2024.
+> **Un outil simple et gratuit** pour connaître votre classification et vérifier votre salaire minimum conventionnel selon la Convention Collective Nationale de la Métallurgie (CCNM) (grilles à jour 2026, avec historique annuel pour les arriérés).
 
 ## 🎯 À quoi sert cet outil ?
 
@@ -64,7 +64,7 @@ L'outil supporte les **accords d'entreprise** qui peuvent améliorer votre rému
 - Plafond à 25 ans (au lieu de 15 ans)
 - Majoration nuit +20% (au lieu de +15%)
 - Majoration dimanche +50% (au lieu de +100%)
-- Prime d'équipe : 0,82 €/heure
+- Prime d'équipe : taux accord, avec base horaire calculée automatiquement (151,67h)
 - Prime de vacances : 525 € en juillet
 
 ### Comment utiliser un accord ?
@@ -192,7 +192,7 @@ L'outil est mis à jour chaque année avec :
 - ✅ Les nouveaux accords d'entreprise
 - ✅ Les nouvelles valeurs du Point Territorial
 
-**Dernière mise à jour** : 2024 (CCNM 2024)
+**Dernière mise à jour** : 2026 (SMH + historique annuel)
 
 ## 🌐 Liens Utiles
 

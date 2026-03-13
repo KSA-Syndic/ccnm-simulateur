@@ -80,7 +80,7 @@
  * @property {boolean} tousStatuts - true = Cadres et Non-cadres ; false = Non-cadres seuls (comportement CCN)
  * @property {'salaire'|'point'} baseCalcul - Base de calcul : 'salaire' = rémunération brute, 'point' = valeur du point
  * @property {Object|function} barème - Taux par année (ex. { 2: 0.02, 3: 0.03, ... }) ou fonction(annees) => taux
- * @property {boolean} [inclusDansSMH=false] - Toujours false : la prime d'ancienneté est formellement exclue de l'assiette SMH (Art. 140 CCNM, Conseil d'État)
+ * @property {boolean} [inclusDansSMH=false] - Paramétrable selon doctrine/jurisprudence applicable dans l'entreprise
  */
 
 /**

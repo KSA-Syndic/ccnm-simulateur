@@ -10,10 +10,11 @@
  * La comparaison s'effectue par année civile (Art. 140 CCNM).
  */
 
-import { getMontantAnnuelSMHSeul } from '../remuneration/RemunerationCalculator.js';
+import { calculateAnnualRemuneration, getMontantAnnuelSMHSeul } from '../remuneration/RemunerationCalculator.js';
 import { formatMoneyPDF } from '../utils/formatters.js';
 import { getActiveClassification } from '../classification/ClassificationEngine.js';
 import { state as defaultState } from '../core/state.js';
+import { CONFIG } from '../core/config.js';
 import { getActiveAgreement } from '../agreements/AgreementLoader.js';
 import { getPrimes } from '../agreements/AgreementInterface.js';
 
@@ -56,6 +57,26 @@ function checkPageBreak(doc, y, space = 20) {
     return y;
 }
 
+function getStateInput(state, key) {
+    if (!state) return undefined;
+    if (state.accordInputs && Object.prototype.hasOwnProperty.call(state.accordInputs, key)) {
+        return state.accordInputs[key];
+    }
+    return state[key];
+}
+
+function getPrimeEquipeModaliteLabel(state, agreement) {
+    const actifRaw = getStateInput(state, 'travailEquipe');
+    const actif = actifRaw === true || actifRaw === 'true';
+    if (!actif) return null;
+    const primeAccord = agreement?.primes?.find(p => p.id === 'primeEquipe');
+    if (primeAccord) {
+        const taux = primeAccord.valeurAccord != null ? String(primeAccord.valeurAccord).replace('.', ',') : '?';
+        return `Prime d'équipe ${agreement?.nomCourt || 'accord'} (base horaire auto 151,67h × +${taux} €/h)`;
+    }
+    return `Prime d'équipe CCN (base horaire auto 151,67h × 30 min du SMH horaire de base)`;
+}
+
 // Style commun pour autoTable — compact pour tenir en ~1 page
 const TABLE_STYLES = {
     theme: 'grid',
@@ -65,6 +86,18 @@ const TABLE_STYLES = {
     margin: { left: MARGIN, right: MARGIN },
     tableWidth: 'auto'
 };
+
+function addAutoTable(doc, config) {
+    if (typeof doc.autoTable === 'function') {
+        doc.autoTable(config);
+        return doc.lastAutoTable?.finalY ?? (config.startY || MARGIN);
+    }
+    // Fallback test/runtime léger quand le plugin autoTable n'est pas disponible.
+    const rows = (Array.isArray(config?.head) ? config.head.length : 0) + (Array.isArray(config?.body) ? config.body.length : 0);
+    const estimatedEndY = (config.startY || MARGIN) + Math.max(8, rows * 4);
+    doc.lastAutoTable = { finalY: estimatedEndY };
+    return estimatedEndY;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // PDF 1 : LETTRE DE MISE EN DEMEURE (conservée pour référence mais non téléchargée)
@@ -116,14 +149,14 @@ export function genererPDFLettreMiseEnDemeure(data, infos = {}, stateParam = nul
         ]);
         body.push([{ content: 'TOTAL', styles: { fontStyle: 'bold' } }, '', '', { content: formatMoneyPDF(data.totalArretees), styles: { fontStyle: 'bold' } }]);
 
-        doc.autoTable({
+        addAutoTable(doc, {
             startY: y,
             head: [['Année', 'SMH annuel dû', 'Total perçu', 'Écart']],
             body,
             ...TABLE_STYLES,
             columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 35 }, 2: { cellWidth: 35 }, 3: { cellWidth: 30, fontStyle: 'bold' } }
         });
-        y = doc.lastAutoTable.finalY + 8;
+        y = (doc.lastAutoTable?.finalY ?? y) + 8;
     }
 
     y = checkPageBreak(doc, y, 40);
@@ -158,7 +191,9 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
 
     const state = stateParam || defaultState;
     const hasAccord = !!(state.accordActif || state.accordId);
-    const salaireDu = getMontantAnnuelSMHSeul(state);
+    const referenceDate = data?.dateFin ? new Date(data.dateFin) : new Date();
+    const agreement = hasAccord ? getActiveAgreement() : null;
+    const salaireDu = getMontantAnnuelSMHSeul(state, agreement, { date: referenceDate });
 
     const doc = new jsPDF();
     const pw = doc.internal.pageSize.getWidth();
@@ -170,8 +205,28 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     doc.text('Annexe technique', pw / 2, y, { align: 'center' }); y += 6;
     doc.setFontSize(11); doc.setFont(undefined, 'normal'); doc.setTextColor(80, 80, 80);
     doc.text('Détail du calcul des arriérés de salaire', pw / 2, y, { align: 'center' }); y += 5;
+    const smhUpdate = CONFIG?.SMH_UPDATE || {};
+    const smhYear = smhUpdate.referenceYear || 'en vigueur';
+    const smhYearEntries = smhUpdate?.years && typeof smhUpdate.years === 'object'
+        ? Object.entries(smhUpdate.years)
+            .map(([year, info]) => ({ year: Number(year), ...(info || {}) }))
+            .filter(entry => Number.isFinite(entry.year))
+            .sort((a, b) => a.year - b.year)
+        : [];
+    const smhYearRef = smhYearEntries.find(entry => entry.year === smhYear) || smhYearEntries[smhYearEntries.length - 1];
+    const smhEffet = smhYearRef?.effectiveDate ? new Date(smhYearRef.effectiveDate).toLocaleDateString('fr-FR') : null;
+    const smhMajDate = smhUpdate.updatedAt ? new Date(smhUpdate.updatedAt).toLocaleDateString('fr-FR') : null;
     doc.setFontSize(9);
-    doc.text('Convention Collective Nationale de la Métallurgie (CCNM) 2024 — IDCC 3248', pw / 2, y, { align: 'center' }); y += 6;
+    doc.text(`Convention Collective Nationale de la Métallurgie (CCNM) ${smhYear} — IDCC 3248`, pw / 2, y, { align: 'center' }); y += 5;
+    if (smhEffet || smhMajDate) {
+        const infoMaj = `Grille SMH effet ${smhEffet || '—'} · MAJ application ${smhMajDate || '—'}`;
+        doc.text(infoMaj, pw / 2, y, { align: 'center' }); y += 5;
+    }
+    if (smhYearRef?.sourceLabel) {
+        doc.text(String(smhYearRef.sourceLabel), pw / 2, y, { align: 'center' }); y += 6;
+    } else {
+        y += 1;
+    }
     doc.setTextColor(0, 0, 0);
     const todayStr = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
     doc.text(`Document établi le ${todayStr}`, MARGIN, y); y += 4;
@@ -185,7 +240,8 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(0, 0, 0);
 
     const classInfo = getActiveClassification(state);
-    const agreement = hasAccord ? getActiveAgreement() : null;
+    const remunerationFull = calculateAnnualRemuneration(state, agreement, { mode: 'full', date: referenceDate });
+    const remunerationSmh = calculateAnnualRemuneration(state, agreement, { mode: 'smh-only', date: referenceDate });
 
     // ── Tableau identité / contrat ──
     const contractRows = [];
@@ -205,7 +261,7 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     }
 
     if (contractRows.length > 0) {
-        doc.autoTable({
+        addAutoTable(doc, {
             startY: y,
             body: contractRows,
             theme: 'plain',
@@ -213,7 +269,7 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
             columnStyles: { 0: { fontStyle: 'bold', cellWidth: 52 } },
             margin: { left: MARGIN, right: MARGIN }
         });
-        y = doc.lastAutoTable.finalY + 6;
+        y = (doc.lastAutoTable?.finalY ?? y) + 6;
     }
 
     // ── Tableau paramètres de calcul du SMH ──
@@ -257,9 +313,21 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
         smhRows.push(['Expérience professionnelle', `${state.experiencePro ?? 0} an(s)`]);
     }
 
-    // Primes incluses dans le SMH (Art. 140)
+    // Éléments inclus dans le SMH (dynamiques)
     const agrPrimes = agreement ? getPrimes(agreement) : [];
     const primesSmh = agrPrimes.filter(p => p.inclusDansSMH === true);
+    const inclusSmhDyn = [];
+    const exclusSmhDyn = [];
+    const addUnique = (arr, label) => {
+        if (!label || arr.includes(label)) return;
+        arr.push(label);
+    };
+    remunerationSmh.details
+        .filter(d => !d.isBase)
+        .forEach(d => addUnique(inclusSmhDyn, d.label));
+    remunerationFull.details
+        .filter(d => !d.isBase && d.isPositive && d.isSMHIncluded !== true)
+        .forEach(d => addUnique(exclusSmhDyn, d.label));
     if (primesSmh.length > 0) {
         const moisNoms = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
         primesSmh.forEach(p => {
@@ -273,17 +341,26 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
         const mois13 = agreement.repartition13Mois.moisVersement;
         smhRows.push(['Inclus SMH : 13e mois', mois13 ? `versé en ${moisNoms13[mois13 - 1]}` : 'oui']);
     }
+    const inclusSmhLabel = inclusSmhDyn.length > 0 ? inclusSmhDyn.join(', ') : 'base SMH';
+    const exclusSmhLabel = exclusSmhDyn.length > 0 ? exclusSmhDyn.join(', ') : 'aucun';
+    smhRows.push(['Inclus SMH (actifs)', inclusSmhLabel]);
+    smhRows.push(['Exclus du SMH (actifs)', exclusSmhLabel]);
+    smhRows.push(['Lecture', 'Le SMH correspond à la base SMH + éléments inclus actifs. Les éléments exclus s’ajoutent au-dessus du minimum.']);
 
-    // Éléments exclus du SMH
-    const primesHorsSMH = agrPrimes.filter(p => p.inclusDansSMH === false);
-    if (primesHorsSMH.length > 0 || (agreement?.anciennete)) {
-        const exclus = [];
-        if (agreement?.anciennete) exclus.push('Prime d\'ancienneté');
-        primesHorsSMH.forEach(p => exclus.push(p.label));
-        smhRows.push(['Exclues du SMH', exclus.join(', ')]);
+    const modalitesActivesHorsSMH = [];
+    const primeEquipeLabel = getPrimeEquipeModaliteLabel(state, agreement);
+    if (primeEquipeLabel) modalitesActivesHorsSMH.push(primeEquipeLabel);
+    if ((state.typeNuit !== 'aucun') && Number(state.heuresNuit || 0) > 0) {
+        modalitesActivesHorsSMH.push(`Majoration nuit (${state.heuresNuit} h/mois)`);
+    }
+    if (state.travailDimanche && Number(state.heuresDimanche || 0) > 0) {
+        modalitesActivesHorsSMH.push(`Majoration dimanche (${state.heuresDimanche} h/mois)`);
+    }
+    if (modalitesActivesHorsSMH.length > 0) {
+        smhRows.push(['Modalités hors SMH actives', modalitesActivesHorsSMH.join(', ')]);
     }
 
-    doc.autoTable({
+    addAutoTable(doc, {
         startY: y,
         body: smhRows,
         theme: 'striped',
@@ -292,7 +369,7 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
         headStyles: { fillColor: [249, 250, 251] },
         margin: { left: MARGIN, right: MARGIN }
     });
-    y = doc.lastAutoTable.finalY + 4;
+    y = (doc.lastAutoTable?.finalY ?? y) + 4;
 
     if (infos.observations) {
         doc.setFontSize(9); doc.setFont(undefined, 'bold');
@@ -311,15 +388,19 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(0, 0, 0);
 
     const moisNomsLongs = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
-    const incluesStr = primesSmh.length > 0 ? primesSmh.map(p => p.label.toLowerCase()).join(', ') + ', 13e mois' : '13e mois';
-    const exclusStr = [];
-    if (agreement?.anciennete) exclusStr.push('prime d\'ancienneté');
-    const primesHorsSMH2 = agrPrimes.filter(p => p.inclusDansSMH === false);
-    primesHorsSMH2.forEach(p => exclusStr.push(p.label.toLowerCase()));
-    exclusStr.push('majorations (nuit, dimanche, équipe, pénibilité)');
-    const exclusTxt = exclusStr.join(', ');
+    const incluesStr = inclusSmhDyn.length > 0
+        ? inclusSmhDyn.map(v => String(v).toLowerCase()).join(', ')
+        : 'base SMH';
+    const exclusStr = exclusSmhDyn.length > 0
+        ? exclusSmhDyn.map(v => String(v).toLowerCase())
+        : [];
+    const primeEquipeMethodo = getPrimeEquipeModaliteLabel(state, agreement);
+    if (primeEquipeMethodo && !exclusStr.includes(primeEquipeMethodo.toLowerCase())) {
+        exclusStr.push(`${primeEquipeMethodo.toLowerCase()} (active)`);
+    }
+    const exclusTxt = exclusStr.length > 0 ? exclusStr.join(', ') : 'aucun élément hors SMH actif';
 
-    y = wrappedText(doc, `Principe (Art. 140 CCNM) : Le SMH s'apprécie sur l'année civile. L'assiette SMH inclut : salaire de base, forfaits cadres le cas échéant, ${incluesStr}. Éléments exclus : ${exclusTxt}.`, MARGIN, y, cw);
+    y = wrappedText(doc, `Principe (Art. 140 CCNM) : Le SMH s'apprécie sur l'année civile. L'assiette SMH inclut (actifs) : ${incluesStr}. Éléments exclus (actifs) : ${exclusTxt}.`, MARGIN, y, cw);
     y += 4;
     doc.setFont(undefined, 'bold');
     y = wrappedText(doc, 'Formule : Arriérés(année) = max(0 ; total SMH dû - total perçu).', MARGIN, y, cw);
@@ -361,14 +442,14 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
             { content: formatMoneyPDF(data.totalArretees), styles: { fontStyle: 'bold', textColor: [9, 105, 218] } }
         ]);
 
-        doc.autoTable({
+        addAutoTable(doc, {
             startY: y,
             head: [['Année', 'SMH annuel dû', 'Total perçu', 'Écart (arriérés)']],
             body,
             ...TABLE_STYLES,
             columnStyles: { 0: { cellWidth: 40 }, 1: { cellWidth: 35 }, 2: { cellWidth: 35 }, 3: { cellWidth: 35 } }
         });
-        y = doc.lastAutoTable.finalY + 8;
+        y = (doc.lastAutoTable?.finalY ?? y) + 8;
     }
 
     // ═══════════════════════════════════════
@@ -391,7 +472,7 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
             d.difference > 0 ? { content: `- ${formatMoneyPDF(d.difference)}`, styles: { textColor: [200, 50, 50] } } : { content: 'OK', styles: { textColor: [50, 150, 50] } }
         ]);
 
-        doc.autoTable({
+        addAutoTable(doc, {
             startY: y,
             head: [['Période', 'Perçu', 'Dû', 'Écart']],
             body,
@@ -399,7 +480,7 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
             styles: { ...TABLE_STYLES.styles, fontSize: 7 },
             columnStyles: { 0: { cellWidth: 38 }, 1: { cellWidth: 28 }, 2: { cellWidth: 28 }, 3: { cellWidth: 28 } }
         });
-        y = doc.lastAutoTable.finalY + 8;
+        y = (doc.lastAutoTable?.finalY ?? y) + 8;
     }
 
     // ═══════════════════════════════════════
@@ -418,14 +499,14 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
                 const valeur = p.valeurAccord != null ? `+${p.valeurAccord} ${p.unit}` : '—';
                 return [p.label, valeur, smhTag];
             });
-            doc.autoTable({
+            addAutoTable(doc, {
                 startY: y,
                 head: [['Prime', 'Valeur', 'Assiette SMH']],
                 body,
                 ...TABLE_STYLES,
                 columnStyles: { 0: { cellWidth: 55 }, 1: { cellWidth: 30 }, 2: { cellWidth: 30 } }
             });
-            y = doc.lastAutoTable.finalY + 4;
+            y = (doc.lastAutoTable?.finalY ?? y) + 4;
         }
         if (agreement.anciennete) {
             doc.setFontSize(9); doc.setFont(undefined, 'normal');
@@ -450,6 +531,22 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
         'Code du travail, Art. L.3245-1 — Prescription triennale des salaires.',
         'Code du travail, Art. L.2254-2 — Principe de faveur.'
     ];
+    const yearlyRates = smhYearEntries.filter(entry => Number.isFinite(entry?.indicativeRate));
+    if (yearlyRates.length > 0) {
+        const rates = yearlyRates
+            .map(entry => `${entry.year}: ${Math.round(Number(entry.indicativeRate) * 10000) / 100}%`)
+            .join(' | ');
+        refs.push(`Revalorisations SMH annuelles (informatif): ${rates}. Les calculs utilisent les grilles annuelles, pas ces pourcentages.`);
+    }
+    if (smhYearEntries.length > 0) {
+        const histo = smhYearEntries
+            .map(entry => `${entry.year}: ${entry.change || ''}`)
+            .join(' | ');
+        refs.push(`Historique revalorisation SMH intégré: ${histo}.`);
+    }
+    if (smhYearRef?.sourceLabel || smhYearRef?.sourceUrl) {
+        refs.push(`Source grille SMH ${smhYearRef?.year || ''}: ${smhYearRef?.sourceLabel || 'Mise à jour interne'}${smhYearRef?.sourceUrl ? ` (${smhYearRef.sourceUrl})` : ''}.`);
+    }
     if (hasAccord && agreement) refs.push(`Accord d'entreprise ${agreement.nomCourt || ''}.`);
     refs.forEach(ref => {
         y = checkPageBreak(doc, y, 10);

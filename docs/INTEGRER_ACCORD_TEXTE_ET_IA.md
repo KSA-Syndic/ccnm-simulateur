@@ -108,7 +108,7 @@ La CCN définit ce qui entre dans l'assiette de vérification du SMH. La logique
 
 4. EN CAS DE DOUTE : si le texte de l'accord ou de la CCN est ambigu sur l'inclusion d'un élément, mettre inclusDansSMH: false par défaut (plus protecteur pour le salarié) et ajouter un commentaire explicatif.
 
-5. PRIME D'ANCIENNETÉ : toujours inclusDansSMH: false — c'est une règle constante confirmée par le Conseil d'État et la jurisprudence, indépendante des évolutions de la CCN.
+5. PRIME D'ANCIENNETÉ : `inclusDansSMH` est paramétrable selon la position juridique retenue. Par défaut, prendre `false` si doute, et justifier explicitement le choix dans un commentaire.
 
 SÉMANTIQUE ESSENTIELLE — NE PAS CONFONDRE :
 Les primes inclusDansSMH: true NE S'AJOUTENT PAS au SMH. Elles constituent une distribution particulière du salaire permettant d'atteindre le SMH grille, pas un supplément. Le SMH reste le montant défini par la grille CCN. La prime de vacances (par exemple 525 €) est une partie du SMH, pas un montant en plus.
@@ -116,6 +116,11 @@ Concrètement dans le simulateur :
 - Le total annuel affiché = SMH grille + forfait cadres + éléments EXCLUS du SMH (ancienneté, majorations).
 - Les primes inclusDansSMH: true n'augmentent pas ce total ; elles sont affichées en sous-lignes informatives rattachées au SMH (préfixe « dont »).
 - Elles sont TOUJOURS actives (pas de checkbox) et influencent uniquement la distribution mensuelle (le mois de leur versement a un montant attendu différent).
+
+RÈGLE D'ÉCRITURE D'UN ACCORD DANS CE PROJET :
+- Ne modéliser que les écarts réels à la CCN.
+- Ne pas ajouter dans `primes`/`majorations` un élément identique à la CCN.
+- Si un élément est cité sans changer le calcul, le laisser en informatif (`elements`) plutôt qu'en logique de calcul.
 
 PÉRIODICITÉ DE VÉRIFICATION DU SMH — ANNÉE CIVILE
 Le SMH s'apprécie sur l'ANNÉE CIVILE (Art. 140 CCNM), pas mois par mois.
@@ -141,7 +146,7 @@ SCHÉMA OBLIGATOIRE DE L'ACCORD (à respecter strictement)
 - dateSignature (string ISO, optionnel)
 
 ANCIENNETE :
-- anciennete (object) : seuil (nombre d'années), plafond (nombre d'années), tousStatuts (booléen, true si cadres et non-cadres), baseCalcul ('salaire'), barème (objet { année: taux décimal }, ex. { 2: 0.02, 3: 0.03, ..., 25: 0.16 }), inclusDansSMH (TOUJOURS false — exclue de l'assiette SMH par la CCN et la jurisprudence)
+- anciennete (object) : seuil (nombre d'années), plafond (nombre d'années), tousStatuts (booléen, true si cadres et non-cadres), baseCalcul ('salaire'), barème (objet { année: taux décimal }, ex. { 2: 0.02, 3: 0.03, ..., 25: 0.16 }), inclusDansSMH (booléen paramétrable, justifié juridiquement)
 
 MAJORATIONS :
 - majorations (object) : nuit (object avec posteNuit, posteMatin en décimal 0.20 = 20%, plageDebut, plageFin, seuilHeuresPosteNuit), dimanche (nombre décimal 0.50 = 50%)
@@ -154,7 +159,8 @@ PRIMES (TABLEAU d'objets) : chaque prime doit avoir au minimum :
   - unit ('€/h', '€', '%')
   - valeurAccord (nombre ou null)
   - stateKeyActif (string, ex. 'travailEquipe', 'primeVacances') : clé pour activer/désactiver dans l'UI
-  - stateKeyHeures (string, obligatoire si valueType === 'horaire' ou 'majorationHoraire', ex. 'heuresEquipe')
+  - stateKeyHeures (string, obligatoire si valueType === 'majorationHoraire' ; optionnel si valueType === 'horaire' quand autoHeures=true)
+  - autoHeures (booléen, optionnel) : pour une prime horaire calculée automatiquement sur une base interne (sans saisie heures)
   - defaultActif (booléen, optionnel) : si true, la case est cochée par défaut. Pour les primes inclusDansSMH: true, cette valeur est ignorée car la prime est toujours active.
   - moisVersement (nombre 1-12, OBLIGATOIRE si valueType === 'montant' et prime annuelle versée un mois donné)
   - inclusDansSMH (booléen, OBLIGATOIRE) : déterminé selon la logique d'analyse de la CCN décrite ci-dessus
@@ -182,6 +188,7 @@ CONVENTIONS DE CODAGE
 - Les taux sont en décimaux : 20% → 0.20, 50% → 0.50.
 - Les primes avec valueType 'montant' et un mois de versement unique doivent avoir moisVersement (1-12).
 - Chaque prime activable par l'utilisateur doit avoir un stateKeyActif unique (camelCase) ; si une nouvelle prime (ex. prime Noël), inventer une clé cohérente (ex. primeNoel) et l'ajouter dans la liste des stateKeyActif à documenter pour le développeur.
+- Pour la prime d'équipe, préférer `autoHeures: true` (base auto 151,67h, sans HS) et éviter la saisie manuelle d'heures.
 - Si le texte ne précise pas une valeur, mettre une valeur par défaut raisonnable ou null et indiquer en commentaire.
 - Le flag inclusDansSMH est OBLIGATOIRE pour chaque prime et pour anciennete. Ne l'oublie jamais.
 - Chaque moisVersement est déduit du texte de l'accord, jamais copié d'un autre accord.

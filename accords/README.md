@@ -6,6 +6,12 @@ Ce répertoire contient **uniquement les définitions des accords d'entreprise**
 - Les accords sont enregistrés dans le registre par `src/agreements/AgreementRegistry.js`.
 - Pour ajouter un nouvel accord : créer un fichier ici (ex. `MonAccord.js`), puis l’importer et appeler `registerAgreement(MonAccord)` dans `AgreementRegistry.js`.
 
+## Bonnes pratiques
+
+- Décrire uniquement les écarts réels avec la CCN.
+- Ne pas dupliquer dans l'accord des éléments strictement identiques à la CCN.
+- Réserver `primes`/`majorations` aux éléments qui modifient effectivement le calcul.
+
 **Fichiers :**
 - `KuhnAgreement.js` — Accord d'entreprise Kuhn (UES KUHN SAS/KUHN MGM SAS), 6 mars 2024.
 

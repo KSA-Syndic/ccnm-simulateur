@@ -4,7 +4,8 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
-    calculerArreteesMoisParMois
+    calculerArreteesMoisParMois,
+    calculateSalaireDuPourMois
 } from '../../src/arretees/ArreteesCalculator.js';
 import { CONFIG } from '../../src/core/config.js';
 
@@ -36,7 +37,7 @@ describe('Arriérés - Calculs Fonctionnels', () => {
             const dateEmbauche = new Date('2020-01-01');
             
             const salairesParMois = {
-                '2024-01': 2000 // Inférieur au SMH mensuel C5 (24250 / 12 ≈ 2021€)
+                '2024-01': 2000 // Inférieur au SMH mensuel C5 (24510 / 12 ≈ 2042,5€)
             };
 
             const result = calculerArreteesMoisParMois({
@@ -144,6 +145,58 @@ describe('Arriérés - Calculs Fonctionnels', () => {
 
             // Seuls les mois dans la période de prescription devraient être calculés
             expect(result.detailsTousMois.length).toBeGreaterThan(0);
+        });
+
+        it('devrait inclure la prime d\'équipe CCN dans le salaire dû en mode complet sans accord', () => {
+            const stateFull = {
+                ...stateBase,
+                anciennete: 0,
+                accordActif: false,
+                accordInputs: {
+                    travailEquipe: true,
+                    heuresEquipe: 151.67
+                }
+            };
+            const annuelDu = calculateSalaireDuPourMois(
+                new Date('2024-01-01'),
+                new Date('2020-01-01'),
+                stateFull,
+                null,
+                false
+            );
+            expect(annuelDu).toBeGreaterThan(CONFIG.SMH[5]);
+        });
+
+        it('devrait appliquer les taux HS de l\'accord dans le salaire dû SMH seul', () => {
+            const accordHS = {
+                id: 'test-hs',
+                majorations: {
+                    heuresSupplementaires: {
+                        majoration25: 0.30,
+                        majoration50: 0.60
+                    }
+                }
+            };
+            const state = {
+                ...stateBase,
+                travailHeuresSup: true,
+                heuresSup: 20
+            };
+            const annuelSansAccord = calculateSalaireDuPourMois(
+                new Date('2024-01-01'),
+                new Date('2020-01-01'),
+                state,
+                null,
+                true
+            );
+            const annuelAvecAccord = calculateSalaireDuPourMois(
+                new Date('2024-01-01'),
+                new Date('2020-01-01'),
+                state,
+                accordHS,
+                true
+            );
+            expect(annuelAvecAccord).toBeGreaterThan(annuelSansAccord);
         });
     });
 

@@ -66,3 +66,13 @@ global.jsPDF = class MockJsPDF {
     save() {}
     setDrawColor() { return this; }
 };
+
+// Mock URL blob helpers pour les tests de génération Word/PDF
+if (typeof global.URL !== 'undefined') {
+    if (typeof global.URL.createObjectURL !== 'function') {
+        global.URL.createObjectURL = () => 'blob:mock-url';
+    }
+    if (typeof global.URL.revokeObjectURL !== 'function') {
+        global.URL.revokeObjectURL = () => {};
+    }
+}

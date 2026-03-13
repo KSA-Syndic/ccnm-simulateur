@@ -40,6 +40,8 @@ export const state = {
     heuresNuit: 0,               // Heures de nuit mensuelles (CCN)
     travailDimanche: false,      // Travail le dimanche
     heuresDimanche: 0,           // Heures dimanche mensuelles
+    travailHeuresSup: false,     // Heures supplémentaires
+    heuresSup: 0,                // Heures supplémentaires mensuelles
     
     // === ACCORD ENTREPRISE (générique, listable) ===
     accordActif: false,          // Accord d'entreprise activé

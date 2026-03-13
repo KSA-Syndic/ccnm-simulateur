@@ -72,12 +72,13 @@ export const KuhnAgreement = {
             sourceValeur: 'accord',
             valueType: 'horaire',
             unit: '€/h',
-            valeurAccord: 0.82,     // €/heure (01/01/2024)
+            valeurAccord: 0.86,     // €/heure (01/01/2024 updated ??)
             stateKeyActif: 'travailEquipe',
             stateKeyHeures: 'heuresEquipe',
+            autoHeures: true,
             inclusDansSMH: false,   // Exclue de l'assiette SMH (condition de travail, pas complément salarial)
             conditionAnciennete: { type: 'aucune', description: 'Aucune' },
-            tooltip: 'Horaire avec pause 20 min, durée effective ≥ 6 h/poste, horaire collectif posté (équipes successives).'
+            tooltip: 'Horaire avec pause 20 min, durée effective ≥ 6 h/poste, horaire collectif posté (équipes successives). Base de calcul : 151,67 h/mois (35 h/semaine).'
         },
         {
             id: 'primeVacances',

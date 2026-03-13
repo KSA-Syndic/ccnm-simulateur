@@ -10,6 +10,10 @@ Un accord d'entreprise peut modifier certains aspects de la Convention Collectiv
 - Primes spécifiques (équipe, vacances)
 - Répartition mensuelle (13e mois)
 
+Règle importante :
+- **Ne fournir que ce qui diffère de la CCN.**
+- Si une règle est identique à la CCN, ne pas la remonter comme "spécifique accord".
+
 ## Comment Contribuer
 
 ### Option 1 : Contacter l'Équipe
@@ -61,6 +65,9 @@ Pour chaque prime, nous avons besoin de :
 - Mois de versement (ex: juillet pour vacances, décembre pour Noël)
 - Conditions (ancienneté requise, catégorie de personnel, etc.)
 - **Inclusion dans le SMH** : cette prime est-elle un complément de salaire (oui) ou une contrepartie de conditions de travail (non) ? Cela détermine si l'employeur peut l'utiliser pour atteindre le minimum conventionnel. En cas de doute, l'équipe analysera la CCN.
+
+Note pratique (prime d'équipe) :
+- Dans l'outil, la prime d'équipe peut être calculée automatiquement sur `151,67 h/mois` (base 35h), sans saisir d'heures manuellement.
 
 ### Répartition Mensuelle
 - Répartition sur 13 mois ? (oui/non)

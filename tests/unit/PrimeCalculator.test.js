@@ -108,7 +108,7 @@ describe('PrimeCalculator', () => {
             source: SOURCE_ACCORD,
             valueKind: 'horaire',
             label: 'Prime équipe',
-            config: { stateKeyActif: 'travailEquipe', stateKeyHeures: 'heuresEquipe' }
+            config: { stateKeyActif: 'travailEquipe', stateKeyHeures: 'heuresEquipe', autoHeures: true }
         };
 
         it('devrait calculer la prime d\'équipe mensuelle', () => {
@@ -120,6 +120,38 @@ describe('PrimeCalculator', () => {
 
         it('devrait retourner 0 si pas d\'accord', () => {
             const r = computePrime(defEquipe, { state: { heuresEquipe: 151.67 }, agreement: null });
+            expect(r.amount).toBe(0);
+        });
+
+        it('devrait calculer automatiquement sur 151,67h (sans inclusion HS)', () => {
+            const r = computePrime(defEquipe, {
+                state: { travailEquipe: true, travailHeuresSup: true, heuresSup: 20, heuresEquipe: 10 },
+                agreement: accordKuhn
+            });
+            // 151.67 * 0.82 * 12
+            expect(r.amount).toBe(1492);
+            expect(r.meta?.heures).toBe(151.67);
+        });
+    });
+
+    describe('computePrime - prime équipe CCN (30 min SMH horaire)', () => {
+        const defEquipeCCN = getConventionPrimeDefs().find(d => d.semanticId === SEMANTIC_ID.PRIME_EQUIPE);
+
+        it('devrait calculer la prime équipe CCN si active', () => {
+            const r = computePrime(defEquipeCCN, {
+                state: { accordInputs: { travailEquipe: true, heuresEquipe: 151.67 } },
+                tauxHoraire: 12
+            });
+            expect(r.amount).toBe(10920); // 151.67 * (12 * 0.5) * 12
+            expect(r.meta?.tauxHoraire).toBe(6);
+            expect(r.meta?.heures).toBe(151.67);
+        });
+
+        it('devrait retourner 0 si la prime équipe CCN est inactive', () => {
+            const r = computePrime(defEquipeCCN, {
+                state: { accordInputs: { travailEquipe: false, heuresEquipe: 151.67 } },
+                tauxHoraire: 12
+            });
             expect(r.amount).toBe(0);
         });
     });
