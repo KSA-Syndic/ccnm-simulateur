@@ -1,7 +1,7 @@
 /**
  * ============================================
  * APP.JS - Logique Application Simulateur
- * Convention Collective Métallurgie 2024
+ * Convention Collective Métallurgie
  * ============================================
  */
 
@@ -52,6 +52,15 @@ const state = {
     // === AFFICHAGE ===
     nbMois: 12                   // Répartition mensuelle (12 ou 13 mois)
 };
+
+const CONVENTION_REFERENCE_YEAR = Number(
+    CONFIG?.CURRENT_DATA_YEAR ?? CONFIG?.SMH_UPDATE?.referenceYear ?? new Date().getFullYear()
+) || new Date().getFullYear();
+const CCNM_EFFECTIVE_YEAR = (() => {
+    const years = Object.keys(CONFIG?.SMH_BY_YEAR || {}).map(Number).filter(Number.isFinite);
+    return years.length ? Math.min(...years) : CONVENTION_REFERENCE_YEAR;
+})();
+const CCNM_EFFECTIVE_DATE = new Date(CCNM_EFFECTIVE_YEAR, 0, 1);
 
 /** Source de vérité unique pour les données PDF arriérés (étape 4). Remplit uniquement par calculerArreteesFinal / afficherResultatsArreteesFinal, vidé par invalidateArreteesDataFinal. */
 let arreteesPdfStore = null;
@@ -2181,7 +2190,7 @@ function aggregateRemunerationDetails(details) {
         if (detail.isBase) {
             aggregated.push({
                 ...detail,
-                tooltipOrigin: 'CCN Métallurgie 2024',
+                tooltipOrigin: `CCN Métallurgie ${CONVENTION_REFERENCE_YEAR}`,
                 tooltipDetail: detail.label
             });
             if (baseLineIndex === -1) {
@@ -3128,9 +3137,11 @@ function updateArreteesSalaireHint() {
             ? window.LABELS.arreteesSalaireBrutFullHintHtml
             : '<strong>Attention :</strong> Indiquez le <strong>total brut</strong> du bulletin (y compris primes) pour comparer à la rémunération complète.';
     }
+    updateArreteesSmhTooltip();
 }
 
-function getSmhScopeDynamic() {
+function getSmhScopeDynamic(options = {}) {
+    const includeOnlyActivePrimes = options.includeOnlyActivePrimes !== false;
     const agreement = (typeof window.AgreementLoader?.getActiveAgreement === 'function')
         ? window.AgreementLoader.getActiveAgreement() : null;
     const isAccordActif = !!(state.accordActif && agreement);
@@ -3149,7 +3160,7 @@ function getSmhScopeDynamic() {
     // Primes accord dynamiques selon inclusDansSMH.
     for (const p of primes) {
         const actif = p.stateKeyActif ? (state.accordInputs?.[p.stateKeyActif] === true || state[p.stateKeyActif] === true) : true;
-        if (!actif) continue;
+        if (includeOnlyActivePrimes && !actif) continue;
         if (p.inclusDansSMH === true) addUnique(included, p.label.toLowerCase());
         else addUnique(excluded, p.label.toLowerCase());
     }
@@ -3173,18 +3184,45 @@ function getSmhScopeDynamic() {
         addUnique(included, 'majorations d\'heures supplémentaires');
     }
 
+    const normalizePrimeKey = (value) => String(value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '');
+    const isPrimeAncienneteSemantic = (prime) => {
+        const explicit = typeof prime?.semanticId === 'string' ? prime.semanticId.trim() : '';
+        if (explicit) return explicit === 'primeAnciennete';
+        const idKey = normalizePrimeKey(prime?.id);
+        const labelKey = normalizePrimeKey(prime?.label);
+        const key = `${idKey} ${labelKey}`;
+        return key.includes('anciennete');
+    };
+    const getGlobalAncienneteInclusion = () => {
+        const runtimeValue = (typeof window !== 'undefined' && window?.CONFIG?.ANCIENNETE)
+            ? window.CONFIG.ANCIENNETE.inclusDansSMH
+            : undefined;
+        if (typeof runtimeValue === 'boolean') return runtimeValue;
+        return CONFIG?.ANCIENNETE?.inclusDansSMH === true;
+    };
+    const resolveAccordAncienneteInclusion = () => {
+        const primeOverride = primes.find(isPrimeAncienneteSemantic)?.inclusDansSMH;
+        if (typeof primeOverride === 'boolean') return primeOverride;
+        const accordOverride = agreement?.anciennete?.inclusDansSMH;
+        if (typeof accordOverride === 'boolean') return accordOverride;
+        return false;
+    };
+
     // Ancienneté dynamiquement incluse/exclue selon paramétrage.
     const ancienneteCfg = (isAccordActif && agreement?.anciennete) ? agreement.anciennete : CONFIG.ANCIENNETE;
-    const accordOverrideAnciennete = isAccordActif && typeof agreement?.anciennete?.inclusDansSMH === 'boolean'
-        ? agreement.anciennete.inclusDansSMH === true
-        : null;
-    const ancienneteIncluse = accordOverrideAnciennete !== null
-        ? accordOverrideAnciennete
-        : (CONFIG?.ANCIENNETE?.inclusDansSMH === true);
+    const ancienneteIncluse = isAccordActif
+        ? resolveAccordAncienneteInclusion()
+        : getGlobalAncienneteInclusion();
     const seuilAnciennete = ancienneteCfg?.seuil ?? CONFIG.ANCIENNETE.seuil;
-    const eligibleAnciennete = isAccordActif
-        ? ((agreement?.anciennete?.tousStatuts === true || !isCadre) && state.anciennete >= seuilAnciennete)
-        : (!isCadre && state.anciennete >= seuilAnciennete);
+    const eligibleAnciennete = includeOnlyActivePrimes
+        ? (isAccordActif
+            ? ((agreement?.anciennete?.tousStatuts === true || !isCadre) && state.anciennete >= seuilAnciennete)
+            : (!isCadre && state.anciennete >= seuilAnciennete))
+        : true;
     if (eligibleAnciennete) {
         if (ancienneteIncluse) addUnique(included, 'prime d\'ancienneté');
         else addUnique(excluded, 'prime d\'ancienneté');
@@ -3197,7 +3235,10 @@ function getSmhScopeDynamic() {
         addUnique(excluded, 'rachat de jours de repos (forfait jours)');
     }
     const travailEquipeActif = (state.accordInputs?.travailEquipe === true || state.travailEquipe === true);
-    if (travailEquipeActif) addUnique(excluded, 'prime d\'équipe');
+    const travailEquipeExiste = (!isCadre) || primes.some(p => String(p.id || '').toLowerCase().includes('equipe'));
+    if ((includeOnlyActivePrimes && travailEquipeActif) || (!includeOnlyActivePrimes && travailEquipeExiste)) {
+        addUnique(excluded, 'prime d\'équipe');
+    }
 
     return { included, excluded };
 }
@@ -3219,10 +3260,18 @@ function buildSmhHintHtml() {
  * @returns {string}
  */
 function buildSmhTooltipText() {
-    const { included, excluded } = getSmhScopeDynamic();
-    const includedLabel = included.length ? included.join(', ') : 'aucun élément additionnel actif';
+    const { included, excluded } = getSmhScopeDynamic({ includeOnlyActivePrimes: false });
+    const includedLabel = included.length ? included.join(', ') : 'aucun élément défini';
     const excludedLabel = excluded.length ? excluded.join(', ') : 'aucun';
-    return `Pris en compte : base SMH + éléments inclus. À inclure : ${includedLabel}. À exclure : ${excludedLabel}.`;
+    return `Salaire dû (SMH seul) : assiette SMH. À inclure : ${includedLabel}. À exclure : ${excludedLabel}.`;
+}
+
+function updateArreteesSmhTooltip() {
+    const tooltipEl = document.querySelector('#arretees-smh-seul + span.tooltip-trigger');
+    if (!tooltipEl) return;
+    const html = `Art. 140 CCNM.<br>${buildSmhTooltipText()}<br>Décochez pour comparer à la rémunération complète.`;
+    tooltipEl.setAttribute('data-tippy-content', html);
+    if (tooltipEl._tippy) tooltipEl._tippy.setContent(html);
 }
 
 /**
@@ -3264,7 +3313,7 @@ function initTimeline() {
     if (chartWrapper) chartWrapper.classList.remove('hidden');
 
     // Dates importantes
-    const dateCCNM = new Date('2024-01-01');
+    const dateCCNM = CCNM_EFFECTIVE_DATE;
     const dateEmbaucheObj = new Date(dateEmbauche);
     const dateFinObj = dateRupture ? new Date(dateRupture) : new Date();
     const datePrescription = new Date();
@@ -4011,7 +4060,7 @@ function calculerArreteesFinal() {
     const salaireDu = remuneration.total;
 
     // Dates importantes
-    const dateCCNM = new Date('2024-01-01');
+    const dateCCNM = CCNM_EFFECTIVE_DATE;
     const dateEmbaucheObj = new Date(dateEmbauche);
     const dateRuptureObj = state.ruptureContratArretees && state.dateRuptureArretees 
         ? new Date(state.dateRuptureArretees) 
@@ -4320,8 +4369,8 @@ function afficherResultatsArreteesFinal(data) {
         const conditionsValides = [];
         const conditionsInvalides = [];
 
-        if (data.dateDebut < new Date('2024-01-01')) {
-            conditionsInvalides.push('Les arriérés avant le 1er janvier 2024 ne sont pas réclamables au titre de cette convention.');
+        if (data.dateDebut < CCNM_EFFECTIVE_DATE) {
+            conditionsInvalides.push(`Les arriérés avant le 1er janvier ${CCNM_EFFECTIVE_YEAR} ne sont pas réclamables au titre de cette convention.`);
         }
 
         if (data.dateDebut < data.datePrescription) {
@@ -4793,7 +4842,7 @@ const legalCarouselSteps = [
                 <li><strong>Prescription :</strong> 3 ans à compter de chaque échéance de paiement (chaque mois est une échéance distincte)</li>
                 <li><strong>Délai de réponse LRAR :</strong> Généralement 1 mois pour une réponse de l'employeur</li>
                 <li><strong>Saisine Prud'hommes :</strong> Doit être effectuée dans les délais de prescription</li>
-                <li><strong>CCNM 2024 :</strong> Les arriérés antérieurs au 1er janvier 2024 ne sont pas réclamables au titre de cette convention</li>
+                <li><strong>CCNM ${CCNM_EFFECTIVE_YEAR} :</strong> Les arriérés antérieurs au 1er janvier ${CCNM_EFFECTIVE_YEAR} ne sont pas réclamables au titre de cette convention</li>
             </ul>
             <p><strong>Conseil :</strong> Ne tardez pas à agir. Plus vous attendez, plus vous risquez de perdre le droit à certains arriérés par prescription.</p>
         `

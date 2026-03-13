@@ -9,7 +9,13 @@
  * Note : Les accords d'entreprise sont gérés séparément dans src/agreements/
  */
 
-const CURRENT_DATA_YEAR = 2024;
+const DEFAULT_CURRENT_DATA_YEAR = 2024;
+const runtimeCurrentDataYear = (typeof window !== 'undefined')
+    ? Number(window?.CONFIG?.CURRENT_DATA_YEAR)
+    : NaN;
+const CURRENT_DATA_YEAR = Number.isFinite(runtimeCurrentDataYear) && runtimeCurrentDataYear > 0
+    ? runtimeCurrentDataYear
+    : DEFAULT_CURRENT_DATA_YEAR;
 
 const SMH_BY_YEAR = {
     2024: {

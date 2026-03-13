@@ -10,41 +10,27 @@
  * - CCN : Données Convention Collective Nationale Métallurgie (SMH, barèmes, taux, forfaits, majorations)
  * - Accords d'entreprise : définis dans le dossier accords/ et chargés à l'exécution (AgreementLoader/AgreementRegistry)
  *
- * RÈGLES MÉTIER - ASSIETTE SMH (Art. 140 CCNM — pour arriérés « SMH seul » et référence générale)
- * --------------------------------------------------------------------------------------------
- * Le SMH est le minimum défini par la grille CCN. Les éléments inclus sont des distributions
- * du salaire permettant d'atteindre ce minimum, PAS des suppléments qui s'y ajoutent.
+ * PRINCIPES MÉTIER (évolutifs)
+ * ----------------------------
+ * - Ce fichier doit rester une source de vérité technique, sans figer des positions
+ *   qui peuvent évoluer (texte conventionnel, jurisprudence, doctrine interne).
+ * - L'assiette de référence SMH est pilotée par la configuration et les règles de calcul,
+ *   pas par des listes codées en dur dans les commentaires.
  *
- * INCLUS dans l'assiette SMH (distributions comptant pour atteindre le minimum conventionnel) :
- * - Base SMH (ou barème débutants F11/F12 si < 6 ans)
- * - Majorations forfaits cadres (heures +15%, jours +30%) : font partie du SMH
- * - Majorations heures supplémentaires : incluses dans l'assiette SMH
- * - 13e mois : distribution du salaire (répartition 12/13), pas un supplément
- * - Primes d'accord avec inclusDansSMH: true (ex. prime de vacances) : distribution du salaire
- *   concentrée dans un mois donné, ne modifie PAS le total annuel
+ * Règles générales à conserver :
+ * - Majorations : leur traitement (inclues / exclues de l'assiette) est défini
+ *   dynamiquement par la logique applicative et la configuration active.
+ * - Primes : leur comportement est dynamique via les flags de configuration
+ *   (ex. inclusDansSMH) et les surcharges éventuelles d'accord d'entreprise.
+ * - Les calculs annuels et mensuels doivent s'appuyer sur les données de grille,
+ *   les paramètres actifs et l'année de référence courante.
  *
- * EXCLUS de l'assiette SMH (s'ajoutent AU-DESSUS du minimum garanti) :
- * - Prime d'ancienneté (CCN ou accord), sauf paramétrage explicite inclusDansSMH=true
- * - Majorations pénibilité
- * - Majorations nuit / dimanche / prime d'équipe
- * - Primes d'accord avec inclusDansSMH: false
- *
- * Total annuel affiché = SMH grille + forfait + éléments EXCLUS uniquement.
- * Les primes inclusDansSMH: true n'augmentent pas ce total ; elles sont informationnelles.
- *
- * PÉRIODICITÉ DE VÉRIFICATION : le SMH s'apprécie sur l'ANNÉE CIVILE (Art. 140 CCNM).
- * Les arriérés sont calculés par année civile :
- *   Arriérés(année) = max(0, totalDû(année) - totalPerçu(année))
- * Le détail mois par mois est conservé pour la transparence mais n'est pas la base de comparaison.
- *
- * BASE DE CALCUL : temps plein 35h/semaine (151,67h/mois). Pas de prorata temps partiel.
- *
- * Distribution mensuelle (arriérés) : les primes SMH sont soustraites du total annuel pour
- * répartition uniforme, puis rajoutées dans leur mois de versement.
- * Saisie utilisateur = brut incluant primes SMH (Art. 140), excluant ancienneté et majorations.
+ * Objectif :
+ * - Permettre des mises à jour annuelles et juridiques sans réécriture structurelle
+ *   du moteur de calcul ni contradictions entre UI, calcul et documentation.
  */
 
-const CURRENT_DATA_YEAR = 2024;
+const CURRENT_DATA_YEAR = 2026;
 
 const SMH_BY_YEAR = {
     2024: {
@@ -151,7 +137,7 @@ const CONFIG = {
     // Valeur du Point Territorial - BAS-RHIN (67)
     // Source : Accord territorial du 17 avril 2025 (valeur 2025)
     // Ref : https://code.travail.gouv.fr/contribution/3248-quand-le-salarie-a-t-il-droit-a-une-prime-danciennete-quel-est-son-montant
-    // IMPORTANT : Mettre à jour lorsque la valeur 2026 sera publiée
+    // IMPORTANT : Mettre à jour la valeur chaque année
     POINT_TERRITORIAL_DEFAUT: 5.90,
     TERRITOIRE: 'Bas-Rhin (67)',
 

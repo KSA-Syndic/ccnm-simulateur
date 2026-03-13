@@ -95,6 +95,19 @@ export function initAppIntegration() {
         forfaitTooltipEl.setAttribute('data-tippy-content', `Base 35h : sans majoration. Forfait Heures : +${pctHeures}%. Forfait Jours : +${pctJours}%.`);
         if (forfaitTooltipEl._tippy) forfaitTooltipEl._tippy.setContent(forfaitTooltipEl.getAttribute('data-tippy-content'));
     }
+    const pointTerritorialTooltipEl = document.getElementById('point-territorial-tooltip');
+    if (pointTerritorialTooltipEl) {
+        const pointYear = Number(CONFIG?.CURRENT_DATA_YEAR ?? CONFIG?.SMH_UPDATE?.referenceYear ?? new Date().getFullYear());
+        const pointValue = Number(CONFIG?.POINT_TERRITORIAL_DEFAUT ?? 0).toFixed(2);
+        const territoire = CONFIG?.TERRITOIRE || 'territoire';
+        pointTerritorialTooltipEl.setAttribute(
+            'data-tippy-content',
+            `Valeur définie par accord territorial. ${territoire} ${pointYear} : ${pointValue}€<br><a href='https://code.travail.gouv.fr/contribution/3248-quand-le-salarie-a-t-il-droit-a-une-prime-danciennete-quel-est-son-montant' target='_blank' rel='noopener'>Voir sur code.travail.gouv.fr</a>`
+        );
+        if (pointTerritorialTooltipEl._tippy) {
+            pointTerritorialTooltipEl._tippy.setContent(pointTerritorialTooltipEl.getAttribute('data-tippy-content'));
+        }
+    }
 
     const setText = (id, text) => {
         const el = document.getElementById(id);

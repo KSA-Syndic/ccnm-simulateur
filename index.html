@@ -190,7 +190,7 @@
                     <div class="form-group">
                         <label for="point-territorial">
                             Valeur du Point Territorial
-                            <span class="tooltip-trigger" data-tippy-content="Valeur définie par accord territorial. Bas-Rhin 2025 : 5.90€&lt;br&gt;&lt;a href='https://code.travail.gouv.fr/contribution/3248-quand-le-salarie-a-t-il-droit-a-une-prime-danciennete-quel-est-son-montant' target='_blank'&gt;Voir sur code.travail.gouv.fr&lt;/a&gt;">?</span>
+                            <span id="point-territorial-tooltip" class="tooltip-trigger" data-tippy-content="">?</span>
                         </label>
                         <div class="input-with-unit">
                             <input type="text" id="point-territorial" class="book-input" value="5.90" inputmode="decimal" data-decimal-input="true" autocomplete="off">
@@ -627,11 +627,12 @@
     <!-- jsPDF + autoTable pour génération PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+    <!-- Config -->
+    <script src="config.js"></script>
     <!-- Modules ES6 -->
     <script type="module" src="src/app-integration.js"></script>
     <script type="module" src="src/compat/expose-to-app.js"></script>
-    <!-- Config et App -->
-    <script src="config.js"></script>
+    <!-- App -->
     <script src="app.js"></script>
 </body>
 </html>
