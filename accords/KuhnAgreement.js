@@ -188,7 +188,7 @@ export const KuhnAgreement = {
     // ─────────────────────────────────────────────────────────────
     labels: {
         nomCourt: 'Kuhn',
-        description: 'Accord d\'entreprise qui est censée améliorer la convention : prime d\'ancienneté dès 2 ans (au lieu de 3), prime vacances, prime équipe, 13e mois et majorations (nuit, dimanche).'
+        description: 'Accord d\'entreprise censée améliorer la convention : prime d\'ancienneté dès 2 ans (au lieu de 3), prime vacances, prime équipe, 13e mois et majorations (nuit, dimanche).'
     },
 
     // ─────────────────────────────────────────────────────────────

@@ -97,10 +97,16 @@ function computePrimeConvention(def, context) {
         if (!actif) {
             return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
         }
-        const heures = resolvePrimeHeures(def, context);
-        // CCN : 30 min du SMH horaire de base (35h), sans impact HS.
+        // CCN : prime d'équipe calculée par poste (30 min du SMH horaire de base 35h).
         const tauxHoraire = context.tauxHoraireBase ?? context.tauxHoraire ?? 0;
         const ratio = Number(cfg.ratioSMHHoraire) || 0;
+        const postesMensuelsCfg = Number(cfg.postesMensuels ?? CONFIG.PRIME_EQUIPE_POSTES_MENSUELS_DEFAUT ?? 22);
+        const minutesParPoste = Number(cfg.minutesParPoste ?? CONFIG.PRIME_EQUIPE_MINUTES_PAR_POSTE ?? 30);
+        const activityRate = Number(context?.activityRate ?? 1);
+        const prorata = Number.isFinite(activityRate) && activityRate > 0 ? activityRate : 1;
+        const postesMensuels = Math.max(0, postesMensuelsCfg * prorata);
+        const heuresEqParPoste = minutesParPoste > 0 ? (minutesParPoste / 60) : 0;
+        const heures = Math.round((postesMensuels * heuresEqParPoste) * 100) / 100;
         if (!heures || !tauxHoraire || !ratio) {
             return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
         }
@@ -112,7 +118,13 @@ function computePrimeConvention(def, context) {
             label: def.label,
             source: SOURCE_CONVENTION,
             semanticId: def.semanticId,
-            meta: { tauxHoraire: Math.round(tauxPrimeHoraire * 100) / 100, heures, ratio }
+            meta: {
+                tauxHoraire: Math.round(tauxPrimeHoraire * 100) / 100,
+                heures,
+                ratio,
+                postesMensuels: Math.round(postesMensuels * 100) / 100,
+                minutesParPoste
+            }
         };
     }
 

@@ -193,6 +193,34 @@ function getAccordBadgeHtml(agreement) {
     return ` <span class="accord-badge" aria-label="Accord d'entreprise : ${nom.replace(/"/g, '&quot;')}">\u{1F3E2} ${escapeHTML(nom)}</span>`;
 }
 
+function formatNumberFr(value, digits = 2) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '0';
+    return n.toFixed(digits).replace('.', ',');
+}
+
+function getPrimeEquipeConventionRatePerHour() {
+    const { classe } = getActiveClassification();
+    const smhClasse = Number(CONFIG?.SMH?.[classe]) || 0;
+    const heuresBase = Number(CONFIG?.DUREE_LEGALE_HEURES_MOIS ?? 151.67) || 151.67;
+    if (!(smhClasse > 0) || !(heuresBase > 0)) return 0;
+    const tauxHoraireBase = smhClasse / 12 / heuresBase;
+    return Math.round((tauxHoraireBase * 0.5) * 100) / 100;
+}
+
+function buildPrimeEquipeTooltip(agreement, accordPrimeEquipe = null) {
+    const tauxCCN = getPrimeEquipeConventionRatePerHour();
+    const conventionLine = `30 min du taux horaire de base par poste.<br>Référence actuelle : ${formatNumberFr(tauxCCN, 2)} €/h.`;
+    const accordValue = accordPrimeEquipe?.valeurAccord;
+    if (state.accordActif && agreement && Number.isFinite(Number(accordValue))) {
+        const nomAccord = getAccordNomCourt(agreement) || 'Accord';
+        const unit = accordPrimeEquipe?.unit || '€/h';
+        const accordLine = `${formatNumberFr(Number(accordValue), 2)} ${unit}.`;
+        return `<strong>Convention :</strong><br>${conventionLine}<br><br><strong>Accord ${escapeHTML(nomAccord)} :</strong><br>${accordLine}`;
+    }
+    return `<strong>Convention :</strong><br>${conventionLine}`;
+}
+
 /**
  * ============================================
  * INITIALISATION
@@ -1496,13 +1524,25 @@ function updateConditionsTravailDisplay() {
         max: 200,
         step: 0.01,
         defaultHeures: CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67,
-        tooltip: 'CCNM : prime d\'équipe = 30 minutes du taux horaire de base. Base de calcul : 151,67 h/mois (35 h/semaine).'
+        tooltip: buildPrimeEquipeTooltip(agreement, null)
     };
-    const accordPrimesHoraires = agreement && typeof window.AgreementHelpers?.getPrimes === 'function'
+    const accordPrimesHorairesRaw = agreement && typeof window.AgreementHelpers?.getPrimes === 'function'
         ? window.AgreementHelpers.getPrimes(agreement).filter(p =>
             ((p.valueType === 'horaire' && (p.stateKeyHeures || p.autoHeures === true))
                 || (p.valueType === 'majorationHoraire' && p.stateKeyHeures)))
         : [];
+    const accordPrimeEquipe = accordPrimesHorairesRaw.find((p) => (p?.semanticId === 'primeEquipe' || p?.id === 'primeEquipe')) || null;
+    const accordPrimesHoraires = accordPrimesHorairesRaw.map((prime) => {
+        const isPrimeEquipe = (prime?.semanticId === 'primeEquipe' || prime?.id === 'primeEquipe');
+        if (!isPrimeEquipe) return prime;
+        return {
+            ...ccnPrimeEquipeDef,
+            stateKeyActif: prime.stateKeyActif || ccnPrimeEquipeDef.stateKeyActif,
+            valeurAccord: prime.valeurAccord,
+            unit: prime.unit || '€/h',
+            tooltip: buildPrimeEquipeTooltip(agreement, prime)
+        };
+    });
     let primesHoraires = [];
     if (state.accordActif && agreement) {
         primesHoraires = [...accordPrimesHoraires];
@@ -1649,14 +1689,15 @@ function updateConditionsTravailDisplay() {
                 cb.checked = actif;
                 const spanLabel = document.createElement('span');
                 spanLabel.textContent = prime.label || "Prime horaire (accord d'entreprise)";
-                const badgeEl = createAccordBadgeElement(agreement);
+                labelCheck.appendChild(cb);
+                labelCheck.appendChild(spanLabel);
+                const isPrimeEquipe = (prime.id === 'primeEquipe' || prime.semanticId === 'primeEquipe');
+                const isAccordPrime = !isPrimeEquipe && (prime.source || 'accord') === 'accord';
+                const badgeEl = isAccordPrime ? createAccordBadgeElement(agreement) : null;
                 if (badgeEl) {
                     spanLabel.appendChild(document.createTextNode(' '));
                     spanLabel.appendChild(badgeEl);
                 }
-                labelCheck.appendChild(cb);
-                labelCheck.appendChild(spanLabel);
-                const isAccordPrime = (prime.source || 'accord') === 'accord';
                 const prefixAccordOnly = isAccordPrime && (typeof window.LABELS !== 'undefined' && window.LABELS.tooltipPrefixAccordOnly)
                     ? window.LABELS.tooltipPrefixAccordOnly
                     : '';
@@ -2123,20 +2164,19 @@ function updateAll() {
 function updateRemunerationDisplay(remuneration) {
     // Ligne contextuelle sous le sous-titre (forfait + base horaire)
     const ctxNotice = document.getElementById('result-context-notice');
+    let baseInfo = '';
     if (ctxNotice) {
-        let base;
         if (state.forfait === 'jours') {
-            base = 'Forfait jours · 218 j/an';
+            baseInfo = 'Forfait jours · 218 j/an';
         } else if (state.forfait === 'heures') {
-            base = 'Forfait heures';
+            baseInfo = 'Forfait heures';
         } else {
-            base = 'Base 35h/sem.';
+            baseInfo = 'Base 35h/sem.';
         }
         if (state.travailTempsPartiel) {
             const taux = Math.round((Number(state.tauxActivite) || (CONFIG.TAUX_ACTIVITE_DEFAUT ?? 100)) * 100) / 100;
-            base += ` · Temps partiel ${String(taux).replace('.', ',')}%`;
+            baseInfo += ` · Temps partiel ${String(taux).replace('.', ',')}%`;
         }
-        ctxNotice.textContent = base;
     }
 
     // Total annuel
@@ -2145,6 +2185,27 @@ function updateRemunerationDisplay(remuneration) {
     // Mensuel (sur 12 ou 13 mois selon le choix)
     const mensuel = Math.round(remuneration.total / state.nbMois);
     document.getElementById('result-mensuel').textContent = formatMoney(mensuel);
+    const hourlyNotice = document.getElementById('result-hourly-deduced');
+    const heuresBase35h = Number(CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67) || 151.67;
+    const tauxActivitePctRaw = state.travailTempsPartiel
+        ? (Number(state.tauxActivite) || Number(CONFIG.TAUX_ACTIVITE_DEFAUT ?? 100))
+        : 100;
+    const tauxActivitePct = Math.max(Number(CONFIG.TAUX_ACTIVITE_MIN ?? 1), Math.min(Number(CONFIG.TAUX_ACTIVITE_MAX ?? 100), tauxActivitePctRaw));
+    const isForfaitJours = state.forfait === 'jours';
+    const heuresMensuellesRef = heuresBase35h * (tauxActivitePct / 100);
+    const joursRefAnnuel = (Number(CONFIG.FORFAIT_JOURS_REFERENCE ?? 218) || 218) * (tauxActivitePct / 100);
+    const tauxHoraire = heuresMensuellesRef > 0 ? (mensuel / heuresMensuellesRef) : 0;
+    const tauxJournalier = joursRefAnnuel > 0 ? (remuneration.total / joursRefAnnuel) : 0;
+    const tauxStr = isForfaitJours
+        ? `${(Math.round(tauxJournalier * 100) / 100).toFixed(2).replace('.', ',')} €/j`
+        : `${(Math.round(tauxHoraire * 100) / 100).toFixed(2).replace('.', ',')} €/h`;
+    const tauxLabel = isForfaitJours ? 'Taux journalier' : 'Taux horaire';
+    if (ctxNotice) {
+        ctxNotice.textContent = `${baseInfo} · ${tauxLabel} ${tauxStr}`;
+    }
+    if (hourlyNotice) {
+        hourlyNotice.textContent = '';
+    }
 
     // Détails avec agrégation intelligente
     const detailsContainer = document.getElementById('result-details');

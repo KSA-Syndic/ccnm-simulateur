@@ -48,11 +48,10 @@ export function getConventionPrimeDefs() {
             label: 'Prime d\'équipe conventionnelle',
             config: {
                 stateKeyActif: 'travailEquipe',
-                stateKeyHeures: 'heuresEquipe',
-                autoHeures: true,
-                defaultHeures: CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67,
+                postesMensuels: CONFIG.PRIME_EQUIPE_POSTES_MENSUELS_DEFAUT ?? 22,
+                minutesParPoste: CONFIG.PRIME_EQUIPE_MINUTES_PAR_POSTE ?? 30,
                 ratioSMHHoraire: 0.5,
-                formule: '151,67h/mois × (0,5 × SMH horaire de base 35h) × 12'
+                formule: 'Nombre de postes/mois × (30 min × SMH horaire de base 35h) × 12'
             }
         }
     ];

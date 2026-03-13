@@ -74,7 +74,52 @@ function getPrimeEquipeModaliteLabel(state, agreement) {
         const taux = primeAccord.valeurAccord != null ? String(primeAccord.valeurAccord).replace('.', ',') : '?';
         return `Prime d'équipe ${agreement?.nomCourt || 'accord'} (base horaire auto 151,67h × ${taux} €/h)`;
     }
-    return `Prime d'équipe CCN (base horaire auto 151,67h × 30 min du SMH horaire de base)`;
+    const postes = Number(CONFIG.PRIME_EQUIPE_POSTES_MENSUELS_DEFAUT ?? 22);
+    return `Prime d'équipe CCN (base auto ${String(postes).replace('.', ',')} postes/mois × 30 min du SMH horaire de base)`;
+}
+
+function formatAgreementRawValue(value) {
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+    if (typeof value === 'function') return '[function]';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    try {
+        return JSON.stringify(value);
+    } catch {
+        return String(value);
+    }
+}
+
+function flattenAgreementToRows(agreement) {
+    const rows = [];
+    const walk = (path, value) => {
+        if (value === undefined) return;
+        const isPrimitive = value === null || ['string', 'number', 'boolean', 'function'].includes(typeof value);
+        if (isPrimitive) {
+            rows.push([path || '(racine)', formatAgreementRawValue(value)]);
+            return;
+        }
+        if (Array.isArray(value)) {
+            if (value.length === 0) {
+                rows.push([path, '[]']);
+                return;
+            }
+            value.forEach((item, idx) => walk(`${path}[${idx}]`, item));
+            return;
+        }
+        const keys = Object.keys(value);
+        if (keys.length === 0) {
+            rows.push([path, '{}']);
+            return;
+        }
+        keys.forEach((key) => {
+            const nextPath = path ? `${path}.${key}` : key;
+            walk(nextPath, value[key]);
+        });
+    };
+    walk('', agreement);
+    return rows;
 }
 
 // Style commun pour autoTable — compact pour tenir en ~1 page
@@ -486,54 +531,19 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
         doc.setFontSize(12); doc.setFont(undefined, 'bold'); doc.setTextColor(55, 65, 81);
         doc.text(`5. Accord d'entreprise (${agreement.nomCourt})`, MARGIN, y); y += 8;
         doc.setTextColor(0, 0, 0);
-
-        const primes = getPrimes(agreement);
-        if (primes && primes.length > 0) {
-            const body = primes.map(p => {
-                const smhTag = p.inclusDansSMH ? 'Incluse SMH' : 'Hors SMH';
-                const type = p.valueType || '—';
-                const valeur = p.valeurAccord != null ? `+${p.valeurAccord} ${p.unit}` : '—';
-                const cond = p.conditionAnciennete?.description
-                    || (p.conditionAnciennete?.type === 'annees_revolues' && typeof p.conditionAnciennete?.annees === 'number'
-                        ? `${p.conditionAnciennete.annees} an(s)`
-                        : 'Aucune');
-                return [p.label, type, valeur, smhTag, cond];
-            });
+        const accordRows = flattenAgreementToRows(agreement);
+        if (accordRows.length > 0) {
             addAutoTable(doc, {
                 startY: y,
-                head: [['Prime / modalité', 'Type', 'Valeur', 'Assiette SMH', 'Condition']],
-                body,
+                head: [['Champ accord', 'Valeur brute']],
+                body: accordRows,
                 ...TABLE_STYLES,
-                columnStyles: { 0: { cellWidth: 48 }, 1: { cellWidth: 20 }, 2: { cellWidth: 24 }, 3: { cellWidth: 24 }, 4: { cellWidth: 34 } }
+                styles: { ...TABLE_STYLES.styles, fontSize: 7 },
+                columnStyles: { 0: { cellWidth: 62 }, 1: { cellWidth: 88 } }
             });
             y = (doc.lastAutoTable?.finalY ?? y) + 4;
-        }
-        if (agreement.anciennete) {
-            doc.setFontSize(9); doc.setFont(undefined, 'normal');
-            const anc = agreement.anciennete;
-            const statuts = anc.tousStatuts === true ? 'Cadres et non-cadres' : 'Non-cadres';
-            const inclusion = typeof anc.inclusDansSMH === 'boolean'
-                ? (anc.inclusDansSMH ? 'Incluse dans l\'assiette SMH' : 'Exclue de l\'assiette SMH')
-                : 'Inclusion SMH selon paramétrage';
-            let baremeResume = 'Barème non détaillé';
-            if (anc.barème && typeof anc.barème === 'object') {
-                const paliers = Object.entries(anc.barème)
-                    .map(([annee, taux]) => ({ annee: Number(annee), taux: Number(taux) }))
-                    .filter(item => Number.isFinite(item.annee) && Number.isFinite(item.taux))
-                    .sort((a, b) => a.annee - b.annee);
-                if (paliers.length > 0) {
-                    const extrait = paliers
-                        .slice(0, 6)
-                        .map(item => `${item.annee} ans: ${Math.round(item.taux * 10000) / 100}%`)
-                        .join(' ; ');
-                    baremeResume = paliers.length > 6 ? `${extrait} ; ...` : extrait;
-                }
-            } else if (typeof anc.barème === 'function') {
-                baremeResume = 'Barème défini par fonction (dynamique)';
-            }
-            y = wrappedText(doc, `Ancienneté (accord) : seuil ${anc.seuil ?? '—'} an(s) ; plafond ${anc.plafond ?? '—'} an(s) ; bénéficiaires : ${statuts}.`, MARGIN, y, cw);
-            y = wrappedText(doc, `Assiette SMH : ${inclusion}. Base de calcul : ${anc.baseCalcul || '—'}.`, MARGIN, y, cw);
-            y = wrappedText(doc, `Barème : ${baremeResume}.`, MARGIN, y, cw);
+        } else {
+            y = wrappedText(doc, 'Aucune donnée exploitable trouvée dans l’accord actif.', MARGIN, y, cw);
         }
         y += 10;
     }
@@ -570,7 +580,11 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     if (smhYearRef?.sourceLabel || smhYearRef?.sourceUrl) {
         refs.push(`Source grille SMH ${smhYearRef?.year || ''}: ${smhYearRef?.sourceLabel || 'Mise à jour interne'}${smhYearRef?.sourceUrl ? ` (${smhYearRef.sourceUrl})` : ''}.`);
     }
-    if (hasAccord && agreement) refs.push(`Accord d'entreprise ${agreement.nomCourt || ''}.`);
+    if (hasAccord && agreement) {
+        const accordNom = agreement.nomCourt || agreement.nom || agreement.id || 'sans nom';
+        const accordUrl = agreement.url ? ` (${agreement.url})` : '';
+        refs.push(`Accord d'entreprise appliqué: ${accordNom}${accordUrl}.`);
+    }
     refs.forEach(ref => {
         y = checkPageBreak(doc, y, 10);
         y = wrappedText(doc, `• ${ref}`, MARGIN, y, cw); y += 2;

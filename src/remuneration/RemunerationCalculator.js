@@ -519,10 +519,12 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         const equipeRetenue = defEquipeAccord ? rEquipeAccord : rEquipeCCN;
         if (equipeRetenue.amount > 0) {
             const taux = equipeRetenue.meta?.tauxHoraire ?? 0;
-            const heures = equipeRetenue.meta?.heures ?? (state.heuresEquipe ?? 0);
             const suffixAccord = agreement ? ` ${agreement.nomCourt}` : '';
+            const labelCalcul = equipeRetenue.source === SOURCE_ACCORD
+                ? `(${equipeRetenue.meta?.heures ?? (state.heuresEquipe ?? 0)}h × ${taux}€)`
+                : `(${equipeRetenue.meta?.postesMensuels ?? 0} postes/mois × ${equipeRetenue.meta?.minutesParPoste ?? 30} min × ${taux}€)`;
             details.push({
-                label: `Prime d'équipe${equipeRetenue.source === SOURCE_ACCORD ? suffixAccord : ' conventionnelle'} (${heures}h × ${taux}€)`,
+                label: `Prime d'équipe${equipeRetenue.source === SOURCE_ACCORD ? suffixAccord : ' conventionnelle'} ${labelCalcul}`,
                 value: equipeRetenue.amount,
                 isPositive: true,
                 isAgreement: equipeRetenue.source === SOURCE_ACCORD,

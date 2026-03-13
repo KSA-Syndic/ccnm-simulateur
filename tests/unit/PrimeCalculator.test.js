@@ -142,9 +142,10 @@ describe('PrimeCalculator', () => {
                 state: { accordInputs: { travailEquipe: true, heuresEquipe: 151.67 } },
                 tauxHoraire: 12
             });
-            expect(r.amount).toBe(10920); // 151.67 * (12 * 0.5) * 12
+            expect(r.amount).toBe(792); // 22 postes/mois * (30min -> 0.5h) * (12 * 0.5)
             expect(r.meta?.tauxHoraire).toBe(6);
-            expect(r.meta?.heures).toBe(151.67);
+            expect(r.meta?.heures).toBe(11);
+            expect(r.meta?.postesMensuels).toBe(22);
         });
 
         it('devrait retourner 0 si la prime équipe CCN est inactive', () => {

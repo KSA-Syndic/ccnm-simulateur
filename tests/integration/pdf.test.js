@@ -437,7 +437,7 @@ describe('PDF - Génération', () => {
 
             genererPDFAnnexeTechnique(data, {}, stateSansAccord);
             const bodies = autoTableCalls.map(c => c.body || []).flat();
-            const hasPrimeEquipeCCN = bodies.some(row => Array.isArray(row) && row.join(' ').includes('Prime d\'équipe CCN'));
+            const hasPrimeEquipeCCN = bodies.some(row => Array.isArray(row) && row.join(' ').includes('Prime d\'équipe conventionnelle'));
             expect(hasPrimeEquipeCCN).toBe(true);
         });
 

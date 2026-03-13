@@ -212,14 +212,15 @@ describe('RemunerationCalculator', () => {
                 accordInputs: { ...stateBase.accordInputs, travailEquipe: true, heuresEquipe: 151.67 }
             };
             const result = calculateAnnualRemuneration(state, null, { mode: 'full' });
-            const primeEquipe = result.details.find(d => d.label.includes('Prime d\'équipe CCN'));
+            const primeEquipe = result.details.find(d => d.label.includes('Prime d\'équipe conventionnelle'));
             expect(primeEquipe).toBeDefined();
             expect(primeEquipe.isAgreement).toBe(false);
-            const expected = Math.round(151.67 * ((CONFIG.SMH[5] / 12 / 151.67) * 0.5) * 12);
+            const tauxHoraireBase = CONFIG.SMH[5] / 12 / (CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67);
+            const expected = Math.round((CONFIG.PRIME_EQUIPE_POSTES_MENSUELS_DEFAUT ?? 22) * ((CONFIG.PRIME_EQUIPE_MINUTES_PAR_POSTE ?? 30) / 60) * (tauxHoraireBase * 0.5) * 12);
             expect(primeEquipe.value).toBe(expected);
         });
 
-        it('devrait appliquer 151,67h implicites pour prime équipe CCN si heures non renseignées', () => {
+        it('devrait appliquer la base automatique en postes pour la prime équipe CCN', () => {
             const state = {
                 ...stateBase,
                 scores: [3, 3, 3, 3, 3, 3], // C5
@@ -227,7 +228,7 @@ describe('RemunerationCalculator', () => {
             };
             delete state.accordInputs.heuresEquipe;
             const result = calculateAnnualRemuneration(state, null, { mode: 'full' });
-            const primeEquipe = result.details.find(d => d.label.includes('Prime d\'équipe CCN'));
+            const primeEquipe = result.details.find(d => d.label.includes('Prime d\'équipe conventionnelle'));
             expect(primeEquipe).toBeDefined();
             expect(primeEquipe.value).toBeGreaterThan(0);
         });
@@ -247,8 +248,8 @@ describe('RemunerationCalculator', () => {
             };
             const rSans = calculateAnnualRemuneration(stateSansHS, null, { mode: 'full' });
             const rAvec = calculateAnnualRemuneration(stateAvecHS, null, { mode: 'full' });
-            const pSans = rSans.details.find(d => d.label.includes('Prime d\'équipe CCN'));
-            const pAvec = rAvec.details.find(d => d.label.includes('Prime d\'équipe CCN'));
+            const pSans = rSans.details.find(d => d.label.includes('Prime d\'équipe conventionnelle'));
+            const pAvec = rAvec.details.find(d => d.label.includes('Prime d\'équipe conventionnelle'));
             expect(pSans).toBeDefined();
             expect(pAvec).toBeDefined();
             expect(pAvec.value).toBe(pSans.value);

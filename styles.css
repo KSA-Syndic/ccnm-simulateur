@@ -254,6 +254,11 @@ body.iframe-mode .simulator-container.iframe-container {
     letter-spacing: 0.02em;
 }
 
+.result-card-caption-compact {
+    margin-top: 4px;
+    font-size: 0.72rem;
+}
+
 /* Cartes de choix (Étape 1A) */
 .choice-cards {
     display: grid;
