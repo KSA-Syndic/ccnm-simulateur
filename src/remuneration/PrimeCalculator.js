@@ -65,7 +65,9 @@ function computePrimeConvention(def, context) {
         }
         const anneesPrime = Math.min(anciennete, plafond ?? CONFIG.ANCIENNETE.plafond);
         const tauxClasse = (tauxParClasse && tauxParClasse[classe]) ?? CONFIG.TAUX_ANCIENNETE[classe] ?? 0;
-        const montantMensuel = pointTerritorial * tauxClasse * anneesPrime;
+        const activityRate = Number(context?.activityRate ?? 1);
+        const prorata = Number.isFinite(activityRate) && activityRate > 0 ? activityRate : 1;
+        const montantMensuel = pointTerritorial * tauxClasse * anneesPrime * prorata;
         const montant = Math.round(montantMensuel * 12);
 
         return {

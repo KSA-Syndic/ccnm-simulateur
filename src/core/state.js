@@ -32,6 +32,8 @@ export const state = {
     // === SITUATION ===
     anciennete: 0,               // Ancienneté (Non-Cadres)
     pointTerritorial: 5.90,      // Valeur du Point Territorial - Bas-Rhin (2025)
+    travailTempsPartiel: false,  // Temps partiel activé
+    tauxActivite: 100,           // Taux d'activité en % (100 = temps plein)
     forfait: '35h',              // Type de forfait (Cadres)
     experiencePro: 0,            // Expérience professionnelle (Barème débutants F11/F12)
     
@@ -42,6 +44,8 @@ export const state = {
     heuresDimanche: 0,           // Heures dimanche mensuelles
     travailHeuresSup: false,     // Heures supplémentaires
     heuresSup: 0,                // Heures supplémentaires mensuelles
+    travailJoursSupForfait: false, // Rachat de jours de repos (forfait jours)
+    joursSupForfait: 0,          // Nombre de jours rachetés sur l'année
     
     // === ACCORD ENTREPRISE (générique, listable) ===
     accordActif: false,          // Accord d'entreprise activé

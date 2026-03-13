@@ -15,12 +15,18 @@ describe('RemunerationCalculator', () => {
         scores: [1, 1, 1, 1, 1, 1],
         anciennete: 0,
         pointTerritorial: 5.90,
+        travailTempsPartiel: false,
+        tauxActivite: 100,
         forfait: '35h',
         experiencePro: 0,
         typeNuit: 'aucun',
         heuresNuit: 0,
         travailDimanche: false,
         heuresDimanche: 0,
+        travailHeuresSup: false,
+        heuresSup: 0,
+        travailJoursSupForfait: false,
+        joursSupForfait: 0,
         accordInputs: {
             primeVacances: false,
             travailEquipe: false,
@@ -106,6 +112,18 @@ describe('RemunerationCalculator', () => {
                 CONFIG.ANCIENNETE.inclusDansSMH = previous;
             }
         });
+
+        it('devrait proratiser le SMH en temps partiel (80%)', () => {
+            const state = {
+                ...stateBase,
+                scores: [3, 3, 3, 3, 3, 3], // C5
+                travailTempsPartiel: true,
+                tauxActivite: 80
+            };
+            const result = calculateAnnualRemuneration(state, null, { mode: 'smh-only' });
+            expect(result.total).toBe(Math.round(CONFIG.SMH[5] * 0.8));
+            expect(result.details[0]?.label).toContain('au prorata 80%');
+        });
     });
 
     describe('calculateAnnualRemuneration - Mode full (non-cadre)', () => {
@@ -115,6 +133,37 @@ describe('RemunerationCalculator', () => {
             expect(result.total).toBe(CONFIG.SMH[5]);
             expect(result.scenario).toBe('non-cadre');
             expect(result.isCadre).toBe(false);
+        });
+
+        it('devrait proratiser la rémunération totale en temps partiel (50%)', () => {
+            const state = {
+                ...stateBase,
+                scores: [3, 3, 3, 3, 3, 3], // C5
+                travailTempsPartiel: true,
+                tauxActivite: 50
+            };
+            const result = calculateAnnualRemuneration(state, null, { mode: 'full' });
+            expect(result.total).toBe(Math.round(CONFIG.SMH[5] * 0.5));
+        });
+
+        it('devrait proratiser aussi la prime ancienneté CCN en temps partiel', () => {
+            const fullState = {
+                ...stateBase,
+                scores: [3, 3, 3, 3, 3, 3], // C5
+                anciennete: 10
+            };
+            const partState = {
+                ...fullState,
+                travailTempsPartiel: true,
+                tauxActivite: 50
+            };
+            const fullResult = calculateAnnualRemuneration(fullState, null, { mode: 'full' });
+            const partResult = calculateAnnualRemuneration(partState, null, { mode: 'full' });
+            const primeFull = fullResult.details.find(d => String(d.label).includes('Prime ancienneté'));
+            const primePart = partResult.details.find(d => String(d.label).includes('Prime ancienneté'));
+            expect(primeFull).toBeDefined();
+            expect(primePart).toBeDefined();
+            expect(primePart.value).toBe(Math.round(primeFull.value * 0.5));
         });
 
         it('devrait inclure la prime d\'ancienneté CCN si ancienneté >= 3 ans', () => {
@@ -466,6 +515,42 @@ describe('RemunerationCalculator', () => {
             const hsLine = result.details.find(d => String(d.label).includes('Majoration heures supplémentaires'));
             expect(hsLine).toBeDefined();
             expect(hsLine.value).toBeGreaterThan(0);
+        });
+
+        it('devrait permettre les majorations nuit/dimanche pour un cadre au forfait jours', () => {
+            const state = {
+                ...stateBase,
+                scores: [7, 7, 6, 6, 6, 6], // F11 cadre
+                experiencePro: 6,
+                forfait: 'jours',
+                typeNuit: 'poste-nuit',
+                heuresNuit: 10,
+                travailDimanche: true,
+                heuresDimanche: 8
+            };
+            const result = calculateAnnualRemuneration(state, null, { mode: 'full' });
+            const nuit = result.details.find(d => String(d.label).includes('Majoration nuit'));
+            const dimanche = result.details.find(d => String(d.label).includes('Majoration dimanche'));
+            expect(nuit).toBeDefined();
+            expect(dimanche).toBeDefined();
+            expect(nuit.value).toBeGreaterThan(0);
+            expect(dimanche.value).toBeGreaterThan(0);
+        });
+
+        it('devrait rémunérer le rachat de jours de repos en forfait jours (majoration >= 10%)', () => {
+            const state = {
+                ...stateBase,
+                scores: [7, 7, 6, 6, 6, 6], // F11 cadre
+                experiencePro: 6,
+                forfait: 'jours',
+                travailJoursSupForfait: true,
+                joursSupForfait: 5
+            };
+            const result = calculateAnnualRemuneration(state, null, { mode: 'full' });
+            const rachat = result.details.find(d => String(d.label).includes('Rachat jours de repos forfait jours'));
+            expect(rachat).toBeDefined();
+            const expected = Math.round((CONFIG.SMH[11] / (CONFIG.FORFAIT_JOURS_REFERENCE ?? 218)) * 5 * (1 + (CONFIG.FORFAIT_JOURS_RACHAT_MAJORATION_MIN ?? 0.10)));
+            expect(rachat.value).toBe(expected);
         });
     });
 

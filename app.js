@@ -29,6 +29,8 @@ const state = {
     // === SITUATION ===
     anciennete: 0,               // Ancienneté (Non-Cadres)
     pointTerritorial: 5.90,      // Valeur du Point Territorial - Bas-Rhin (2025)
+    travailTempsPartiel: false,  // Temps partiel activé
+    tauxActivite: 100,           // Taux d'activité en % (100 = temps plein)
     forfait: '35h',              // Type de forfait (Cadres)
     experiencePro: 0,            // Expérience professionnelle (Barème débutants F11/F12)
     
@@ -39,6 +41,8 @@ const state = {
     heuresDimanche: 0,           // Heures dimanche mensuelles
     travailHeuresSup: false,     // Heures supplémentaires
     heuresSup: 0,                // Heures supplémentaires mensuelles
+    travailJoursSupForfait: false, // Rachat de jours de repos (forfait jours)
+    joursSupForfait: 0,          // Nombre de jours rachetés (annuel)
     
     // === ACCORD ENTREPRISE (générique, listable) ===
     accordActif: false,           // Accord d'entreprise activé (générique)
@@ -920,6 +924,9 @@ function initControls() {
     // Contrôles modalités
     const ancienneteInput = document.getElementById('anciennete');
     const pointTerritorialInput = document.getElementById('point-territorial');
+    const travailTempsPartielCheckbox = document.getElementById('travail-temps-partiel');
+    const tauxActiviteField = document.getElementById('taux-activite-field');
+    const tauxActiviteInput = document.getElementById('taux-activite');
     const forfaitSelect = document.getElementById('forfait');
     const experienceProInput = document.getElementById('experience-pro');
 
@@ -1003,10 +1010,12 @@ function initControls() {
     // Appliquer à tous les champs numériques
     setupNumberInputUX(ancienneteInput);
     setupNumberInputUX(pointTerritorialInput);
+    setupNumberInputUX(tauxActiviteInput);
     setupNumberInputUX(experienceProInput);
     setupNumberInputUX(document.getElementById('heures-nuit'));
     setupNumberInputUX(document.getElementById('heures-dimanche'));
     setupNumberInputUX(document.getElementById('heures-sup'));
+    setupNumberInputUX(document.getElementById('jours-sup-forfait'));
     setupNumberInputUX(document.getElementById('age-actuel'));
     setupNumberInputUX(document.getElementById('augmentation-annuelle'));
     setupNumberInputUX(document.getElementById('floating-salary-input'));
@@ -1027,6 +1036,25 @@ function initControls() {
         state.pointTerritorial = parseDecimalInput(e.target.value, CONFIG.POINT_TERRITORIAL_DEFAUT);
         updateAll();
     });
+
+    if (travailTempsPartielCheckbox && tauxActiviteField && tauxActiviteInput) {
+        travailTempsPartielCheckbox.addEventListener('change', (e) => {
+            state.travailTempsPartiel = e.target.checked;
+            if (!state.travailTempsPartiel) {
+                state.tauxActivite = CONFIG.TAUX_ACTIVITE_DEFAUT ?? 100;
+                tauxActiviteInput.value = String(state.tauxActivite);
+            }
+            tauxActiviteField.classList.toggle('hidden', !state.travailTempsPartiel);
+            updateAll();
+        });
+        tauxActiviteInput.addEventListener('input', (e) => {
+            const raw = parseDecimalInput(e.target.value, CONFIG.TAUX_ACTIVITE_DEFAUT ?? 100);
+            const min = CONFIG.TAUX_ACTIVITE_MIN ?? 1;
+            const max = CONFIG.TAUX_ACTIVITE_MAX ?? 100;
+            state.tauxActivite = Math.min(max, Math.max(min, raw));
+            updateAll();
+        });
+    }
 
     forfaitSelect.addEventListener('change', (e) => {
         state.forfait = e.target.value;
@@ -1112,6 +1140,22 @@ function initControls() {
         });
         heuresSupInput.addEventListener('input', (e) => {
             state.heuresSup = parseDecimalInput(e.target.value, 0);
+            updateAll();
+        });
+    }
+
+    // Jours supplémentaires - cadres au forfait jours (rachat de jours de repos)
+    const travailJoursSupForfaitCheckbox = document.getElementById('travail-jours-sup-forfait');
+    const joursSupForfaitField = document.getElementById('jours-sup-forfait-field');
+    const joursSupForfaitInput = document.getElementById('jours-sup-forfait');
+    if (travailJoursSupForfaitCheckbox && joursSupForfaitField && joursSupForfaitInput) {
+        travailJoursSupForfaitCheckbox.addEventListener('change', (e) => {
+            state.travailJoursSupForfait = e.target.checked;
+            joursSupForfaitField.classList.toggle('hidden', !e.target.checked);
+            updateAll();
+        });
+        joursSupForfaitInput.addEventListener('input', (e) => {
+            state.joursSupForfait = parseDecimalInput(e.target.value, 0);
             updateAll();
         });
     }
@@ -1389,6 +1433,7 @@ function updateConditionsTravailDisplay() {
     const groupNuit = document.getElementById('group-nuit');
     const groupDimanche = document.getElementById('group-dimanche');
     const groupHeuresSup = document.getElementById('group-heures-sup');
+    const groupJoursSupForfait = document.getElementById('group-jours-sup-forfait');
     const container = document.getElementById('accord-primes-horaires-container');
     
     const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
@@ -1421,37 +1466,60 @@ function updateConditionsTravailDisplay() {
     }
     const hasPrimeHeures = primesHoraires.length > 0;
     
-    // Cadres au forfait jours : pas de majorations financières (repos uniquement)
+    // Cadres au forfait jours : pas d'heures supplémentaires en heures,
+    // mais possibilité de rachat de jours de repos (L3121-59)
     if (isCadre && isForfaitJours) {
         hintForfaitJours.classList.remove('hidden');
-        groupNuit.classList.add('hidden');
-        groupDimanche.classList.add('hidden');
+        groupNuit.classList.remove('hidden');
+        groupDimanche.classList.remove('hidden');
         if (groupHeuresSup) groupHeuresSup.classList.add('hidden');
+        if (groupJoursSupForfait) groupJoursSupForfait.classList.remove('hidden');
         if (container) {
             container.innerHTML = '';
             container.classList.add('hidden');
         }
-        state.typeNuit = 'aucun';
-        state.travailDimanche = false;
         state.travailHeuresSup = false;
         state.heuresSup = 0;
         primesHoraires.forEach(p => {
             if (p.stateKeyActif) state.accordInputs[p.stateKeyActif] = false;
         });
-        document.getElementById('travail-nuit').checked = false;
-        document.getElementById('travail-dimanche').checked = false;
         const hsCb = document.getElementById('travail-heures-sup');
         const hsInput = document.getElementById('heures-sup');
+        const jsfCb = document.getElementById('travail-jours-sup-forfait');
+        const jsfInput = document.getElementById('jours-sup-forfait');
+        const jsfField = document.getElementById('jours-sup-forfait-field');
         if (hsCb) hsCb.checked = false;
         if (hsInput) hsInput.value = '0';
-        document.getElementById('heures-nuit-field').classList.add('hidden');
-        document.getElementById('heures-dimanche-field').classList.add('hidden');
+        const nuitCb = document.getElementById('travail-nuit');
+        const nuitInput = document.getElementById('heures-nuit');
+        const nuitField = document.getElementById('heures-nuit-field');
+        if (nuitCb) nuitCb.checked = state.typeNuit !== 'aucun';
+        if (nuitInput && document.activeElement !== nuitInput) nuitInput.value = String(state.heuresNuit ?? 0);
+        if (nuitField) nuitField.classList.toggle('hidden', state.typeNuit === 'aucun');
+        const dimCb = document.getElementById('travail-dimanche');
+        const dimInput = document.getElementById('heures-dimanche');
+        const dimField = document.getElementById('heures-dimanche-field');
+        if (dimCb) dimCb.checked = !!state.travailDimanche;
+        if (dimInput && document.activeElement !== dimInput) dimInput.value = String(state.heuresDimanche ?? 0);
+        if (dimField) dimField.classList.toggle('hidden', !state.travailDimanche);
+        if (jsfCb) jsfCb.checked = !!state.travailJoursSupForfait;
+        if (jsfInput && document.activeElement !== jsfInput) jsfInput.value = String(state.joursSupForfait ?? 0);
+        if (jsfField) jsfField.classList.toggle('hidden', !state.travailJoursSupForfait);
         const hsField = document.getElementById('heures-sup-field');
         if (hsField) hsField.classList.add('hidden');
     } else {
         hintForfaitJours.classList.add('hidden');
         groupDimanche.classList.remove('hidden');
         groupNuit.classList.remove('hidden');
+        if (groupJoursSupForfait) groupJoursSupForfait.classList.add('hidden');
+        state.travailJoursSupForfait = false;
+        state.joursSupForfait = 0;
+        const jsfCb = document.getElementById('travail-jours-sup-forfait');
+        const jsfInput = document.getElementById('jours-sup-forfait');
+        const jsfField = document.getElementById('jours-sup-forfait-field');
+        if (jsfCb) jsfCb.checked = false;
+        if (jsfInput && document.activeElement !== jsfInput) jsfInput.value = '0';
+        if (jsfField) jsfField.classList.add('hidden');
         if (groupHeuresSup) groupHeuresSup.classList.toggle('hidden', !hsAllowed);
         const travailNuitCheckbox = document.getElementById('travail-nuit');
         const heuresNuitEl = document.getElementById('heures-nuit');
@@ -1963,6 +2031,17 @@ function updateAll() {
     // Affichage des conditions de travail selon statut/forfait
     updateConditionsTravailDisplay();
 
+    const tpCb = document.getElementById('travail-temps-partiel');
+    const tpField = document.getElementById('taux-activite-field');
+    const tpInput = document.getElementById('taux-activite');
+    if (tpCb && tpField && tpInput) {
+        tpCb.checked = !!state.travailTempsPartiel;
+        tpField.classList.toggle('hidden', !state.travailTempsPartiel);
+        if (document.activeElement !== tpInput) {
+            tpInput.value = String(state.tauxActivite ?? (CONFIG.TAUX_ACTIVITE_DEFAUT ?? 100));
+        }
+    }
+
     // Synchroniser la checkbox accord depuis state
     const accordCheckboxEl = document.getElementById('accord-actif');
     if (accordCheckboxEl) accordCheckboxEl.checked = !!state.accordActif;
@@ -2007,7 +2086,11 @@ function updateRemunerationDisplay(remuneration) {
         } else if (state.forfait === 'heures') {
             base = 'Forfait heures';
         } else {
-            base = 'Temps plein · 35h/sem.';
+            base = 'Base 35h/sem.';
+        }
+        if (state.travailTempsPartiel) {
+            const taux = Math.round((Number(state.tauxActivite) || (CONFIG.TAUX_ACTIVITE_DEFAUT ?? 100)) * 100) / 100;
+            base += ` · Temps partiel ${String(taux).replace('.', ',')}%`;
         }
         ctxNotice.textContent = base;
     }
@@ -3071,6 +3154,10 @@ function getSmhScopeDynamic() {
 
     // Base SMH : toujours présente dans l'assiette.
     addUnique(included, 'base SMH');
+    if (state.travailTempsPartiel === true) {
+        const taux = Math.round((Number(state.tauxActivite) || (CONFIG.TAUX_ACTIVITE_DEFAUT ?? 100)) * 100) / 100;
+        addUnique(included, `prorata temps partiel (${String(taux).replace('.', ',')}%)`);
+    }
 
     // 13e mois et forfaits font partie du SMH.
     if (isAccordActif && agreement?.repartition13Mois?.actif && agreement?.repartition13Mois?.inclusDansSMH === true) {
@@ -3104,6 +3191,9 @@ function getSmhScopeDynamic() {
     // Majorations de pénibilité / contraintes (si actives) hors SMH.
     if (state.typeNuit !== 'aucun' && Number(state.heuresNuit || 0) > 0) addUnique(excluded, 'majoration nuit');
     if (state.travailDimanche === true && Number(state.heuresDimanche || 0) > 0) addUnique(excluded, 'majoration dimanche');
+    if (isForfaitJoursCadre && state.travailJoursSupForfait === true && Number(state.joursSupForfait || 0) > 0) {
+        addUnique(excluded, 'rachat de jours de repos (forfait jours)');
+    }
     const travailEquipeActif = (state.accordInputs?.travailEquipe === true || state.travailEquipe === true);
     if (travailEquipeActif) addUnique(excluded, 'prime d\'équipe');
 

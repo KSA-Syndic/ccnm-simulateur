@@ -173,6 +173,20 @@
                     <button class="btn-link" id="btn-modifier-classe">Modifier</button>
                 </div>
 
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="travail-temps-partiel" class="book-checkbox">
+                        <span>Temps partiel</span>
+                        <span class="tooltip-trigger" data-tippy-content="Code du travail (L3123-5) : la rémunération à temps partiel est proportionnelle à celle d'un temps complet, à qualification égale.">?</span>
+                    </label>
+                    <div class="sub-field sub-field-inline hidden" id="taux-activite-field">
+                        <div class="input-with-unit">
+                            <input type="text" id="taux-activite" class="book-input" value="100" inputmode="decimal" data-decimal-input="true" aria-label="Taux d'activité" autocomplete="off">
+                            <span class="input-unit">%</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Ancienneté -->
                 <div class="form-group">
                     <label for="anciennete">
@@ -232,7 +246,7 @@
                     <div class="conditions-content">
                         <!-- Note forfait jours -->
                         <div class="book-hint info hidden" id="hint-forfait-jours">
-                            <p><strong>📋 Forfait jours :</strong> En tant que cadre au forfait jours, les majorations pour travail de nuit ou du dimanche ne s'appliquent pas financièrement. Elles donnent lieu à du <strong>repos compensateur</strong> (non simulable ici).</p>
+                            <p><strong>📋 Forfait jours :</strong> les heures supplémentaires (en heures) ne s'appliquent pas. En revanche, le rachat de jours de repos peut être rémunéré via un avenant écrit, avec majoration minimale de 10%.</p>
                         </div>
                         
                         <div class="form-group" id="group-nuit">
@@ -280,6 +294,26 @@
                                 <div class="input-with-unit">
                                     <input type="text" id="heures-sup" class="book-input" value="0" inputmode="decimal" data-decimal-input="true" aria-label="Heures supplémentaires par mois" autocomplete="off">
                                     <span class="input-unit">heures/mois</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Jours supplémentaires forfait jours -->
+                        <div class="form-group hidden" id="group-jours-sup-forfait">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="travail-jours-sup-forfait" class="book-checkbox">
+                                <span>Jours supplémentaires (forfait jours)</span>
+                                <span
+                                    class="tooltip-trigger"
+                                    id="travail-jours-sup-forfait-tooltip"
+                                    data-tippy-content="Code du travail (L3121-59) : le salarié au forfait jours peut renoncer à des jours de repos via avenant écrit annuel, avec une majoration de salaire qui ne peut pas être inférieure à 10%."
+                                    aria-label="Règle"
+                                >?</span>
+                            </label>
+                            <div class="sub-field sub-field-inline hidden" id="jours-sup-forfait-field">
+                                <div class="input-with-unit">
+                                    <input type="text" id="jours-sup-forfait" class="book-input" value="0" inputmode="decimal" data-decimal-input="true" aria-label="Jours supplémentaires rachetés sur l'année" autocomplete="off">
+                                    <span class="input-unit">jours/an</span>
                                 </div>
                             </div>
                         </div>

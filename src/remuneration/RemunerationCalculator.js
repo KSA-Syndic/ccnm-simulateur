@@ -56,13 +56,28 @@ function isCadreForfaitJours(classe, state) {
     return isCadre(classe) && state?.forfait === 'jours';
 }
 
+function getActivityRate(state) {
+    const enabled = state?.travailTempsPartiel === true;
+    if (!enabled) return 1;
+    const min = Number(CONFIG.TAUX_ACTIVITE_MIN ?? 1);
+    const max = Number(CONFIG.TAUX_ACTIVITE_MAX ?? 100);
+    const fallback = Number(CONFIG.TAUX_ACTIVITE_DEFAUT ?? 100);
+    const raw = Number(state?.tauxActivite);
+    const bounded = Number.isFinite(raw)
+        ? Math.min(max, Math.max(min, raw))
+        : fallback;
+    return bounded / 100;
+}
+
 /**
  * Construit le contexte de calcul commun (state + bases).
  * @private
  */
-function buildContext(state, baseSMH, classe, agreement) {
+function buildContext(state, baseSMH, classe, agreement, options = {}) {
+    const baseSMHFull = Number(options.baseSMHFull ?? baseSMH) || 0;
+    const activityRate = Number(options.activityRate ?? 1) || 1;
     const heuresBaseMensuelles = CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67;
-    const tauxHoraireBase = baseSMH > 0 ? baseSMH / 12 / heuresBaseMensuelles : 0;
+    const tauxHoraireBase = baseSMHFull > 0 ? baseSMHFull / 12 / heuresBaseMensuelles : 0;
     const hsActif = !isCadreForfaitJours(classe, state) && state?.travailHeuresSup === true;
     const heuresSup = hsActif ? (Number(state?.heuresSup) || 0) : 0;
     const seuilMensuel = CONFIG.HEURES_SUP_TRANCHE_1_MENSUELLES ?? 34.67;
@@ -80,6 +95,8 @@ function buildContext(state, baseSMH, classe, agreement) {
     return {
         state,
         baseSMH,
+        baseSMHFull,
+        activityRate,
         salaireBase: baseSMH,
         pointTerritorial: state.pointTerritorial,
         classe,
@@ -88,6 +105,27 @@ function buildContext(state, baseSMH, classe, agreement) {
         tauxHoraireBase,
         coeffMajorationHS
     };
+}
+
+function getForfaitJoursRachatMajoration(agreement) {
+    const minimum = Number(CONFIG.FORFAIT_JOURS_RACHAT_MAJORATION_MIN ?? 0.10);
+    const accordRateRaw = agreement?.majorations?.forfaitJours?.rachatJoursMajoration;
+    const accordRate = Number(accordRateRaw);
+    if (!Number.isFinite(accordRate)) return minimum;
+    return Math.max(minimum, accordRate);
+}
+
+function computeForfaitJoursRachat(state, baseSMH, agreement) {
+    const actif = state?.travailJoursSupForfait === true;
+    const jours = Number(state?.joursSupForfait) || 0;
+    if (!actif || jours <= 0) return null;
+    const reference = Number(CONFIG.FORFAIT_JOURS_REFERENCE ?? 218);
+    if (!Number.isFinite(reference) || reference <= 0) return null;
+    const majoration = getForfaitJoursRachatMajoration(agreement);
+    const baseJour = baseSMH / reference;
+    const amount = Math.round(baseJour * jours * (1 + majoration));
+    if (!(amount > 0)) return null;
+    return { amount, jours, majoration };
 }
 
 /**
@@ -270,10 +308,10 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
     const isGroupeF = classe === 11 || classe === 12;
 
     const smhByYear = getSmhForClasse(classe, date);
-    let baseSMH = smhByYear.amount;
-    if (!baseSMH || isNaN(baseSMH)) {
-        console.error('SMH invalide pour classe', classe, ':', baseSMH);
-        baseSMH = 0;
+    let baseSMHFull = smhByYear.amount;
+    if (!baseSMHFull || isNaN(baseSMHFull)) {
+        console.error('SMH invalide pour classe', classe, ':', baseSMHFull);
+        baseSMHFull = 0;
     }
 
     if ((classe === 11 || classe === 12) && state.experiencePro < 6) {
@@ -281,13 +319,16 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         if (state.experiencePro >= 4) tranche = 4;
         else if (state.experiencePro >= 2) tranche = 2;
         const baremeByYear = getBaremeDebutantForClasse(classe, tranche, date);
-        baseSMH = baremeByYear.amount;
+        baseSMHFull = baremeByYear.amount;
     }
+
+    const activityRate = getActivityRate(state);
+    let baseSMH = Math.round((baseSMHFull || 0) * activityRate);
 
     let scenario = '';
     let details = [];
     let total = baseSMH;
-    const context = buildContext(state, baseSMH, classe, agreement);
+    const context = buildContext(state, baseSMH, classe, agreement, { baseSMHFull, activityRate });
     const convPrimeDefs = getConventionPrimeDefs();
 
     // ─── Mode SMH seul ───
@@ -297,7 +338,11 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         const forfaitResult = forfaitDef ? computeForfait(forfaitDef, context) : { amount: 0 };
         const forfaitMontant = forfaitResult.amount || 0;
         let totalSmh = baseSMH + forfaitMontant;
-        const detailsSmh = [{ label: `SMH Base (${groupe}${classe})`, value: baseSMH, isBase: true }];
+        const tauxActivitePct = Math.round(activityRate * 10000) / 100;
+        const baseLabel = activityRate < 1
+            ? `SMH Base (${groupe}${classe}) au prorata ${tauxActivitePct}%`
+            : `SMH Base (${groupe}${classe})`;
+        const detailsSmh = [{ label: baseLabel, value: baseSMH, isBase: true }];
 
         const ancienneteRetenue = resolveAnciennetePrime(state, context, convPrimeDefs, agreement, isCadreValue);
         if (ancienneteRetenue && ancienneteRetenue.isSMHIncluded) {
@@ -366,14 +411,22 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
     // ─── Mode full ───
     if (!isCadreValue) {
         scenario = 'non-cadre';
-        details.push({ label: `SMH Base (${groupe}${classe})`, value: baseSMH, isBase: true });
+        const tauxActivitePct = Math.round(activityRate * 10000) / 100;
+        const baseLabel = activityRate < 1
+            ? `SMH Base (${groupe}${classe}) au prorata ${tauxActivitePct}%`
+            : `SMH Base (${groupe}${classe})`;
+        details.push({ label: baseLabel, value: baseSMH, isBase: true });
     } else if (isGroupeF && state.experiencePro < 6) {
         scenario = 'cadre-debutant';
         let labelTranche = '< 2 ans';
         if (state.experiencePro >= 4) labelTranche = '4 à 6 ans';
         else if (state.experiencePro >= 2) labelTranche = '2 à 4 ans';
+        const tauxActivitePct = Math.round(activityRate * 10000) / 100;
+        const baseLabel = activityRate < 1
+            ? `Barème débutants ${groupe}${classe} (${labelTranche}) au prorata ${tauxActivitePct}%`
+            : `Barème débutants ${groupe}${classe} (${labelTranche})`;
         details.push({
-            label: `Barème débutants ${groupe}${classe} (${labelTranche})`,
+            label: baseLabel,
             value: baseSMH,
             isBase: true
         });
@@ -389,7 +442,11 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         }
     } else {
         scenario = 'cadre';
-        details.push({ label: `SMH Base (${groupe}${classe})`, value: baseSMH, isBase: true });
+        const tauxActivitePct = Math.round(activityRate * 10000) / 100;
+        const baseLabel = activityRate < 1
+            ? `SMH Base (${groupe}${classe}) au prorata ${tauxActivitePct}%`
+            : `SMH Base (${groupe}${classe})`;
+        details.push({ label: baseLabel, value: baseSMH, isBase: true });
 
         const forfaitDefs = getConventionForfaitDefs();
         const forfaitDef = forfaitDefs.find(d => d.config?.forfaitKey === state.forfait);
@@ -399,6 +456,20 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                 details.push({ label: rForfait.label, value: rForfait.amount, isPositive: true });
                 total += rForfait.amount;
             }
+        }
+    }
+
+    // Forfait jours : possibilité de rachat de jours de repos (Code du travail L3121-59)
+    if (isCadreForfaitJours(classe, state)) {
+        const rachat = computeForfaitJoursRachat(state, baseSMH, agreement);
+        if (rachat) {
+            const pct = Math.round((rachat.majoration || 0) * 10000) / 100;
+            details.push({
+                label: `Rachat jours de repos forfait jours (+${pct}%) (${rachat.jours} j/an)`,
+                value: rachat.amount,
+                isPositive: true
+            });
+            total += rachat.amount;
         }
     }
 
@@ -445,78 +516,76 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
 
     // ─── Majorations conditions de travail ───
     const isForfaitJours = isCadreForfaitJours(classe, state);
-    if (!isForfaitJours) {
-        const convMajDefs = getConventionMajorationDefs();
-        const accordMajDefs = buildAccordMajorationDefs(agreement);
+    const convMajDefs = getConventionMajorationDefs();
+    const accordMajDefs = buildAccordMajorationDefs(agreement);
 
-        const hasNuitClassique = state.typeNuit !== 'aucun' && (state.heuresNuit ?? 0) > 0;
-        const defNuit = (accordMajDefs.length && hasNuitClassique)
-            ? accordMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_NUIT) ?? convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_NUIT)
-            : convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_NUIT);
-        if (defNuit && hasNuitClassique) {
-            const rNuit = computeMajoration(defNuit, context);
-            if (rNuit.amount > 0) {
+    const hasNuitClassique = state.typeNuit !== 'aucun' && (state.heuresNuit ?? 0) > 0;
+    const defNuit = (accordMajDefs.length && hasNuitClassique)
+        ? accordMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_NUIT) ?? convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_NUIT)
+        : convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_NUIT);
+    if (defNuit && hasNuitClassique) {
+        const rNuit = computeMajoration(defNuit, context);
+        if (rNuit.amount > 0) {
+            details.push({
+                label: `Majoration nuit (+${rNuit.meta?.taux ?? 0}%) (${state.heuresNuit}h/mois)`,
+                value: rNuit.amount,
+                isPositive: true,
+                isAgreement: rNuit.source === SOURCE_ACCORD,
+                agreementId: agreement?.id
+            });
+            total += rNuit.amount;
+        }
+    }
+
+    const defDim = (accordMajDefs.length && state.heuresDimanche > 0)
+        ? accordMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_DIMANCHE) ?? convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_DIMANCHE)
+        : convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_DIMANCHE);
+    if (defDim && state.travailDimanche && state.heuresDimanche > 0) {
+        const rDim = computeMajoration(defDim, context);
+        if (rDim.amount > 0) {
+            details.push({
+                label: `Majoration dimanche (+${rDim.meta?.taux ?? 0}%) (${state.heuresDimanche}h/mois)`,
+                value: rDim.amount,
+                isPositive: true,
+                isAgreement: rDim.source === SOURCE_ACCORD,
+                agreementId: agreement?.id
+            });
+            total += rDim.amount;
+        }
+    }
+
+    const hsActif = !isForfaitJours && state.travailHeuresSup === true && (Number(state.heuresSup) || 0) > 0;
+    if (hsActif) {
+        const defHs25 = (accordMajDefs.length)
+            ? accordMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_25) ?? convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_25)
+            : convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_25);
+        const defHs50 = (accordMajDefs.length)
+            ? accordMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_50) ?? convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_50)
+            : convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_50);
+        if (defHs25) {
+            const rHs25 = computeMajoration(defHs25, context);
+            if (rHs25.amount > 0) {
                 details.push({
-                    label: `Majoration nuit (+${rNuit.meta?.taux ?? 0}%) (${state.heuresNuit}h/mois)`,
-                    value: rNuit.amount,
+                    label: `Majoration heures supplémentaires (+${rHs25.meta?.taux ?? 0}%) (${Math.round((rHs25.meta?.heures ?? 0) * 100) / 100}h/mois)`,
+                    value: rHs25.amount,
                     isPositive: true,
-                    isAgreement: rNuit.source === SOURCE_ACCORD,
+                    isAgreement: rHs25.source === SOURCE_ACCORD,
                     agreementId: agreement?.id
                 });
-                total += rNuit.amount;
+                total += rHs25.amount;
             }
         }
-
-        const defDim = (accordMajDefs.length && state.heuresDimanche > 0)
-            ? accordMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_DIMANCHE) ?? convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_DIMANCHE)
-            : convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_DIMANCHE);
-        if (defDim && state.travailDimanche && state.heuresDimanche > 0) {
-            const rDim = computeMajoration(defDim, context);
-            if (rDim.amount > 0) {
+        if (defHs50) {
+            const rHs50 = computeMajoration(defHs50, context);
+            if (rHs50.amount > 0) {
                 details.push({
-                    label: `Majoration dimanche (+${rDim.meta?.taux ?? 0}%) (${state.heuresDimanche}h/mois)`,
-                    value: rDim.amount,
+                    label: `Majoration heures supplémentaires (+${rHs50.meta?.taux ?? 0}%) (${Math.round((rHs50.meta?.heures ?? 0) * 100) / 100}h/mois)`,
+                    value: rHs50.amount,
                     isPositive: true,
-                    isAgreement: rDim.source === SOURCE_ACCORD,
+                    isAgreement: rHs50.source === SOURCE_ACCORD,
                     agreementId: agreement?.id
                 });
-                total += rDim.amount;
-            }
-        }
-
-        const hsActif = !isForfaitJours && state.travailHeuresSup === true && (Number(state.heuresSup) || 0) > 0;
-        if (hsActif) {
-            const defHs25 = (accordMajDefs.length)
-                ? accordMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_25) ?? convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_25)
-                : convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_25);
-            const defHs50 = (accordMajDefs.length)
-                ? accordMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_50) ?? convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_50)
-                : convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_50);
-            if (defHs25) {
-                const rHs25 = computeMajoration(defHs25, context);
-                if (rHs25.amount > 0) {
-                    details.push({
-                        label: `Majoration heures supplémentaires (+${rHs25.meta?.taux ?? 0}%) (${Math.round((rHs25.meta?.heures ?? 0) * 100) / 100}h/mois)`,
-                        value: rHs25.amount,
-                        isPositive: true,
-                        isAgreement: rHs25.source === SOURCE_ACCORD,
-                        agreementId: agreement?.id
-                    });
-                    total += rHs25.amount;
-                }
-            }
-            if (defHs50) {
-                const rHs50 = computeMajoration(defHs50, context);
-                if (rHs50.amount > 0) {
-                    details.push({
-                        label: `Majoration heures supplémentaires (+${rHs50.meta?.taux ?? 0}%) (${Math.round((rHs50.meta?.heures ?? 0) * 100) / 100}h/mois)`,
-                        value: rHs50.amount,
-                        isPositive: true,
-                        isAgreement: rHs50.source === SOURCE_ACCORD,
-                        agreementId: agreement?.id
-                    });
-                    total += rHs50.amount;
-                }
+                total += rHs50.amount;
             }
         }
     }
