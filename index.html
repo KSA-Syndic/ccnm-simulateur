@@ -180,7 +180,7 @@
                         <span class="tooltip-trigger" data-tippy-content="Prime d'ancienneté : CCN dès 3 ans (non-cadres). Avec un accord d'entreprise, le seuil de cette prime et les conditions d'ancienneté d'autres primes (ex. prime vacances) peuvent différer.">?</span>
                     </label>
                     <div class="input-with-unit">
-                        <input type="text" id="anciennete" class="book-input" value="0" inputmode="decimal" data-decimal-input="true" autocomplete="off">
+                        <input type="text" id="anciennete" class="book-input" value="0" inputmode="decimal" data-decimal-input="true" data-number-behavior="decimal" autocomplete="off">
                         <span class="input-unit">ans</span>
                     </div>
                 </div>
@@ -193,7 +193,7 @@
                             <span id="point-territorial-tooltip" class="tooltip-trigger" data-tippy-content="">?</span>
                         </label>
                         <div class="input-with-unit">
-                            <input type="text" id="point-territorial" class="book-input" value="5.90" inputmode="decimal" data-decimal-input="true" autocomplete="off">
+                            <input type="text" id="point-territorial" class="book-input" value="5.90" inputmode="decimal" data-decimal-input="true" data-number-behavior="decimal" autocomplete="off">
                             <span class="input-unit">€</span>
                         </div>
                     </div>
@@ -218,7 +218,7 @@
                                 <span class="tooltip-trigger" data-tippy-content="Si < 6 ans, barème débutants appliqué.">?</span>
                             </label>
                             <div class="input-with-unit">
-                                <input type="text" id="experience-pro" class="book-input" value="0" inputmode="decimal" data-decimal-input="true" autocomplete="off">
+                                <input type="text" id="experience-pro" class="book-input" value="0" inputmode="decimal" data-decimal-input="true" data-number-behavior="decimal" autocomplete="off">
                                 <span class="input-unit">ans</span>
                             </div>
                         </div>
@@ -239,7 +239,7 @@
                             </label>
                             <div class="sub-field sub-field-inline hidden" id="taux-activite-field">
                                 <div class="input-with-unit">
-                                    <input type="text" id="taux-activite" class="book-input" value="100" inputmode="decimal" data-decimal-input="true" aria-label="Taux d'activité" autocomplete="off">
+                                    <input type="text" id="taux-activite" class="book-input" value="100" inputmode="decimal" data-decimal-input="true" data-number-behavior="decimal" aria-label="Taux d'activité" autocomplete="off">
                                     <span class="input-unit">%</span>
                                 </div>
                             </div>
@@ -253,7 +253,7 @@
                             </label>
                             <div class="sub-field sub-field-inline hidden" id="heures-nuit-field">
                                 <div class="input-with-unit">
-                                    <input type="text" id="heures-nuit" class="book-input" value="0" inputmode="decimal" data-decimal-input="true" aria-label="Heures de nuit par mois" autocomplete="off">
+                                    <input type="text" id="heures-nuit" class="book-input" value="0" inputmode="decimal" data-decimal-input="true" data-number-behavior="decimal" aria-label="Heures de nuit par mois" autocomplete="off">
                                     <span class="input-unit">heures/mois</span>
                                 </div>
                             </div>
@@ -268,7 +268,7 @@
                             </label>
                             <div class="sub-field sub-field-inline hidden" id="heures-dimanche-field">
                                 <div class="input-with-unit">
-                                    <input type="text" id="heures-dimanche" class="book-input" value="0" inputmode="decimal" data-decimal-input="true" aria-label="Heures dimanche par mois" autocomplete="off">
+                                    <input type="text" id="heures-dimanche" class="book-input" value="0" inputmode="decimal" data-decimal-input="true" data-number-behavior="decimal" aria-label="Heures dimanche par mois" autocomplete="off">
                                     <span class="input-unit">heures/mois</span>
                                 </div>
                             </div>
@@ -288,7 +288,7 @@
                             </label>
                             <div class="sub-field sub-field-inline hidden" id="heures-sup-field">
                                 <div class="input-with-unit">
-                                    <input type="text" id="heures-sup" class="book-input" value="0" inputmode="decimal" data-decimal-input="true" aria-label="Heures supplémentaires par mois" autocomplete="off">
+                                    <input type="text" id="heures-sup" class="book-input" value="0" inputmode="decimal" data-decimal-input="true" data-number-behavior="decimal" aria-label="Heures supplémentaires par mois" autocomplete="off">
                                     <span class="input-unit">heures/mois</span>
                                 </div>
                             </div>
@@ -308,7 +308,7 @@
                             </label>
                             <div class="sub-field sub-field-inline hidden" id="jours-sup-forfait-field">
                                 <div class="input-with-unit">
-                                    <input type="text" id="jours-sup-forfait" class="book-input" value="0" inputmode="decimal" data-decimal-input="true" aria-label="Jours supplémentaires rachetés sur l'année" autocomplete="off">
+                                    <input type="text" id="jours-sup-forfait" class="book-input" value="0" inputmode="decimal" data-decimal-input="true" data-number-behavior="decimal" aria-label="Jours supplémentaires rachetés sur l'année" autocomplete="off">
                                     <span class="input-unit">jours/an</span>
                                 </div>
                             </div>
@@ -405,11 +405,11 @@
                             </label>
                             <label class="hidden" id="age-input-wrapper">
                                 Âge :
-                                <input type="number" id="age-actuel" class="book-input-small" min="18" max="66" step="1" value="30" inputmode="decimal">
+                                <input type="number" id="age-actuel" class="book-input-small" min="18" max="66" step="1" value="30" inputmode="decimal" data-number-behavior="integer">
                             </label>
                             <label>
                                 Augmentation/an :
-                                <input type="text" id="augmentation-annuelle" class="book-input-small" value="0" inputmode="decimal" data-decimal-input="true" autocomplete="off">%
+                                <input type="text" id="augmentation-annuelle" class="book-input-small" value="0" inputmode="decimal" data-decimal-input="true" data-number-behavior="decimal" autocomplete="off">%
                             </label>
                         </div>
                         <div class="chart-container">
@@ -534,7 +534,7 @@
                                 <span class="tooltip-trigger" id="floating-info-icon" data-tippy-content="Salaire brut total du mois : indiquez le « Total brut » de votre fiche de paie.">?</span>
                             </div>
                             <div class="input-with-unit floating-input">
-                                <input type="text" id="floating-salary-input" class="book-input" placeholder="" inputmode="decimal" data-decimal-input="true" autocomplete="off">
+                                <input type="text" id="floating-salary-input" class="book-input" placeholder="" inputmode="decimal" data-decimal-input="true" data-number-behavior="decimal" autocomplete="off">
                                 <span class="input-unit">€</span>
                             </div>
                             <p class="floating-hint" id="floating-hint-text"></p>

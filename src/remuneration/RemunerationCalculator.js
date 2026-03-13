@@ -440,9 +440,10 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         if (state.experiencePro >= 4) labelTranche = '4 à 6 ans';
         else if (state.experiencePro >= 2) labelTranche = '2 à 4 ans';
         const tauxActivitePct = Math.round(activityRate * 10000) / 100;
+        const baseSuffix = `${groupe}${classe} débutant (${labelTranche})`;
         const baseLabel = activityRate < 1
-            ? `Barème débutants ${groupe}${classe} (${labelTranche}) au prorata ${tauxActivitePct}%`
-            : `Barème débutants ${groupe}${classe} (${labelTranche})`;
+            ? `Salaire de base (${baseSuffix}) au prorata ${tauxActivitePct}%`
+            : `Salaire de base (${baseSuffix})`;
         details.push({
             label: baseLabel,
             value: baseSMH,

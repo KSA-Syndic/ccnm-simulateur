@@ -22,6 +22,7 @@ export const LABELS = {
     // Header
     headerTitle: `Simulateur Métallurgie ${CURRENT_DATA_YEAR}`,
     headerSubtitle: 'Classification et Rémunération',
+    conventionLabel: 'Convention collective de la métallurgie (CCN)',
     headerInfoTooltip: 'Ce simulateur vous aide à estimer votre niveau de classification et à vérifier que votre salaire respecte au minimum les barèmes de la convention collective de la métallurgie (CCN).',
     headerInfoTooltipLinkText: 'Voir les textes de la convention',
 
@@ -76,6 +77,7 @@ export const LABELS = {
     resultatAnnuel: 'bruts / an',
     resultatMensuel: 'bruts / mois',
     detailCalcul: 'Détail du calcul',
+    smhIncludedOriginLabel: 'Incluse dans le salaire minima (Art. 140 CCN) — ne s\'ajoute pas au total',
     evolutionInflation: '📈 Évolution vs inflation',
     resultArreteesPromptTitle: '💡 Vous pensez gagner moins que la rémunération affichée ?',
     resultArreteesPromptBody: 'Calculez vos arriérés de salaire et générez un rapport PDF pour les réclamer.',

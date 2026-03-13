@@ -210,7 +210,7 @@ function getPrimeEquipeConventionRatePerHour() {
 
 function buildPrimeEquipeTooltip(agreement, accordPrimeEquipe = null) {
     const tauxCCN = getPrimeEquipeConventionRatePerHour();
-    const conventionLine = `30 min du taux horaire de base par poste.<br>Référence actuelle : ${formatNumberFr(tauxCCN, 2)} €/h.`;
+    const conventionLine = `30 min du taux horaire de base par poste.<br>Référence actuelle : ${formatNumberFr(tauxCCN, 2)} €/poste.`;
     const accordValue = accordPrimeEquipe?.valeurAccord;
     if (state.accordActif && agreement && Number.isFinite(Number(accordValue))) {
         const nomAccord = getAccordNomCourt(agreement) || 'Accord';
@@ -967,17 +967,22 @@ function initControls() {
     const forfaitSelect = document.getElementById('forfait');
     const experienceProInput = document.getElementById('experience-pro');
 
-    // Amélioration UX : sélectionner automatiquement le contenu au focus
-    function setupNumberInputUX(input) {
-        if (!input) return;
-        if (input.type === 'number' && (!input.getAttribute('step') || input.getAttribute('step') === '1')) {
-            input.setAttribute('step', 'any');
-        }
-        input.setAttribute('inputmode', 'decimal');
-        input.setAttribute('data-decimal-input', 'true');
-        input.addEventListener('focus', function() {
-            // Sélectionner tout le contenu pour faciliter la modification
-            this.select();
+    function initNumberInputBehaviors(root = document) {
+        if (!root) return;
+        const inputs = root.querySelectorAll('input[data-number-behavior], input[data-decimal-input="true"], input[type="number"]');
+        inputs.forEach((input) => {
+            const behavior = String(input.getAttribute('data-number-behavior') || '').toLowerCase();
+            const wantsDecimal = behavior.includes('decimal') || input.getAttribute('data-decimal-input') === 'true';
+            if (wantsDecimal) {
+                input.setAttribute('inputmode', 'decimal');
+                input.setAttribute('data-decimal-input', 'true');
+                if (input.type === 'number' && (!input.getAttribute('step') || input.getAttribute('step') === '1')) {
+                    input.setAttribute('step', 'any');
+                }
+            }
+            if (!input.hasAttribute('data-number-select-on-focus')) {
+                input.setAttribute('data-number-select-on-focus', 'true');
+            }
         });
     }
 
@@ -1033,7 +1038,7 @@ function initControls() {
     // Mobile/IME: intercepter avant insertion de "," ou "." dans les inputs number.
     document.addEventListener('beforeinput', (e) => {
         const input = e.target && e.target.closest
-            ? e.target.closest('input[type="number"], input[data-decimal-input="true"]')
+            ? e.target.closest('input[data-decimal-input="true"], input[data-number-behavior*="decimal"], input[type="number"]')
             : null;
         if (!input) return;
         if (e.inputType !== 'insertText') return;
@@ -1064,7 +1069,7 @@ function initControls() {
     // Délégation globale pour les champs number créés dynamiquement (ex: modale saisie salaire)
     document.addEventListener('keydown', (e) => {
         const input = e.target && e.target.closest
-            ? e.target.closest('input[type="number"], input[data-decimal-input="true"]')
+            ? e.target.closest('input[data-decimal-input="true"], input[data-number-behavior*="decimal"], input[type="number"]')
             : null;
         if (!input) return;
         if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -1080,18 +1085,16 @@ function initControls() {
         insertDotDecimal(input);
     }, true);
 
-    // Appliquer à tous les champs numériques
-    setupNumberInputUX(ancienneteInput);
-    setupNumberInputUX(pointTerritorialInput);
-    setupNumberInputUX(tauxActiviteInput);
-    setupNumberInputUX(experienceProInput);
-    setupNumberInputUX(document.getElementById('heures-nuit'));
-    setupNumberInputUX(document.getElementById('heures-dimanche'));
-    setupNumberInputUX(document.getElementById('heures-sup'));
-    setupNumberInputUX(document.getElementById('jours-sup-forfait'));
-    setupNumberInputUX(document.getElementById('age-actuel'));
-    setupNumberInputUX(document.getElementById('augmentation-annuelle'));
-    setupNumberInputUX(document.getElementById('floating-salary-input'));
+    document.addEventListener('focusin', (e) => {
+        const input = e.target && e.target.closest
+            ? e.target.closest('input[data-number-select-on-focus="true"]')
+            : null;
+        if (!input) return;
+        try { input.select(); } catch (_) { /* no-op */ }
+    }, true);
+
+    // Appliquer globalement selon les attributs HTML
+    initNumberInputBehaviors(document);
 
     ancienneteInput.addEventListener('input', (e) => {
         state.anciennete = Math.max(0, parseDecimalInput(e.target.value, 0));
@@ -1703,6 +1706,9 @@ function updateConditionsTravailDisplay() {
                     : '';
                 const tooltipContent = (() => {
                     const baseTooltip = prime.tooltip ? String(prime.tooltip) : '';
+                    if (prime.id === 'primeEquipe' || prime.semanticId === 'primeEquipe') {
+                        return baseTooltip.trim();
+                    }
                     if (prime.valueType === 'majorationHoraire' && prime.valeurAccord != null) {
                         const pct = Math.round(prime.valeurAccord * 100);
                         const ratePart = `+${pct}%. `;
@@ -1734,6 +1740,7 @@ function updateConditionsTravailDisplay() {
                     inputHeures.dataset.stateKeyHeures = prime.stateKeyHeures;
                     inputHeures.setAttribute('inputmode', 'decimal');
                     inputHeures.setAttribute('data-decimal-input', 'true');
+                    inputHeures.setAttribute('data-number-behavior', 'decimal');
                     inputHeures.setAttribute('autocomplete', 'off');
                     inputHeures.setAttribute('aria-label', 'Heures par mois');
                     inputHeures.addEventListener('focus', function () { this.select(); });
@@ -2162,6 +2169,7 @@ function updateAll() {
  * Mettre à jour l'affichage de la rémunération
  */
 function updateRemunerationDisplay(remuneration) {
+    const conventionLabel = window.LABELS?.conventionLabel || 'Convention collective de la métallurgie (CCN)';
     // Ligne contextuelle sous le sous-titre (forfait + base horaire)
     const ctxNotice = document.getElementById('result-context-notice');
     let baseInfo = '';
@@ -2186,6 +2194,9 @@ function updateRemunerationDisplay(remuneration) {
     const mensuel = Math.round(remuneration.total / state.nbMois);
     document.getElementById('result-mensuel').textContent = formatMoney(mensuel);
     const hourlyNotice = document.getElementById('result-hourly-deduced');
+    // Référence juridique : taux de base calculé sur l'assiette SMH uniquement (hors éléments exclus du SMH).
+    const assietteSmhAnnuelle = Number(getMontantAnnuelSMHSeul()) || Number(remuneration.baseSMH) || Number(remuneration.total) || 0;
+    const assietteSmhMensuelle = Math.round(assietteSmhAnnuelle / (state.nbMois || 12));
     const heuresBase35h = Number(CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67) || 151.67;
     const tauxActivitePctRaw = state.travailTempsPartiel
         ? (Number(state.tauxActivite) || Number(CONFIG.TAUX_ACTIVITE_DEFAUT ?? 100))
@@ -2194,12 +2205,14 @@ function updateRemunerationDisplay(remuneration) {
     const isForfaitJours = state.forfait === 'jours';
     const heuresMensuellesRef = heuresBase35h * (tauxActivitePct / 100);
     const joursRefAnnuel = (Number(CONFIG.FORFAIT_JOURS_REFERENCE ?? 218) || 218) * (tauxActivitePct / 100);
-    const tauxHoraire = heuresMensuellesRef > 0 ? (mensuel / heuresMensuellesRef) : 0;
-    const tauxJournalier = joursRefAnnuel > 0 ? (remuneration.total / joursRefAnnuel) : 0;
+    const tauxHoraire = heuresMensuellesRef > 0 ? (assietteSmhMensuelle / heuresMensuellesRef) : 0;
+    const tauxJournalier = joursRefAnnuel > 0 ? (assietteSmhAnnuelle / joursRefAnnuel) : 0;
     const tauxStr = isForfaitJours
         ? `${(Math.round(tauxJournalier * 100) / 100).toFixed(2).replace('.', ',')} €/j`
         : `${(Math.round(tauxHoraire * 100) / 100).toFixed(2).replace('.', ',')} €/h`;
-    const tauxLabel = isForfaitJours ? 'Taux journalier' : 'Taux horaire';
+    const tauxLabel = isForfaitJours
+        ? 'Taux journalier de base'
+        : 'Taux horaire de base';
     if (ctxNotice) {
         ctxNotice.textContent = `${baseInfo} · ${tauxLabel} ${tauxStr}`;
     }
@@ -2221,8 +2234,8 @@ function updateRemunerationDisplay(remuneration) {
         const prefix = detail.isPositive ? '+' : '';
         const isAccord = !!detail.isAgreement;
         const accordBadge = isAccord ? getAccordBadgeHtml(agreement) : '';
-        const origin = detail.tooltipOrigin || (isAccord ? `Accord d'entreprise ${nomAccord}` : 'Convention collective (CCN)');
-        let tipContent = '<strong>Origine :</strong> ' + (typeof origin === 'string' ? origin : (isAccord ? `Accord d'entreprise ${nomAccord}` : 'Convention collective (CCN)')) + '<br>';
+        const origin = detail.tooltipOrigin || (isAccord ? `Accord d'entreprise ${nomAccord}` : conventionLabel);
+        let tipContent = '<strong>Origine :</strong> ' + (typeof origin === 'string' ? origin : (isAccord ? `Accord d'entreprise ${nomAccord}` : conventionLabel)) + '<br>';
         if (detail.breakdown && detail.breakdown.length) {
             tipContent += '<strong>Détail du calcul :</strong><br>';
             detail.breakdown.forEach(b => {
@@ -2272,6 +2285,7 @@ function updateRemunerationDisplay(remuneration) {
  * Séparation CCN / Accord d'entreprise : le badge accord ne s'affiche que sur les lignes 100 % accord.
  */
 function aggregateRemunerationDetails(details) {
+    const conventionLabel = window.LABELS?.conventionLabel || 'Convention collective de la métallurgie (CCN)';
     const aggregated = [];
     let majorationsCCN = 0;
     let majorationsAccord = 0;
@@ -2286,7 +2300,7 @@ function aggregateRemunerationDetails(details) {
         if (detail.isBase) {
             aggregated.push({
                 ...detail,
-                tooltipOrigin: `CCN Métallurgie ${CONVENTION_REFERENCE_YEAR}`,
+                tooltipOrigin: conventionLabel,
                 tooltipDetail: detail.label
             });
             if (baseLineIndex === -1) {
@@ -2304,7 +2318,7 @@ function aggregateRemunerationDetails(details) {
                 isPositive: false,
                 isAgreement: isAccordDetail(detail),
                 isSMHSubLine: true,
-                tooltipOrigin: 'Incluse dans le SMH (Art. 140 CCNM) — ne s\'ajoute pas au total',
+                tooltipOrigin: window.LABELS?.smhIncludedOriginLabel || 'Incluse dans le salaire minima (Art. 140 CCN) — ne s\'ajoute pas au total',
                 tooltipDetail: `${detail.label} — ${window.LABELS?.smhIncludedTooltipDetailSuffix || 'Répartie dans le SMH, sans ajout au total.'}`
             });
         }
@@ -2327,7 +2341,7 @@ function aggregateRemunerationDetails(details) {
                     ...detail,
                     tooltipOrigin: isAccordDetail(detail)
                         ? `Accord d'entreprise ${getAccordNomCourt(typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null) || 'accord'}`
-                        : 'Convention collective (CCN)',
+                        : conventionLabel,
                     tooltipDetail: detail.label
                 });
             } else {
@@ -2335,7 +2349,7 @@ function aggregateRemunerationDetails(details) {
                     ...detail,
                     tooltipOrigin: isAccordDetail(detail)
                         ? `Accord d'entreprise ${getAccordNomCourt(typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null) || 'accord'}`
-                        : 'Convention collective (CCN)',
+                        : conventionLabel,
                     tooltipDetail: detail.label
                 });
             }
@@ -2362,7 +2376,7 @@ function aggregateRemunerationDetails(details) {
             value: majorationsCCN,
             isPositive: true,
             isAgreement: false,
-            tooltipOrigin: 'Convention collective (CCN)',
+            tooltipOrigin: conventionLabel,
             breakdown: majorationsBreakdownCCN
         });
     }
@@ -4076,7 +4090,7 @@ function openSalaryModal(periodKey, periodLabel, currentSalary) {
                         <p>Le salaire mensuel brut correspond au « Total brut » de votre fiche de paie pour ce mois.</p>
                     </div>
                     <div class="input-with-unit" style="margin-top: 15px;">
-                        <input type="text" id="modal-salary-amount" class="book-input" value="0" inputmode="decimal" data-decimal-input="true" autocomplete="off">
+                        <input type="text" id="modal-salary-amount" class="book-input" value="0" inputmode="decimal" data-decimal-input="true" data-number-behavior="decimal" autocomplete="off">
                         <span class="input-unit">€</span>
                     </div>
                 </div>
