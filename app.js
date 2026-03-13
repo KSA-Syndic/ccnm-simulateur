@@ -2200,7 +2200,7 @@ function aggregateRemunerationDetails(details) {
                 isAgreement: isAccordDetail(detail),
                 isSMHSubLine: true,
                 tooltipOrigin: 'Incluse dans le SMH (Art. 140 CCNM) — ne s\'ajoute pas au total',
-                tooltipDetail: `${detail.label} — distribution du SMH, pas un supplément`
+                tooltipDetail: `${detail.label} — ${window.LABELS?.smhIncludedTooltipDetailSuffix || 'Répartie dans le SMH, sans ajout au total.'}`
             });
         }
         // Agréger les majorations en CCN vs accord
@@ -3437,7 +3437,9 @@ function createSalaryCurve() {
         if (noDateMsg) {
             const p = noDateMsg.querySelector('.timeline-help') || document.createElement('p');
             if (!p.classList.contains('timeline-help')) p.className = 'timeline-help';
-            p.textContent = 'Erreur : Chart.js n\'est pas chargé. Veuillez recharger la page.';
+            p.textContent = (window.LABELS && window.LABELS.timelineChartMissingText)
+                ? window.LABELS.timelineChartMissingText
+                : 'Affichage temporairement indisponible. Veuillez recharger la page.';
             p.style.color = '#d32f2f';
             if (!noDateMsg.contains(p)) noDateMsg.appendChild(p);
             noDateMsg.classList.remove('hidden');
@@ -3739,7 +3741,11 @@ function updateCurveProgressReopenState() {
         progressWrap.classList.add('curve-progress--reopen');
         progressWrap.setAttribute('tabindex', '0');
         progressWrap.setAttribute('aria-label', `${periodsData.filter(p => p.salaireReel).length} sur ${periodsData.length} mois saisis. Cliquer pour rouvrir la saisie.`);
-        if (hintEl) hintEl.textContent = '— cliquer pour rouvrir la saisie';
+        if (hintEl) {
+            hintEl.textContent = (window.LABELS && window.LABELS.curveProgressReopenHint)
+                ? window.LABELS.curveProgressReopenHint
+                : '— cliquer pour rouvrir la saisie';
+        }
     } else {
         progressWrap.classList.remove('curve-progress--reopen');
         progressWrap.setAttribute('tabindex', '-1');

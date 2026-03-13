@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <link rel="icon" href="favicon.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulateur de Classification et Rémunération - Métallurgie 2024</title>
+    <title>Simulateur Métallurgie - Classification et Rémunération</title>
     <!-- Police Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,9 +19,9 @@
     <div class="simulator-container">
         <!-- En-tête -->
         <header class="simulator-header">
-            <h1>Simulateur Métallurgie 2024</h1>
+            <h1 id="header-title-text"></h1>
             <p class="subtitle">
-                <span id="header-subtitle-text">Classification et Rémunération</span>
+                <span id="header-subtitle-text"></span>
                 <span id="header-info-icon" class="header-info tooltip-trigger__light" data-tippy-content="" title="Aide"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
             </p>
         </header>
@@ -30,22 +30,22 @@
         <div class="wizard-progress" id="wizard-progress">
             <div class="progress-step active" data-step="1">
                 <span class="progress-dot">1</span>
-                <span class="progress-label">Classification</span>
+                <span class="progress-label" id="progress-label-step-1">Classification</span>
             </div>
             <div class="progress-line"></div>
             <div class="progress-step" data-step="2">
                 <span class="progress-dot">2</span>
-                <span class="progress-label">Situation</span>
+                <span class="progress-label" id="progress-label-step-2">Situation</span>
             </div>
             <div class="progress-line"></div>
             <div class="progress-step" data-step="3">
                 <span class="progress-dot">3</span>
-                <span class="progress-label">Résultat</span>
+                <span class="progress-label" id="progress-label-step-3">Résultat</span>
             </div>
             <div class="progress-line stepper-step-4-optional" id="progress-line-before-4"></div>
             <div class="progress-step stepper-step-4-optional" data-step="4" id="progress-step-4">
                 <span class="progress-dot">4</span>
-                <span class="progress-label">Arriérés</span>
+                <span class="progress-label" id="progress-label-step-4">Arriérés</span>
             </div>
         </div>
 

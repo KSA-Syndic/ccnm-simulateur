@@ -3186,6 +3186,11 @@ body.iframe-mode .simulator-container.iframe-container {
     text-decoration: underline;
 }
 
+.tippy-box[data-theme~='metallurgie'] a.tooltip-link {
+    display: inline-block;
+    margin-top: 0.1rem;
+}
+
 .tippy-box[data-theme~='metallurgie'] a:hover {
     color: white;
 }

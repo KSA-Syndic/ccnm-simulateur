@@ -80,25 +80,27 @@ export function updateHeaderAgreement(agreement) {
             ? yearEntries.map(entry => `${entry.year}: ${entry.change || ''}`).join('<br>')
             : '';
 
-        let tooltipContent = LABELS.headerInfoTooltip +
-            `<br><br><a href="${CONVENTION_URL}" target="_blank" rel="noopener">${LABELS.headerInfoTooltipLinkText}</a>`;
+        const blocks = [];
+        blocks.push(escapeHtml(LABELS.headerInfoTooltip));
+        blocks.push(`<a class="tooltip-link" href="${CONVENTION_URL}" target="_blank" rel="noopener">${escapeHtml(LABELS.headerInfoTooltipLinkText)}</a>`);
         if (year || effectiveDate || updatedAt || yearly) {
             const lines = [];
-            if (year) lines.push(`SMH: grille ${year}`);
-            if (effectiveDate) lines.push(`Effet: ${effectiveDate}`);
+            if (year) lines.push(`Grille SMH : ${year}`);
+            if (effectiveDate) lines.push(`Date d'effet : ${effectiveDate}`);
             if (updatedAt) lines.push(`MAJ appli: ${updatedAt}`);
             if (selectedYear?.sourceLabel) lines.push(`Source: ${escapeHtml(selectedYear.sourceLabel)}`);
             if (yearlyRates.length) {
                 const ratesLabel = yearlyRates
                     .map(entry => `${entry.year}: +${Math.round(entry.indicativeRate * 10000) / 100}%`)
                     .join(' · ');
-                lines.push(`Repères (informatif): ${ratesLabel}`);
-                lines.push('Calcul: grilles annuelles.');
+                lines.push(`Repères annuels (info) : ${ratesLabel}`);
+                lines.push('Calcul : grilles annuelles.');
             }
-            tooltipContent += `<br><br>📅 <strong>MAJ salaires minima</strong><br>${lines.join('<br>')}`;
+            let updatesBlock = `📅 <strong>MAJ salaires minima</strong><br>${lines.join('<br>')}`;
             if (selectedYear?.sourceUrl) {
-                tooltipContent += `<br><a href="${escapeAttr(selectedYear.sourceUrl)}" target="_blank" rel="noopener">Voir la source de revalorisation (${selectedYear.year})</a>`;
+                updatesBlock += `<br><a class="tooltip-link" href="${escapeAttr(selectedYear.sourceUrl)}" target="_blank" rel="noopener">Source revalorisation ${selectedYear.year}</a>`;
             }
+            blocks.push(updatesBlock);
         }
         if (agreement) {
             const nom = agreement.nomCourt || agreement.nom;
@@ -106,10 +108,12 @@ export function updateHeaderAgreement(agreement) {
             const tooltipAccord = labels.description || labels.tooltipHeader || labels.tooltip || '';
             const descAccord = tooltipAccord
                 ? escapeHtml(tooltipAccord)
-                : `Si votre entreprise applique l'accord ${nom}, cochez l'option en page Résultat pour inclure ses règles dans le calcul.`;
-            tooltipContent += `<br><br>🏢 <strong>${escapeHtml(nom)}</strong><br>${descAccord}`;
-            if (agreement.url) tooltipContent += `<br><br><a href="${escapeAttr(agreement.url)}" target="_blank" rel="noopener">Voir le texte de l'accord</a>`;
+                : `Accord ${nom} : activez l'option sur la page Résultat pour appliquer ses règles.`;
+            let accordBlock = `🏢 <strong>${escapeHtml(nom)}</strong><br>${descAccord}`;
+            if (agreement.url) accordBlock += `<br><a class="tooltip-link" href="${escapeAttr(agreement.url)}" target="_blank" rel="noopener">Texte de l'accord</a>`;
+            blocks.push(accordBlock);
         }
+        const tooltipContent = blocks.join('<br><br>');
         headerInfoIcon.setAttribute('data-tippy-content', tooltipContent);
         if (headerInfoIcon._tippy) headerInfoIcon._tippy.setContent(tooltipContent);
     }

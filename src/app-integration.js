@@ -110,6 +110,12 @@ export function initAppIntegration() {
     };
 
     // Hydrater les libellés depuis LABELS (éviter doublons avec index.html)
+    setText('header-title-text', LABELS.headerTitle);
+    setText('header-subtitle-text', LABELS.headerSubtitle);
+    setText('progress-label-step-1', LABELS.step1Title);
+    setText('progress-label-step-2', LABELS.step2Title);
+    setText('progress-label-step-3', LABELS.step3Title);
+    setText('progress-label-step-4', LABELS.step4Title);
     setText('step-1a-page-title', LABELS.step1aPageTitle);
     setText('step-1a-page-subtitle', LABELS.step1aPageSubtitle);
     setText('choice-connais-title', LABELS.connaisClasse);
@@ -145,6 +151,11 @@ export function initAppIntegration() {
     setText('label-rupture-contrat-arretees', LABELS.ruptureContratLabel);
     setText('label-accord-ecrit-arretees', LABELS.accordEcritLabel);
     setText('label-arretees-smh-seul', LABELS.arreteesSmhSeulLabel);
+    const arreteesSmhSeulTooltip = document.querySelector('#arretees-smh-seul + span.tooltip-trigger');
+    if (arreteesSmhSeulTooltip && LABELS.arreteesSmhSeulTooltipHtml) {
+        arreteesSmhSeulTooltip.setAttribute('data-tippy-content', LABELS.arreteesSmhSeulTooltipHtml);
+        if (arreteesSmhSeulTooltip._tippy) arreteesSmhSeulTooltip._tippy.setContent(LABELS.arreteesSmhSeulTooltipHtml);
+    }
     setText('salary-curve-title', LABELS.salaryCurveTitle);
     setText('salary-curve-help', LABELS.salaryCurveHelp);
     setText('timeline-help-text', LABELS.timelineHelpText);
