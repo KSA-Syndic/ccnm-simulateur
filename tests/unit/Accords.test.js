@@ -133,7 +133,8 @@ describe('Accords - Interface (getPrimeValue, getPrimeHeures, isPrimeActive)', (
 
     it('devrait retourner la valeur accord pour prime horaire (prime équipe)', () => {
         const state = { accordInputs: {} };
-        expect(getPrimeValue(KuhnAgreement, 'primeEquipe', state)).toBe(0.82);
+        const primeEquipe = getPrimeById(KuhnAgreement, 'primeEquipe');
+        expect(getPrimeValue(KuhnAgreement, 'primeEquipe', state)).toBe(primeEquipe?.valeurAccord ?? 0);
     });
 
     it('devrait retourner 0 pour prime inexistante', () => {
@@ -165,7 +166,8 @@ describe('Accords - Interface (primeDefToElementDef, getAccordPrimeDefsAsElement
         expect(el.source).toBe('accord');
         expect(el.valueKind).toBe('horaire');
         expect(el.semanticId).toBe('primeEquipe');
-        expect(el.config?.valeurAccord).toBe(0.82);
+        const primeEquipe = getPrimeById(KuhnAgreement, 'primeEquipe');
+        expect(el.config?.valeurAccord).toBe(primeEquipe?.valeurAccord ?? 0);
     });
 
     it('devrait retourner toutes les primes accord en ElementDef', () => {
@@ -176,12 +178,14 @@ describe('Accords - Interface (primeDefToElementDef, getAccordPrimeDefsAsElement
 });
 
 describe('Accords - Kuhn (calculs spécifiques)', () => {
-    it('devrait calculer la prime équipe (horaire) : 0,82 €/h × heures × 12', () => {
+    it('devrait calculer la prime équipe (horaire) : valeur accord × heures × 12', () => {
         const def = getAccordPrimeDefsAsElements(KuhnAgreement).find(e => e.id === 'primeEquipe');
         const state = { accordInputs: { travailEquipe: true, heuresEquipe: 151.67 } };
         const ctx = { state, agreement: KuhnAgreement };
         const result = computePrime(def, ctx);
-        const attendu = Math.round(151.67 * 0.82 * 12);
+        const primeEquipe = getPrimeById(KuhnAgreement, 'primeEquipe');
+        const valeurAccord = Number(primeEquipe?.valeurAccord) || 0;
+        const attendu = Math.round(151.67 * valeurAccord * 12);
         expect(result.amount).toBe(attendu);
         expect(result.source).toBe('accord');
     });

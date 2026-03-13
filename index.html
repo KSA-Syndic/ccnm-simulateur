@@ -173,20 +173,6 @@
                     <button class="btn-link" id="btn-modifier-classe">Modifier</button>
                 </div>
 
-                <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="travail-temps-partiel" class="book-checkbox">
-                        <span>Temps partiel</span>
-                        <span class="tooltip-trigger" data-tippy-content="Code du travail (L3123-5) : la rémunération à temps partiel est proportionnelle à celle d'un temps complet, à qualification égale.">?</span>
-                    </label>
-                    <div class="sub-field sub-field-inline hidden" id="taux-activite-field">
-                        <div class="input-with-unit">
-                            <input type="text" id="taux-activite" class="book-input" value="100" inputmode="decimal" data-decimal-input="true" aria-label="Taux d'activité" autocomplete="off">
-                            <span class="input-unit">%</span>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Ancienneté -->
                 <div class="form-group">
                     <label for="anciennete">
@@ -244,11 +230,21 @@
                     <summary>Conditions de travail particulières</summary>
                     
                     <div class="conditions-content">
-                        <!-- Note forfait jours -->
-                        <div class="book-hint info hidden" id="hint-forfait-jours">
-                            <p><strong>📋 Forfait jours :</strong> les heures supplémentaires (en heures) ne s'appliquent pas. En revanche, le rachat de jours de repos peut être rémunéré via un avenant écrit, avec majoration minimale de 10%.</p>
+                        <!-- Temps partiel -->
+                        <div class="form-group" id="group-temps-partiel">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="travail-temps-partiel" class="book-checkbox">
+                                <span>Temps partiel</span>
+                                <span class="tooltip-trigger" data-tippy-content="Code du travail (L3123-5) : la rémunération à temps partiel est proportionnelle à celle d'un temps complet, à qualification égale.">?</span>
+                            </label>
+                            <div class="sub-field sub-field-inline hidden" id="taux-activite-field">
+                                <div class="input-with-unit">
+                                    <input type="text" id="taux-activite" class="book-input" value="100" inputmode="decimal" data-decimal-input="true" aria-label="Taux d'activité" autocomplete="off">
+                                    <span class="input-unit">%</span>
+                                </div>
+                            </div>
                         </div>
-                        
+
                         <div class="form-group" id="group-nuit">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="travail-nuit" class="book-checkbox">
@@ -302,7 +298,7 @@
                         <div class="form-group hidden" id="group-jours-sup-forfait">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="travail-jours-sup-forfait" class="book-checkbox">
-                                <span>Jours supplémentaires (forfait jours)</span>
+                                <span>Jours supplémentaires</span>
                                 <span
                                     class="tooltip-trigger"
                                     id="travail-jours-sup-forfait-tooltip"

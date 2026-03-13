@@ -1429,7 +1429,6 @@ function updateConditionsTravailDisplay() {
     const isForfaitJours = state.forfait === 'jours';
     const hsAllowed = !(isCadre && isForfaitJours);
     
-    const hintForfaitJours = document.getElementById('hint-forfait-jours');
     const groupNuit = document.getElementById('group-nuit');
     const groupDimanche = document.getElementById('group-dimanche');
     const groupHeuresSup = document.getElementById('group-heures-sup');
@@ -1469,7 +1468,6 @@ function updateConditionsTravailDisplay() {
     // Cadres au forfait jours : pas d'heures supplémentaires en heures,
     // mais possibilité de rachat de jours de repos (L3121-59)
     if (isCadre && isForfaitJours) {
-        hintForfaitJours.classList.remove('hidden');
         groupNuit.classList.remove('hidden');
         groupDimanche.classList.remove('hidden');
         if (groupHeuresSup) groupHeuresSup.classList.add('hidden');
@@ -1508,7 +1506,6 @@ function updateConditionsTravailDisplay() {
         const hsField = document.getElementById('heures-sup-field');
         if (hsField) hsField.classList.add('hidden');
     } else {
-        hintForfaitJours.classList.add('hidden');
         groupDimanche.classList.remove('hidden');
         groupNuit.classList.remove('hidden');
         if (groupJoursSupForfait) groupJoursSupForfait.classList.add('hidden');

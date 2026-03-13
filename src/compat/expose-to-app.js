@@ -37,14 +37,18 @@ function syncStateToModules(appState) {
     moduleState.classeManuel = appState.classeManuel || moduleState.classeManuel;
     moduleState.anciennete = appState.anciennete !== undefined ? appState.anciennete : moduleState.anciennete;
     moduleState.pointTerritorial = appState.pointTerritorial !== undefined ? appState.pointTerritorial : moduleState.pointTerritorial;
-    moduleState.forfait = appState.forfait || moduleState.forfait;
+    moduleState.travailTempsPartiel = appState.travailTempsPartiel !== undefined ? appState.travailTempsPartiel : moduleState.travailTempsPartiel;
+    moduleState.tauxActivite = appState.tauxActivite !== undefined ? appState.tauxActivite : moduleState.tauxActivite;
+    moduleState.forfait = appState.forfait !== undefined ? appState.forfait : moduleState.forfait;
     moduleState.experiencePro = appState.experiencePro !== undefined ? appState.experiencePro : moduleState.experiencePro;
-    moduleState.typeNuit = appState.typeNuit || moduleState.typeNuit;
+    moduleState.typeNuit = appState.typeNuit !== undefined ? appState.typeNuit : moduleState.typeNuit;
     moduleState.heuresNuit = appState.heuresNuit !== undefined ? appState.heuresNuit : moduleState.heuresNuit;
     moduleState.travailDimanche = appState.travailDimanche !== undefined ? appState.travailDimanche : moduleState.travailDimanche;
     moduleState.heuresDimanche = appState.heuresDimanche !== undefined ? appState.heuresDimanche : moduleState.heuresDimanche;
     moduleState.travailHeuresSup = appState.travailHeuresSup !== undefined ? appState.travailHeuresSup : moduleState.travailHeuresSup;
     moduleState.heuresSup = appState.heuresSup !== undefined ? appState.heuresSup : moduleState.heuresSup;
+    moduleState.travailJoursSupForfait = appState.travailJoursSupForfait !== undefined ? appState.travailJoursSupForfait : moduleState.travailJoursSupForfait;
+    moduleState.joursSupForfait = appState.joursSupForfait !== undefined ? appState.joursSupForfait : moduleState.joursSupForfait;
     if (appState.accordInputs && typeof appState.accordInputs === 'object') {
         moduleState.accordInputs = { ...(moduleState.accordInputs || {}), ...appState.accordInputs };
     }
