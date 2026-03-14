@@ -11,6 +11,7 @@
 import { CONFIG } from '../core/config.js';
 import { getPrimeValue, getAccordInput } from '../agreements/AgreementInterface.js';
 import { SEMANTIC_ID, SOURCE_CONVENTION, SOURCE_ACCORD } from '../core/RemunerationTypes.js';
+import { roundToCents, roundToEuro, annualFromMonthly } from '../utils/rounding.js';
 
 function resolvePrimeHeures(def, context) {
     const cfg = def.config || {};
@@ -20,7 +21,7 @@ function resolvePrimeHeures(def, context) {
     // Prime d'équipe : assiette horaire automatique sur base légale 35h uniquement.
     const autoFromHs = cfg.autoHeures === true || def.semanticId === SEMANTIC_ID.PRIME_EQUIPE;
     if (autoFromHs) {
-        return Math.round(defaultHeures * 100) / 100;
+        return roundToCents(defaultHeures);
     }
 
     const heuresRaw = cfg.stateKeyHeures
@@ -77,7 +78,7 @@ function computePrimeConvention(def, context) {
         const activityRate = Number(context?.activityRate ?? 1);
         const prorata = Number.isFinite(activityRate) && activityRate > 0 ? activityRate : 1;
         const montantMensuel = pointTerritorial * tauxClasse * anneesPrime * prorata;
-        const montant = Math.round(montantMensuel * 12);
+        const montant = annualFromMonthly(montantMensuel);
 
         return {
             amount: montant,
@@ -106,23 +107,23 @@ function computePrimeConvention(def, context) {
         const prorata = Number.isFinite(activityRate) && activityRate > 0 ? activityRate : 1;
         const postesMensuels = Math.max(0, postesMensuelsCfg * prorata);
         const heuresEqParPoste = minutesParPoste > 0 ? (minutesParPoste / 60) : 0;
-        const heures = Math.round((postesMensuels * heuresEqParPoste) * 100) / 100;
+        const heures = roundToCents(postesMensuels * heuresEqParPoste);
         if (!heures || !tauxHoraire || !ratio) {
             return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
         }
         const tauxPrimeHoraire = tauxHoraire * ratio;
-        const montantMensuel = Math.round(heures * tauxPrimeHoraire * 100) / 100;
-        const montantAnnuel = Math.round(montantMensuel * 12);
+        const montantMensuel = roundToCents(heures * tauxPrimeHoraire);
+        const montantAnnuel = annualFromMonthly(montantMensuel);
         return {
             amount: montantAnnuel,
             label: def.label,
             source: SOURCE_CONVENTION,
             semanticId: def.semanticId,
             meta: {
-                tauxHoraire: Math.round(tauxPrimeHoraire * 100) / 100,
+                tauxHoraire: roundToCents(tauxPrimeHoraire),
                 heures,
                 ratio,
-                postesMensuels: Math.round(postesMensuels * 100) / 100,
+                postesMensuels: roundToCents(postesMensuels),
                 minutesParPoste
             }
         };
@@ -166,7 +167,7 @@ function computePrimeAccord(def, context) {
                 }
             }
         }
-        const montant = Math.round(salaireBase * taux);
+        const montant = roundToEuro(salaireBase * taux);
         const meta = {
             taux: Math.round(taux * 10000) / 100,
             annees: anneesPrime
@@ -193,8 +194,8 @@ function computePrimeAccord(def, context) {
         if (taux == null || !heures || !tauxHoraire) {
             return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
         }
-        const montantMensuel = Math.round(heures * tauxHoraire * taux * 100) / 100;
-        const montantAnnuel = Math.round(montantMensuel * 12);
+        const montantMensuel = roundToCents(heures * tauxHoraire * taux);
+        const montantAnnuel = annualFromMonthly(montantMensuel);
         return {
             amount: montantAnnuel,
             label: def.label,
@@ -216,9 +217,9 @@ function computePrimeAccord(def, context) {
         }
         const calculMensuel = (def.valueKind === 'horaire') || (cfg.calculMensuel !== false);
         const montantMensuel = calculMensuel
-            ? Math.round(heures * valeur * 100) / 100
-            : Math.round(heures * valeur * 12 * 100) / 100 / 12;
-        const montantAnnuel = Math.round(montantMensuel * 12);
+            ? roundToCents(heures * valeur)
+            : roundToCents((heures * valeur * 12) / 12);
+        const montantAnnuel = annualFromMonthly(montantMensuel);
         return {
             amount: montantAnnuel,
             label: def.label,

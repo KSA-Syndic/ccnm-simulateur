@@ -17,6 +17,7 @@ import { formatMoney } from '../utils/formatters.js';
 import { getAccordInput, getAccordPrimeDefsAsElements, resolvePrimeSemanticId } from '../agreements/AgreementInterface.js';
 import { getConventionPrimeDefs, getConventionMajorationDefs, getConventionForfaitDefs } from '../convention/ConventionCatalog.js';
 import { SEMANTIC_ID, SOURCE_ACCORD } from '../core/RemunerationTypes.js';
+import { roundToEuro } from '../utils/rounding.js';
 
 function resolveReferenceYear(date) {
     const selectedYear = date instanceof Date && !Number.isNaN(date.getTime())
@@ -120,7 +121,7 @@ function computeForfaitJoursRachat(state, baseSMH, agreement) {
     if (!Number.isFinite(reference) || reference <= 0) return null;
     const majoration = getForfaitJoursRachatMajoration(agreement);
     const baseJour = baseSMH / reference;
-    const amount = Math.round(baseJour * jours * (1 + majoration));
+    const amount = roundToEuro(baseJour * jours * (1 + majoration));
     if (!(amount > 0)) return null;
     return { amount, jours, majoration };
 }
@@ -341,7 +342,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
     }
 
     const activityRate = getActivityRate(state);
-    let baseSMH = Math.round((baseSMHFull || 0) * activityRate);
+    let baseSMH = roundToEuro((baseSMHFull || 0) * activityRate);
 
     let scenario = '';
     let details = [];

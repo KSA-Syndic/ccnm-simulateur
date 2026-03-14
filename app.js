@@ -2211,8 +2211,8 @@ function updateRemunerationDisplay(remuneration) {
         ? `${(Math.round(tauxJournalier * 100) / 100).toFixed(2).replace('.', ',')} €/j`
         : `${(Math.round(tauxHoraire * 100) / 100).toFixed(2).replace('.', ',')} €/h`;
     const tauxLabel = isForfaitJours
-        ? 'Taux journalier de base'
-        : 'Taux horaire de base';
+        ? 'Taux journalier'
+        : 'Taux horaire';
     if (ctxNotice) {
         ctxNotice.textContent = `${baseInfo} · ${tauxLabel} ${tauxStr}`;
     }
@@ -2300,8 +2300,8 @@ function aggregateRemunerationDetails(details) {
         if (detail.isBase) {
             aggregated.push({
                 ...detail,
-                tooltipOrigin: conventionLabel,
-                tooltipDetail: detail.label
+                tooltipOrigin: window.LABELS?.baseSalaryOriginLabel || 'Assiette salaire minima (SMH, Art. 140 CCN)',
+                tooltipDetail: window.LABELS?.baseSalaryTooltipDetail || 'Salaire de base retenu dans l\'assiette du salaire minima hiérarchique (SMH).'
             });
             if (baseLineIndex === -1) {
                 baseLineIndex = aggregated.length - 1;

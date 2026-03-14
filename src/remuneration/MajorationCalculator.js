@@ -9,6 +9,7 @@
 
 import { CONFIG } from '../core/config.js';
 import { SEMANTIC_ID, SOURCE_CONVENTION, SOURCE_ACCORD } from '../core/RemunerationTypes.js';
+import { roundToCents, annualFromMonthly } from '../utils/rounding.js';
 
 /**
  * Calcule le montant annuel d'une majoration à partir de sa définition (convention ou accord).
@@ -74,8 +75,8 @@ function computeMajorationConvention(def, context) {
     const baseForCalc = (def.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_25 || def.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_50)
         ? tauxHoraireBase
         : tauxHoraire;
-    const montantMensuel = Math.round(heures * baseForCalc * taux * 100) / 100;
-    const amount = Math.round(montantMensuel * 12);
+    const montantMensuel = roundToCents(heures * baseForCalc * taux);
+    const amount = annualFromMonthly(montantMensuel);
 
     return {
         amount,
@@ -106,8 +107,8 @@ function computeMajorationAccord(def, context) {
         if (heures === 0) {
             return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
         }
-        const montantMensuel = Math.round(heures * tauxHoraireBase * taux * 100) / 100;
-        const amount = Math.round(montantMensuel * 12);
+        const montantMensuel = roundToCents(heures * tauxHoraireBase * taux);
+        const amount = annualFromMonthly(montantMensuel);
         return {
             amount,
             label: def.label,
@@ -123,8 +124,8 @@ function computeMajorationAccord(def, context) {
         if (heures === 0) {
             return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
         }
-        const montantMensuel = Math.round(heures * tauxHoraire * taux * 100) / 100;
-        const amount = Math.round(montantMensuel * 12);
+        const montantMensuel = roundToCents(heures * tauxHoraire * taux);
+        const amount = annualFromMonthly(montantMensuel);
         return {
             amount,
             label: def.label,
@@ -153,8 +154,9 @@ function computeMajorationAccord(def, context) {
         const taux = def.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_25
             ? (hs.majoration25 ?? CONFIG.MAJORATIONS_CCN.heuresSup25)
             : (hs.majoration50 ?? CONFIG.MAJORATIONS_CCN.heuresSup50);
-        const montantMensuel = Math.round(heures * tauxHoraire * taux * 100) / 100;
-        const amount = Math.round(montantMensuel * 12);
+        const baseForCalc = tauxHoraireBase;
+        const montantMensuel = roundToCents(heures * baseForCalc * taux);
+        const amount = annualFromMonthly(montantMensuel);
         return {
             amount,
             label: def.label,

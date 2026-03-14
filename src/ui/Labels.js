@@ -77,6 +77,8 @@ export const LABELS = {
     resultatAnnuel: 'bruts / an',
     resultatMensuel: 'bruts / mois',
     detailCalcul: 'Détail du calcul',
+    baseSalaryOriginLabel: 'Assiette salaire minima (SMH, Art. 140 CCN)',
+    baseSalaryTooltipDetail: 'Salaire de base retenu dans l\'assiette du salaire minima hiérarchique (SMH).',
     smhIncludedOriginLabel: 'Incluse dans le salaire minima (Art. 140 CCN) — ne s\'ajoute pas au total',
     evolutionInflation: '📈 Évolution vs inflation',
     resultArreteesPromptTitle: '💡 Vous pensez gagner moins que la rémunération affichée ?',

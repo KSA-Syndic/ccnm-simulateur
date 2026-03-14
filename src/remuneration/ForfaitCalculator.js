@@ -9,6 +9,7 @@
 
 import { CONFIG } from '../core/config.js';
 import { SEMANTIC_ID, SOURCE_CONVENTION, SOURCE_ACCORD } from '../core/RemunerationTypes.js';
+import { roundToEuro } from '../utils/rounding.js';
 
 /**
  * Calcule le montant annuel d'un forfait à partir de sa définition (convention ou accord).
@@ -47,7 +48,7 @@ function computeForfaitConvention(def, context) {
     if (taux === 0) {
         return { amount: 0, label: 'Base 35h', source: SOURCE_CONVENTION, semanticId: def.semanticId };
     }
-    const amount = Math.round(baseSMH * taux);
+    const amount = roundToEuro(baseSMH * taux);
     return {
         amount,
         label: def.label,
@@ -68,7 +69,7 @@ function computeForfaitAccord(def, context) {
     if (taux === 0) {
         return { amount: 0, label: def.label, source: SOURCE_ACCORD, semanticId: def.semanticId };
     }
-    const amount = Math.round(baseSMH * taux);
+    const amount = roundToEuro(baseSMH * taux);
     return {
         amount,
         label: def.label,
