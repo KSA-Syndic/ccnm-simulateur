@@ -34,7 +34,7 @@ export const KuhnAgreement = {
         plafond: 25,        // Plafonné à 25 ans (CCN: 15 ans)
         tousStatuts: true,  // Cadres ET Non-Cadres (CCN: Non-Cadres seuls)
         baseCalcul: 'salaire', // Base = rémunération de base brute (salaire réel, pas valeur du point)
-        inclusDansSMH: false,  // Doctrine retenue: prime d'ancienneté exclue de l'assiette SMH (Art. 140 CCNM)
+        inclusDansSMH: 'surplusEntrepriseInclus',  // Inclusion partielle: seul le surplus accord au-delà du socle branche est inclus dans l'assiette SMH
         barème: {
             2: 0.02, 3: 0.03, 4: 0.04, 5: 0.05, 6: 0.06,
             7: 0.07, 8: 0.08, 9: 0.09, 10: 0.10, 11: 0.11,

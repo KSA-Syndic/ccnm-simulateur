@@ -1909,6 +1909,20 @@ body.iframe-mode .simulator-container.iframe-container {
     #step-3 .result-details-toggle {
         margin: 12px 0;
     }
+    #step-3 .result-detail-item {
+        gap: 0.55em;
+    }
+    #step-3 .result-detail-label {
+        font-size: 0.93rem;
+    }
+    #step-3 .result-detail-value {
+        font-size: 0.95rem;
+    }
+    #step-3 .result-detail-info-icon {
+        width: 16px;
+        height: 16px;
+        font-size: 0.68rem;
+    }
     #step-3 .arretees-check-card {
         margin: 20px 0;
         padding: 14px;
@@ -2855,9 +2869,10 @@ body.iframe-mode .simulator-container.iframe-container {
 .result-detail-item {
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
     padding: 8px 0;
     border-bottom: 1px solid var(--gray-200);
-    gap: 0.5em;
+    gap: 0.75em;
 }
 
 /* Retirer la bordure du dernier élément qui n'est pas total-row */
@@ -2905,8 +2920,15 @@ body.iframe-mode .simulator-container.iframe-container {
 .result-detail-label {
     color: var(--gray-500);
     display: inline-flex;
+    flex: 1 1 auto;
+    min-width: 0;
     align-items: center;
     gap: 6px;
+}
+
+.result-detail-label-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .result-detail-info-icon {
@@ -2932,6 +2954,9 @@ body.iframe-mode .simulator-container.iframe-container {
 .result-detail-value {
     font-weight: 600;
     color: var(--body-font-color);
+    flex: 0 0 auto;
+    white-space: nowrap;
+    text-align: right;
 }
 
 .result-detail-value.positive {

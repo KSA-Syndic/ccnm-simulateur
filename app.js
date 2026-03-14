@@ -2264,7 +2264,8 @@ function updateRemunerationDisplay(remuneration) {
         const subPrefix = isSub ? '↳ ' : '';
         detailsHTML += `
             <div class="result-detail-item${subClass}">
-                <span class="result-detail-label">${subPrefix}${detail.label}${accordBadge}
+                <span class="result-detail-label">
+                    <span class="result-detail-label-text">${subPrefix}${detail.label}${accordBadge}</span>
                     <span class="result-detail-info-icon tooltip-trigger" data-tippy-content="${tipAttr}" data-tippy-allowHTML="true" aria-label="Détails">i</span>
                 </span>
                 <span class="result-detail-value ${valueClass}">${prefix}${formatMoney(detail.value)}</span>
@@ -2320,17 +2321,25 @@ function aggregateRemunerationDetails(details) {
         }
         // Primes incluses dans le SMH (Art. 140) : sous-lignes rattachées à la base SMH
         else if (detail.isSMHIncluded) {
+            const rawLabel = String(detail.label || '');
+            const isAncienneteSurplus = /surplus entreprise inclus/i.test(rawLabel);
+            const compactLabel = isAncienneteSurplus
+                ? 'dont Prime ancienneté (surplus entreprise)'
+                : `dont ${rawLabel}`;
+            const compactTooltip = isAncienneteSurplus
+                ? `Calcul : ${rawLabel}. Seul le surplus entreprise (au-delà de la référence branche) est inclus dans l'assiette SMH.`
+                : `${rawLabel} — ${window.LABELS?.smhIncludedTooltipDetailSuffix || 'Répartie dans le SMH, sans ajout au total.'}`;
             // Prime incluse dans le SMH (Art. 140) : ne s'ajoute PAS au total, c'est une distribution
             // du salaire permettant d'atteindre le SMH grille. Affichée en sous-ligne informative.
             // Le mois de versement est déjà dans detail.label (ex. "Prime de vacances Kuhn (juillet)")
             smhSubLines.push({
-                label: `dont ${detail.label}`,
+                label: compactLabel,
                 value: detail.value,
                 isPositive: false,
                 isAgreement: isAccordDetail(detail),
                 isSMHSubLine: true,
                 tooltipOrigin: window.LABELS?.smhIncludedOriginLabel || 'Incluse dans le salaire minima (Art. 140 CCN) — ne s\'ajoute pas au total',
-                tooltipDetail: `${detail.label} — ${window.LABELS?.smhIncludedTooltipDetailSuffix || 'Répartie dans le SMH, sans ajout au total.'}`
+                tooltipDetail: compactTooltip
             });
         }
         // Agréger les majorations en CCN vs accord

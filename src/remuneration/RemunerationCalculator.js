@@ -156,15 +156,24 @@ function getAccordAnciennetePrimeConfig(agreement) {
     return primes.find((prime) => resolvePrimeSemanticId(prime) === SEMANTIC_ID.PRIME_ANCIENNETE) ?? null;
 }
 
+const ANCIENNETE_SMH_MODE_SURPLUS_ENTREPRISE = 'surplusEntrepriseInclus';
+
+function normalizeAncienneteSmhMode(value, source) {
+    if (value === true || value === false) return value;
+    if (value === ANCIENNETE_SMH_MODE_SURPLUS_ENTREPRISE) return value;
+    if (source === 'accord') return false;
+    return getAncienneteConfigInclusion();
+}
+
 function resolveAccordAncienneteSmhInclusion(agreement, primeAncienneteAccord = null) {
     // Priorité explicite accord :
     // 1) surcharge via prime sémantique primeAnciennete
     // 2) agreement.anciennete.inclusDansSMH
     // 3) défaut CCNM (exclue du SMH) => false
     const primeOverride = primeAncienneteAccord?.inclusDansSMH;
-    if (typeof primeOverride === 'boolean') return primeOverride;
+    if (primeOverride !== undefined) return normalizeAncienneteSmhMode(primeOverride, 'accord');
     const accordOverride = agreement?.anciennete?.inclusDansSMH;
-    if (typeof accordOverride === 'boolean') return accordOverride;
+    if (accordOverride !== undefined) return normalizeAncienneteSmhMode(accordOverride, 'accord');
     return false;
 }
 
@@ -177,35 +186,43 @@ function getAncienneteConfigInclusion() {
     return CONFIG?.ANCIENNETE?.inclusDansSMH === true;
 }
 
+function getRuntimeAncienneteInclusionOverride() {
+    const runtimeValue = (typeof window !== 'undefined' && window?.CONFIG?.ANCIENNETE)
+        ? window.CONFIG.ANCIENNETE.inclusDansSMH
+        : undefined;
+    if (runtimeValue === true || runtimeValue === false || runtimeValue === ANCIENNETE_SMH_MODE_SURPLUS_ENTREPRISE) {
+        return runtimeValue;
+    }
+    return undefined;
+}
+
 function resolveAncienneteSmhInclusion(explicitInclusion, source) {
     // Règle de priorité :
     // - Accord: surcharge explicite, sinon défaut CCNM (false)
     // - CCN: explicite puis paramètre global config
-    if (source === 'accord' && typeof explicitInclusion === 'boolean') {
-        return explicitInclusion;
+    if (source === 'ccn') {
+        const runtimeOverride = getRuntimeAncienneteInclusionOverride();
+        if (runtimeOverride !== undefined) return normalizeAncienneteSmhMode(runtimeOverride, 'ccn');
     }
-    if (source === 'accord') {
-        return false;
-    }
-    if (source === 'ccn' && typeof explicitInclusion === 'boolean') {
-        return explicitInclusion;
-    }
-    return getAncienneteConfigInclusion();
+    if (explicitInclusion !== undefined) return normalizeAncienneteSmhMode(explicitInclusion, source);
+    return source === 'accord' ? false : getAncienneteConfigInclusion();
 }
 
 function resolveAnciennetePrime(state, context, convPrimeDefs, agreement, isCadreValue) {
     const candidates = [];
+    let ccnReferenceAmount = 0;
 
     const defAncienneteCCN = convPrimeDefs.find(d => d.semanticId === SEMANTIC_ID.PRIME_ANCIENNETE);
     if (!isCadreValue && defAncienneteCCN) {
         const rCCN = computePrime(defAncienneteCCN, context);
         if (rCCN.amount > 0) {
+            ccnReferenceAmount = rCCN.amount;
             candidates.push({
                 source: 'ccn',
                 result: rCCN,
                 isAgreement: false,
-                isSMHIncluded: resolveAncienneteSmhInclusion(defAncienneteCCN.config?.inclusDansSMH, 'ccn'),
-                label: `Prime d'ancienneté conventionnelle (${state.pointTerritorial}€ × ${rCCN.meta?.taux ?? 0}% × ${rCCN.meta?.annees ?? 0} ans × 12)`
+                inclusionMode: resolveAncienneteSmhInclusion(defAncienneteCCN.config?.inclusDansSMH, 'ccn'),
+                label: `Prime ancienneté conventionnelle (${state.pointTerritorial}€ × ${rCCN.meta?.taux ?? 0}% × ${rCCN.meta?.annees ?? 0} ans × 12)`
             });
         }
     }
@@ -222,7 +239,7 @@ function resolveAnciennetePrime(state, context, convPrimeDefs, agreement, isCadr
                     source: 'accord',
                     result: rAccord,
                     isAgreement: true,
-                    isSMHIncluded: resolveAncienneteSmhInclusion(defAncienneteAccord.config?.inclusDansSMH, 'accord'),
+                    inclusionMode: resolveAncienneteSmhInclusion(defAncienneteAccord.config?.inclusDansSMH, 'accord'),
                     label: `${defAncienneteAccord.label} (${formatMoney(context.baseSMH)} × ${rAccord.meta?.taux ?? 0}%)`
                 });
             }
@@ -232,8 +249,21 @@ function resolveAnciennetePrime(state, context, convPrimeDefs, agreement, isCadr
     if (!candidates.length) return null;
     const selected = candidates.reduce((best, cur) => (cur.result.amount > best.result.amount ? cur : best), candidates[0]);
     const hasAlternative = candidates.length > 1;
+    const inclusionMode = selected.inclusionMode;
+    let smhIncludedAmount = inclusionMode === true ? selected.result.amount : 0;
+    if (selected.source === 'accord' && inclusionMode === ANCIENNETE_SMH_MODE_SURPLUS_ENTREPRISE) {
+        // Juridique 2025 : inclure uniquement le surplus accord au-delà de la référence branche.
+        smhIncludedAmount = Math.max(0, selected.result.amount - ccnReferenceAmount);
+    }
+    const smhExcludedAmount = Math.max(0, selected.result.amount - smhIncludedAmount);
+    const isSMHIncluded = smhIncludedAmount > 0;
+
     return {
         ...selected,
+        inclusionMode,
+        isSMHIncluded,
+        smhIncludedAmount,
+        smhExcludedAmount,
         note: hasAlternative
             ? (selected.isAgreement ? 'Plus avantageux que la convention' : 'Plus avantageux que l\'accord')
             : ''
@@ -365,17 +395,20 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         const detailsSmh = [{ label: baseLabel, value: baseSMH, isBase: true }];
 
         const ancienneteRetenue = resolveAnciennetePrime(state, context, convPrimeDefs, agreement, isCadreValue);
-        if (ancienneteRetenue && ancienneteRetenue.isSMHIncluded) {
+        const ancienneteSmhAmount = ancienneteRetenue?.smhIncludedAmount ?? 0;
+        if (ancienneteRetenue && ancienneteSmhAmount > 0) {
             detailsSmh.push({
-                label: 'Prime d\'ancienneté assiette salaire minima',
-                value: ancienneteRetenue.result.amount,
+                label: ancienneteRetenue.inclusionMode === ANCIENNETE_SMH_MODE_SURPLUS_ENTREPRISE
+                    ? 'Prime ancienneté assiette SMH (surplus entreprise inclus)'
+                    : 'Prime ancienneté assiette SMH',
+                value: ancienneteSmhAmount,
                 isPositive: true,
                 isSMHIncluded: true,
                 isAgreement: ancienneteRetenue.isAgreement,
                 semanticId: SEMANTIC_ID.PRIME_ANCIENNETE,
                 note: ancienneteRetenue.note
             });
-            totalSmh += ancienneteRetenue.result.amount;
+            totalSmh += ancienneteSmhAmount;
         }
 
         // Assiette SMH (Art. 140) : inclure les majorations d'heures supplémentaires,
@@ -394,7 +427,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                 const rHs25 = computeMajoration(defHs25, context);
                 if (rHs25.amount > 0) {
                     detailsSmh.push({
-                        label: `Heures supplémentaires assiette salaire minima (+${rHs25.meta?.taux ?? 0}%) (${Math.round((rHs25.meta?.heures ?? 0) * 100) / 100}h/mois)`,
+                        label: `Heures supplémentaires assiette SMH (+${rHs25.meta?.taux ?? 0}%) (${Math.round((rHs25.meta?.heures ?? 0) * 100) / 100}h/mois)`,
                         value: rHs25.amount,
                         isPositive: true,
                         isSMHIncluded: true,
@@ -407,7 +440,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                 const rHs50 = computeMajoration(defHs50, context);
                 if (rHs50.amount > 0) {
                     detailsSmh.push({
-                        label: `Heures supplémentaires assiette salaire minima (+${rHs50.meta?.taux ?? 0}%) (${Math.round((rHs50.meta?.heures ?? 0) * 100) / 100}h/mois)`,
+                        label: `Heures supplémentaires assiette SMH (+${rHs50.meta?.taux ?? 0}%) (${Math.round((rHs50.meta?.heures ?? 0) * 100) / 100}h/mois)`,
                         value: rHs50.amount,
                         isPositive: true,
                         isSMHIncluded: true,
@@ -497,18 +530,40 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
     // Prime ancienneté : principe de faveur CCN/accord + inclusion SMH paramétrable
     const ancienneteRetenue = resolveAnciennetePrime(state, context, convPrimeDefs, agreement, isCadreValue);
     if (ancienneteRetenue) {
-        details.push({
-            label: ancienneteRetenue.label,
-            value: ancienneteRetenue.result.amount,
-            isPositive: ancienneteRetenue.isSMHIncluded !== true,
-            isSMHIncluded: ancienneteRetenue.isSMHIncluded === true,
-            isAgreement: ancienneteRetenue.isAgreement,
-            agreementId: ancienneteRetenue.isAgreement ? agreement?.id : undefined,
-            semanticId: SEMANTIC_ID.PRIME_ANCIENNETE,
-            note: ancienneteRetenue.note
-        });
-        if (!ancienneteRetenue.isSMHIncluded) {
-            total += ancienneteRetenue.result.amount;
+        const excludedAmount = ancienneteRetenue.smhExcludedAmount ?? ancienneteRetenue.result.amount;
+        const includedAmount = ancienneteRetenue.smhIncludedAmount ?? 0;
+
+        if (excludedAmount > 0) {
+            const excludedLabel = ancienneteRetenue.inclusionMode === ANCIENNETE_SMH_MODE_SURPLUS_ENTREPRISE
+                ? `${ancienneteRetenue.label} (part hors assiette)`
+                : ancienneteRetenue.label;
+            details.push({
+                label: excludedLabel,
+                value: excludedAmount,
+                isPositive: true,
+                isSMHIncluded: false,
+                isAgreement: ancienneteRetenue.isAgreement,
+                agreementId: ancienneteRetenue.isAgreement ? agreement?.id : undefined,
+                semanticId: SEMANTIC_ID.PRIME_ANCIENNETE,
+                note: ancienneteRetenue.note
+            });
+            total += excludedAmount;
+        }
+
+        if (includedAmount > 0) {
+            const includedLabel = ancienneteRetenue.inclusionMode === ANCIENNETE_SMH_MODE_SURPLUS_ENTREPRISE
+                ? `${ancienneteRetenue.label} (surplus entreprise inclus dans l'assiette SMH)`
+                : ancienneteRetenue.label;
+            details.push({
+                label: includedLabel,
+                value: includedAmount,
+                isPositive: false,
+                isSMHIncluded: true,
+                isAgreement: ancienneteRetenue.isAgreement,
+                agreementId: ancienneteRetenue.isAgreement ? agreement?.id : undefined,
+                semanticId: SEMANTIC_ID.PRIME_ANCIENNETE,
+                note: ancienneteRetenue.note
+            });
         }
     }
 
