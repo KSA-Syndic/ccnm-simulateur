@@ -18,6 +18,7 @@ import { getAccordInput, getAccordPrimeDefsAsElements, resolvePrimeSemanticId } 
 import { getConventionPrimeDefs, getConventionMajorationDefs, getConventionForfaitDefs } from '../convention/ConventionCatalog.js';
 import { SEMANTIC_ID, SOURCE_ACCORD } from '../core/RemunerationTypes.js';
 import { roundToEuro } from '../utils/rounding.js';
+import { getSmhHourlyBaseRate } from './RateCalculator.js';
 
 function resolveReferenceYear(date) {
     const selectedYear = date instanceof Date && !Number.isNaN(date.getTime())
@@ -74,8 +75,8 @@ function getActivityRate(state) {
 function buildContext(state, baseSMH, classe, agreement, options = {}) {
     const baseSMHFull = Number(options.baseSMHFull ?? baseSMH) || 0;
     const activityRate = Number(options.activityRate ?? 1) || 1;
+    const tauxHoraireBase = getSmhHourlyBaseRate(baseSMHFull, { nbMois: 12, activityRate: 1 });
     const heuresBaseMensuelles = CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67;
-    const tauxHoraireBase = baseSMHFull > 0 ? baseSMHFull / 12 / heuresBaseMensuelles : 0;
     const hsActif = !isCadreForfaitJours(classe, state) && state?.travailHeuresSup === true;
     const heuresSup = hsActif ? (Number(state?.heuresSup) || 0) : 0;
     const seuilMensuel = CONFIG.HEURES_SUP_TRANCHE_1_MENSUELLES ?? 34.67;

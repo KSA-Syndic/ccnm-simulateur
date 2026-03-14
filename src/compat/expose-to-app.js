@@ -15,6 +15,7 @@ import { genererPDFArretees } from '../arretees/PDFGenerator.js';
 import { getActiveAgreement } from '../agreements/AgreementLoader.js';
 import { state as moduleState } from '../core/state.js';
 import { computeSalaireProrataEntree } from '../utils/dateUtils.js';
+import { getSmhHourlyBaseRate, getSmhDailyBaseRate } from '../remuneration/RateCalculator.js';
 
 /**
  * Synchroniser le state de app.js vers le state des modules
@@ -179,4 +180,20 @@ window.getMontantPrimesVerseesCeMoisFromModules = function(appState, mois, optio
  */
 window.computeSalaireProrataEntreeFromModules = function(salaireMensuelComplet, dateDebutTravail, dernierJourMois) {
     return computeSalaireProrataEntree(salaireMensuelComplet, dateDebutTravail, dernierJourMois);
+};
+
+/**
+ * Taux horaire/journalier de référence SMH (source unique).
+ */
+window.getSmhHourlyBaseRateFromModules = function(smhAnnual, options = {}) {
+    const nbMois = Number(options.nbMois) || 12;
+    const tauxActivitePct = Number(options.tauxActivitePct);
+    const activityRate = Number.isFinite(tauxActivitePct) ? (tauxActivitePct / 100) : 1;
+    return getSmhHourlyBaseRate(Number(smhAnnual) || 0, { nbMois, activityRate });
+};
+
+window.getSmhDailyBaseRateFromModules = function(smhAnnual, options = {}) {
+    const tauxActivitePct = Number(options.tauxActivitePct);
+    const activityRate = Number.isFinite(tauxActivitePct) ? (tauxActivitePct / 100) : 1;
+    return getSmhDailyBaseRate(Number(smhAnnual) || 0, { activityRate });
 };

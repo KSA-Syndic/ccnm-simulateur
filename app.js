@@ -199,17 +199,29 @@ function formatNumberFr(value, digits = 2) {
     return n.toFixed(digits).replace('.', ',');
 }
 
-function getPrimeEquipeConventionRatePerHour() {
+function getSmhHourlyBaseRateFromAnnual(smhAnnual, options = {}) {
+    if (typeof window.getSmhHourlyBaseRateFromModules === 'function') {
+        return window.getSmhHourlyBaseRateFromModules(smhAnnual, options);
+    }
+    return 0;
+}
+
+function getSmhDailyBaseRateFromAnnual(smhAnnual, options = {}) {
+    if (typeof window.getSmhDailyBaseRateFromModules === 'function') {
+        return window.getSmhDailyBaseRateFromModules(smhAnnual, options);
+    }
+    return 0;
+}
+
+function getPrimeEquipeConventionRatePerPoste() {
     const { classe } = getActiveClassification();
     const smhClasse = Number(CONFIG?.SMH?.[classe]) || 0;
-    const heuresBase = Number(CONFIG?.DUREE_LEGALE_HEURES_MOIS ?? 151.67) || 151.67;
-    if (!(smhClasse > 0) || !(heuresBase > 0)) return 0;
-    const tauxHoraireBase = smhClasse / 12 / heuresBase;
+    const tauxHoraireBase = getSmhHourlyBaseRateFromAnnual(smhClasse, { nbMois: 12, tauxActivitePct: 100 });
     return Math.round((tauxHoraireBase * 0.5) * 100) / 100;
 }
 
 function buildPrimeEquipeTooltip(agreement, accordPrimeEquipe = null) {
-    const tauxCCN = getPrimeEquipeConventionRatePerHour();
+    const tauxCCN = getPrimeEquipeConventionRatePerPoste();
     const conventionLine = `30 min du taux horaire de base par poste.<br>Référence actuelle : ${formatNumberFr(tauxCCN, 2)} €/poste.`;
     const accordValue = accordPrimeEquipe?.valeurAccord;
     if (state.accordActif && agreement && Number.isFinite(Number(accordValue))) {
@@ -2194,25 +2206,24 @@ function updateRemunerationDisplay(remuneration) {
     const mensuel = Math.round(remuneration.total / state.nbMois);
     document.getElementById('result-mensuel').textContent = formatMoney(mensuel);
     const hourlyNotice = document.getElementById('result-hourly-deduced');
-    // Référence juridique : taux de base calculé sur l'assiette SMH uniquement (hors éléments exclus du SMH).
-    const assietteSmhAnnuelle = Number(getMontantAnnuelSMHSeul()) || Number(remuneration.baseSMH) || Number(remuneration.total) || 0;
-    const assietteSmhMensuelle = Math.round(assietteSmhAnnuelle / (state.nbMois || 12));
-    const heuresBase35h = Number(CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67) || 151.67;
+    // Référence unifiée avec la prime d'équipe : taux horaire SMH de base (35h),
+    // hors heures supplémentaires et hors contreparties ajoutées.
+    const smhBaseAnnuel = Number(remuneration.baseSMH) || Number(getMontantAnnuelSMHSeul()) || 0;
     const tauxActivitePctRaw = state.travailTempsPartiel
         ? (Number(state.tauxActivite) || Number(CONFIG.TAUX_ACTIVITE_DEFAUT ?? 100))
         : 100;
     const tauxActivitePct = Math.max(Number(CONFIG.TAUX_ACTIVITE_MIN ?? 1), Math.min(Number(CONFIG.TAUX_ACTIVITE_MAX ?? 100), tauxActivitePctRaw));
     const isForfaitJours = state.forfait === 'jours';
-    const heuresMensuellesRef = heuresBase35h * (tauxActivitePct / 100);
-    const joursRefAnnuel = (Number(CONFIG.FORFAIT_JOURS_REFERENCE ?? 218) || 218) * (tauxActivitePct / 100);
-    const tauxHoraire = heuresMensuellesRef > 0 ? (assietteSmhMensuelle / heuresMensuellesRef) : 0;
-    const tauxJournalier = joursRefAnnuel > 0 ? (assietteSmhAnnuelle / joursRefAnnuel) : 0;
+    // Le taux horaire SMH de base est une référence 35h annualisée sur 12 mois,
+    // indépendante du mode de répartition de paie (12/13 mois).
+    const tauxHoraire = getSmhHourlyBaseRateFromAnnual(smhBaseAnnuel, { nbMois: 12, tauxActivitePct });
+    const tauxJournalier = getSmhDailyBaseRateFromAnnual(smhBaseAnnuel, { tauxActivitePct });
     const tauxStr = isForfaitJours
         ? `${(Math.round(tauxJournalier * 100) / 100).toFixed(2).replace('.', ',')} €/j`
         : `${(Math.round(tauxHoraire * 100) / 100).toFixed(2).replace('.', ',')} €/h`;
     const tauxLabel = isForfaitJours
-        ? 'Taux journalier'
-        : 'Taux horaire';
+        ? 'Taux journalier SMH'
+        : 'Taux horaire SMH (base 35h)';
     if (ctxNotice) {
         ctxNotice.textContent = `${baseInfo} · ${tauxLabel} ${tauxStr}`;
     }
@@ -3377,14 +3388,14 @@ function buildSmhTooltipText() {
     const excludedLines = excluded.length
         ? excluded.map((item) => `• ${item}`).join('<br>')
         : '• aucun';
-    return `<strong>Salaire dû (salaire minima seul)</strong> : assiette salaire minima.<br><strong>À inclure :</strong><br>${includedLines}<br><strong>À exclure :</strong><br>${excludedLines}`;
+    return `<strong>Salaire dû (salaire minima seul)</strong> : assiette SMH (Art. 140 CCN).<br><strong>À inclure :</strong><br>${includedLines}<br><strong>À exclure :</strong><br>${excludedLines}`;
 }
 
 function updateArreteesSmhTooltip() {
     const tooltipEl = document.getElementById('arretees-smh-seul-tooltip')
         || document.querySelector('#arretees-smh-seul + span.tooltip-trigger');
     if (!tooltipEl) return;
-    const html = `Art. 140 CCN.<br>${buildSmhTooltipText()}<br>Décochez pour comparer à la rémunération complète.`;
+    const html = `${buildSmhTooltipText()}<br>Décochez pour comparer à la rémunération complète.`;
     tooltipEl.setAttribute('data-tippy-content', html);
     if (tooltipEl._tippy) tooltipEl._tippy.setContent(html);
 }
