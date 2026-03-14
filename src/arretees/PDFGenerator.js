@@ -398,7 +398,7 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     const exclusSmhLabel = exclusSmhDyn.length > 0 ? exclusSmhDyn.join(', ') : 'aucun';
     smhRows.push(['Inclus SMH (actifs)', inclusSmhLabel]);
     smhRows.push(['Exclus du SMH (actifs)', exclusSmhLabel]);
-    smhRows.push(['Lecture', 'Le SMH correspond à la base SMH + éléments inclus actifs. Les éléments exclus s’ajoutent au-dessus du minimum.']);
+    smhRows.push(['Lecture', 'L’assiette SMH correspond à la base + éléments inclus actifs. Les éléments exclus s’ajoutent au-dessus du minimum.']);
 
     addAutoTable(doc, {
         startY: y,
