@@ -74,6 +74,33 @@ Si l’accord introduit de **nouvelles** clés (ex. prime Noël avec `stateKeyAc
 
 ---
 
+## Pipeline hybride recommandé (obligatoire)
+
+Pour fiabiliser la conversion texte → code, appliquer systématiquement ces 2 passes :
+
+1. **Extraction IA** : produire un brouillon d'objet d'accord structuré.
+2. **Validation déterministe** : appliquer les contrôles bloquants ci-dessous avant d'accepter le fichier.
+
+### Contrôles bloquants (rejets automatiques)
+
+- Champ critique absent (`id`, `label`, `valueType`, `inclusDansSMH`).
+- `valueType` invalide (hors `horaire`, `montant`, `pourcentage`, `majorationHoraire`).
+- `majorationHoraire` sans `stateKeyHeures`.
+- `horaire` sans `stateKeyHeures` si `autoHeures !== true`.
+- Prime hors SMH (`inclusDansSMH: false`) sans `stateKeyActif`.
+- Contradiction métier : élément de sujétion / indemnisation marqué `inclusDansSMH: true`.
+- Collision sémantique ambiguë (`semanticId` incohérent ou dupliqué sans intention).
+
+### Sortie attendue
+
+Le résultat final doit être un fichier complet, exploitable tel quel :
+
+- `accords/NomAccord.js` prêt à enregistrer,
+- aucune section “texte brut” non interprétée,
+- toutes les modalités activables reliées à des clés UI (`stateKeyActif`, `stateKeyHeures`).
+
+---
+
 ## Prompt IA à utiliser
 
 **Copiez tout le bloc ci-dessous**, puis collez le texte de l’accord après la ligne « TEXTE DE L'ACCORD : ».

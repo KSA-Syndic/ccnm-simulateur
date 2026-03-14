@@ -23,6 +23,7 @@ export const ELEMENT_KIND_FORFAIT = 'forfait';
 export const VALUE_KIND_HORAIRE = 'horaire';
 export const VALUE_KIND_MONTANT = 'montant';
 export const VALUE_KIND_POURCENTAGE = 'pourcentage';
+export const VALUE_KIND_MAJORATION_HORAIRE = 'majorationHoraire';
 
 /**
  * Identifiants sémantiques pour le principe de faveur (comparer convention vs accord).
@@ -32,10 +33,15 @@ export const SEMANTIC_ID = {
     PRIME_ANCIENNETE: 'primeAnciennete',
     PRIME_EQUIPE: 'primeEquipe',
     PRIME_VACANCES: 'primeVacances',
+    PRIME_ASTREINTE_DISPONIBILITE: 'primeAstreinteDisponibilite',
+    PRIME_PANIER_NUIT: 'primePanierNuit',
+    PRIME_HABILLAGE_DESHABILLAGE: 'primeHabillageDeshabillage',
+    PRIME_DEPLACEMENT_PRO: 'primeDeplacementProfessionnel',
     MAJORATION_NUIT: 'majorationNuit',
     MAJORATION_DIMANCHE: 'majorationDimanche',
     MAJORATION_HEURES_SUP_25: 'majorationHeuresSup25',
     MAJORATION_HEURES_SUP_50: 'majorationHeuresSup50',
+    MAJORATION_INTERVENTION_ASTREINTE: 'majorationInterventionAstreinte',
     FORFAIT_HEURES: 'forfaitHeures',
     FORFAIT_JOURS: 'forfaitJours'
 };

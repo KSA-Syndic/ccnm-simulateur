@@ -2,6 +2,25 @@
 
 Ce guide explique comment ajouter un nouvel accord d'entreprise au simulateur. Le schéma détaillé est défini dans `src/agreements/AgreementInterface.js`.
 
+## Référentiel métier (obligatoire)
+
+Cette section est la base de décision pour transformer un texte juridique en attributs techniques.
+
+| Concept | Définition opérationnelle | Impact de modélisation |
+|---|---|---|
+| `Salaire` | Contrepartie directe du travail effectif | Composante salariale de base |
+| `Rémunération` | Ensemble des éléments bruts versés au titre du travail | Agrégat global affiché dans l'app |
+| `Contrepartie directe` | Élément lié à la performance/poste sans contrainte particulière | Candidat `inclusDansSMH: true` |
+| `Sujétion` | Compensation d'une contrainte d'organisation/conditions de travail | `inclusDansSMH: false` |
+| `Indemnisation` | Compensation de frais ou d'une situation hors travail effectif | `inclusDansSMH: false` (hors complément salarial) |
+
+### Règle d'assiette SMH (Art. 140 CCNM)
+
+- `inclusDansSMH: true` uniquement pour les composantes salariales / contreparties directes.
+- `inclusDansSMH: false` pour sujétions et indemnisations.
+- Le contrôle porte sur la **réalité de l'élément**, pas son intitulé.
+- Doctrine projet : **prime d'ancienneté exclue du SMH par défaut** ; inclusion possible uniquement avec justification juridique explicite.
+
 ## Règle prioritaire : modéliser uniquement les écarts à la CCN
 
 Ne mettez dans l'accord que ce qui change réellement la règle CCN.
@@ -49,6 +68,38 @@ Chaque prime est un objet avec au minimum :
 - **`inclusDansSMH`** : **(OBLIGATOIRE)** `true` si la prime est un complément salarial annuel inclus dans l'assiette SMH (Art. 140 CCNM) ; `false` si c'est une contrepartie de conditions de travail exclue de l'assiette. Voir section « Assiette SMH » ci-dessous.
 - **`conditionAnciennete`** : (optionnel) `{ type: 'annees_revolues'|'aucune', annees?, description? }` — condition d'ancienneté pour ouvrir droit
 - **`tooltip`** : (optionnel) texte d'aide affiché au survol (?) sur l'option
+
+### Mapping objectif : texte juridique → attributs techniques
+
+| Indice dans le texte | Attribut(s) cible(s) | Règle |
+|---|---|---|
+| « X € par an », « forfait annuel » | `valueType: 'montant'`, `valeurAccord`, `moisVersement` si versé en un mois | Montant annuel fixe |
+| « X €/h », « par heure » | `valueType: 'horaire'`, `valeurAccord`, `stateKeyHeures` | Base horaire mensuelle |
+| « +X% du taux horaire », « majoration » | `valueType: 'majorationHoraire'`, `valeurAccord`, `stateKeyHeures` | Majoration sur taux horaire |
+| « au 1er juin », « après X ans » | `conditionAnciennete` | Encoder type + seuil |
+| « ne se cumule pas avec » | `nonCumulAvec` | Référencer les `stateKeyActif` incompatibles |
+| « selon intervention / si activé » | `stateKeyActif` (+ `stateKeyHeures` si besoin) | Activation explicite UI |
+| « prime usuelle/commune » | `uiSection: 'basique'` | Affichage hors bloc spécifique accord |
+
+### Grille de validation déterministe (avant intégration)
+
+Une prime est refusée tant que ces règles ne sont pas respectées :
+
+1. `id`, `label`, `valueType`, `inclusDansSMH` sont renseignés.
+2. `valueType` est dans `horaire | montant | pourcentage | majorationHoraire`.
+3. Si `valueType === 'majorationHoraire'`, alors `stateKeyHeures` est obligatoire.
+4. Si `valueType === 'horaire'` et `autoHeures !== true`, alors `stateKeyHeures` est obligatoire.
+5. Si `inclusDansSMH !== true`, alors `stateKeyActif` est requis.
+6. Si `valueType === 'montant'` et versement annuel ponctuel, `moisVersement` doit être défini.
+7. Tout choix atypique sur ancienneté/SMH doit être justifié dans le commentaire de l'accord.
+
+### Format de sortie attendu (évite les fragments bruts)
+
+La conversion d'un texte juridique doit produire un objet accord complet, directement utilisable :
+
+- un fichier unique `accords/NomAccord.js`,
+- un tableau `primes[]` exploitable sans retouche manuelle de structure,
+- des clés UI explicites (`stateKeyActif`, `stateKeyHeures`) pour chaque modalité activable.
 
 #### Assiette SMH (`inclusDansSMH`)
 
@@ -182,3 +233,27 @@ Pour générer un fichier d'accord à partir du **texte intégral** de l'accord 
 ## Schéma complet
 
 Voir `src/agreements/AgreementInterface.js` pour les types JSDoc complets (`Agreement`, `PrimeDef`, `ElementDroit`, etc.) et la liste des champs optionnels (`elements`, `pointsVigilance`, `exemplesRecrutement`, `conges`).
+
+## Check-list anti-régression (obligatoire)
+
+- Ajouter une prime ne doit pas masquer les autres modalités existantes.
+- Une sujétion ne doit jamais passer dans le SMH sans justification explicite.
+- Le non-cumul doit rester cohérent (UI et calcul final).
+- L'ancienneté respecte la doctrine par défaut (`inclusDansSMH: false`) sauf exception motivée.
+- Vérifier les scénarios minimaux : nuit, équipe, astreinte, prime d'objectif, avantage en nature.
+
+### Scénarios minimaux à vérifier
+
+| Scénario | Entrée clé | Résultat attendu |
+|---|---|---|
+| `Nuit + Dimanche` | `heuresNuit > 0`, `heuresDimanche > 0` | Les deux majorations sont présentes, sans suppression mutuelle non prévue |
+| `Prime équipe` | `travailEquipe: true` | Prime d'équipe calculée selon base prévue (autoHeures ou saisie) |
+| `Astreinte intervention + HS` | prime intervention active + HS actives | Le non-cumul configuré est appliqué (pas de double comptage) |
+| `Prime objectif annuelle` | `valueType: montant`, `inclusDansSMH: true` | Affichage en sous-ligne SMH, pas d'ajout au total |
+| `Avantage en nature` | modalité salariale explicite | Classé selon règle d'assiette définie, cohérent doc/calcul |
+
+## Réajustement de l'existant (Convention + Kuhn)
+
+- Convention : expliciter l'assiette SMH dans les définitions CCN (`inclusDansSMH`) pour éviter les ambiguïtés entre doc et calcul.
+- Kuhn : aligner la prime d'ancienneté avec la doctrine par défaut (`inclusDansSMH: false`) sauf justification juridique contraire.
+- UI/Calcul : vérifier que les modalités basiques et spécifiques accord restent séparées, sans disparition de lignes lors des ajouts de primes.

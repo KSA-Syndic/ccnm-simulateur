@@ -65,6 +65,11 @@ import { SEMANTIC_ID } from '../core/RemunerationTypes.js';
  * @property {number} [moisVersement] - Mois de versement 1-12 (valueType === 'montant' : prime versée ce mois-là)
  * @property {ConditionAnciennete} [conditionAnciennete] - Condition d'ancienneté pour en bénéficier (générique ; utilisé pour le calcul)
  * @property {string} [tooltip] - Texte d'aide affiché au survol (?) sur l'option (modalités particulières)
+ * @property {string} [inputUnitLabel] - Libellé d'unité de saisie UI (ex: 'heures/mois', 'unités/mois')
+ * @property {string[]} [nonCumulAvec] - Liste de stateKeyActif incompatibles (anti-cumul)
+ * @property {'basique'|'accord'} [uiSection] - Positionnement UI (zone commune vs zone spécifique accord)
+ * @property {string} [sourceArticle] - Référence article/source juridique (traçabilité)
+ * @property {string} [conditionTexte] - Formulation textuelle brute de la condition (traçabilité)
  * @property {boolean} [inclusDansSMH=false] - Si true, la prime est incluse dans l'assiette de comparaison du SMH (Art. 140 CCNM).
  *   Elle constitue une distribution du salaire permettant d'atteindre le SMH grille, PAS un supplément.
  *   Elle ne s'ajoute pas au total annuel affiché. Toujours active (pas de checkbox).
@@ -133,6 +138,7 @@ export function validateAgreement(agreement) {
     }
 
     const ids = new Set();
+    const allowedValueTypes = new Set(['horaire', 'montant', 'pourcentage', 'majorationHoraire']);
     for (const prime of agreement.primes) {
         if (!prime || typeof prime !== 'object' || typeof prime.id !== 'string' || prime.id.trim() === '') {
             console.warn('Chaque prime doit définir un id non vide (string).');
@@ -145,6 +151,30 @@ export function validateAgreement(agreement) {
         ids.add(prime.id);
         if (prime.semanticId != null && (typeof prime.semanticId !== 'string' || prime.semanticId.trim() === '')) {
             console.warn(`semanticId invalide pour la prime ${prime.id}`);
+            return false;
+        }
+        if (!allowedValueTypes.has(prime.valueType)) {
+            console.warn(`valueType invalide pour la prime ${prime.id}: ${prime.valueType}`);
+            return false;
+        }
+        const hasStateKeyActif = typeof prime.stateKeyActif === 'string' && prime.stateKeyActif.trim() !== '';
+        const hasStateKeyHeures = typeof prime.stateKeyHeures === 'string' && prime.stateKeyHeures.trim() !== '';
+        const isAutoHeures = prime.autoHeures === true;
+
+        if (prime.valueType === 'majorationHoraire' && !hasStateKeyHeures) {
+            console.warn(`stateKeyHeures obligatoire pour majorationHoraire (${prime.id})`);
+            return false;
+        }
+        if (prime.valueType === 'horaire' && !isAutoHeures && !hasStateKeyHeures) {
+            console.warn(`stateKeyHeures obligatoire pour prime horaire sans autoHeures (${prime.id})`);
+            return false;
+        }
+        if (prime.inclusDansSMH !== true && !hasStateKeyActif) {
+            console.warn(`stateKeyActif obligatoire pour prime hors assiette SMH (${prime.id})`);
+            return false;
+        }
+        if (prime.valueType === 'montant' && prime.inclusDansSMH !== true && !hasStateKeyActif) {
+            console.warn(`prime montant hors SMH sans stateKeyActif (${prime.id})`);
             return false;
         }
     }
@@ -386,5 +416,9 @@ export function resolvePrimeSemanticId(primeDef) {
     if (key.includes('anciennete')) return SEMANTIC_ID.PRIME_ANCIENNETE;
     if (key.includes('equipe')) return SEMANTIC_ID.PRIME_EQUIPE;
     if (key.includes('vacances')) return SEMANTIC_ID.PRIME_VACANCES;
+    if (key.includes('astreinte')) return SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE;
+    if (key.includes('panier')) return SEMANTIC_ID.PRIME_PANIER_NUIT;
+    if (key.includes('habillage') || key.includes('deshabillage')) return SEMANTIC_ID.PRIME_HABILLAGE_DESHABILLAGE;
+    if (key.includes('deplacement') || key.includes('trajet') || key.includes('transport')) return SEMANTIC_ID.PRIME_DEPLACEMENT_PRO;
     return primeDef?.id || '';
 }

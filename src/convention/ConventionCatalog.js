@@ -36,6 +36,7 @@ export function getConventionPrimeDefs() {
                 seuil: CONFIG.ANCIENNETE.seuil,
                 plafond: CONFIG.ANCIENNETE.plafond,
                 tauxParClasse: CONFIG.TAUX_ANCIENNETE,
+                inclusDansSMH: CONFIG.ANCIENNETE.inclusDansSMH === true,
                 formule: 'Point × Taux × Années × 12'
             }
         },
@@ -50,6 +51,7 @@ export function getConventionPrimeDefs() {
                 stateKeyActif: 'travailEquipe',
                 postesMensuels: CONFIG.PRIME_EQUIPE_POSTES_MENSUELS_DEFAUT ?? 22,
                 minutesParPoste: CONFIG.PRIME_EQUIPE_MINUTES_PAR_POSTE ?? 30,
+                inclusDansSMH: false,
                 ratioSMHHoraire: 0.5,
                 formule: 'Nombre de postes/mois × (30 min × SMH horaire de base 35h) × 12'
             }
