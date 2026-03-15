@@ -8,6 +8,7 @@ import {
     calculateSalaireDuPourMois
 } from '../../src/arretees/ArreteesCalculator.js';
 import { CONFIG } from '../../src/core/config.js';
+import { CONVENTION_MODALITES_PRIMES } from '../../src/convention/ConventionCatalog.js';
 
 describe('Arriérés - Calculs Fonctionnels', () => {
     const stateBase = {
@@ -216,9 +217,9 @@ describe('Arriérés - Calculs Fonctionnels', () => {
         });
 
         it('devrait refléter les modalités nationales astreinte en mode complet pour les arriérés', () => {
-            const prevAstreinte = JSON.parse(JSON.stringify(CONFIG.MODALITES_NATIONALES.astreinteDisponibilite));
-            CONFIG.MODALITES_NATIONALES.astreinteDisponibilite.modeCalcul = 'horaire';
-            CONFIG.MODALITES_NATIONALES.astreinteDisponibilite.valeurHoraire = 2;
+            const prevAstreinte = JSON.parse(JSON.stringify(CONVENTION_MODALITES_PRIMES.astreinteDisponibilite));
+            CONVENTION_MODALITES_PRIMES.astreinteDisponibilite.modeCalcul = 'horaire';
+            CONVENTION_MODALITES_PRIMES.astreinteDisponibilite.valeurHoraire = 2;
             try {
                 const stateSans = {
                     ...stateBase,
@@ -244,7 +245,7 @@ describe('Arriérés - Calculs Fonctionnels', () => {
                 );
                 expect(annuelAvec - annuelSans).toBe(240); // 10h * 2€ * 12
             } finally {
-                CONFIG.MODALITES_NATIONALES.astreinteDisponibilite = prevAstreinte;
+                CONVENTION_MODALITES_PRIMES.astreinteDisponibilite = prevAstreinte;
             }
         });
 

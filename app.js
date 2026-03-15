@@ -35,8 +35,8 @@ const state = {
     experiencePro: 0,            // Expérience professionnelle (Barème débutants F11/F12)
     
     // === CONDITIONS DE TRAVAIL (Non-Cadres) ===
-    typeNuit: 'aucun',           // 'aucun', 'poste-nuit', 'poste-matin' (CCN)
-    heuresNuit: 0,               // Heures de nuit mensuelles (CCN)
+    typeNuit: 'aucun',           // 'aucun', 'poste-nuit', 'poste-matin' (CCNM)
+    heuresNuit: 0,               // Heures de nuit mensuelles (CCNM)
     travailDimanche: false,      // Travail le dimanche
     heuresDimanche: 0,           // Heures dimanche mensuelles
     travailHeuresSup: false,     // Heures supplémentaires
@@ -1701,140 +1701,54 @@ function resolveNationalPrimeValue(semanticId, modaliteConfig, rawConfigValue) {
 }
 
 function getNationalHourlyPrimeDefs(agreement) {
-    const modalites = CONFIG?.MODALITES_NATIONALES || {};
-    const astreinte = modalites.astreinteDisponibilite || {};
-    const intervention = modalites.interventionAstreinte || {};
-    const panier = modalites.panierNuit || {};
-    const habillage = modalites.habillageDeshabillage || {};
-    const deplacement = modalites.deplacementProfessionnel || {};
-
-    const ccnPrimeEquipeDef = {
-        id: 'primeEquipe',
-        semanticId: 'primeEquipe',
-        label: 'Prime d\'équipe',
-        source: 'convention',
-        valueType: 'horaire',
-        stateKeyActif: 'travailEquipe',
-        stateKeyHeures: 'heuresEquipe',
-        autoHeures: true,
-        unit: '€/h',
-        valeurAccord: null,
-        step: 0.01,
-        defaultHeures: CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67,
-        tooltip: buildPrimeEquipeTooltip(agreement, null),
-        sourceArticle: CONFIG?.TOOLTIP_TEXTS?.primeEquipe?.sourceArticle || '',
-        conditionTexte: CONFIG?.TOOLTIP_TEXTS?.primeEquipe?.conditionTexte || '',
-        requiresKeys: [],
-        nonCumulAvec: []
-    };
-
-    const defs = [
-        ccnPrimeEquipeDef,
-        {
-            id: 'primeAstreinteDisponibilite',
-            semanticId: 'primeAstreinteDisponibilite',
-            label: 'Prime astreinte disponibilité',
-            source: 'convention',
-            valueType: 'horaire',
-            stateKeyActif: astreinte.stateKeyActif || 'primeAstreinteDisponibilite',
-            stateKeyHeures: astreinte.stateKeyHeures || 'heuresAstreinteDisponibilite',
-            autoHeures: false,
-            unit: astreinte.modeCalcul === 'forfaitPeriode' ? '€/période' : (astreinte.unit || '€/h'),
-            valeurAccord: resolveNationalPrimeValue(
-                'primeAstreinteDisponibilite',
-                astreinte,
-                astreinte.modeCalcul === 'forfaitPeriode' ? astreinte.valeurForfaitPeriode : astreinte.valeurHoraire
-            ),
-            defaultHeures: Number(astreinte.defaultHeures ?? 0),
-            inputUnitLabel: astreinte.inputUnitLabel || 'heures/mois',
-            allowUserOverride: astreinte.allowUserOverride === true,
-            tooltip: astreinte.tooltip || '',
-            sourceArticle: astreinte.sourceArticle || '',
-            conditionTexte: astreinte.conditionTexte || '',
-            requiresKeys: [],
-            nonCumulAvec: Array.isArray(astreinte.nonCumulAvec) ? astreinte.nonCumulAvec : []
-        },
-        {
-            id: 'majorationInterventionAstreinte',
-            semanticId: 'majorationInterventionAstreinte',
-            label: 'Majoration intervention astreinte',
-            source: 'convention',
-            valueType: 'majorationHoraire',
-            stateKeyActif: intervention.stateKeyActif || 'majorationInterventionAstreinte',
-            stateKeyHeures: intervention.stateKeyHeures || 'heuresInterventionAstreinte',
-            autoHeures: false,
-            unit: intervention.unit || '%',
-            valeurAccord: resolveNationalPrimeValue('majorationInterventionAstreinte', intervention, intervention.tauxMajoration),
-            defaultHeures: Number(intervention.defaultHeures ?? 0),
-            inputUnitLabel: intervention.inputUnitLabel || 'heures/mois',
-            allowUserOverride: intervention.allowUserOverride === true,
-            tooltip: intervention.tooltip || '',
-            sourceArticle: intervention.sourceArticle || '',
-            conditionTexte: intervention.conditionTexte || '',
-            requiresKeys: Array.isArray(intervention.requiresKeys) ? intervention.requiresKeys : [],
-            nonCumulAvec: Array.isArray(intervention.nonCumulAvec) ? intervention.nonCumulAvec : []
-        },
-        {
-            id: 'primePanierNuit',
-            semanticId: 'primePanierNuit',
-            label: 'Prime panier nuit',
-            source: 'convention',
-            valueType: 'horaire',
-            stateKeyActif: panier.stateKeyActif || 'primePanierNuit',
-            stateKeyHeures: panier.stateKeyHeures || 'heuresPanierNuit',
-            autoHeures: false,
-            unit: panier.unit || '€/h',
-            valeurAccord: resolveNationalPrimeValue('primePanierNuit', panier, panier.valeurHoraire),
-            defaultHeures: Number(panier.defaultHeures ?? 0),
-            inputUnitLabel: panier.inputUnitLabel || 'heures/mois',
-            allowUserOverride: panier.allowUserOverride === true,
-            tooltip: panier.tooltip || '',
-            sourceArticle: panier.sourceArticle || '',
-            conditionTexte: panier.conditionTexte || '',
-            requiresKeys: [],
-            nonCumulAvec: Array.isArray(panier.nonCumulAvec) ? panier.nonCumulAvec : []
-        },
-        {
-            id: 'primeHabillageDeshabillage',
-            semanticId: 'primeHabillageDeshabillage',
-            label: 'Prime habillage / déshabillage',
-            source: 'convention',
-            valueType: 'horaire',
-            stateKeyActif: habillage.stateKeyActif || 'primeHabillageDeshabillage',
-            stateKeyHeures: habillage.stateKeyHeures || 'heuresHabillageDeshabillage',
-            autoHeures: false,
-            unit: habillage.unit || '€/h',
-            valeurAccord: resolveNationalPrimeValue('primeHabillageDeshabillage', habillage, habillage.valeurHoraire),
-            defaultHeures: Number(habillage.defaultHeures ?? 0),
-            inputUnitLabel: habillage.inputUnitLabel || 'heures/mois',
-            allowUserOverride: habillage.allowUserOverride === true,
-            tooltip: habillage.tooltip || '',
-            sourceArticle: habillage.sourceArticle || '',
-            conditionTexte: habillage.conditionTexte || '',
-            requiresKeys: [],
-            nonCumulAvec: Array.isArray(habillage.nonCumulAvec) ? habillage.nonCumulAvec : []
-        },
-        {
-            id: 'primeDeplacementProfessionnel',
-            semanticId: 'primeDeplacementProfessionnel',
-            label: 'Prime déplacements professionnels',
-            source: 'convention',
-            valueType: 'horaire',
-            stateKeyActif: deplacement.stateKeyActif || 'primeDeplacementProfessionnel',
-            stateKeyHeures: deplacement.stateKeyHeures || 'heuresDeplacementProfessionnel',
-            autoHeures: false,
-            unit: deplacement.unit || '€/h',
-            valeurAccord: resolveNationalPrimeValue('primeDeplacementProfessionnel', deplacement, deplacement.valeurHoraire),
-            defaultHeures: Number(deplacement.defaultHeures ?? 0),
-            inputUnitLabel: deplacement.inputUnitLabel || 'heures/mois',
-            allowUserOverride: deplacement.allowUserOverride === true,
-            tooltip: deplacement.tooltip || '',
-            sourceArticle: deplacement.sourceArticle || '',
-            conditionTexte: deplacement.conditionTexte || '',
-            requiresKeys: [],
-            nonCumulAvec: Array.isArray(deplacement.nonCumulAvec) ? deplacement.nonCumulAvec : []
-        }
-    ];
+    const conventionDefs = (typeof window.getConventionPrimeDefsFromModules === 'function')
+        ? (window.getConventionPrimeDefsFromModules() || [])
+        : [];
+    const targetSemanticIds = new Set([
+        'primeEquipe',
+        'primeAstreinteDisponibilite',
+        'majorationInterventionAstreinte',
+        'primePanierNuit',
+        'primeHabillageDeshabillage',
+        'primeDeplacementProfessionnel'
+    ]);
+    const primeEquipeTexts = CONFIG?.TOOLTIP_TEXTS?.primeEquipe || {};
+    const defs = conventionDefs
+        .filter((def) => targetSemanticIds.has(def?.semanticId))
+        .map((def) => {
+            const cfg = def?.config || {};
+            const isPrimeEquipe = def.semanticId === 'primeEquipe';
+            const valueType = def.valueKind === 'majorationHoraire' ? 'majorationHoraire' : 'horaire';
+            const unit = cfg.unit || (valueType === 'majorationHoraire' ? '%' : '€/h');
+            const rawConfigValue = valueType === 'majorationHoraire'
+                ? cfg.taux
+                : (cfg.modeCalcul === 'forfaitPeriode' ? cfg.valeurForfaitPeriode : cfg.tauxHoraire);
+            const value = isPrimeEquipe
+                ? null
+                : resolveNationalPrimeValue(def.semanticId, cfg, rawConfigValue);
+            return {
+                id: def.id,
+                semanticId: def.semanticId,
+                label: isPrimeEquipe ? 'Prime d\'équipe' : String(def.label || '').replace(/\s+conventionnelle?/gi, '').trim(),
+                source: 'convention',
+                valueType,
+                stateKeyActif: cfg.stateKeyActif,
+                stateKeyHeures: cfg.stateKeyHeures,
+                autoHeures: isPrimeEquipe ? true : !cfg.stateKeyHeures,
+                unit,
+                valeurAccord: value,
+                step: 0.01,
+                defaultHeures: Number(cfg.defaultHeures ?? (isPrimeEquipe ? (CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67) : 0)),
+                inputUnitLabel: cfg.inputUnitLabel || 'heures/mois',
+                allowUserOverride: cfg.allowUserOverride === true,
+                tooltip: isPrimeEquipe ? buildPrimeEquipeTooltip(agreement, null) : (cfg.tooltip || ''),
+                sourceArticle: cfg.sourceArticle || (isPrimeEquipe ? (primeEquipeTexts.sourceArticle || '') : ''),
+                conditionTexte: cfg.conditionTexte || (isPrimeEquipe ? (primeEquipeTexts.conditionTexte || '') : ''),
+                requiresKeys: Array.isArray(cfg.requiresKeys) ? cfg.requiresKeys : [],
+                nonCumulAvec: Array.isArray(cfg.nonCumulAvec) ? cfg.nonCumulAvec : [],
+                uiSection: cfg.uiSection || 'main'
+            };
+        });
 
     return defs.filter((def) => def && def.stateKeyActif);
 }
@@ -1878,13 +1792,11 @@ function updateConditionsTravailDisplay() {
             conditionTexte: prime.conditionTexte || ccnPrimeEquipeDef?.conditionTexte || ''
         };
     });
-    const extraSemanticIds = new Set([
-        'primeAstreinteDisponibilite',
-        'majorationInterventionAstreinte',
-        'primePanierNuit',
-        'primeHabillageDeshabillage',
-        'primeDeplacementProfessionnel'
-    ]);
+    const extraSemanticIds = new Set(
+        nationalPrimesHoraires
+            .filter((p) => (p.uiSection || 'main') === 'extra')
+            .map((p) => p.semanticId || p.id)
+    );
     const mergeBySemantic = (baseDefs, overrideDefs) => {
         const orderedKeys = [];
         const bySemantic = new Map();
@@ -1897,7 +1809,7 @@ function updateConditionsTravailDisplay() {
         (overrideDefs || []).forEach(upsertPrime);
         return orderedKeys.map((key) => bySemantic.get(key)).filter(Boolean);
     };
-    const nationalMainPrimes = ccnPrimeEquipeDef ? [ccnPrimeEquipeDef] : [];
+    const nationalMainPrimes = nationalPrimesHoraires.filter((p) => !extraSemanticIds.has(p.semanticId || p.id));
     const nationalExtraPrimes = nationalPrimesHoraires.filter((p) => extraSemanticIds.has(p.semanticId || p.id));
     const accordMainPrimes = accordPrimesHoraires.filter((p) => !extraSemanticIds.has(p.semanticId || p.id));
     const accordExtraPrimes = accordPrimesHoraires.filter((p) => extraSemanticIds.has(p.semanticId || p.id));
@@ -2235,7 +2147,7 @@ function buildAccordOptionsUI() {
 }
 
 /**
- * Mettre à jour les informations de taux appliqués (CCN vs accord)
+ * Mettre à jour les informations de taux appliqués (CCNM vs accord)
  */
 function getTauxHoraireReferenceUI(agreement) {
     const heuresBase = CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67;
@@ -2268,7 +2180,7 @@ function updateTauxInfo() {
     const tauxRef = getTauxHoraireReferenceUI(agreement);
     const suffixTauxRef = tauxRef.isMajoreHS ? ` · Base horaire majorée HS (x${String(tauxRef.coeff).replace('.', ',')})` : ' · Base 35h';
 
-    // Taux de nuit (taux accord si présent, sinon CCN)
+    // Taux de nuit (taux accord si présent, sinon CCNM)
     if (tauxNuitInfo) {
         if (state.typeNuit !== 'aucun') {
             if (state.accordActif && agreement && agreement.majorations?.nuit?.posteNuit != null) {
@@ -2277,7 +2189,7 @@ function updateTauxInfo() {
                 tauxNuitInfo.className = 'taux-applique accord';
             } else {
                 const pctCCN = Math.round((CONFIG.MAJORATIONS_CCN?.nuit ?? 0.15) * 100);
-                tauxNuitInfo.textContent = `Taux CCN : +${pctCCN}%${suffixTauxRef}`;
+                tauxNuitInfo.textContent = `Taux CCNM : +${pctCCN}%${suffixTauxRef}`;
                 tauxNuitInfo.className = 'taux-applique';
             }
         } else {
@@ -2285,7 +2197,7 @@ function updateTauxInfo() {
         }
     }
 
-    // Taux dimanche (taux accord si présent, sinon CCN +100%)
+    // Taux dimanche (taux accord si présent, sinon CCNM +100%)
     if (tauxDimancheInfo) {
         if (state.travailDimanche) {
             if (state.accordActif && agreement && agreement.majorations?.dimanche != null) {
@@ -2297,7 +2209,7 @@ function updateTauxInfo() {
                 tauxDimancheInfo.className = 'taux-applique accord';
             } else {
                 const pctCCN = Math.round((CONFIG.MAJORATIONS_CCN?.dimanche ?? 1) * 100);
-                tauxDimancheInfo.textContent = `Taux CCN : +${pctCCN}%${suffixTauxRef}`;
+                tauxDimancheInfo.textContent = `Taux CCNM : +${pctCCN}%${suffixTauxRef}`;
                 tauxDimancheInfo.className = 'taux-applique';
             }
         } else {
@@ -2699,7 +2611,7 @@ function updateRemunerationDisplay(remuneration) {
 
 /**
  * Agréger les détails de rémunération pour épurer l'affichage.
- * Séparation CCN / Accord d'entreprise : le badge accord ne s'affiche que sur les lignes 100 % accord.
+ * Séparation CCNM / Accord d'entreprise : le badge accord ne s'affiche que sur les lignes 100 % accord.
  */
 function aggregateRemunerationDetails(details) {
     const conventionLabel = getTooltipOrigins().ccnm;
@@ -2717,7 +2629,7 @@ function aggregateRemunerationDetails(details) {
         if (detail.isBase) {
             aggregated.push({
                 ...detail,
-                tooltipOrigin: window.LABELS?.baseSalaryOriginLabel || 'Assiette salaire minima (SMH, Art. 140 CCN)',
+                tooltipOrigin: window.LABELS?.baseSalaryOriginLabel || 'Assiette salaire minima (SMH, Art. 140 CCNM)',
                 tooltipDetail: window.LABELS?.baseSalaryTooltipDetail || 'Salaire de base retenu dans l\'assiette du salaire minima hiérarchique (SMH).'
             });
             if (baseLineIndex === -1) {
@@ -2743,11 +2655,11 @@ function aggregateRemunerationDetails(details) {
                 isPositive: false,
                 isAgreement: isAccordDetail(detail),
                 isSMHSubLine: true,
-                tooltipOrigin: window.LABELS?.smhIncludedOriginLabel || 'Incluse dans le salaire minima (Art. 140 CCN) — ne s\'ajoute pas au total',
+                tooltipOrigin: window.LABELS?.smhIncludedOriginLabel || 'Incluse dans le salaire minima (Art. 140 CCNM) — ne s\'ajoute pas au total',
                 tooltipDetail: compactTooltip
             });
         }
-        // Agréger les majorations en CCN vs accord
+        // Agréger les majorations en CCNM vs accord
         else if ((detail.label.includes('Majoration') || detail.label.includes('Forfait'))
             && detail.semanticId !== 'majorationInterventionAstreinte') {
             if (isAccordDetail(detail)) {
@@ -2758,7 +2670,7 @@ function aggregateRemunerationDetails(details) {
                 majorationsBreakdownCCN.push({ label: detail.label, value: detail.value, isAgreement: false });
             }
         }
-        // Primes hors SMH : afficher une ligne par prime (CCN et accord)
+        // Primes hors SMH : afficher une ligne par prime (CCNM et accord)
         else if (detail.isPositive && !detail.isBase) {
             const isPrimeDetail = (detail.semanticId && String(detail.semanticId).startsWith('prime'))
                 || /prime/i.test(detail.label || '');
@@ -2797,7 +2709,7 @@ function aggregateRemunerationDetails(details) {
     const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
     const nomAccord = getAccordNomCourt(agreement) || 'accord';
 
-    // Lignes agrégées séparées CCN / Accord d'entreprise (badge + tooltip pour l'origine)
+    // Lignes agrégées séparées CCNM / Accord d'entreprise (badge + tooltip pour l'origine)
     if (majorationsCCN > 0) {
         aggregated.push({
             label: 'Majorations et forfaits',
@@ -2877,8 +2789,8 @@ function updateHintDisplay(remuneration) {
         hints.push({
             type: 'info',
             content: `
-                <strong>Majorations CCN appliquées</strong><br>
-                Taux CCN : nuit +${pctNuitCCN}%, dimanche +${pctDimCCN}%.<br>
+                <strong>Majorations CCNM appliquées</strong><br>
+                Taux CCNM : nuit +${pctNuitCCN}%, dimanche +${pctDimCCN}%.<br>
                 <small>Activez un accord d'entreprise pour les taux entreprise.</small>
             `
         });
@@ -2888,16 +2800,16 @@ function updateHintDisplay(remuneration) {
     if (hints.length === 0) {
         const isCadre = typeof remuneration.classe === 'number' && remuneration.classe >= CONFIG.SEUIL_CADRE;
         if (isCadre) {
-            // Cadres : pas de prime d'ancienneté CCN, message neutre
+            // Cadres : pas de prime d'ancienneté CCNM, message neutre
             hints.push({
                 type: 'info',
                 content: 'Ce montant est le minimum conventionnel.'
             });
         } else {
-            // Non-cadres : prime d'ancienneté CCN (ou accord si accord actif)
+            // Non-cadres : prime d'ancienneté CCNM (ou accord si accord actif)
             const agreementAnc = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
             const seuilAccord = agreementAnc?.anciennete?.seuil;
-            const seuilAnc = state.accordActif && typeof seuilAccord === 'number' ? `${seuilAccord} ans (${agreementAnc?.nomCourt || 'accord'})` : '3 ans (CCN)';
+            const seuilAnc = state.accordActif && typeof seuilAccord === 'number' ? `${seuilAccord} ans (${agreementAnc?.nomCourt || 'accord'})` : '3 ans (CCNM)';
             const hasAnciennete = state.anciennete >= 3 || (state.accordActif && typeof seuilAccord === 'number' && state.anciennete >= seuilAccord);
             hints.push({
                 type: 'info',
@@ -3817,7 +3729,7 @@ function buildSmhHintHtml() {
     const { included, excluded } = getSmhScopeLabels();
     const includedLabel = included.length ? included.join(', ') : 'aucun élément additionnel actif';
     const excludedLabel = excluded.length ? excluded.join(', ') : 'aucun';
-    return `<strong>Comment saisir votre brut (Art. 140 CCN)</strong><br><strong>Pris en compte</strong> : salaire minima + éléments inclus.<br><strong>À inclure</strong> : ${includedLabel}.<br><strong>À exclure</strong> : ${excludedLabel}.`;
+    return `<strong>Comment saisir votre brut (Art. 140 CCNM)</strong><br><strong>Pris en compte</strong> : salaire minima + éléments inclus.<br><strong>À inclure</strong> : ${includedLabel}.<br><strong>À exclure</strong> : ${excludedLabel}.`;
 }
 
 function getSmhScopeLabels(options = {}) {
@@ -3839,7 +3751,7 @@ function buildSmhTooltipText() {
     const excludedLines = excluded.length
         ? excluded.map((item) => `• ${item}`).join('<br>')
         : '• aucun';
-    return `<strong>Salaire dû (salaire minima seul)</strong> : assiette SMH (Art. 140 CCN).<br><strong>À inclure :</strong><br>${includedLines}<br><strong>À exclure :</strong><br>${excludedLines}`;
+    return `<strong>Salaire dû (salaire minima seul)</strong> : assiette SMH (Art. 140 CCNM).<br><strong>À inclure :</strong><br>${includedLines}<br><strong>À exclure :</strong><br>${excludedLines}`;
 }
 
 function updateArreteesSmhTooltip() {
@@ -3965,7 +3877,7 @@ function initTimeline() {
             if (primesCeMois > 0) salaireMensuelDu += primesCeMois;
         }
 
-        // Proratisation premier mois (CCNM Art. 139, 103.5.1, 103.5.2) : salaire au prorata des jours ouvrés (config CCN, dateUtils)
+        // Proratisation premier mois (CCNM Art. 139, 103.5.1, 103.5.2) : salaire au prorata des jours ouvrés (config CCNM, dateUtils)
         const estPremierMois = currentDate.getFullYear() === dateEmbaucheObj.getFullYear() &&
             currentDate.getMonth() === dateEmbaucheObj.getMonth();
         if (estPremierMois && typeof window.computeSalaireProrataEntreeFromModules === 'function') {
@@ -4937,7 +4849,7 @@ function getArreteesDataForPdf() {
 /**
  * Ouvrir le modal des infos personnelles avant génération du PDF.
  * Stocke les données déjà validées sur l’overlay pour que la génération ne dépende pas de window.arreteesDataFinal au moment du clic.
- * Conformément à la CCN, les arriérés doivent être calculés sur le SMH : la génération est bloquée si « SMH seul » n'est pas coché.
+ * Conformément à la CCNM, les arriérés doivent être calculés sur le SMH : la génération est bloquée si « SMH seul » n'est pas coché.
  */
 function openPdfInfosModal() {
     let result = getArreteesDataForPdf();

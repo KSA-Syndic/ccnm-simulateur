@@ -5,8 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { computePrime } from '../../src/remuneration/PrimeCalculator.js';
-import { getConventionPrimeDefs } from '../../src/convention/ConventionCatalog.js';
-import { CONFIG } from '../../src/core/config.js';
+import { getConventionPrimeDefs, CONVENTION_MODALITES_PRIMES } from '../../src/convention/ConventionCatalog.js';
 import { SEMANTIC_ID, SOURCE_ACCORD, SOURCE_CONVENTION } from '../../src/core/RemunerationTypes.js';
 
 describe('PrimeCalculator', () => {
@@ -217,9 +216,9 @@ describe('PrimeCalculator', () => {
 
     describe('computePrime - modalités nationales astreinte', () => {
         it('calcule l’astreinte disponibilité en mode horaire', () => {
-            const previous = JSON.parse(JSON.stringify(CONFIG.MODALITES_NATIONALES.astreinteDisponibilite));
-            CONFIG.MODALITES_NATIONALES.astreinteDisponibilite.modeCalcul = 'horaire';
-            CONFIG.MODALITES_NATIONALES.astreinteDisponibilite.valeurHoraire = 4;
+            const previous = JSON.parse(JSON.stringify(CONVENTION_MODALITES_PRIMES.astreinteDisponibilite));
+            CONVENTION_MODALITES_PRIMES.astreinteDisponibilite.modeCalcul = 'horaire';
+            CONVENTION_MODALITES_PRIMES.astreinteDisponibilite.valeurHoraire = 4;
             try {
                 const def = getConventionPrimeDefs().find(d => d.semanticId === SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE);
                 const r = computePrime(def, {
@@ -228,14 +227,14 @@ describe('PrimeCalculator', () => {
                 expect(r.amount).toBe(480); // 10h * 4€ * 12
                 expect(r.meta?.modeCalcul).toBe('horaire');
             } finally {
-                CONFIG.MODALITES_NATIONALES.astreinteDisponibilite = previous;
+                CONVENTION_MODALITES_PRIMES.astreinteDisponibilite = previous;
             }
         });
 
         it('calcule l’astreinte disponibilité en mode forfait par période', () => {
-            const previous = JSON.parse(JSON.stringify(CONFIG.MODALITES_NATIONALES.astreinteDisponibilite));
-            CONFIG.MODALITES_NATIONALES.astreinteDisponibilite.modeCalcul = 'forfaitPeriode';
-            CONFIG.MODALITES_NATIONALES.astreinteDisponibilite.valeurForfaitPeriode = 35;
+            const previous = JSON.parse(JSON.stringify(CONVENTION_MODALITES_PRIMES.astreinteDisponibilite));
+            CONVENTION_MODALITES_PRIMES.astreinteDisponibilite.modeCalcul = 'forfaitPeriode';
+            CONVENTION_MODALITES_PRIMES.astreinteDisponibilite.valeurForfaitPeriode = 35;
             try {
                 const def = getConventionPrimeDefs().find(d => d.semanticId === SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE);
                 const r = computePrime(def, {
@@ -244,14 +243,14 @@ describe('PrimeCalculator', () => {
                 expect(r.amount).toBe(1680); // 4 périodes * 35€ * 12
                 expect(r.meta?.modeCalcul).toBe('forfaitPeriode');
             } finally {
-                CONFIG.MODALITES_NATIONALES.astreinteDisponibilite = previous;
+                CONVENTION_MODALITES_PRIMES.astreinteDisponibilite = previous;
             }
         });
 
         it('calcule l’intervention d’astreinte avec base horaire incluse', () => {
-            const previous = JSON.parse(JSON.stringify(CONFIG.MODALITES_NATIONALES.interventionAstreinte));
-            CONFIG.MODALITES_NATIONALES.interventionAstreinte.tauxMajoration = 0.5;
-            CONFIG.MODALITES_NATIONALES.interventionAstreinte.inclureBaseHoraire = true;
+            const previous = JSON.parse(JSON.stringify(CONVENTION_MODALITES_PRIMES.interventionAstreinte));
+            CONVENTION_MODALITES_PRIMES.interventionAstreinte.tauxMajoration = 0.5;
+            CONVENTION_MODALITES_PRIMES.interventionAstreinte.inclureBaseHoraire = true;
             try {
                 const def = getConventionPrimeDefs().find(d => d.semanticId === SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE);
                 const r = computePrime(def, {
@@ -267,7 +266,7 @@ describe('PrimeCalculator', () => {
                 expect(r.amount).toBe(3600); // 10h * 20€ * (1+50%) * 12
                 expect(r.meta?.inclureBaseHoraire).toBe(true);
             } finally {
-                CONFIG.MODALITES_NATIONALES.interventionAstreinte = previous;
+                CONVENTION_MODALITES_PRIMES.interventionAstreinte = previous;
             }
         });
     });

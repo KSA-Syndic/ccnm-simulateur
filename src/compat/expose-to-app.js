@@ -16,6 +16,7 @@ import { getActiveAgreement } from '../agreements/AgreementLoader.js';
 import { state as moduleState } from '../core/state.js';
 import { computeSalaireProrataEntree } from '../utils/dateUtils.js';
 import { getSmhHourlyBaseRate, getSmhDailyBaseRate } from '../remuneration/RateCalculator.js';
+import { getConventionPrimeDefs } from '../convention/ConventionCatalog.js';
 
 /**
  * Synchroniser le state de app.js vers le state des modules
@@ -210,4 +211,8 @@ window.getSmhDailyBaseRateFromModules = function(smhAnnual, options = {}) {
     const tauxActivitePct = Number(options.tauxActivitePct);
     const activityRate = Number.isFinite(tauxActivitePct) ? (tauxActivitePct / 100) : 1;
     return getSmhDailyBaseRate(Number(smhAnnual) || 0, { activityRate });
+};
+
+window.getConventionPrimeDefsFromModules = function() {
+    return getConventionPrimeDefs();
 };

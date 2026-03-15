@@ -27,7 +27,7 @@ describe('Config consistency (legacy/runtime vs module)', () => {
 
     it('garde les modalités nationales synchronisées', () => {
         const legacy = loadLegacyConfig();
-        expect(legacy?.MODALITES_NATIONALES).toEqual(MODULE_CONFIG.MODALITES_NATIONALES);
+        expect(legacy?.INDEMNITE_REPAS_NUIT_ACOSS_BY_YEAR).toEqual(MODULE_CONFIG.INDEMNITE_REPAS_NUIT_ACOSS_BY_YEAR);
     });
 });
 import fs from 'node:fs';

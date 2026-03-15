@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { calculateAnnualRemuneration, getMontantAnnuelSMHSeul } from '../../src/remuneration/RemunerationCalculator.js';
 import { CONFIG } from '../../src/core/config.js';
+import { CONVENTION_MODALITES_PRIMES } from '../../src/convention/ConventionCatalog.js';
 
 describe('RemunerationCalculator', () => {
     const stateBase = {
@@ -234,12 +235,12 @@ describe('RemunerationCalculator', () => {
         });
 
         it('devrait intégrer les modalités nationales d’astreinte dans le total full', () => {
-            const prevAstreinte = JSON.parse(JSON.stringify(CONFIG.MODALITES_NATIONALES.astreinteDisponibilite));
-            const prevInter = JSON.parse(JSON.stringify(CONFIG.MODALITES_NATIONALES.interventionAstreinte));
-            CONFIG.MODALITES_NATIONALES.astreinteDisponibilite.modeCalcul = 'horaire';
-            CONFIG.MODALITES_NATIONALES.astreinteDisponibilite.valeurHoraire = 3;
-            CONFIG.MODALITES_NATIONALES.interventionAstreinte.tauxMajoration = 0.25;
-            CONFIG.MODALITES_NATIONALES.interventionAstreinte.inclureBaseHoraire = true;
+            const prevAstreinte = JSON.parse(JSON.stringify(CONVENTION_MODALITES_PRIMES.astreinteDisponibilite));
+            const prevInter = JSON.parse(JSON.stringify(CONVENTION_MODALITES_PRIMES.interventionAstreinte));
+            CONVENTION_MODALITES_PRIMES.astreinteDisponibilite.modeCalcul = 'horaire';
+            CONVENTION_MODALITES_PRIMES.astreinteDisponibilite.valeurHoraire = 3;
+            CONVENTION_MODALITES_PRIMES.interventionAstreinte.tauxMajoration = 0.25;
+            CONVENTION_MODALITES_PRIMES.interventionAstreinte.inclureBaseHoraire = true;
             try {
                 const state = {
                     ...stateBase,
@@ -260,15 +261,15 @@ describe('RemunerationCalculator', () => {
                 expect(astreinte.value).toBe(288); // 8h * 3€ * 12
                 expect(result.total).toBeGreaterThan(CONFIG.SMH[5] + 288);
             } finally {
-                CONFIG.MODALITES_NATIONALES.astreinteDisponibilite = prevAstreinte;
-                CONFIG.MODALITES_NATIONALES.interventionAstreinte = prevInter;
+                CONVENTION_MODALITES_PRIMES.astreinteDisponibilite = prevAstreinte;
+                CONVENTION_MODALITES_PRIMES.interventionAstreinte = prevInter;
             }
         });
 
         it('devrait appliquer un override utilisateur sur une modalité nationale déductible', () => {
-            const prevInter = JSON.parse(JSON.stringify(CONFIG.MODALITES_NATIONALES.interventionAstreinte));
-            CONFIG.MODALITES_NATIONALES.interventionAstreinte.allowUserOverride = true;
-            CONFIG.MODALITES_NATIONALES.interventionAstreinte.tauxMajoration = 0.25;
+            const prevInter = JSON.parse(JSON.stringify(CONVENTION_MODALITES_PRIMES.interventionAstreinte));
+            CONVENTION_MODALITES_PRIMES.interventionAstreinte.allowUserOverride = true;
+            CONVENTION_MODALITES_PRIMES.interventionAstreinte.tauxMajoration = 0.25;
             try {
                 const stateSansOverride = {
                     ...stateBase,
@@ -290,7 +291,7 @@ describe('RemunerationCalculator', () => {
                 const avecOverride = calculateAnnualRemuneration(stateAvecOverride, null, { mode: 'full' });
                 expect(avecOverride.total).toBeGreaterThan(sansOverride.total);
             } finally {
-                CONFIG.MODALITES_NATIONALES.interventionAstreinte = prevInter;
+                CONVENTION_MODALITES_PRIMES.interventionAstreinte = prevInter;
             }
         });
 
