@@ -105,7 +105,8 @@ export function getConventionPrimeDefs() {
                 sourceArticle: interventionAstreinte.sourceArticle || '',
                 conditionTexte: interventionAstreinte.conditionTexte || '',
                 tooltip: interventionAstreinte.tooltip || '',
-                requiresKeys: Array.isArray(interventionAstreinte.requiresKeys) ? interventionAstreinte.requiresKeys : []
+                requiresKeys: Array.isArray(interventionAstreinte.requiresKeys) ? interventionAstreinte.requiresKeys : [],
+                nonCumulAvec: Array.isArray(interventionAstreinte.nonCumulAvec) ? interventionAstreinte.nonCumulAvec : []
             }
         },
         {

@@ -187,13 +187,13 @@ export const CONFIG = {
         astreinteDisponibilite: {
             actif: true,
             modeCalcul: 'horaire',            // 'horaire' | 'forfaitPeriode'
-            valeurHoraire: 0,                 // €/h de disponibilité astreinte (mode horaire)
+            valeurHoraire: 1.2,               // €/h de disponibilité astreinte (mode horaire)
             valeurForfaitPeriode: 0,          // € par période d'astreinte (mode forfaitPeriode)
             unit: '€/h',
             stateKeyActif: 'primeAstreinteDisponibilite',
             stateKeyHeures: 'heuresAstreinteDisponibilite',
             defaultHeures: 0,
-            inputUnitLabel: 'heures/mois',
+            inputUnitLabel: "heures d'astreinte/mois",
             inclusDansSMH: false,
             sourceArticle: 'Code du travail L3121-9, L3121-11, L3121-12',
             conditionTexte: 'Contrepartie d’astreinte obligatoire (financière ou repos) selon accord ou règles supplétives.',
@@ -201,27 +201,28 @@ export const CONFIG = {
         },
         interventionAstreinte: {
             actif: true,
-            tauxMajoration: 0,                // % du taux horaire (ex: 0.5 = +50%)
+            tauxMajoration: 0.25,             // % du taux horaire (ex: 0.5 = +50%)
             inclureBaseHoraire: true,         // true => heures × tauxHoraire × (1 + majoration)
             unit: '%',
             stateKeyActif: 'majorationInterventionAstreinte',
             stateKeyHeures: 'heuresInterventionAstreinte',
             defaultHeures: 0,
-            inputUnitLabel: 'heures/mois',
+            inputUnitLabel: "heures d'intervention/mois",
             inclusDansSMH: false,
             requiresKeys: ['primeAstreinteDisponibilite'],
+            nonCumulAvec: ['travailHeuresSup'],
             sourceArticle: 'Code du travail L3121-9 et L3121-10',
             conditionTexte: 'Le temps d’intervention est du travail effectif; seule la période de disponibilité est astreinte.',
-            tooltip: 'Intervention pendant astreinte: temps de travail effectif. Formule paramétrée sur taux horaire de référence, hors assiette SMH.'
+            tooltip: "Intervention pendant astreinte: temps de travail effectif (L3121-9). Non-cumul recommandé avec HS sur les mêmes heures."
         },
         panierNuit: {
             actif: true,
-            valeurHoraire: 0,                 // €/h ou équivalent paramétré entreprise
-            unit: '€/h',
+            valeurHoraire: 7.5,               // €/unité ou équivalent paramétré entreprise
+            unit: '€/unité',
             stateKeyActif: 'primePanierNuit',
-            stateKeyHeures: 'heuresPanierNuit',
+            stateKeyHeures: 'nbPaniersNuit',
             defaultHeures: 0,
-            inputUnitLabel: 'heures/mois',
+            inputUnitLabel: 'unités/mois',
             inclusDansSMH: false,
             sourceArticle: 'Accord collectif applicable / usage',
             conditionTexte: 'Prime de sujétion/indemnisation selon accord, distincte des majorations légales.',
@@ -229,7 +230,7 @@ export const CONFIG = {
         },
         habillageDeshabillage: {
             actif: true,
-            valeurHoraire: 0,                 // €/h ou équivalent paramétré entreprise
+            valeurHoraire: 0.8,               // €/h ou équivalent paramétré entreprise
             unit: '€/h',
             stateKeyActif: 'primeHabillageDeshabillage',
             stateKeyHeures: 'heuresHabillageDeshabillage',
@@ -242,10 +243,10 @@ export const CONFIG = {
         },
         deplacementProfessionnel: {
             actif: true,
-            valeurHoraire: 0,                 // €/h ou base équivalente paramétrée
+            valeurHoraire: 1,                 // €/h ou base équivalente paramétrée
             unit: '€/h',
             stateKeyActif: 'primeDeplacementProfessionnel',
-            stateKeyHeures: 'heuresDeplacementProfessionnel',
+            stateKeyHeures: 'heuresDeplacementCompense',
             defaultHeures: 0,
             inputUnitLabel: 'heures/mois',
             inclusDansSMH: false,

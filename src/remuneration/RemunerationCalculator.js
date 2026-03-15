@@ -602,6 +602,12 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         SEMANTIC_ID.PRIME_HABILLAGE_DESHABILLAGE,
         SEMANTIC_ID.PRIME_DEPLACEMENT_PRO
     ];
+    const resolveQuantiteSuffix = (def) => {
+        const inputUnitLabel = String(def?.config?.inputUnitLabel || '').toLowerCase();
+        if (inputUnitLabel.includes('unité')) return 'unités';
+        if (inputUnitLabel.includes('période')) return 'périodes';
+        return 'h';
+    };
     for (const semanticId of modalitesNationales) {
         const candidatesDefs = [];
         const defConv = convPrimeDefs.find(d => d.semanticId === semanticId);
@@ -632,10 +638,13 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
             label = `${r.label} (${nbPeriodes} périodes/mois × ${valeurForfaitPeriode}€)`;
         } else if (def.valueKind === 'horaire' && r.meta?.heures != null) {
             const taux = r.meta.tauxHoraire ?? 0;
+            const quantiteSuffix = resolveQuantiteSuffix(def);
+            const quantite = Number(r.meta.heures ?? 0);
+            const quantiteLabel = quantiteSuffix === 'h' ? `${quantite}h` : `${quantite} ${quantiteSuffix}`;
             if (isAgreementPrime) {
-                label = `${r.label} (${r.meta.heures}h × ${taux}€ ${agreement?.nomCourt || 'accord'})`;
+                label = `${r.label} (${quantiteLabel} × ${taux}€ ${agreement?.nomCourt || 'accord'})`;
             } else {
-                label = `${r.label} (${r.meta.heures}h × ${taux}€)`;
+                label = `${r.label} (${quantiteLabel} × ${taux}€)`;
             }
         } else if (def.valueKind === 'majorationHoraire' && r.meta?.heures != null) {
             if (semanticId === SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE && r.meta?.inclureBaseHoraire === true) {
@@ -776,7 +785,10 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
             let label = r.label;
             if (def.valueKind === 'horaire' && r.meta?.heures != null) {
                 const taux = r.meta.tauxHoraire ?? 0;
-                label = `${r.label} (${r.meta.heures}h × ${taux}€ ${agreement.nomCourt})`;
+                const quantiteSuffix = resolveQuantiteSuffix(def);
+                const quantite = Number(r.meta.heures ?? 0);
+                const quantiteLabel = quantiteSuffix === 'h' ? `${quantite}h` : `${quantite} ${quantiteSuffix}`;
+                label = `${r.label} (${quantiteLabel} × ${taux}€ ${agreement.nomCourt})`;
             } else if (def.valueKind === 'majorationHoraire' && r.meta?.heures != null) {
                 label = `${r.label} (+${r.meta.taux ?? 0}%) (${r.meta.heures}h/mois)`;
             } else if (def.valueKind === 'montant' && def.config?.moisVersement != null) {
