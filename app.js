@@ -48,6 +48,8 @@ const state = {
     accordActif: false,           // Accord d'entreprise activé (générique)
     /** Entrées utilisateur par élément d'accord. Clés fournies par l'accord (stateKeyActif, stateKeyHeures). Initialisé à vide ; hydraté par hydrateAccordInputs(agreement, state) quand un accord est chargé/activé. */
     accordInputs: {},
+    /** Overrides utilisateur des valeurs nationales déductibles (par semanticId). */
+    nationalPrimeOverrides: {},
     
     // === AFFICHAGE ===
     nbMois: 12                   // Répartition mensuelle (12 ou 13 mois)
@@ -1283,6 +1285,18 @@ function initControls() {
             if (keyHeures) {
                 state.accordInputs[keyHeures] = parseDecimalInput(e.target.value, 0);
                 updateAll();
+                return;
+            }
+            const overrideSemantic = e.target.dataset?.nationalOverrideSemantic;
+            if (overrideSemantic) {
+                const parsed = parseDecimalInput(e.target.value, NaN);
+                if (Number.isFinite(parsed) && parsed >= 0) {
+                    state.nationalPrimeOverrides[overrideSemantic] = parsed;
+                } else {
+                    delete state.nationalPrimeOverrides[overrideSemantic];
+                }
+                updateConditionsTravailDisplay();
+                updateAll();
             }
         });
     };
@@ -1530,35 +1544,40 @@ function buildStateKeyPrimeMap(primes = []) {
 }
 
 function applyPrimeCompatibilityRules(stateKeyActif, isChecked, defsByKey, options = {}) {
-    if (!isChecked || !stateKeyActif || !defsByKey || typeof defsByKey !== 'object') return;
-    const sourceDef = defsByKey[stateKeyActif];
-    if (!sourceDef) return;
+    if (!stateKeyActif || !defsByKey || typeof defsByKey !== 'object') return;
     const silent = options.silent === true;
-    const requires = Array.isArray(sourceDef.requiresKeys) ? sourceDef.requiresKeys : [];
-    const nonCumulAvec = Array.isArray(sourceDef.nonCumulAvec) ? sourceDef.nonCumulAvec : [];
-    let requiredActivated = 0;
-    let cumulDisabled = 0;
-
-    requires.forEach((requiredKey) => {
-        if (!requiredKey) return;
-        if (state.accordInputs[requiredKey] === true) return;
-        state.accordInputs[requiredKey] = true;
-        requiredActivated += 1;
-    });
-
-    nonCumulAvec.forEach((conflictKey) => {
-        if (!conflictKey) return;
-        if (state.accordInputs[conflictKey] !== true) return;
-        state.accordInputs[conflictKey] = false;
-        cumulDisabled += 1;
-    });
-
-    if (!silent && requiredActivated > 0) {
-        showToast('Une modalité dépendante a été activée automatiquement.', 'info', 2600);
+    const normalizer = window.normalizePrimeSelectionState;
+    if (typeof normalizer !== 'function') return;
+    const normalized = normalizer(state.accordInputs || {}, defsByKey, stateKeyActif, isChecked === true);
+    state.accordInputs = normalized.nextInputs || state.accordInputs;
+    if (!silent && normalized?.changes) {
+        if (normalized.changes.activated.length > 0) {
+            showToast('Une modalité dépendante a été activée automatiquement.', 'info', 2600);
+        }
+        if (normalized.changes.deactivated.length > 0) {
+            showToast('Une modalité incompatible ou dépendante a été ajustée.', 'info', 2600);
+        }
     }
-    if (!silent && cumulDisabled > 0) {
-        showToast('Une modalité incompatible a été désactivée automatiquement.', 'info', 2600);
+}
+
+function resolveNationalBaseValue(modaliteConfig = {}, fallbackValue = 0) {
+    if (modaliteConfig?.deriveFrom === 'majorations.heuresSup25') {
+        const derived = Number(CONFIG?.MAJORATIONS_CCN?.heuresSup25);
+        if (Number.isFinite(derived) && derived > 0) return derived;
     }
+    const fallback = Number(fallbackValue);
+    return Number.isFinite(fallback) ? fallback : 0;
+}
+
+function resolveNationalPrimeValue(semanticId, modaliteConfig, rawConfigValue) {
+    const baseValue = resolveNationalBaseValue(modaliteConfig, rawConfigValue);
+    const allowOverride = modaliteConfig?.allowUserOverride === true;
+    const overrideRaw = allowOverride ? state?.nationalPrimeOverrides?.[semanticId] : undefined;
+    const overrideValue = Number(overrideRaw);
+    if (allowOverride && Number.isFinite(overrideValue) && overrideValue >= 0) {
+        return overrideValue;
+    }
+    return baseValue;
 }
 
 function getNationalHourlyPrimeDefs(agreement) {
@@ -1583,6 +1602,8 @@ function getNationalHourlyPrimeDefs(agreement) {
         step: 0.01,
         defaultHeures: CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67,
         tooltip: buildPrimeEquipeTooltip(agreement, null),
+        sourceArticle: CONFIG?.TOOLTIP_TEXTS?.primeEquipe?.sourceArticle || '',
+        conditionTexte: CONFIG?.TOOLTIP_TEXTS?.primeEquipe?.conditionTexte || '',
         requiresKeys: [],
         nonCumulAvec: []
     };
@@ -1599,10 +1620,17 @@ function getNationalHourlyPrimeDefs(agreement) {
             stateKeyHeures: astreinte.stateKeyHeures || 'heuresAstreinteDisponibilite',
             autoHeures: false,
             unit: astreinte.modeCalcul === 'forfaitPeriode' ? '€/période' : (astreinte.unit || '€/h'),
-            valeurAccord: Number(astreinte.modeCalcul === 'forfaitPeriode' ? astreinte.valeurForfaitPeriode : astreinte.valeurHoraire) || 0,
+            valeurAccord: resolveNationalPrimeValue(
+                'primeAstreinteDisponibilite',
+                astreinte,
+                astreinte.modeCalcul === 'forfaitPeriode' ? astreinte.valeurForfaitPeriode : astreinte.valeurHoraire
+            ),
             defaultHeures: Number(astreinte.defaultHeures ?? 0),
             inputUnitLabel: astreinte.inputUnitLabel || 'heures/mois',
+            allowUserOverride: astreinte.allowUserOverride === true,
             tooltip: astreinte.tooltip || '',
+            sourceArticle: astreinte.sourceArticle || '',
+            conditionTexte: astreinte.conditionTexte || '',
             requiresKeys: [],
             nonCumulAvec: Array.isArray(astreinte.nonCumulAvec) ? astreinte.nonCumulAvec : []
         },
@@ -1616,10 +1644,13 @@ function getNationalHourlyPrimeDefs(agreement) {
             stateKeyHeures: intervention.stateKeyHeures || 'heuresInterventionAstreinte',
             autoHeures: false,
             unit: intervention.unit || '%',
-            valeurAccord: Number(intervention.tauxMajoration ?? 0),
+            valeurAccord: resolveNationalPrimeValue('majorationInterventionAstreinte', intervention, intervention.tauxMajoration),
             defaultHeures: Number(intervention.defaultHeures ?? 0),
             inputUnitLabel: intervention.inputUnitLabel || 'heures/mois',
+            allowUserOverride: intervention.allowUserOverride === true,
             tooltip: intervention.tooltip || '',
+            sourceArticle: intervention.sourceArticle || '',
+            conditionTexte: intervention.conditionTexte || '',
             requiresKeys: Array.isArray(intervention.requiresKeys) ? intervention.requiresKeys : [],
             nonCumulAvec: Array.isArray(intervention.nonCumulAvec) ? intervention.nonCumulAvec : []
         },
@@ -1633,10 +1664,13 @@ function getNationalHourlyPrimeDefs(agreement) {
             stateKeyHeures: panier.stateKeyHeures || 'heuresPanierNuit',
             autoHeures: false,
             unit: panier.unit || '€/h',
-            valeurAccord: Number(panier.valeurHoraire ?? 0),
+            valeurAccord: resolveNationalPrimeValue('primePanierNuit', panier, panier.valeurHoraire),
             defaultHeures: Number(panier.defaultHeures ?? 0),
             inputUnitLabel: panier.inputUnitLabel || 'heures/mois',
+            allowUserOverride: panier.allowUserOverride === true,
             tooltip: panier.tooltip || '',
+            sourceArticle: panier.sourceArticle || '',
+            conditionTexte: panier.conditionTexte || '',
             requiresKeys: [],
             nonCumulAvec: Array.isArray(panier.nonCumulAvec) ? panier.nonCumulAvec : []
         },
@@ -1650,10 +1684,13 @@ function getNationalHourlyPrimeDefs(agreement) {
             stateKeyHeures: habillage.stateKeyHeures || 'heuresHabillageDeshabillage',
             autoHeures: false,
             unit: habillage.unit || '€/h',
-            valeurAccord: Number(habillage.valeurHoraire ?? 0),
+            valeurAccord: resolveNationalPrimeValue('primeHabillageDeshabillage', habillage, habillage.valeurHoraire),
             defaultHeures: Number(habillage.defaultHeures ?? 0),
             inputUnitLabel: habillage.inputUnitLabel || 'heures/mois',
+            allowUserOverride: habillage.allowUserOverride === true,
             tooltip: habillage.tooltip || '',
+            sourceArticle: habillage.sourceArticle || '',
+            conditionTexte: habillage.conditionTexte || '',
             requiresKeys: [],
             nonCumulAvec: Array.isArray(habillage.nonCumulAvec) ? habillage.nonCumulAvec : []
         },
@@ -1667,10 +1704,13 @@ function getNationalHourlyPrimeDefs(agreement) {
             stateKeyHeures: deplacement.stateKeyHeures || 'heuresDeplacementProfessionnel',
             autoHeures: false,
             unit: deplacement.unit || '€/h',
-            valeurAccord: Number(deplacement.valeurHoraire ?? 0),
+            valeurAccord: resolveNationalPrimeValue('primeDeplacementProfessionnel', deplacement, deplacement.valeurHoraire),
             defaultHeures: Number(deplacement.defaultHeures ?? 0),
             inputUnitLabel: deplacement.inputUnitLabel || 'heures/mois',
+            allowUserOverride: deplacement.allowUserOverride === true,
             tooltip: deplacement.tooltip || '',
+            sourceArticle: deplacement.sourceArticle || '',
+            conditionTexte: deplacement.conditionTexte || '',
             requiresKeys: [],
             nonCumulAvec: Array.isArray(deplacement.nonCumulAvec) ? deplacement.nonCumulAvec : []
         }
@@ -1713,7 +1753,9 @@ function updateConditionsTravailDisplay() {
             valeurAccord: prime.valeurAccord,
             unit: prime.unit || '€/h',
             tooltip: buildPrimeEquipeTooltip(agreement, prime),
-            source: 'accord'
+            source: 'accord',
+            sourceArticle: prime.sourceArticle || ccnPrimeEquipeDef?.sourceArticle || '',
+            conditionTexte: prime.conditionTexte || ccnPrimeEquipeDef?.conditionTexte || ''
         };
     });
     const extraSemanticIds = new Set([
@@ -1774,10 +1816,18 @@ function updateConditionsTravailDisplay() {
                     if (formGroup) {
                         const cb = formGroup.querySelector('input[type="checkbox"]');
                         const inputHeures = formGroup.querySelector('input[data-state-key-heures]');
+                        const overrideInput = formGroup.querySelector('input[data-national-override-semantic]');
                         const subField = formGroup.querySelector('.sub-field');
                         if (cb) cb.checked = actif;
                         if (inputHeures && !prime.autoHeures && document.activeElement !== inputHeures) {
                             inputHeures.value = String(heures);
+                        }
+                        if (overrideInput && document.activeElement !== overrideInput) {
+                            const currentOverride = state?.nationalPrimeOverrides?.[prime.semanticId];
+                            const value = Number.isFinite(Number(currentOverride))
+                                ? currentOverride
+                                : prime.valeurAccord;
+                            overrideInput.value = value != null ? String(value) : '';
                         }
                         if (subField) subField.classList.toggle('hidden', !actif);
                     }
@@ -1828,18 +1878,29 @@ function updateConditionsTravailDisplay() {
                     : '';
                 const tooltipContent = (() => {
                     const baseTooltip = prime.tooltip ? String(prime.tooltip) : '';
-                    if (prime.id === 'primeEquipe' || prime.semanticId === 'primeEquipe') {
-                        return baseTooltip.trim();
-                    }
+                    const originFallback = isAccordPrime
+                        ? `Accord d'entreprise ${getAccordNomCourt(agreement) || 'accord'}`
+                        : (window.LABELS?.conventionLabel || 'Convention collective de la métallurgie (CCN)');
+                    const origin = classifyOriginFromSourceArticle(prime.sourceArticle, originFallback);
+                    const sourceLine = prime.sourceArticle
+                        ? String(prime.sourceArticle)
+                        : String(origin || '');
+                    const wrapWithTemplate = (detailText) => {
+                        const description = [String(prime.conditionTexte || ''), String(detailText || '')]
+                            .filter(Boolean)
+                            .join(' ')
+                            .trim();
+                        return `<strong>${sourceLine} :</strong><br>${description}`.trim();
+                    };
                     if (prime.valueType === 'majorationHoraire' && prime.valeurAccord != null) {
                         const pct = Math.round(prime.valeurAccord * 100);
-                        const ratePart = `+${pct}%. `;
-                        return (prefixAccordOnly + (ratePart + baseTooltip).trim()).trim();
+                        const ratePart = `+${pct}%.`;
+                        return (prefixAccordOnly + wrapWithTemplate(`${ratePart} ${baseTooltip}`.trim())).trim();
                     }
                     const taux = prime.valeurAccord != null ? String(prime.valeurAccord).replace('.', ',') : '';
                     const unit = prime.unit || '€/h';
-                    const ratePart = taux ? `+${taux} ${unit}. ` : '';
-                    return (prefixAccordOnly + (ratePart + baseTooltip).trim()).trim();
+                    const ratePart = taux ? `+${taux} ${unit}.` : '';
+                    return (prefixAccordOnly + wrapWithTemplate(`${ratePart} ${baseTooltip}`.trim())).trim();
                 })();
                 if (tooltipContent) {
                     const tooltipSpan = document.createElement('span');
@@ -1872,6 +1933,30 @@ function updateConditionsTravailDisplay() {
                     inputWithUnit.appendChild(inputHeures);
                     inputWithUnit.appendChild(spanUnit);
                     subField.appendChild(inputWithUnit);
+                    if (prime.allowUserOverride === true && prime.semanticId) {
+                        const overrideWithUnit = document.createElement('div');
+                        overrideWithUnit.className = 'input-with-unit';
+                        const overrideInput = document.createElement('input');
+                        overrideInput.type = 'text';
+                        overrideInput.className = 'book-input';
+                        overrideInput.setAttribute('inputmode', 'decimal');
+                        overrideInput.setAttribute('data-decimal-input', 'true');
+                        overrideInput.setAttribute('data-number-behavior', 'decimal');
+                        overrideInput.setAttribute('autocomplete', 'off');
+                        overrideInput.setAttribute('aria-label', 'Valeur unitaire');
+                        overrideInput.dataset.nationalOverrideSemantic = prime.semanticId;
+                        const currentOverride = state?.nationalPrimeOverrides?.[prime.semanticId];
+                        overrideInput.value = Number.isFinite(Number(currentOverride))
+                            ? String(currentOverride)
+                            : String(prime.valeurAccord ?? '');
+                        overrideInput.addEventListener('focus', function () { this.select(); });
+                        const overrideUnit = document.createElement('span');
+                        overrideUnit.className = 'input-unit';
+                        overrideUnit.textContent = `taux (${prime.unit || ''})`;
+                        overrideWithUnit.appendChild(overrideInput);
+                        overrideWithUnit.appendChild(overrideUnit);
+                        subField.appendChild(overrideWithUnit);
+                    }
                     formGroup.appendChild(labelCheck);
                     formGroup.appendChild(subField);
                 } else {
@@ -2386,6 +2471,31 @@ function updateAll() {
     }
 }
 
+function classifyOriginFromSourceArticle(sourceArticle, fallbackOrigin) {
+    const tooltipLabels = CONFIG?.TOOLTIP_TEXTS?.labels || {};
+    const src = String(sourceArticle || '').toLowerCase();
+    if (!src) return fallbackOrigin;
+    if (src.includes('code du travail') || /\bl\d{4}-\d+\b/.test(src)) {
+        return tooltipLabels.codeTravail || 'Code du travail';
+    }
+    if (src.includes('convention') || src.includes('ccn') || src.includes('ccnm') || src.includes('idcc')) {
+        return tooltipLabels.conventionMetallurgie || window.LABELS?.conventionLabel || 'Convention collective de la métallurgie (CCN)';
+    }
+    if (src.includes('accord')) {
+        return tooltipLabels.accordCollectif || 'Accord collectif';
+    }
+    return fallbackOrigin;
+}
+
+function simplifyResultDisplayLabel(rawLabel) {
+    return String(rawLabel || '')
+        .replace(/\bconventionnelle?\b/gi, '')
+        .replace(/\bCCN(M)?\b/gi, '')
+        .replace(/\s{2,}/g, ' ')
+        .replace(/\s+\)/g, ')')
+        .trim();
+}
+
 /**
  * Mettre à jour l'affichage de la rémunération
  */
@@ -2454,8 +2564,15 @@ function updateRemunerationDisplay(remuneration) {
         const prefix = detail.isPositive ? '+' : '';
         const isAccord = !!detail.isAgreement;
         const accordBadge = isAccord ? getAccordBadgeHtml(agreement) : '';
-        const origin = detail.tooltipOrigin || (isAccord ? `Accord d'entreprise ${nomAccord}` : conventionLabel);
-        let tipContent = '<strong>Origine :</strong> ' + (typeof origin === 'string' ? origin : (isAccord ? `Accord d'entreprise ${nomAccord}` : conventionLabel)) + '<br>';
+        const fallbackOrigin = isAccord ? `Accord d'entreprise ${nomAccord}` : conventionLabel;
+        const origin = classifyOriginFromSourceArticle(detail.sourceArticle, detail.tooltipOrigin || fallbackOrigin);
+        let tipContent = '<strong>Origine :</strong> ' + (typeof origin === 'string' ? origin : fallbackOrigin) + '<br>';
+        if (detail.sourceArticle) {
+            tipContent += '<strong>Référence :</strong> ' + escapeHTML(String(detail.sourceArticle)) + '<br>';
+        }
+        if (detail.conditionTexte) {
+            tipContent += '<strong>Cadre :</strong> ' + escapeHTML(String(detail.conditionTexte)) + '<br>';
+        }
         if (detail.breakdown && detail.breakdown.length) {
             tipContent += '<strong>Détail du calcul :</strong><br>';
             detail.breakdown.forEach(b => {
@@ -2471,10 +2588,11 @@ function updateRemunerationDisplay(remuneration) {
         const isSub = detail.isSMHSubLine === true;
         const subClass = isSub ? ' smh-sub-line' : '';
         const subPrefix = isSub ? '↳ ' : '';
+        const displayLabel = simplifyResultDisplayLabel(detail.label);
         detailsHTML += `
             <div class="result-detail-item${subClass}">
                 <span class="result-detail-label">
-                    <span class="result-detail-label-text">${subPrefix}${detail.label}${accordBadge}</span>
+                    <span class="result-detail-label-text">${subPrefix}${displayLabel}${accordBadge}</span>
                     <span class="result-detail-info-icon tooltip-trigger" data-tippy-content="${tipAttr}" data-tippy-allowHTML="true" aria-label="Détails">i</span>
                 </span>
                 <span class="result-detail-value ${valueClass}">${prefix}${formatMoney(detail.value)}</span>
@@ -2566,19 +2684,21 @@ function aggregateRemunerationDetails(details) {
             const isPrimeDetail = (detail.semanticId && String(detail.semanticId).startsWith('prime'))
                 || /prime/i.test(detail.label || '');
             if (isPrimeDetail) {
+                const fallbackOrigin = isAccordDetail(detail)
+                    ? `Accord d'entreprise ${getAccordNomCourt(typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null) || 'accord'}`
+                    : conventionLabel;
                 aggregated.push({
                     ...detail,
-                    tooltipOrigin: isAccordDetail(detail)
-                        ? `Accord d'entreprise ${getAccordNomCourt(typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null) || 'accord'}`
-                        : conventionLabel,
+                    tooltipOrigin: classifyOriginFromSourceArticle(detail.sourceArticle, fallbackOrigin),
                     tooltipDetail: detail.label
                 });
             } else {
+                const fallbackOrigin = isAccordDetail(detail)
+                    ? `Accord d'entreprise ${getAccordNomCourt(typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null) || 'accord'}`
+                    : conventionLabel;
                 aggregated.push({
                     ...detail,
-                    tooltipOrigin: isAccordDetail(detail)
-                        ? `Accord d'entreprise ${getAccordNomCourt(typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null) || 'accord'}`
-                        : conventionLabel,
+                    tooltipOrigin: classifyOriginFromSourceArticle(detail.sourceArticle, fallbackOrigin),
                     tooltipDetail: detail.label
                 });
             }
@@ -3481,6 +3601,7 @@ function updateArreteesSalaireHint() {
 
 function getSmhScopeDynamic(options = {}) {
     const includeOnlyActivePrimes = options.includeOnlyActivePrimes !== false;
+    const compactLabels = options.compactLabels === true;
     const agreement = (typeof window.AgreementLoader?.getActiveAgreement === 'function')
         ? window.AgreementLoader.getActiveAgreement() : null;
     const isAccordActif = !!(state.accordActif && agreement);
@@ -3491,9 +3612,21 @@ function getSmhScopeDynamic(options = {}) {
     const included = [];
     const excluded = [];
 
+    const formatScopeLabel = (rawLabel) => {
+        const input = String(rawLabel || '').trim();
+        if (!input) return '';
+        if (!compactLabels) return input;
+        // Mode compact: retirer uniquement les détails de calcul entre parenthèses.
+        return simplifyResultDisplayLabel(
+            input.replace(/\s*\([^)]*\)/g, '').replace(/\s{2,}/g, ' ').trim()
+        );
+    };
     const addUnique = (arr, label) => {
-        if (!label) return;
-        if (!arr.includes(label)) arr.push(label);
+        const formatted = formatScopeLabel(label);
+        if (!formatted) return;
+        const normalized = formatted.toLowerCase();
+        if (arr.some((v) => String(v).toLowerCase() === normalized)) return;
+        arr.push(formatted);
     };
 
     // Primes accord dynamiques selon inclusDansSMH.
@@ -3579,6 +3712,20 @@ function getSmhScopeDynamic(options = {}) {
         addUnique(excluded, 'prime d\'équipe');
     }
 
+    // Complément générique via le moteur de rémunération (anciens + nouveaux éléments actifs).
+    // Permet d'éviter les oublis quand de nouvelles primes/majorations sont ajoutées.
+    const remFull = calculateRemuneration();
+    const fullDetails = Array.isArray(remFull?.details) ? remFull.details : [];
+    for (const d of fullDetails) {
+        const value = Number(d?.value || 0);
+        if (!Number.isFinite(value) || value <= 0) continue;
+        if (d?.isBase) continue;
+        const label = String(d?.label || '').trim().toLowerCase();
+        if (!label) continue;
+        if (d?.isSMHIncluded === true) addUnique(included, label);
+        else addUnique(excluded, label);
+    }
+
     return { included, excluded };
 }
 
@@ -3588,10 +3735,16 @@ function getSmhScopeDynamic(options = {}) {
  * @returns {string} HTML du hint
  */
 function buildSmhHintHtml() {
-    const { included, excluded } = getSmhScopeDynamic();
+    const { included, excluded } = getSmhScopeLabels();
     const includedLabel = included.length ? included.join(', ') : 'aucun élément additionnel actif';
     const excludedLabel = excluded.length ? excluded.join(', ') : 'aucun';
     return `<strong>Comment saisir votre brut (Art. 140 CCN)</strong><br><strong>Pris en compte</strong> : salaire minima + éléments inclus.<br><strong>À inclure</strong> : ${includedLabel}.<br><strong>À exclure</strong> : ${excludedLabel}.`;
+}
+
+function getSmhScopeLabels(options = {}) {
+    const includeOnlyActivePrimes = options.includeOnlyActivePrimes !== false;
+    const compactLabels = options.compactLabels !== false;
+    return getSmhScopeDynamic({ includeOnlyActivePrimes, compactLabels });
 }
 
 /**
@@ -3599,10 +3752,11 @@ function buildSmhHintHtml() {
  * @returns {string}
  */
 function buildSmhTooltipText() {
-    const { included, excluded } = getSmhScopeDynamic({ includeOnlyActivePrimes: false });
+    // Même logique que le panneau d'information: éléments actifs + libellés compacts.
+    const { included, excluded } = getSmhScopeLabels();
     const includedLines = included.length
         ? included.map((item) => `• ${item}`).join('<br>')
-        : '• aucun élément défini';
+        : '• aucun élément additionnel actif';
     const excludedLines = excluded.length
         ? excluded.map((item) => `• ${item}`).join('<br>')
         : '• aucun';
@@ -4424,115 +4578,30 @@ function calculerArreteesFinal() {
         datePrescription.getTime()
     ));
 
-    // ═══════════════════════════════════════════════════
-    // PASSE 1 : calcul mois par mois (données granulaires)
-    // ═══════════════════════════════════════════════════
-    const detailsTousMois = []; // Tous les mois saisis pour affichage (rouge/vert)
-    let currentDate = new Date(dateDebut);
-    
-    // Calculer l'ancienneté de départ (en années complètes)
-    const ancienneteDepart = Math.floor((dateDebut - dateEmbaucheObj) / (365.25 * 24 * 60 * 60 * 1000));
-
-    while (currentDate <= dateRuptureObj) {
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth() + 1;
-        const periodKey = `${year}-${String(month).padStart(2, '0')}`;
-        const salaireReel = state.salairesParMois[periodKey];
-        
-        if (salaireReel !== undefined) {
-            // Calculer le salaire dû pour ce mois (SMH seul ou rémunération complète)
-            const salaireAnnuelDuMois = calculateSalaireDuPourMois(currentDate, dateEmbaucheObj);
-            
-            let salaireMensuelDu;
-            const mois = currentDate.getMonth() + 1;
-            // Mois de versement du 13e mois : dynamique depuis l'accord
-            const agreementCalc = (typeof window.AgreementLoader?.getActiveAgreement === 'function') ? window.AgreementLoader.getActiveAgreement() : null;
-            const moisVersement13eCalc = agreementCalc?.repartition13Mois?.moisVersement ?? 11;
-            const estMois13eMoisCalc = mois === moisVersement13eCalc;
-            if (state.arretesSurSMHSeul) {
-                // SMH seul (Art. 140) : primes incluses concentrées dans leur mois de versement
-                const primesFixesSMH = (typeof window.getMontantPrimesFixesAnnuelFromModules === 'function')
-                    ? window.getMontantPrimesFixesAnnuelFromModules(state, { smhOnly: true }) : 0;
-                const baseSmhPourRepartition = salaireAnnuelDuMois - primesFixesSMH;
-                if (state.accordActif && state.nbMois === 13 && estMois13eMoisCalc) {
-                    salaireMensuelDu = (baseSmhPourRepartition / 13) * 2;
-                } else if (state.accordActif && state.nbMois === 13) {
-                    salaireMensuelDu = baseSmhPourRepartition / 13;
-                } else {
-                    salaireMensuelDu = baseSmhPourRepartition / 12;
-                }
-                // Ajouter les primes SMH versées ce mois-là (dynamique via moisVersement)
-                const primesCeMoisSMH = (typeof window.getMontantPrimesVerseesCeMoisFromModules === 'function')
-                    ? window.getMontantPrimesVerseesCeMoisFromModules(state, mois, { smhOnly: true }) : 0;
-                if (primesCeMoisSMH > 0) salaireMensuelDu += primesCeMoisSMH;
-            } else {
-                const primesFixesAnnuel = (typeof window.getMontantPrimesFixesAnnuelFromModules === 'function')
-                    ? window.getMontantPrimesFixesAnnuelFromModules(state) : 0;
-                const baseAnnuellePourRepartition = salaireAnnuelDuMois - primesFixesAnnuel;
-                if (state.accordActif && state.nbMois === 13 && estMois13eMoisCalc) {
-                    salaireMensuelDu = (baseAnnuellePourRepartition / 13) * 2;
-                } else if (state.accordActif && state.nbMois === 13) {
-                    salaireMensuelDu = baseAnnuellePourRepartition / 13;
-                } else {
-                    salaireMensuelDu = baseAnnuellePourRepartition / 12;
-                }
-                const primesCeMois = (typeof window.getMontantPrimesVerseesCeMoisFromModules === 'function')
-                    ? window.getMontantPrimesVerseesCeMoisFromModules(state, mois) : 0;
-                if (primesCeMois > 0) salaireMensuelDu += primesCeMois;
-            }
-
-            // Le salaire réel saisi est maintenant en mensuel brut (pas besoin de diviser par 12)
-            const salaireMensuelReel = salaireReel;
-            const difference = salaireMensuelDu - salaireMensuelReel;
-            
-            detailsTousMois.push({
-                periode: currentDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
-                periodeKey: periodKey,
-                dateMois: new Date(currentDate),
-                year: year,
-                salaireReel: salaireReel,
-                salaireMensuelReel: salaireMensuelReel,
-                salaireDu: salaireAnnuelDuMois,
-                salaireMensuelDu: salaireMensuelDu,
-                difference: difference
-            });
-        }
-
-        // Passer au mois suivant
-        currentDate.setMonth(currentDate.getMonth() + 1);
+    const agreement = (typeof window.AgreementLoader?.getActiveAgreement === 'function')
+        ? window.AgreementLoader.getActiveAgreement()
+        : null;
+    const arreteesResult = (typeof window.calculerArreteesMoisParMoisFromModules === 'function')
+        ? window.calculerArreteesMoisParMoisFromModules({
+            dateDebut,
+            dateFin: dateRuptureObj,
+            dateEmbauche: dateEmbaucheObj,
+            dateChangementClassification: dateChangementObj,
+            salairesParMois: state.salairesParMois,
+            stateSnapshot: state,
+            agreement,
+            smhSeul: state.arretesSurSMHSeul,
+            nbMois: state.nbMois
+        }, state)
+        : null;
+    if (!arreteesResult) {
+        showToast('⚠️ Moteur arriérés indisponible. Veuillez recharger la page.', 'error', 5000);
+        return;
     }
-
-    // ═══════════════════════════════════════════════════
-    // PASSE 2 : regroupement par année civile
-    // Le SMH s'apprécie sur l'année civile (Art. 140 CCNM).
-    // Arriérés(année) = max(0, totalDû - totalPerçu)
-    // ═══════════════════════════════════════════════════
-    const anneeMap = {};
-    for (const row of detailsTousMois) {
-        const y = row.year;
-        if (!anneeMap[y]) anneeMap[y] = { annee: y, totalDu: 0, totalReel: 0, mois: [] };
-        anneeMap[y].totalDu += row.salaireMensuelDu;
-        anneeMap[y].totalReel += row.salaireMensuelReel;
-        anneeMap[y].mois.push(row);
-    }
-    const detailsParAnnee = [];
-    let totalArretees = 0;
-    for (const y of Object.keys(anneeMap).sort()) {
-        const entry = anneeMap[y];
-        const ecart = Math.max(0, entry.totalDu - entry.totalReel);
-        detailsParAnnee.push({
-            annee: entry.annee,
-            totalDu: Math.round(entry.totalDu * 100) / 100,
-            totalReel: Math.round(entry.totalReel * 100) / 100,
-            ecart: Math.round(ecart * 100) / 100,
-            nbMoisSaisis: entry.mois.length,
-            mois: entry.mois
-        });
-        totalArretees += ecart;
-    }
-    totalArretees = Math.round(totalArretees);
-    // Rétrocompatibilité : mois individuels avec différence > 0
-    const detailsArretees = detailsTousMois.filter(d => d.difference > 0);
+    const detailsTousMois = arreteesResult.detailsTousMois || [];
+    const detailsParAnnee = arreteesResult.detailsParAnnee || [];
+    const detailsArretees = arreteesResult.detailsArretees || [];
+    const totalArretees = Number(arreteesResult.totalArretees) || 0;
 
     if (totalArretees <= 0) {
         showToast('✅ Aucun arriéré détecté. Votre salaire est conforme.', 'success', 4000);
@@ -4569,6 +4638,7 @@ function calculerArreteesFinal() {
             salairesParMois: state.salairesParMois,
             accordEcrit: state.accordEcritArretees,
             ruptureContrat: state.ruptureContratArretees,
+            scopeMode: state.arretesSurSMHSeul ? 'smh-only' : 'full',
             dateRupture: state.dateRuptureArretees,
             dateEmbauche: dateEmbaucheInput,
             dateChangementClassification: dateChangementInput,
@@ -4621,6 +4691,7 @@ function afficherResultatsArreteesFinal(data) {
         salairesParMois: state.salairesParMois,
         accordEcrit: state.accordEcritArretees,
         ruptureContrat: state.ruptureContratArretees,
+        scopeMode: state.arretesSurSMHSeul ? 'smh-only' : 'full',
         dateRupture: state.dateRuptureArretees,
         dateEmbauche: dateEmbaucheInput,
         dateChangementClassification: dateChangementInput,
@@ -4790,15 +4861,6 @@ function getArreteesDataForPdf() {
  * Conformément à la CCN, les arriérés doivent être calculés sur le SMH : la génération est bloquée si « SMH seul » n'est pas coché.
  */
 function openPdfInfosModal() {
-    if (!state.arretesSurSMHSeul) {
-        showToast(
-            'Le rapport PDF ne peut être généré qu\'en mode « SMH seul ». Cochez l\'option « Calculer les arriérés sur le SMH seul » et saisissez les salaires bruts selon l\'assiette SMH (Art. 140 CCNM), puis recalculez les arriérés.',
-            'warning',
-            6000
-        );
-        return;
-    }
-
     let result = getArreteesDataForPdf();
     if (!result.valid) {
         const step4 = document.getElementById('step-4');
@@ -4822,7 +4884,7 @@ function openPdfInfosModal() {
             <div class="modal pdf-infos-modal" onclick="event.stopPropagation()">
                 <h3>Informations pour la lettre de mise en demeure</h3>
                 <p class="modal-subtitle">Ces informations seront incluses dans la lettre et l'annexe technique. Tous les champs sont facultatifs — vous pourrez compléter à la main après téléchargement.</p>
-                <p class="pdf-smh-only-notice"><strong>Le rapport est établi sur la base du SMH</strong> (assiette conventionnelle Art. 140 CCNM).</p>
+                <p class="pdf-smh-only-notice" id="pdf-scope-notice"></p>
 
                 <h4 class="modal-section-title">Salarié</h4>
                 <div class="form-group">
@@ -4916,6 +4978,13 @@ function openPdfInfosModal() {
         });
     }
     overlay._pdfData = result.data;
+    const scopeEl = document.getElementById('pdf-scope-notice');
+    if (scopeEl) {
+        const smhOnly = (result.data?.scopeMode || (state.arretesSurSMHSeul ? 'smh-only' : 'full')) === 'smh-only';
+        scopeEl.innerHTML = smhOnly
+            ? '<strong>Périmètre retenu :</strong> SMH seul (assiette conventionnelle Art. 140 CCNM).'
+            : '<strong>Périmètre retenu :</strong> rémunération complète (option explicite).';
+    }
     overlay.classList.add('visible');
 }
 

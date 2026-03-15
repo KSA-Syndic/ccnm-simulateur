@@ -10,7 +10,7 @@
 import { getMontantAnnuelSMHSeul } from '../remuneration/RemunerationCalculator.js';
 import { calculateAnnualRemuneration } from '../remuneration/RemunerationCalculator.js';
 import { getMontantPrimesFixesAnnuel, getMontantPrimesVerseesCeMois } from '../remuneration/PrimesFixesHelper.js';
-import { calculateSalaireDuPourMois } from '../arretees/ArreteesCalculator.js';
+import { calculateSalaireDuPourMois, calculerArreteesMoisParMois } from '../arretees/ArreteesCalculator.js';
 import { genererPDFArretees } from '../arretees/PDFGenerator.js';
 import { getActiveAgreement } from '../agreements/AgreementLoader.js';
 import { state as moduleState } from '../core/state.js';
@@ -52,6 +52,9 @@ function syncStateToModules(appState) {
     moduleState.joursSupForfait = appState.joursSupForfait !== undefined ? appState.joursSupForfait : moduleState.joursSupForfait;
     if (appState.accordInputs && typeof appState.accordInputs === 'object') {
         moduleState.accordInputs = { ...(moduleState.accordInputs || {}), ...appState.accordInputs };
+    }
+    if (appState.nationalPrimeOverrides && typeof appState.nationalPrimeOverrides === 'object') {
+        moduleState.nationalPrimeOverrides = { ...(moduleState.nationalPrimeOverrides || {}), ...appState.nationalPrimeOverrides };
     }
     // Compatibilité historique : certaines vues/tests renseignent encore les clés à la racine.
     // On les recopie dans accordInputs pour que les calculs modulaires les voient toujours.
@@ -128,6 +131,17 @@ window.calculateSalaireDuPourMoisFromModules = function(dateMois, dateEmbauche, 
     }
     
     return calculateSalaireDuPourMois(dateMois, dateEmbauche, stateSnapshot, activeAgreement, smhSeul);
+};
+
+window.calculerArreteesMoisParMoisFromModules = function(params, appState) {
+    syncStateToModules(appState || {});
+    const agreement = getActiveAgreement();
+    const activeAgreement = (moduleState.accordActif && agreement) ? agreement : null;
+    return calculerArreteesMoisParMois({
+        ...params,
+        stateSnapshot: { ...moduleState, ...(params?.stateSnapshot || {}) },
+        agreement: params?.agreement ?? activeAgreement
+    });
 };
 
 /**

@@ -13,6 +13,7 @@ import { extractURLParams, applyIframeStyles, isIframeMode } from './core/URLPar
 import { CONFIG } from './core/config.js';
 import { updateHeaderAgreement } from './ui/RemunerationDisplay.js';
 import { LABELS } from './ui/Labels.js';
+import { normalizePrimeSelectionState } from './ui/PrimeDependencies.js';
 
 /** Nom court pour affichage badge accord (aligné avec app.js). */
 function getAccordNomCourt(agreement) {
@@ -50,22 +51,37 @@ export function initAppIntegration() {
     const typeNuitTooltip = document.getElementById('type-nuit-tooltip');
     const travailDimancheTooltip = document.getElementById('travail-dimanche-tooltip');
     const travailHeuresSupTooltip = document.getElementById('travail-heures-sup-tooltip');
+    const travailTempsPartielTooltip = document.getElementById('travail-temps-partiel-tooltip');
+    const page2TooltipConfig = CONFIG?.TOOLTIP_TEXTS?.page2 || {};
+    const tooltipTemplates = CONFIG?.TOOLTIP_TEXTS?.templates || {};
     const pctNuitCCN = Math.round((CONFIG.MAJORATIONS_CCN?.nuit ?? 0.15) * 100);
     const pctDimancheCCN = Math.round((CONFIG.MAJORATIONS_CCN?.dimanche ?? 1) * 100);
     const pctHs25CCN = Math.round((CONFIG.MAJORATIONS_CCN?.heuresSup25 ?? 0.25) * 100);
     const pctHs50CCN = Math.round((CONFIG.MAJORATIONS_CCN?.heuresSup50 ?? 0.50) * 100);
+    const applyTemplate = (tpl, vars = {}) => String(tpl || '').replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? ''));
+    const formatLegalTooltip = (sourceTitle, description) => applyTemplate(
+        tooltipTemplates.legalBlock || '<strong>{title} :</strong><br>{description}',
+        { title: sourceTitle, description }
+    );
     const formatConventionAccordTooltip = (conventionHtml, accordHtml = '', accordName = '') => {
-        const accordTitle = accordName ? `Accord ${accordName}` : 'Accord';
-        const accordBlock = accordHtml ? `<br><strong>${accordTitle} :</strong><br>${accordHtml}` : '';
-        return `<strong>Convention :</strong><br>${conventionHtml}${accordBlock}`;
+        const conventionBlock = formatLegalTooltip(
+            page2TooltipConfig.conventionTitle || 'Convention métallurgie (CCNM)',
+            conventionHtml
+        );
+        const accordTitlePrefix = page2TooltipConfig.accordTitlePrefix || 'Accord';
+        const accordTitle = accordName
+            ? `${accordTitlePrefix} ${accordName}`
+            : (CONFIG?.TOOLTIP_TEXTS?.labels?.accordCollectif || 'Accord collectif');
+        const accordBlock = accordHtml ? `<br>${formatLegalTooltip(accordTitle, accordHtml)}` : '';
+        return `${conventionBlock}${accordBlock}`;
     };
     if (typeNuitTooltip) {
         const pctNuitAccord = agreement?.majorations?.nuit?.posteNuit != null
             ? Math.round(agreement.majorations.nuit.posteNuit * 100)
             : null;
-        const convention = `+${pctNuitCCN}%.`;
+        const convention = applyTemplate(page2TooltipConfig.nuitRateTemplate || '+{pct}%.', { pct: pctNuitCCN });
         const accord = pctNuitAccord != null
-            ? `+${pctNuitAccord}%.`
+            ? applyTemplate(page2TooltipConfig.nuitRateTemplate || '+{pct}%.', { pct: pctNuitAccord })
             : '';
         typeNuitTooltip.setAttribute('data-tippy-content', formatConventionAccordTooltip(convention, accord, getAccordNomCourt(agreement)));
         if (typeNuitTooltip._tippy) typeNuitTooltip._tippy.setContent(typeNuitTooltip.getAttribute('data-tippy-content'));
@@ -76,13 +92,16 @@ export function initAppIntegration() {
             travailDimancheTooltip.setAttribute(
                 'data-tippy-content',
                 formatConventionAccordTooltip(
-                    `+${pctDimancheCCN}%.`,
-                    `+${pct}%.`,
+                    applyTemplate(page2TooltipConfig.dimancheRateTemplate || '+{pct}%.', { pct: pctDimancheCCN }),
+                    applyTemplate(page2TooltipConfig.dimancheRateTemplate || '+{pct}%.', { pct }),
                     getAccordNomCourt(agreement)
                 )
             );
         } else {
-            travailDimancheTooltip.setAttribute('data-tippy-content', formatConventionAccordTooltip(`+${pctDimancheCCN}%.`));
+            travailDimancheTooltip.setAttribute(
+                'data-tippy-content',
+                formatConventionAccordTooltip(applyTemplate(page2TooltipConfig.dimancheRateTemplate || '+{pct}%.', { pct: pctDimancheCCN }))
+            );
         }
         if (travailDimancheTooltip._tippy) travailDimancheTooltip._tippy.setContent(travailDimancheTooltip.getAttribute('data-tippy-content'));
     }
@@ -93,29 +112,66 @@ export function initAppIntegration() {
             const pct50 = Math.round((hs.majoration50 ?? CONFIG.MAJORATIONS_CCN?.heuresSup50 ?? 0.50) * 100);
             const contingent = hs.contingent != null ? ` Contingent : ${hs.contingent}h/an.` : '';
             const repos = hs.reposCompensateur === true ? ' Repos compensateur possible selon accord.' : '';
+            const convRates = applyTemplate(page2TooltipConfig.heuresSupRateTemplate || '+{pct25}% (36e-43e), puis +{pct50}% (>=44e).', { pct25: pctHs25CCN, pct50: pctHs50CCN });
+            const accordRates = applyTemplate(page2TooltipConfig.heuresSupRateTemplate || '+{pct25}% (36e-43e), puis +{pct50}% (>=44e).', { pct25, pct50 });
             travailHeuresSupTooltip.setAttribute(
                 'data-tippy-content',
                 formatConventionAccordTooltip(
-                    `+${pctHs25CCN}% (36e-43e), puis +${pctHs50CCN}% (>=44e).`,
-                    `+${pct25}% (36e-43e), puis +${pct50}% (>=44e).${contingent}${repos}`,
+                    convRates,
+                    applyTemplate(page2TooltipConfig.heuresSupAccordDescription || '{rates}{contingent}{repos}', { rates: accordRates, contingent, repos }),
                     getAccordNomCourt(agreement)
                 )
             );
         } else {
+            const convRates = applyTemplate(page2TooltipConfig.heuresSupRateTemplate || '+{pct25}% (36e-43e), puis +{pct50}% (>=44e).', { pct25: pctHs25CCN, pct50: pctHs50CCN });
             travailHeuresSupTooltip.setAttribute(
                 'data-tippy-content',
                 formatConventionAccordTooltip(
-                    `Heures supplémentaires : +${pctHs25CCN}% (36e-43e), puis +${pctHs50CCN}% (>=44e).<br>Durée légale : 35h/semaine (151,67h/mois).`
+                    applyTemplate(
+                        page2TooltipConfig.heuresSupConventionDescription || 'Heures supplémentaires : {rates}<br>Durée légale : 35h/semaine (151,67h/mois).',
+                        { rates: convRates }
+                    )
                 )
             );
         }
         if (travailHeuresSupTooltip._tippy) travailHeuresSupTooltip._tippy.setContent(travailHeuresSupTooltip.getAttribute('data-tippy-content'));
     }
+    if (travailTempsPartielTooltip) {
+        travailTempsPartielTooltip.setAttribute(
+            'data-tippy-content',
+            formatLegalTooltip(
+                page2TooltipConfig.tempsPartielSource || 'Code du travail (Art. L3123-5)',
+                page2TooltipConfig.tempsPartielDescription || "La rémunération à temps partiel est proportionnelle à celle d'un temps complet, à qualification égale."
+            )
+        );
+        if (travailTempsPartielTooltip._tippy) {
+            travailTempsPartielTooltip._tippy.setContent(travailTempsPartielTooltip.getAttribute('data-tippy-content'));
+        }
+    }
+    const joursSupForfaitTooltip = document.getElementById('travail-jours-sup-forfait-tooltip');
+    if (joursSupForfaitTooltip) {
+        joursSupForfaitTooltip.setAttribute(
+            'data-tippy-content',
+            formatLegalTooltip(
+                page2TooltipConfig.joursSupForfaitSource || 'Code du travail (Art. L3121-59)',
+                page2TooltipConfig.joursSupForfaitDescription || "Le salarié au forfait jours peut renoncer à des jours de repos via avenant écrit annuel, avec une majoration de salaire qui ne peut pas être inférieure à 10%."
+            )
+        );
+        if (joursSupForfaitTooltip._tippy) {
+            joursSupForfaitTooltip._tippy.setContent(joursSupForfaitTooltip.getAttribute('data-tippy-content'));
+        }
+    }
     const forfaitTooltipEl = document.getElementById('forfait-tooltip');
     if (forfaitTooltipEl && CONFIG.FORFAITS) {
         const pctHeures = Math.round((CONFIG.FORFAITS.heures ?? 0.15) * 100);
         const pctJours = Math.round((CONFIG.FORFAITS.jours ?? 0.30) * 100);
-        forfaitTooltipEl.setAttribute('data-tippy-content', `Base 35h : sans majoration. Forfait Heures : +${pctHeures}%. Forfait Jours : +${pctJours}%.`);
+        forfaitTooltipEl.setAttribute(
+            'data-tippy-content',
+            formatLegalTooltip(
+                page2TooltipConfig.forfaitSource || 'Convention métallurgie (CCNM)',
+                applyTemplate(page2TooltipConfig.forfaitDescription || 'Base 35h : sans majoration. Forfait Heures : +{pctHeures}%. Forfait Jours : +{pctJours}%.', { pctHeures, pctJours })
+            )
+        );
         if (forfaitTooltipEl._tippy) forfaitTooltipEl._tippy.setContent(forfaitTooltipEl.getAttribute('data-tippy-content'));
     }
     const pointTerritorialTooltipEl = document.getElementById('point-territorial-tooltip');
@@ -125,7 +181,14 @@ export function initAppIntegration() {
         const territoire = CONFIG?.TERRITOIRE || 'territoire';
         pointTerritorialTooltipEl.setAttribute(
             'data-tippy-content',
-            `Valeur définie par accord territorial. ${territoire} ${pointYear} : ${pointValue}€<br><a href='https://code.travail.gouv.fr/contribution/3248-quand-le-salarie-a-t-il-droit-a-une-prime-danciennete-quel-est-son-montant' target='_blank' rel='noopener'>Voir sur code.travail.gouv.fr</a>`
+            `${formatLegalTooltip(
+                page2TooltipConfig.pointTerritorialSource || 'Accord territorial',
+                applyTemplate(page2TooltipConfig.pointTerritorialDescription || 'Valeur définie par accord territorial. {territoire} {year} : {pointValue}€', {
+                    territoire,
+                    year: pointYear,
+                    pointValue
+                })
+            )}<br><a href='https://code.travail.gouv.fr/contribution/3248-quand-le-salarie-a-t-il-droit-a-une-prime-danciennete-quel-est-son-montant' target='_blank' rel='noopener'>${page2TooltipConfig.pointTerritorialLinkLabel || 'Voir sur code.travail.gouv.fr'}</a>`
         );
         if (pointTerritorialTooltipEl._tippy) {
             pointTerritorialTooltipEl._tippy.setContent(pointTerritorialTooltipEl.getAttribute('data-tippy-content'));
@@ -251,6 +314,7 @@ export function initAppIntegration() {
         isIframeMode,
         getURLParam: (key) => urlParams[key] || null
     };
+    window.normalizePrimeSelectionState = normalizePrimeSelectionState;
     
     return {
         agreement,

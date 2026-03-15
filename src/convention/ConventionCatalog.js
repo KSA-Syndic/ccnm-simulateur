@@ -81,6 +81,8 @@ export function getConventionPrimeDefs() {
                 defaultHeures: Number(astreinte.defaultHeures ?? 0),
                 inputUnitLabel: astreinte.inputUnitLabel || 'heures/mois',
                 inclusDansSMH: astreinte.inclusDansSMH === true,
+                allowUserOverride: astreinte.allowUserOverride === true,
+                deriveFrom: astreinte.deriveFrom || null,
                 sourceArticle: astreinte.sourceArticle || '',
                 conditionTexte: astreinte.conditionTexte || '',
                 tooltip: astreinte.tooltip || ''
@@ -102,6 +104,8 @@ export function getConventionPrimeDefs() {
                 defaultHeures: Number(interventionAstreinte.defaultHeures ?? 0),
                 inputUnitLabel: interventionAstreinte.inputUnitLabel || 'heures/mois',
                 inclusDansSMH: interventionAstreinte.inclusDansSMH === true,
+                allowUserOverride: interventionAstreinte.allowUserOverride === true,
+                deriveFrom: interventionAstreinte.deriveFrom || null,
                 sourceArticle: interventionAstreinte.sourceArticle || '',
                 conditionTexte: interventionAstreinte.conditionTexte || '',
                 tooltip: interventionAstreinte.tooltip || '',
@@ -124,6 +128,8 @@ export function getConventionPrimeDefs() {
                 defaultHeures: Number(panierNuit.defaultHeures ?? 0),
                 inputUnitLabel: panierNuit.inputUnitLabel || 'heures/mois',
                 inclusDansSMH: panierNuit.inclusDansSMH === true,
+                allowUserOverride: panierNuit.allowUserOverride === true,
+                deriveFrom: panierNuit.deriveFrom || null,
                 sourceArticle: panierNuit.sourceArticle || '',
                 conditionTexte: panierNuit.conditionTexte || '',
                 tooltip: panierNuit.tooltip || ''
@@ -144,6 +150,8 @@ export function getConventionPrimeDefs() {
                 defaultHeures: Number(habillage.defaultHeures ?? 0),
                 inputUnitLabel: habillage.inputUnitLabel || 'heures/mois',
                 inclusDansSMH: habillage.inclusDansSMH === true,
+                allowUserOverride: habillage.allowUserOverride === true,
+                deriveFrom: habillage.deriveFrom || null,
                 sourceArticle: habillage.sourceArticle || '',
                 conditionTexte: habillage.conditionTexte || '',
                 tooltip: habillage.tooltip || ''
@@ -164,6 +172,8 @@ export function getConventionPrimeDefs() {
                 defaultHeures: Number(deplacement.defaultHeures ?? 0),
                 inputUnitLabel: deplacement.inputUnitLabel || 'heures/mois',
                 inclusDansSMH: deplacement.inclusDansSMH === true,
+                allowUserOverride: deplacement.allowUserOverride === true,
+                deriveFrom: deplacement.deriveFrom || null,
                 sourceArticle: deplacement.sourceArticle || '',
                 conditionTexte: deplacement.conditionTexte || '',
                 tooltip: deplacement.tooltip || ''

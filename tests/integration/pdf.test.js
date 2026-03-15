@@ -174,7 +174,7 @@ describe('PDF - Génération', () => {
             expect(global.jsPDF).toHaveBeenCalled();
         });
 
-        it('devrait rejeter la génération si le mode SMH seul n\'est pas activé', () => {
+        it('devrait générer le PDF même en mode complet explicite', () => {
             const stateSansSMHSeul = {
                 arretesSurSMHSeul: false,
                 modeManuel: false,
@@ -202,7 +202,7 @@ describe('PDF - Génération', () => {
 
             expect(() => {
                 genererPDFArretees(data, {}, false, stateSansSMHSeul);
-            }).toThrow(/SMH seul/);
+            }).not.toThrow();
         });
 
         it('devrait utiliser le barème débutants pour F11 avec 4 ans d\'expérience et forfait jours', () => {
@@ -439,6 +439,60 @@ describe('PDF - Génération', () => {
             const bodies = autoTableCalls.map(c => c.body || []).flat();
             const hasPrimeEquipeCCN = bodies.some(row => Array.isArray(row) && row.join(' ').includes('Prime d\'équipe conventionnelle'));
             expect(hasPrimeEquipeCCN).toBe(true);
+        });
+
+        it('doit afficher le périmètre retenu dans l\'annexe selon le mode', () => {
+            const autoTableCalls = [];
+            const mockDoc = {
+                internal: {
+                    pageSize: { getWidth: () => 210, getHeight: () => 297 },
+                    getNumberOfPages: () => 1
+                },
+                setFontSize: vi.fn().mockReturnThis(),
+                setFont: vi.fn().mockReturnThis(),
+                setTextColor: vi.fn().mockReturnThis(),
+                text: vi.fn().mockReturnThis(),
+                line: vi.fn().mockReturnThis(),
+                addPage: vi.fn().mockReturnThis(),
+                splitTextToSize: vi.fn((text) => [text]),
+                save: vi.fn(),
+                setDrawColor: vi.fn().mockReturnThis(),
+                setPage: vi.fn().mockReturnThis(),
+                autoTable: vi.fn((cfg) => {
+                    autoTableCalls.push(cfg);
+                    mockDoc.lastAutoTable = { finalY: (cfg.startY || 20) + 10 };
+                    return mockDoc;
+                }),
+                lastAutoTable: { finalY: 30 }
+            };
+            global.window = {
+                jsPDF: vi.fn(() => mockDoc),
+                jspdf: { jsPDF: vi.fn(() => mockDoc) }
+            };
+            const data = {
+                detailsParAnnee: [],
+                detailsTousMois: [],
+                totalArretees: 0,
+                scopeMode: 'full'
+            };
+            const stateModeComplet = {
+                modeManuel: false,
+                groupeManuel: 'C',
+                classeManuel: 5,
+                scores: [3, 3, 3, 3, 3, 3],
+                anciennete: 0,
+                pointTerritorial: 5.90,
+                forfait: '35h',
+                experiencePro: 0,
+                accordActif: false,
+                accordInputs: {},
+                nbMois: 12,
+                arretesSurSMHSeul: false
+            };
+            genererPDFAnnexeTechnique(data, {}, stateModeComplet);
+            const bodyRows = autoTableCalls.map(c => c.body || []).flat();
+            const hasScopeRow = bodyRows.some(row => Array.isArray(row) && row.join(' ').includes('Périmètre retenu'));
+            expect(hasScopeRow).toBe(true);
         });
 
         it('devrait créer les sections principales du PDF', () => {

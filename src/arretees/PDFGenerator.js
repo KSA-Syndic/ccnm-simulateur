@@ -238,7 +238,7 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     const hasAccord = !!(state.accordActif || state.accordId);
     const referenceDate = data?.dateFin ? new Date(data.dateFin) : new Date();
     const agreement = hasAccord ? getActiveAgreement() : null;
-    const salaireDu = getMontantAnnuelSMHSeul(state, agreement, { date: referenceDate });
+    const scopeMode = data?.scopeMode || (state.arretesSurSMHSeul ? 'smh-only' : 'full');
 
     const doc = new jsPDF();
     const pw = doc.internal.pageSize.getWidth();
@@ -287,6 +287,9 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     const classInfo = getActiveClassification(state);
     const remunerationFull = calculateAnnualRemuneration(state, agreement, { mode: 'full', date: referenceDate });
     const remunerationSmh = calculateAnnualRemuneration(state, agreement, { mode: 'smh-only', date: referenceDate });
+    const salaireDu = scopeMode === 'smh-only'
+        ? getMontantAnnuelSMHSeul(state, agreement, { date: referenceDate })
+        : (remunerationFull?.total || 0);
 
     // ── Tableau identité / contrat ──
     const contractRows = [];
@@ -316,6 +319,26 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
         });
         y = (doc.lastAutoTable?.finalY ?? y) + 6;
     }
+
+    y = checkPageBreak(doc, y, 20);
+    const scopeLabel = scopeMode === 'smh-only'
+        ? 'SMH seul (assiette conventionnelle, Art. 140 CCNM)'
+        : 'Rémunération complète (option explicite)';
+    const scopeMethodo = scopeMode === 'smh-only'
+        ? 'Comparaison principale recommandée pour une mise en demeure sur minima conventionnels.'
+        : 'Comparaison élargie au brut complet (incluant les éléments hors assiette SMH).';
+    addAutoTable(doc, {
+        startY: y,
+        body: [
+            ['Périmètre retenu', scopeLabel],
+            ['Méthodologie associée', scopeMethodo]
+        ],
+        theme: 'plain',
+        styles: { fontSize: 8, cellPadding: 1.2 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 52 } },
+        margin: { left: MARGIN, right: MARGIN }
+    });
+    y = (doc.lastAutoTable?.finalY ?? y) + 6;
 
     // ── Tableau paramètres de calcul du SMH ──
     y = checkPageBreak(doc, y, 30);
@@ -440,7 +463,10 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     }
     const exclusTxt = exclusStr.length > 0 ? exclusStr.join(', ') : 'aucun élément hors SMH actif';
 
-    y = wrappedText(doc, `Principe (Art. 140 CCNM) : Le SMH s'apprécie sur l'année civile. L'assiette SMH inclut (actifs) : ${incluesStr}. Éléments exclus (actifs) : ${exclusTxt}.`, MARGIN, y, cw);
+    const principe = scopeMode === 'smh-only'
+        ? `Principe (Art. 140 CCNM) : Le SMH s'apprécie sur l'année civile. L'assiette SMH inclut (actifs) : ${incluesStr}. Éléments exclus (actifs) : ${exclusTxt}.`
+        : `Principe (option complète) : comparaison annuelle sur la rémunération brute totale reconstituée. Référence assiette SMH active : ${incluesStr}. Éléments hors assiette actifs : ${exclusTxt}.`;
+    y = wrappedText(doc, principe, MARGIN, y, cw);
     y += 4;
     doc.setFont(undefined, 'bold');
     y = wrappedText(doc, 'Formule : Arriérés(année) = max(0 ; total SMH dû - total perçu).', MARGIN, y, cw);
@@ -484,7 +510,7 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
 
         addAutoTable(doc, {
             startY: y,
-            head: [['Année', 'SMH annuel dû', 'Total perçu', 'Écart (arriérés)']],
+            head: [['Année', 'Annuel dû', 'Total perçu', 'Écart (arriérés)']],
             body,
             ...TABLE_STYLES,
             columnStyles: { 0: { cellWidth: 40 }, 1: { cellWidth: 35 }, 2: { cellWidth: 35 }, 3: { cellWidth: 35 } }
@@ -699,10 +725,6 @@ function esc(str) {
  */
 export function genererPDFArretees(data, infosPersonnelles = {}, forceSmhSeul = false, stateParam = null) {
     const state = stateParam || defaultState;
-
-    if (!state.arretesSurSMHSeul) {
-        throw new Error('Le rapport ne peut être généré qu\'en mode « SMH seul ».');
-    }
 
     // 1. Word : Lettre de mise en demeure (éditable)
     genererWordLettreMiseEnDemeure(data, infosPersonnelles);

@@ -265,6 +265,35 @@ describe('RemunerationCalculator', () => {
             }
         });
 
+        it('devrait appliquer un override utilisateur sur une modalité nationale déductible', () => {
+            const prevInter = JSON.parse(JSON.stringify(CONFIG.MODALITES_NATIONALES.interventionAstreinte));
+            CONFIG.MODALITES_NATIONALES.interventionAstreinte.allowUserOverride = true;
+            CONFIG.MODALITES_NATIONALES.interventionAstreinte.tauxMajoration = 0.25;
+            try {
+                const stateSansOverride = {
+                    ...stateBase,
+                    scores: [3, 3, 3, 3, 3, 3],
+                    accordInputs: {
+                        ...stateBase.accordInputs,
+                        majorationInterventionAstreinte: true,
+                        heuresInterventionAstreinte: 10
+                    },
+                    nationalPrimeOverrides: {}
+                };
+                const stateAvecOverride = {
+                    ...stateSansOverride,
+                    nationalPrimeOverrides: {
+                        majorationInterventionAstreinte: 0.5
+                    }
+                };
+                const sansOverride = calculateAnnualRemuneration(stateSansOverride, null, { mode: 'full' });
+                const avecOverride = calculateAnnualRemuneration(stateAvecOverride, null, { mode: 'full' });
+                expect(avecOverride.total).toBeGreaterThan(sansOverride.total);
+            } finally {
+                CONFIG.MODALITES_NATIONALES.interventionAstreinte = prevInter;
+            }
+        });
+
         it('ne devrait pas majorer la prime d\'équipe CCN avec les HS (base 35h fixe)', () => {
             const stateSansHS = {
                 ...stateBase,

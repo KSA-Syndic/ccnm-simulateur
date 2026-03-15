@@ -13,6 +13,39 @@ import { calculateAnnualRemuneration, getMontantAnnuelSMHSeul } from '../remuner
 import { getMontantPrimesFixesAnnuel, getMontantPrimesVerseesCeMois } from '../remuneration/PrimesFixesHelper.js';
 import { computeSalaireProrataEntree } from '../utils/dateUtils.js';
 
+function computeMensuelDueProfile({ salaireAnnuelDuMois, stateMois, agreement, smhSeul, month, nbMois }) {
+    const moisVersement13e = agreement?.repartition13Mois?.moisVersement ?? 11;
+    const estMois13eMois = month === moisVersement13e;
+    const repartition13Active = !!(agreement?.repartition13Mois?.actif && nbMois === 13);
+    const isSmhOnly = smhSeul === true;
+
+    const primesFixesAnnuel = agreement
+        ? getMontantPrimesFixesAnnuel(stateMois, agreement, { smhOnly: isSmhOnly })
+        : 0;
+    const baseAnnuellePourRepartition = salaireAnnuelDuMois - primesFixesAnnuel;
+
+    let mensuelDuBase = 0;
+    if (repartition13Active) {
+        mensuelDuBase = estMois13eMois
+            ? (baseAnnuellePourRepartition / 13) * 2
+            : (baseAnnuellePourRepartition / 13);
+    } else {
+        mensuelDuBase = baseAnnuellePourRepartition / 12;
+    }
+
+    const primesVerseesCeMois = agreement
+        ? getMontantPrimesVerseesCeMois(stateMois, agreement, month, { smhOnly: isSmhOnly })
+        : 0;
+    const salaireMensuelDuFinal = mensuelDuBase + primesVerseesCeMois;
+
+    return {
+        mensuelDuBase,
+        primesFixesAnnuel,
+        primesVerseesCeMois,
+        salaireMensuelDuFinal
+    };
+}
+
 /**
  * Calculer le salaire dû pour un mois donné avec tous les paramètres
  * @param {Date} dateMois - Date du mois
@@ -99,43 +132,15 @@ export function calculerArreteesMoisParMois(params) {
                 agreement,
                 smhSeul
             );
-            
-            // Calculer le salaire mensuel dû avec répartition 12/13 mois
-            let salaireMensuelDu;
-            const moisVersement13e = agreement?.repartition13Mois?.moisVersement ?? 11;
-            const estMois13eMois = month === moisVersement13e;
-            
-            if (smhSeul) {
-                // SMH seul : répartition tenant compte des primes incluses dans le SMH (Art. 140 CCNM)
-                const primesFixesSMH = agreement ? getMontantPrimesFixesAnnuel(stateMois, agreement, { smhOnly: true }) : 0;
-                const baseAnnuellePourRepartition = salaireAnnuelDuMois - primesFixesSMH;
-                if (agreement && agreement.repartition13Mois && agreement.repartition13Mois.actif && nbMois === 13) {
-                    if (estMois13eMois) {
-                        salaireMensuelDu = (baseAnnuellePourRepartition / 13) * 2;
-                    } else {
-                        salaireMensuelDu = baseAnnuellePourRepartition / 13;
-                    }
-                } else {
-                    salaireMensuelDu = baseAnnuellePourRepartition / 12;
-                }
-                const primesCeMoisSMH = agreement ? getMontantPrimesVerseesCeMois(stateMois, agreement, month, { smhOnly: true }) : 0;
-                if (primesCeMoisSMH > 0) salaireMensuelDu += primesCeMoisSMH;
-            } else {
-                // Rémunération complète : primes à versement unique selon moisVersement de chaque prime
-                const primesFixesAnnuel = agreement ? getMontantPrimesFixesAnnuel(stateMois, agreement) : 0;
-                const baseAnnuellePourRepartition = salaireAnnuelDuMois - primesFixesAnnuel;
-                if (agreement && agreement.repartition13Mois && agreement.repartition13Mois.actif && nbMois === 13) {
-                    if (estMois13eMois) {
-                        salaireMensuelDu = (baseAnnuellePourRepartition / 13) * 2;
-                    } else {
-                        salaireMensuelDu = baseAnnuellePourRepartition / 13;
-                    }
-                } else {
-                    salaireMensuelDu = baseAnnuellePourRepartition / 12;
-                }
-                const primesCeMois = agreement ? getMontantPrimesVerseesCeMois(stateMois, agreement, month) : 0;
-                if (primesCeMois > 0) salaireMensuelDu += primesCeMois;
-            }
+            const dueProfile = computeMensuelDueProfile({
+                salaireAnnuelDuMois,
+                stateMois,
+                agreement,
+                smhSeul,
+                month,
+                nbMois
+            });
+            let salaireMensuelDu = dueProfile.salaireMensuelDuFinal;
 
             // Proratisation premier mois (CCNM Art. 139, 103.5.1, 103.5.2)
             const estPremierMois = currentDate.getFullYear() === dateEmbauche.getFullYear() &&
@@ -157,6 +162,9 @@ export function calculerArreteesMoisParMois(params) {
                 salaireMensuelReel: salaireMensuelReel,
                 salaireDu: salaireAnnuelDuMois,
                 salaireMensuelDu: salaireMensuelDu,
+                salaireMensuelDuBase: dueProfile.mensuelDuBase,
+                primesFixesAnnuel: dueProfile.primesFixesAnnuel,
+                primesVerseesCeMois: dueProfile.primesVerseesCeMois,
                 difference: difference
             });
         }

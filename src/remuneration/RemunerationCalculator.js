@@ -68,6 +68,55 @@ function getActivityRate(state) {
     return bounded / 100;
 }
 
+function resolveDerivedNationalValue(config = {}, fallbackValue = 0) {
+    if (config?.deriveFrom === 'majorations.heuresSup25') {
+        const derived = Number(CONFIG?.MAJORATIONS_CCN?.heuresSup25);
+        if (Number.isFinite(derived) && derived > 0) return derived;
+    }
+    const fallback = Number(fallbackValue);
+    return Number.isFinite(fallback) ? fallback : 0;
+}
+
+function applyNationalPrimeOverridesToDefs(defs, state) {
+    if (!Array.isArray(defs) || defs.length === 0) return defs;
+    const overrideMap = (state && typeof state.nationalPrimeOverrides === 'object')
+        ? state.nationalPrimeOverrides
+        : {};
+    return defs.map((def) => {
+        const semanticId = def?.semanticId;
+        if (!semanticId) return def;
+        const isNationalTarget = semanticId === SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE
+            || semanticId === SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE
+            || semanticId === SEMANTIC_ID.PRIME_PANIER_NUIT
+            || semanticId === SEMANTIC_ID.PRIME_HABILLAGE_DESHABILLAGE
+            || semanticId === SEMANTIC_ID.PRIME_DEPLACEMENT_PRO;
+        if (!isNationalTarget) return def;
+
+        const cfg = { ...(def.config || {}) };
+        const allowOverride = cfg.allowUserOverride === true;
+        const overrideRaw = allowOverride ? overrideMap?.[semanticId] : undefined;
+        const overrideValue = Number(overrideRaw);
+
+        if (semanticId === SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE) {
+            const base = resolveDerivedNationalValue(cfg, cfg.taux);
+            cfg.taux = (allowOverride && Number.isFinite(overrideValue) && overrideValue >= 0)
+                ? overrideValue
+                : base;
+        } else if (semanticId === SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE && cfg.modeCalcul === 'forfaitPeriode') {
+            const base = resolveDerivedNationalValue(cfg, cfg.valeurForfaitPeriode);
+            cfg.valeurForfaitPeriode = (allowOverride && Number.isFinite(overrideValue) && overrideValue >= 0)
+                ? overrideValue
+                : base;
+        } else {
+            const base = resolveDerivedNationalValue(cfg, cfg.tauxHoraire);
+            cfg.tauxHoraire = (allowOverride && Number.isFinite(overrideValue) && overrideValue >= 0)
+                ? overrideValue
+                : base;
+        }
+        return { ...def, config: cfg };
+    });
+}
+
 /**
  * Construit le contexte de calcul commun (state + bases).
  * @private
@@ -379,7 +428,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
     let details = [];
     let total = baseSMH;
     const context = buildContext(state, baseSMH, classe, agreement, { baseSMHFull, activityRate });
-    const convPrimeDefs = getConventionPrimeDefs();
+    const convPrimeDefs = applyNationalPrimeOverridesToDefs(getConventionPrimeDefs(), state);
 
     // ─── Mode SMH seul ───
     if (mode === 'smh-only') {
@@ -661,7 +710,9 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
             isAgreement: isAgreementPrime,
             isSMHIncluded,
             agreementId: isAgreementPrime ? agreement?.id : undefined,
-            semanticId
+            semanticId,
+            sourceArticle: def.config?.sourceArticle || '',
+            conditionTexte: def.config?.conditionTexte || ''
         });
         if (!isSMHIncluded) {
             total += r.amount;
@@ -805,7 +856,9 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                 isSMHIncluded,
                 agreementId: agreement.id,
                 semanticId: def.semanticId || def.id,
-                moisVersement: def.config?.moisVersement ?? null
+                moisVersement: def.config?.moisVersement ?? null,
+                sourceArticle: def.config?.sourceArticle || '',
+                conditionTexte: def.config?.conditionTexte || ''
             });
             // Les primes incluses dans le SMH (Art. 140 CCNM) ne s'ajoutent PAS au total :
             // elles constituent une distribution du salaire permettant d'atteindre le SMH grille,

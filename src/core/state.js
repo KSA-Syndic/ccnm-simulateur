@@ -52,6 +52,8 @@ export const state = {
     accordId: null,              // ID de l'accord actif (ex: 'kuhn')
     /** Entrées utilisateur par élément d'accord. Clés fournies par l'accord (stateKeyActif, stateKeyHeures). Vide au démarrage ; hydraté par hydrateAccordInputs(agreement, state) quand un accord est chargé/activé. */
     accordInputs: {},
+    /** Surcharges utilisateur des valeurs nationales déductibles, indexées par semanticId. */
+    nationalPrimeOverrides: {},
     
     // === AFFICHAGE ===
     nbMois: 12                   // Répartition mensuelle (12 ou 13 mois)

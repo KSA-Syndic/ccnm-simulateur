@@ -180,6 +180,40 @@ export const CONFIG = {
         heuresSup50: 0.50   // +50% (HS suivantes) – inclus assiette SMH
     },
 
+    // Textes UI configurables pour titres/descriptions de tooltips.
+    TOOLTIP_TEXTS: {
+        labels: {
+            codeTravail: 'Code du travail',
+            conventionMetallurgie: 'Convention collective de la métallurgie (CCNM)',
+            accordCollectif: 'Accord collectif'
+        },
+        templates: {
+            legalBlock: '<strong>{title} :</strong><br>{description}'
+        },
+        page2: {
+            conventionTitle: 'Convention métallurgie (CCNM)',
+            accordTitlePrefix: 'Accord',
+            nuitRateTemplate: '+{pct}%.',
+            dimancheRateTemplate: '+{pct}%.',
+            heuresSupRateTemplate: '+{pct25}% (36e-43e), puis +{pct50}% (>=44e).',
+            heuresSupConventionDescription: 'Heures supplémentaires : {rates}<br>Durée légale : 35h/semaine (151,67h/mois).',
+            heuresSupAccordDescription: '{rates}{contingent}{repos}',
+            tempsPartielSource: 'Code du travail (Art. L3123-5)',
+            tempsPartielDescription: "La rémunération à temps partiel est proportionnelle à celle d'un temps complet, à qualification égale.",
+            joursSupForfaitSource: 'Code du travail (Art. L3121-59)',
+            joursSupForfaitDescription: "Le salarié au forfait jours peut renoncer à des jours de repos via avenant écrit annuel, avec une majoration de salaire qui ne peut pas être inférieure à 10%.",
+            forfaitSource: 'Convention métallurgie (CCNM)',
+            forfaitDescription: 'Base 35h : sans majoration. Forfait Heures : +{pctHeures}%. Forfait Jours : +{pctJours}%.',
+            pointTerritorialSource: 'Accord territorial',
+            pointTerritorialDescription: 'Valeur définie par accord territorial. {territoire} {year} : {pointValue}€',
+            pointTerritorialLinkLabel: 'Voir sur code.travail.gouv.fr'
+        },
+        primeEquipe: {
+            sourceArticle: 'Convention collective de la métallurgie (CCNM)',
+            conditionTexte: 'Prime d’équipe conventionnelle calculée sur la base horaire de référence.'
+        }
+    },
+
     // Modalités nationales paramétrables (Code du travail / CCN / usages)
     // IMPORTANT: les valeurs ci-dessous sont volontairement configurables.
     // Elles doivent être ajustées à la source juridique applicable à l'entreprise.
@@ -195,6 +229,7 @@ export const CONFIG = {
             defaultHeures: 0,
             inputUnitLabel: "heures d'astreinte/mois",
             inclusDansSMH: false,
+            allowUserOverride: false,
             sourceArticle: 'Code du travail L3121-9, L3121-11, L3121-12',
             conditionTexte: 'Contrepartie d’astreinte obligatoire (financière ou repos) selon accord ou règles supplétives.',
             tooltip: 'Astreinte: contrepartie obligatoire de disponibilité (L3121-9). Organisation/compensation par accord (L3121-11) ou dispositif supplétif (L3121-12). Hors assiette SMH.'
@@ -209,6 +244,8 @@ export const CONFIG = {
             defaultHeures: 0,
             inputUnitLabel: "heures d'intervention/mois",
             inclusDansSMH: false,
+            allowUserOverride: true,          // Valeur déductible: par défaut alignée sur majoration HS 25%
+            deriveFrom: 'majorations.heuresSup25',
             requiresKeys: ['primeAstreinteDisponibilite'],
             nonCumulAvec: ['travailHeuresSup'],
             sourceArticle: 'Code du travail L3121-9 et L3121-10',
@@ -224,6 +261,7 @@ export const CONFIG = {
             defaultHeures: 0,
             inputUnitLabel: 'unités/mois',
             inclusDansSMH: false,
+            allowUserOverride: false,
             sourceArticle: 'Accord collectif applicable / usage',
             conditionTexte: 'Prime de sujétion/indemnisation selon accord, distincte des majorations légales.',
             tooltip: 'Panier/repas de nuit selon accord applicable. Contrepartie de sujétion, hors assiette SMH.'
@@ -237,6 +275,7 @@ export const CONFIG = {
             defaultHeures: 0,
             inputUnitLabel: 'heures/mois',
             inclusDansSMH: false,
+            allowUserOverride: false,
             sourceArticle: 'Code du travail L3121-3',
             conditionTexte: 'Contrepartie obligatoire lorsque habillage/déshabillage est imposé et sur le lieu de travail.',
             tooltip: 'Habillage/déshabillage: contrepartie prévue par L3121-3, hors assiette SMH.'
@@ -250,6 +289,7 @@ export const CONFIG = {
             defaultHeures: 0,
             inputUnitLabel: 'heures/mois',
             inclusDansSMH: false,
+            allowUserOverride: false,
             sourceArticle: 'Code du travail L3121-4',
             conditionTexte: 'Dépassement du temps normal de trajet: contrepartie obligatoire, sans qualification de temps de travail effectif.',
             tooltip: 'Déplacements/trajets professionnels: contrepartie selon L3121-4 et accord applicable, hors assiette SMH.'

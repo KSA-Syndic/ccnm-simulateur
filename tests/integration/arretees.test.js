@@ -166,6 +166,23 @@ describe('Arriérés - Calculs Fonctionnels', () => {
             expect(annuelDu).toBeGreaterThan(CONFIG.SMH[5]);
         });
 
+        it('devrait exposer un profil mensuel dû explicite', () => {
+            const result = calculerArreteesMoisParMois({
+                dateDebut: new Date('2024-01-01'),
+                dateFin: new Date('2024-01-31'),
+                dateEmbauche: new Date('2020-01-01'),
+                dateChangementClassification: null,
+                salairesParMois: { '2024-01': 1900 },
+                stateSnapshot: stateBase,
+                agreement: null,
+                smhSeul: true,
+                nbMois: 12
+            });
+            expect(result.detailsTousMois[0]).toHaveProperty('salaireMensuelDuBase');
+            expect(result.detailsTousMois[0]).toHaveProperty('primesFixesAnnuel');
+            expect(result.detailsTousMois[0]).toHaveProperty('primesVerseesCeMois');
+        });
+
         it('devrait appliquer les taux HS de l\'accord dans le salaire dû SMH seul', () => {
             const accordHS = {
                 id: 'test-hs',
@@ -229,6 +246,40 @@ describe('Arriérés - Calculs Fonctionnels', () => {
             } finally {
                 CONFIG.MODALITES_NATIONALES.astreinteDisponibilite = prevAstreinte;
             }
+        });
+
+        it('devrait prendre en compte les overrides nationaux déductibles en mode complet', () => {
+            const stateSansOverride = {
+                ...stateBase,
+                accordInputs: {
+                    primeAstreinteDisponibilite: true,
+                    heuresAstreinteDisponibilite: 10,
+                    majorationInterventionAstreinte: true,
+                    heuresInterventionAstreinte: 5
+                },
+                nationalPrimeOverrides: {}
+            };
+            const stateAvecOverride = {
+                ...stateSansOverride,
+                nationalPrimeOverrides: {
+                    majorationInterventionAstreinte: 0.5
+                }
+            };
+            const annuelSans = calculateSalaireDuPourMois(
+                new Date('2024-01-01'),
+                new Date('2020-01-01'),
+                stateSansOverride,
+                null,
+                false
+            );
+            const annuelAvec = calculateSalaireDuPourMois(
+                new Date('2024-01-01'),
+                new Date('2020-01-01'),
+                stateAvecOverride,
+                null,
+                false
+            );
+            expect(annuelAvec).toBeGreaterThan(annuelSans);
         });
 
         it('devrait proratiser le salaire dû en temps partiel', () => {
