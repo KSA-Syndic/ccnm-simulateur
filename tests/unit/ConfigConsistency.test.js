@@ -1,3 +1,35 @@
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
+import vm from 'node:vm';
+import { CONFIG as MODULE_CONFIG } from '../../src/core/config.js';
+
+const testDir = dirname(fileURLToPath(import.meta.url));
+
+function loadLegacyConfig() {
+    const legacyConfigPath = resolve(testDir, '../../config.js');
+    const code = readFileSync(legacyConfigPath, 'utf8');
+    const sandbox = {
+        window: {},
+        module: { exports: {} },
+        console
+    };
+    vm.runInNewContext(code, sandbox, { filename: 'config.js' });
+    return sandbox.window.CONFIG || sandbox.module.exports;
+}
+
+describe('Config consistency (legacy/runtime vs module)', () => {
+    it('garde les textes UI de tooltips synchronisés', () => {
+        const legacy = loadLegacyConfig();
+        expect(legacy?.TOOLTIP_TEXTS).toEqual(MODULE_CONFIG.TOOLTIP_TEXTS);
+    });
+
+    it('garde les modalités nationales synchronisées', () => {
+        const legacy = loadLegacyConfig();
+        expect(legacy?.MODALITES_NATIONALES).toEqual(MODULE_CONFIG.MODALITES_NATIONALES);
+    });
+});
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';

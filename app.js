@@ -205,6 +205,105 @@ function formatNumberFr(value, digits = 2) {
     return n.toFixed(digits).replace('.', ',');
 }
 
+function applyTooltipTemplate(template, vars = {}) {
+    return String(template || '').replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? ''));
+}
+
+function getTooltipTextsConfig() {
+    return CONFIG?.TOOLTIP_TEXTS || {};
+}
+
+function getTooltipOrigins() {
+    const origins = getTooltipTextsConfig()?.origins || {};
+    return {
+        codeTravail: origins.codeTravail || 'Code du travail',
+        ccnm: origins.ccnm || window.LABELS?.conventionLabel || 'CCNM',
+        accordEntreprise: origins.accordEntreprise || "Accord d'entreprise",
+        accordCollectif: origins.accordCollectif || 'Accord collectif / usage'
+    };
+}
+
+function buildLegalTooltipContent(title, description) {
+    const template = getTooltipTextsConfig()?.templates?.legalBlock || '<strong>{title} :</strong><br>{description}';
+    const safeTitle = escapeHTML(String(title || ''));
+    const safeDescription = escapeHTML(String(description || '')).replace(/\n/g, '<br>');
+    return applyTooltipTemplate(template, { title: safeTitle, description: safeDescription });
+}
+
+function composeTooltipDescription(parts = []) {
+    return parts
+        .map((part) => String(part || '').trim())
+        .filter(Boolean)
+        .join(' ')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+}
+
+function buildPrimeConditionTooltip(prime, options = {}) {
+    const isPrimeEquipe = prime?.id === 'primeEquipe' || prime?.semanticId === 'primeEquipe';
+    if (isPrimeEquipe && typeof prime?.tooltip === 'string' && prime.tooltip.trim()) {
+        return prime.tooltip;
+    }
+    const isAccordPrime = options?.isAccordPrime === true;
+    const agreement = options?.agreement || null;
+    const tooltipOrigins = getTooltipOrigins();
+    const accordPrefix = tooltipOrigins.accordEntreprise;
+    const fallbackOrigin = isAccordPrime
+        ? `${accordPrefix} ${getAccordNomCourt(agreement) || 'accord'}`
+        : tooltipOrigins.ccnm;
+    const sourceTitle = classifyOriginFromSourceArticle(prime?.sourceArticle, fallbackOrigin) || fallbackOrigin;
+    const baseTooltip = String(prime?.tooltip || '');
+    let ratePart = '';
+    if (prime?.valueType === 'majorationHoraire' && prime?.valeurAccord != null) {
+        const pct = Math.round(Number(prime.valeurAccord) * 100);
+        ratePart = `+${pct}%.`;
+    } else if (prime?.valeurAccord != null) {
+        const unit = prime?.unit || '€/h';
+        ratePart = `+${formatNumberFr(Number(prime.valeurAccord), 2)} ${unit}.`;
+    }
+    const description = composeTooltipDescription([ratePart, baseTooltip || prime?.conditionTexte]);
+    return buildLegalTooltipContent(sourceTitle, description || baseTooltip || sourceTitle);
+}
+
+function buildResultTooltipContent(detail, fallbackOrigin) {
+    const resultCfg = getTooltipTextsConfig()?.result || {};
+    const origin = classifyOriginFromSourceArticle(detail?.sourceArticle, detail?.tooltipOrigin || fallbackOrigin) || fallbackOrigin;
+    const title = origin;
+    const lineTemplate = resultCfg.breakdownLineTemplate || '• {label} : {value}';
+    const descriptionLines = [];
+    const summaryLine = String(detail?.tooltipDetail || '').trim();
+    const defaultLine = `${detail?.label || ''} : ${formatMoney(detail?.value || 0)}`.trim();
+    const hasBreakdown = Array.isArray(detail?.breakdown) && detail.breakdown.length > 0;
+    if (hasBreakdown) {
+        detail.breakdown.forEach((b) => {
+            descriptionLines.push(applyTooltipTemplate(lineTemplate, {
+                label: b?.label || '',
+                value: formatMoney(b?.value || 0)
+            }));
+        });
+        const normalizedSummary = summaryLine.toLowerCase();
+        const summaryIsRedundant = !normalizedSummary
+            || normalizedSummary === defaultLine.toLowerCase()
+            || descriptionLines.some((line) => line.toLowerCase().includes(normalizedSummary));
+        if (!summaryIsRedundant) {
+            descriptionLines.push(summaryLine);
+        }
+    } else {
+        if (summaryLine) {
+            descriptionLines.push(summaryLine);
+        } else {
+            descriptionLines.push(defaultLine);
+        }
+    }
+    if (detail?.sourceArticle) {
+        descriptionLines.push(`Référence : ${detail.sourceArticle}`);
+    }
+    if (detail?.conditionTexte) {
+        descriptionLines.push(`Base de calcul : ${detail.conditionTexte}`);
+    }
+    return buildLegalTooltipContent(title, descriptionLines.filter(Boolean).join('\n'));
+}
+
 function getSmhHourlyBaseRateFromAnnual(smhAnnual, options = {}) {
     if (typeof window.getSmhHourlyBaseRateFromModules === 'function') {
         return window.getSmhHourlyBaseRateFromModules(smhAnnual, options);
@@ -227,16 +326,37 @@ function getPrimeEquipeConventionRatePerPoste() {
 }
 
 function buildPrimeEquipeTooltip(agreement, accordPrimeEquipe = null) {
+    const primeEquipeConfig = CONFIG?.TOOLTIP_TEXTS?.primeEquipe || {};
+    const tooltipOrigins = getTooltipOrigins();
+    const conventionSource = tooltipOrigins.ccnm;
+    const conventionDescriptionTemplate = primeEquipeConfig.conventionDescriptionTemplate
+        || '30 min du taux horaire de base par poste. Référence actuelle : {value} €/poste.';
+    const accordDescriptionTemplate = primeEquipeConfig.accordDescriptionTemplate
+        || 'Valeur unitaire accord : {value} {unit}.';
     const tauxCCN = getPrimeEquipeConventionRatePerPoste();
-    const conventionLine = `30 min du taux horaire de base par poste.<br>Référence actuelle : ${formatNumberFr(tauxCCN, 2)} €/poste.`;
+    const conventionLine = applyTooltipTemplate(conventionDescriptionTemplate, { value: formatNumberFr(tauxCCN, 2) });
     const accordValue = accordPrimeEquipe?.valeurAccord;
+    const conventionBlock = buildLegalTooltipContent(
+        conventionSource,
+        composeTooltipDescription([primeEquipeConfig.conditionTexte, conventionLine])
+    );
     if (state.accordActif && agreement && Number.isFinite(Number(accordValue))) {
         const nomAccord = getAccordNomCourt(agreement) || 'Accord';
         const unit = accordPrimeEquipe?.unit || '€/h';
-        const accordLine = `${formatNumberFr(Number(accordValue), 2)} ${unit}.`;
-        return `<strong>Convention :</strong><br>${conventionLine}<br><br><strong>Accord ${escapeHTML(nomAccord)} :</strong><br>${accordLine}`;
+        const accordSource = tooltipOrigins.accordEntreprise
+            ? `${tooltipOrigins.accordEntreprise} ${nomAccord}`
+            : `${tooltipOrigins.accordEntreprise} ${nomAccord}`;
+        const accordLine = applyTooltipTemplate(accordDescriptionTemplate, {
+            value: formatNumberFr(Number(accordValue), 2),
+            unit
+        });
+        const accordBlock = buildLegalTooltipContent(
+            accordSource,
+            composeTooltipDescription([accordPrimeEquipe?.conditionTexte, accordLine, accordPrimeEquipe?.tooltip])
+        );
+        return `${conventionBlock}<br><br>${accordBlock}`;
     }
-    return `<strong>Convention :</strong><br>${conventionLine}`;
+    return conventionBlock;
 }
 
 /**
@@ -1873,35 +1993,7 @@ function updateConditionsTravailDisplay() {
                     spanLabel.appendChild(document.createTextNode(' '));
                     spanLabel.appendChild(badgeEl);
                 }
-                const prefixAccordOnly = isAccordPrime && (typeof window.LABELS !== 'undefined' && window.LABELS.tooltipPrefixAccordOnly)
-                    ? window.LABELS.tooltipPrefixAccordOnly
-                    : '';
-                const tooltipContent = (() => {
-                    const baseTooltip = prime.tooltip ? String(prime.tooltip) : '';
-                    const originFallback = isAccordPrime
-                        ? `Accord d'entreprise ${getAccordNomCourt(agreement) || 'accord'}`
-                        : (window.LABELS?.conventionLabel || 'Convention collective de la métallurgie (CCN)');
-                    const origin = classifyOriginFromSourceArticle(prime.sourceArticle, originFallback);
-                    const sourceLine = prime.sourceArticle
-                        ? String(prime.sourceArticle)
-                        : String(origin || '');
-                    const wrapWithTemplate = (detailText) => {
-                        const description = [String(prime.conditionTexte || ''), String(detailText || '')]
-                            .filter(Boolean)
-                            .join(' ')
-                            .trim();
-                        return `<strong>${sourceLine} :</strong><br>${description}`.trim();
-                    };
-                    if (prime.valueType === 'majorationHoraire' && prime.valeurAccord != null) {
-                        const pct = Math.round(prime.valeurAccord * 100);
-                        const ratePart = `+${pct}%.`;
-                        return (prefixAccordOnly + wrapWithTemplate(`${ratePart} ${baseTooltip}`.trim())).trim();
-                    }
-                    const taux = prime.valeurAccord != null ? String(prime.valeurAccord).replace('.', ',') : '';
-                    const unit = prime.unit || '€/h';
-                    const ratePart = taux ? `+${taux} ${unit}.` : '';
-                    return (prefixAccordOnly + wrapWithTemplate(`${ratePart} ${baseTooltip}`.trim())).trim();
-                })();
+                const tooltipContent = buildPrimeConditionTooltip(prime, { agreement, isAccordPrime });
                 if (tooltipContent) {
                     const tooltipSpan = document.createElement('span');
                     tooltipSpan.className = 'tooltip-trigger';
@@ -2472,17 +2564,20 @@ function updateAll() {
 }
 
 function classifyOriginFromSourceArticle(sourceArticle, fallbackOrigin) {
-    const tooltipLabels = CONFIG?.TOOLTIP_TEXTS?.labels || {};
+    const tooltipOrigins = getTooltipOrigins();
     const src = String(sourceArticle || '').toLowerCase();
     if (!src) return fallbackOrigin;
     if (src.includes('code du travail') || /\bl\d{4}-\d+\b/.test(src)) {
-        return tooltipLabels.codeTravail || 'Code du travail';
+        return tooltipOrigins.codeTravail;
+    }
+    if (src.includes('usage') || src.includes('accord collectif applicable')) {
+        return tooltipOrigins.accordCollectif;
     }
     if (src.includes('convention') || src.includes('ccn') || src.includes('ccnm') || src.includes('idcc')) {
-        return tooltipLabels.conventionMetallurgie || window.LABELS?.conventionLabel || 'Convention collective de la métallurgie (CCN)';
+        return tooltipOrigins.ccnm;
     }
     if (src.includes('accord')) {
-        return tooltipLabels.accordCollectif || 'Accord collectif';
+        return src.includes("d'entreprise") ? tooltipOrigins.accordEntreprise : tooltipOrigins.accordCollectif;
     }
     return fallbackOrigin;
 }
@@ -2500,7 +2595,7 @@ function simplifyResultDisplayLabel(rawLabel) {
  * Mettre à jour l'affichage de la rémunération
  */
 function updateRemunerationDisplay(remuneration) {
-    const conventionLabel = window.LABELS?.conventionLabel || 'Convention collective de la métallurgie (CCN)';
+    const conventionLabel = getTooltipOrigins().ccnm;
     // Ligne contextuelle sous le sous-titre (forfait + base horaire)
     const ctxNotice = document.getElementById('result-context-notice');
     let baseInfo = '';
@@ -2565,24 +2660,7 @@ function updateRemunerationDisplay(remuneration) {
         const isAccord = !!detail.isAgreement;
         const accordBadge = isAccord ? getAccordBadgeHtml(agreement) : '';
         const fallbackOrigin = isAccord ? `Accord d'entreprise ${nomAccord}` : conventionLabel;
-        const origin = classifyOriginFromSourceArticle(detail.sourceArticle, detail.tooltipOrigin || fallbackOrigin);
-        let tipContent = '<strong>Origine :</strong> ' + (typeof origin === 'string' ? origin : fallbackOrigin) + '<br>';
-        if (detail.sourceArticle) {
-            tipContent += '<strong>Référence :</strong> ' + escapeHTML(String(detail.sourceArticle)) + '<br>';
-        }
-        if (detail.conditionTexte) {
-            tipContent += '<strong>Cadre :</strong> ' + escapeHTML(String(detail.conditionTexte)) + '<br>';
-        }
-        if (detail.breakdown && detail.breakdown.length) {
-            tipContent += '<strong>Détail du calcul :</strong><br>';
-            detail.breakdown.forEach(b => {
-                tipContent += '• ' + escapeHTML(b.label) + ' : ' + formatMoney(b.value) + '<br>';
-            });
-        } else if (detail.tooltipDetail) {
-            tipContent += '<strong>Détail :</strong> ' + escapeHTML(detail.tooltipDetail) + '<br>';
-        } else {
-            tipContent += '<strong>Détail :</strong> ' + escapeHTML(detail.label) + ' : ' + formatMoney(detail.value);
-        }
+        const tipContent = buildResultTooltipContent(detail, fallbackOrigin);
         const tipAttr = tipContent.replace(/"/g, '&quot;');
         // Sous-lignes SMH (Art. 140) : indentées, rattachées visuellement à la base
         const isSub = detail.isSMHSubLine === true;
@@ -2624,7 +2702,7 @@ function updateRemunerationDisplay(remuneration) {
  * Séparation CCN / Accord d'entreprise : le badge accord ne s'affiche que sur les lignes 100 % accord.
  */
 function aggregateRemunerationDetails(details) {
-    const conventionLabel = window.LABELS?.conventionLabel || 'Convention collective de la métallurgie (CCN)';
+    const conventionLabel = getTooltipOrigins().ccnm;
     const aggregated = [];
     let majorationsCCN = 0;
     let majorationsAccord = 0;
@@ -2670,7 +2748,8 @@ function aggregateRemunerationDetails(details) {
             });
         }
         // Agréger les majorations en CCN vs accord
-        else if (detail.label.includes('Majoration') || detail.label.includes('Forfait')) {
+        else if ((detail.label.includes('Majoration') || detail.label.includes('Forfait'))
+            && detail.semanticId !== 'majorationInterventionAstreinte') {
             if (isAccordDetail(detail)) {
                 majorationsAccord += detail.value;
                 majorationsBreakdownAccord.push({ label: detail.label, value: detail.value, isAgreement: true });

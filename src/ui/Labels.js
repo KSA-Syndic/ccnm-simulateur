@@ -22,8 +22,8 @@ export const LABELS = {
     // Header
     headerTitle: `Simulateur Métallurgie ${CURRENT_DATA_YEAR}`,
     headerSubtitle: 'Classification et Rémunération',
-    conventionLabel: 'Convention collective de la métallurgie (CCN)',
-    headerInfoTooltip: 'Ce simulateur vous aide à estimer votre niveau de classification et à vérifier que votre salaire respecte au minimum les barèmes de la convention collective de la métallurgie (CCN).',
+    conventionLabel: 'Convention collective nationale de la métallurgie (CCNM)',
+    headerInfoTooltip: 'Ce simulateur vous aide à estimer votre niveau de classification et à vérifier que votre salaire respecte au minimum les barèmes de la convention collective nationale de la métallurgie (CCNM).',
     headerInfoTooltipLinkText: 'Voir les textes de la convention',
 
     // Steps
@@ -77,9 +77,9 @@ export const LABELS = {
     resultatAnnuel: 'bruts / an',
     resultatMensuel: 'bruts / mois',
     detailCalcul: 'Détail du calcul',
-    baseSalaryOriginLabel: 'CCN (Art. 140) — assiette du salaire minima (SMH)',
+    baseSalaryOriginLabel: 'CCNM (Art. 140) — assiette du salaire minima (SMH)',
     baseSalaryTooltipDetail: 'Base du salaire minima (SMH).',
-    smhIncludedOriginLabel: 'Incluse dans le salaire minima (Art. 140 CCN) — ne s\'ajoute pas au total',
+    smhIncludedOriginLabel: 'Incluse dans le salaire minima (Art. 140 CCNM) — ne s\'ajoute pas au total',
     evolutionInflation: '📈 Évolution vs inflation',
     resultArreteesPromptTitle: '💡 Vous pensez gagner moins que la rémunération affichée ?',
     resultArreteesPromptBody: 'Calculez vos arriérés de salaire et générez un rapport PDF pour les réclamer.',
@@ -115,7 +115,7 @@ export const LABELS = {
     smhSeul: 'Calculer les arriérés sur le salaire minima seul',
     
     // Footer
-    footerText: `Convention collective de la métallurgie (CCN) ${CURRENT_DATA_YEAR}`,
+    footerText: `Convention collective nationale de la métallurgie (CCNM) ${CURRENT_DATA_YEAR}`,
     footerDisclaimer: 'Outil indicatif',
     footerCredit: 'Réalisé par CFDT Kuhn',
     footerPrivacyLink: 'Politique de confidentialité'

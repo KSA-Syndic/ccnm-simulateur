@@ -481,7 +481,14 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 
 #### C. Structure des Données (`CONFIG`)
 
-Le code centralise les données **CCN** dans `config.js` (CONFIG) : SMH, BAREME_DEBUTANTS, TAUX_ANCIENNETE, FORFAITS, MAJORATIONS_CCN, etc. Les **accords d'entreprise** ne sont pas dans CONFIG : ils sont définis dans le dossier `accords/` (fichiers par accord) et chargés à l'exécution via AgreementLoader/AgreementRegistry.
+Le code centralise les données **CCN** dans la configuration `CONFIG` : SMH, BAREME_DEBUTANTS, TAUX_ANCIENNETE, FORFAITS, MAJORATIONS_CCN, textes de tooltips et libellés UI. Les **accords d'entreprise** ne sont pas dans CONFIG : ils sont définis dans le dossier `accords/` (fichiers par accord) et chargés à l'exécution via AgreementLoader/AgreementRegistry.
+
+**Règle d'architecture (obligatoire) :**
+- Les textes UI (titres, descriptions, tooltips, intitulés d'origine légale) doivent être pilotés par la config (`CONFIG.TOOLTIP_TEXTS`, `LABELS`) et **non codés en dur** dans `app.js`/`src/*`.
+- Le template d'affichage des tooltips juridiques est unique : **source en gras + retour ligne + description**.
+- Les mentions redondantes dans les labels (ex. « conventionnelle » déjà explicité dans le tooltip) doivent être évitées.
+- Les modalités issues du **Code du travail** doivent conserver explicitement cette origine dans le rendu (pas de fallback CCNM erroné).
+- Objectif de maintenance : converger vers **une seule source de vérité de configuration** ; les éventuels fichiers de compatibilité runtime ne doivent être que des adaptateurs sans duplication métier.
 
 **Valeurs numériques (convention, accords) :** Les montants, taux, seuils et délais mentionnés dans ce PRD (SMH, majorations, forfaits, ancienneté, barèmes, prescription, etc.) sont donnés **à titre d'exemple** ou reflètent une version antérieure des textes. Les valeurs à jour à utiliser dans l'application doivent être cherchées dans les **fichiers de configuration** (`src/core/config.js`, objet CONFIG) et dans les **définitions d'accord** (dossier `accords/`, fichiers par accord).
 
@@ -606,8 +613,13 @@ Le code est organisé en modules fonctionnels :
 Ce PRD ne doit pas embarquer de valeurs chiffrées figées (montants, taux, seuils, grilles) afin d'éviter les obsolescences.
 
 Sources uniques :
-- **Convention (valeurs dynamiques)** : `src/core/config.js` (`CONFIG` : SMH, barèmes débutants, taux ancienneté, majorations, forfaits, durée légale, etc.).
+- **Convention (valeurs dynamiques + textes UI métier)** : `src/core/config.js` (`CONFIG` : SMH, barèmes débutants, taux ancienneté, majorations, forfaits, durée légale, `TOOLTIP_TEXTS`, etc.).
 - **Accords entreprise (valeurs dynamiques)** : dossier `accords/` (fichiers d'accord chargés à l'exécution).
+
+Règle de non-régression :
+- Interdit d'introduire des chaînes juridiques/tooltip en dur dans la couche UI.
+- Toute nouvelle modalité doit fournir `sourceArticle` + `conditionTexte` (ou équivalent) dans la config/définition d'accord.
+- En cas de besoin legacy multi-runtime, l'adaptateur secondaire doit être dérivé automatiquement de la source principale (pas de copie manuelle divergente).
 
 Référence des clés de configuration (sans valeurs en dur dans ce PRD) :
 - `CONFIG.SMH`

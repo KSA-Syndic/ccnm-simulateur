@@ -54,6 +54,16 @@ const BAREME_DEBUTANTS_BY_YEAR = {
     }
 };
 
+// Indemnité repas de nuit (CCNM Art. 147)
+// Référence de montant : plafond ACOSS/Urssaf "repas sur lieu de travail".
+const INDEMNITE_REPAS_NUIT_ACOSS_BY_YEAR = {
+    2026: {
+        surLieuTravail: 7.50,
+        horsLocauxEntreprise: 10.40,
+        restaurantDeplacement: 21.40
+    }
+};
+
 if (!SMH_BY_YEAR[CURRENT_DATA_YEAR] || !BAREME_DEBUTANTS_BY_YEAR[CURRENT_DATA_YEAR]) {
     throw new Error(`[CONFIG] Données annuelles incomplètes pour ${CURRENT_DATA_YEAR}. Mettre à jour SMH_BY_YEAR et BAREME_DEBUTANTS_BY_YEAR.`);
 }
@@ -101,6 +111,7 @@ export const CONFIG = {
     // Barème salariés débutants (Groupe F : Classes 11 et 12) - Grille active
     BAREME_DEBUTANTS: BAREME_DEBUTANTS_BY_YEAR[CURRENT_DATA_YEAR],
     BAREME_DEBUTANTS_BY_YEAR,
+    INDEMNITE_REPAS_NUIT_ACOSS_BY_YEAR,
 
     // Taux pour calcul Prime d'Ancienneté (Non-Cadres uniquement)
     TAUX_ANCIENNETE: {
@@ -182,35 +193,36 @@ export const CONFIG = {
 
     // Textes UI configurables pour titres/descriptions de tooltips.
     TOOLTIP_TEXTS: {
-        labels: {
+        origins: {
             codeTravail: 'Code du travail',
-            conventionMetallurgie: 'Convention collective de la métallurgie (CCNM)',
-            accordCollectif: 'Accord collectif'
+            ccnm: 'Convention collective nationale de la métallurgie (CCNM)',
+            accordEntreprise: 'Accord d\'entreprise',
+            accordCollectif: 'Accord collectif / usage'
         },
         templates: {
             legalBlock: '<strong>{title} :</strong><br>{description}'
         },
-        page2: {
-            conventionTitle: 'Convention métallurgie (CCNM)',
-            accordTitlePrefix: 'Accord',
+        conditions: {
             nuitRateTemplate: '+{pct}%.',
             dimancheRateTemplate: '+{pct}%.',
             heuresSupRateTemplate: '+{pct25}% (36e-43e), puis +{pct50}% (>=44e).',
-            heuresSupConventionDescription: 'Heures supplémentaires : {rates}<br>Durée légale : 35h/semaine (151,67h/mois).',
+            heuresSupConventionDescription: 'Heures supplémentaires : {rates} Durée légale : 35h/semaine (151,67h/mois).',
             heuresSupAccordDescription: '{rates}{contingent}{repos}',
-            tempsPartielSource: 'Code du travail (Art. L3123-5)',
-            tempsPartielDescription: "La rémunération à temps partiel est proportionnelle à celle d'un temps complet, à qualification égale.",
-            joursSupForfaitSource: 'Code du travail (Art. L3121-59)',
-            joursSupForfaitDescription: "Le salarié au forfait jours peut renoncer à des jours de repos via avenant écrit annuel, avec une majoration de salaire qui ne peut pas être inférieure à 10%.",
-            forfaitSource: 'Convention métallurgie (CCNM)',
+            tempsPartielDescription: "Rémunération proportionnelle à un temps complet, à qualification égale.",
+            joursSupForfaitDescription: "Renonciation possible à des jours de repos par avenant annuel, avec majoration minimale de 10%.",
             forfaitDescription: 'Base 35h : sans majoration. Forfait Heures : +{pctHeures}%. Forfait Jours : +{pctJours}%.',
             pointTerritorialSource: 'Accord territorial',
             pointTerritorialDescription: 'Valeur définie par accord territorial. {territoire} {year} : {pointValue}€',
             pointTerritorialLinkLabel: 'Voir sur code.travail.gouv.fr'
         },
         primeEquipe: {
-            sourceArticle: 'Convention collective de la métallurgie (CCNM)',
-            conditionTexte: 'Prime d’équipe conventionnelle calculée sur la base horaire de référence.'
+            sourceArticle: 'Convention collective de la métallurgie (CCNM, Art. 145)',
+            conditionTexte: 'Prime d’équipe calculée sur la base horaire de référence.',
+            conventionDescriptionTemplate: '30 min du taux horaire de base par poste. Référence actuelle : {value} €/poste.',
+            accordDescriptionTemplate: 'Valeur unitaire accord : {value} {unit}.'
+        },
+        result: {
+            breakdownLineTemplate: '• {label} : {value}'
         }
     },
 
@@ -254,7 +266,7 @@ export const CONFIG = {
         },
         panierNuit: {
             actif: true,
-            valeurHoraire: 7.5,               // €/unité ou équivalent paramétré entreprise
+            valeurHoraire: Number(INDEMNITE_REPAS_NUIT_ACOSS_BY_YEAR?.[CURRENT_DATA_YEAR]?.surLieuTravail ?? 7.5),
             unit: '€/unité',
             stateKeyActif: 'primePanierNuit',
             stateKeyHeures: 'nbPaniersNuit',
@@ -262,9 +274,9 @@ export const CONFIG = {
             inputUnitLabel: 'unités/mois',
             inclusDansSMH: false,
             allowUserOverride: false,
-            sourceArticle: 'Accord collectif applicable / usage',
-            conditionTexte: 'Prime de sujétion/indemnisation selon accord, distincte des majorations légales.',
-            tooltip: 'Panier/repas de nuit selon accord applicable. Contrepartie de sujétion, hors assiette SMH.'
+            sourceArticle: 'CCNM Art. 147 (indemnité de repas de nuit)',
+            conditionTexte: 'Due au travailleur de nuit si au moins 6h sont effectuées entre 21h et 6h, et si les conditions de travail imposent la prise de repas sur le lieu de travail.',
+            tooltip: "Remboursement de frais professionnels (pas une majoration salariale). Montant de référence aligné sur le plafond ACOSS/Urssaf annuel pour repas sur lieu de travail ; non due les jours non travaillés ; hors assiette SMH."
         },
         habillageDeshabillage: {
             actif: true,
