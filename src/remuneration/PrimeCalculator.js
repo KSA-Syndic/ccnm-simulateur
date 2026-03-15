@@ -129,6 +129,81 @@ function computePrimeConvention(def, context) {
         };
     }
 
+    if (
+        def.semanticId === SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE
+        || def.semanticId === SEMANTIC_ID.PRIME_PANIER_NUIT
+        || def.semanticId === SEMANTIC_ID.PRIME_HABILLAGE_DESHABILLAGE
+        || def.semanticId === SEMANTIC_ID.PRIME_DEPLACEMENT_PRO
+    ) {
+        const cfg = def.config || {};
+        const state = context?.state ?? {};
+        const actif = cfg.stateKeyActif
+            ? (getAccordInput(state, cfg.stateKeyActif) === true || state[cfg.stateKeyActif] === true)
+            : false;
+        if (!actif) {
+            return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
+        }
+        const modeCalcul = String(cfg.modeCalcul || 'horaire');
+        if (def.semanticId === SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE && modeCalcul === 'forfaitPeriode') {
+            const nbPeriodes = resolvePrimeHeures(def, context);
+            const valeurForfaitPeriode = Number(cfg.valeurForfaitPeriode ?? 0);
+            if (!(nbPeriodes > 0) || !(valeurForfaitPeriode > 0)) {
+                return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
+            }
+            const montantMensuel = roundToCents(nbPeriodes * valeurForfaitPeriode);
+            const montantAnnuel = annualFromMonthly(montantMensuel);
+            return {
+                amount: montantAnnuel,
+                label: def.label,
+                source: SOURCE_CONVENTION,
+                semanticId: def.semanticId,
+                meta: { nbPeriodes, valeurForfaitPeriode, modeCalcul: 'forfaitPeriode' }
+            };
+        }
+        const heures = resolvePrimeHeures(def, context);
+        const tauxHoraire = Number(cfg.tauxHoraire ?? 0);
+        if (!(heures > 0) || !(tauxHoraire > 0)) {
+            return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
+        }
+        const montantMensuel = roundToCents(heures * tauxHoraire);
+        const montantAnnuel = annualFromMonthly(montantMensuel);
+        return {
+            amount: montantAnnuel,
+            label: def.label,
+            source: SOURCE_CONVENTION,
+            semanticId: def.semanticId,
+            meta: { tauxHoraire, heures, modeCalcul: 'horaire' }
+        };
+    }
+
+    if (def.semanticId === SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE) {
+        const cfg = def.config || {};
+        const state = context?.state ?? {};
+        const actif = cfg.stateKeyActif
+            ? (getAccordInput(state, cfg.stateKeyActif) === true || state[cfg.stateKeyActif] === true)
+            : false;
+        if (!actif) {
+            return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
+        }
+        const heures = resolvePrimeHeures(def, context);
+        const tauxMaj = Number(cfg.taux ?? 0);
+        const tauxHoraire = Number(context?.tauxHoraire ?? 0);
+        if (!(heures > 0) || !(tauxMaj > 0) || !(tauxHoraire > 0)) {
+            return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
+        }
+        const inclureBaseHoraire = cfg.inclureBaseHoraire !== false;
+        const multiplicateur = inclureBaseHoraire ? (1 + tauxMaj) : tauxMaj;
+        const montantMensuel = roundToCents(heures * tauxHoraire * multiplicateur);
+        const montantAnnuel = annualFromMonthly(montantMensuel);
+        return {
+            amount: montantAnnuel,
+            label: def.label,
+            source: SOURCE_CONVENTION,
+            semanticId: def.semanticId,
+            meta: { taux: Math.round(tauxMaj * 100), heures, inclureBaseHoraire }
+        };
+    }
+
     return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
 }
 

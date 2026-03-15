@@ -233,6 +233,38 @@ describe('RemunerationCalculator', () => {
             expect(primeEquipe.value).toBeGreaterThan(0);
         });
 
+        it('devrait intégrer les modalités nationales d’astreinte dans le total full', () => {
+            const prevAstreinte = JSON.parse(JSON.stringify(CONFIG.MODALITES_NATIONALES.astreinteDisponibilite));
+            const prevInter = JSON.parse(JSON.stringify(CONFIG.MODALITES_NATIONALES.interventionAstreinte));
+            CONFIG.MODALITES_NATIONALES.astreinteDisponibilite.modeCalcul = 'horaire';
+            CONFIG.MODALITES_NATIONALES.astreinteDisponibilite.valeurHoraire = 3;
+            CONFIG.MODALITES_NATIONALES.interventionAstreinte.tauxMajoration = 0.25;
+            CONFIG.MODALITES_NATIONALES.interventionAstreinte.inclureBaseHoraire = true;
+            try {
+                const state = {
+                    ...stateBase,
+                    scores: [3, 3, 3, 3, 3, 3], // C5
+                    accordInputs: {
+                        ...stateBase.accordInputs,
+                        primeAstreinteDisponibilite: true,
+                        heuresAstreinteDisponibilite: 8,
+                        majorationInterventionAstreinte: true,
+                        heuresInterventionAstreinte: 4
+                    }
+                };
+                const result = calculateAnnualRemuneration(state, null, { mode: 'full' });
+                const astreinte = result.details.find(d => d.semanticId === 'primeAstreinteDisponibilite');
+                const intervention = result.details.find(d => d.semanticId === 'majorationInterventionAstreinte');
+                expect(astreinte).toBeDefined();
+                expect(intervention).toBeDefined();
+                expect(astreinte.value).toBe(288); // 8h * 3€ * 12
+                expect(result.total).toBeGreaterThan(CONFIG.SMH[5] + 288);
+            } finally {
+                CONFIG.MODALITES_NATIONALES.astreinteDisponibilite = prevAstreinte;
+                CONFIG.MODALITES_NATIONALES.interventionAstreinte = prevInter;
+            }
+        });
+
         it('ne devrait pas majorer la prime d\'équipe CCN avec les HS (base 35h fixe)', () => {
             const stateSansHS = {
                 ...stateBase,

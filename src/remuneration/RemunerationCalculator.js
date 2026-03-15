@@ -567,11 +567,12 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         }
     }
 
+    const accordPrimeDefs = agreement ? getAccordPrimeDefsAsElements(agreement) : [];
+
     // Prime d'équipe : modalité CCN par défaut (30 min du SMH horaire), surchargeable par l'accord actif
     if (!isCadreValue) {
         const defEquipeCCN = convPrimeDefs.find(d => d.semanticId === SEMANTIC_ID.PRIME_EQUIPE);
         const rEquipeCCN = defEquipeCCN ? computePrime(defEquipeCCN, context) : { amount: 0 };
-        const accordPrimeDefs = agreement ? getAccordPrimeDefsAsElements(agreement) : [];
         const defEquipeAccord = accordPrimeDefs.find(d => d.semanticId === SEMANTIC_ID.PRIME_EQUIPE || d.id === 'primeEquipe');
         const rEquipeAccord = defEquipeAccord ? computePrime(defEquipeAccord, context) : { amount: 0 };
         const equipeRetenue = defEquipeAccord ? rEquipeAccord : rEquipeCCN;
@@ -589,6 +590,72 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                 agreementId: equipeRetenue.source === SOURCE_ACCORD ? agreement?.id : undefined
             });
             total += equipeRetenue.amount;
+        }
+    }
+
+    // Modalités nationales paramétrables (astreinte, panier, habillage, déplacements/sujétions)
+    // et éventuelles surcharges accord d'entreprise par semanticId.
+    const modalitesNationales = [
+        SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE,
+        SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE,
+        SEMANTIC_ID.PRIME_PANIER_NUIT,
+        SEMANTIC_ID.PRIME_HABILLAGE_DESHABILLAGE,
+        SEMANTIC_ID.PRIME_DEPLACEMENT_PRO
+    ];
+    for (const semanticId of modalitesNationales) {
+        const candidatesDefs = [];
+        const defConv = convPrimeDefs.find(d => d.semanticId === semanticId);
+        const defAcc = accordPrimeDefs.find(d => d.semanticId === semanticId);
+        if (defConv) candidatesDefs.push(defConv);
+        if (defAcc) candidatesDefs.push(defAcc);
+        if (!candidatesDefs.length) continue;
+
+        const computedCandidates = candidatesDefs
+            .map((def) => {
+                const r = computePrime(def, context);
+                if (!(r.amount > 0)) return null;
+                return { def, r };
+            })
+            .filter(Boolean);
+        if (!computedCandidates.length) continue;
+
+        const selected = computedCandidates.reduce((best, cur) => (cur.r.amount > best.r.amount ? cur : best), computedCandidates[0]);
+        const def = selected.def;
+        const r = selected.r;
+        const isAgreementPrime = def.source === SOURCE_ACCORD;
+        const isSMHIncluded = def.config?.inclusDansSMH === true;
+
+        let label = r.label;
+        if (semanticId === SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE && r.meta?.modeCalcul === 'forfaitPeriode') {
+            const nbPeriodes = Number(r.meta?.nbPeriodes ?? 0);
+            const valeurForfaitPeriode = Number(r.meta?.valeurForfaitPeriode ?? 0);
+            label = `${r.label} (${nbPeriodes} périodes/mois × ${valeurForfaitPeriode}€)`;
+        } else if (def.valueKind === 'horaire' && r.meta?.heures != null) {
+            const taux = r.meta.tauxHoraire ?? 0;
+            if (isAgreementPrime) {
+                label = `${r.label} (${r.meta.heures}h × ${taux}€ ${agreement?.nomCourt || 'accord'})`;
+            } else {
+                label = `${r.label} (${r.meta.heures}h × ${taux}€)`;
+            }
+        } else if (def.valueKind === 'majorationHoraire' && r.meta?.heures != null) {
+            if (semanticId === SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE && r.meta?.inclureBaseHoraire === true) {
+                label = `${r.label} (base +${r.meta.taux ?? 0}%) (${r.meta.heures}h/mois)`;
+            } else {
+                label = `${r.label} (+${r.meta.taux ?? 0}%) (${r.meta.heures}h/mois)`;
+            }
+        }
+
+        details.push({
+            label,
+            value: r.amount,
+            isPositive: !isSMHIncluded,
+            isAgreement: isAgreementPrime,
+            isSMHIncluded,
+            agreementId: isAgreementPrime ? agreement?.id : undefined,
+            semanticId
+        });
+        if (!isSMHIncluded) {
+            total += r.amount;
         }
     }
 
@@ -672,10 +739,16 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
     // Les primes incluses dans le SMH sont toujours actives (distribution du SMH).
     // En cas de doublon sémantique dans un accord, on retient la plus favorable.
     if (agreement) {
-        const accordPrimeDefs = getAccordPrimeDefsAsElements(agreement);
         const groupedBySemantic = new Map();
         for (const def of accordPrimeDefs) {
             if (def.semanticId === SEMANTIC_ID.PRIME_ANCIENNETE || def.semanticId === SEMANTIC_ID.PRIME_EQUIPE) continue; // déjà traitées au-dessus
+            if (
+                def.semanticId === SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE
+                || def.semanticId === SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE
+                || def.semanticId === SEMANTIC_ID.PRIME_PANIER_NUIT
+                || def.semanticId === SEMANTIC_ID.PRIME_HABILLAGE_DESHABILLAGE
+                || def.semanticId === SEMANTIC_ID.PRIME_DEPLACEMENT_PRO
+            ) continue; // traitées dans le bloc modalités nationales/surcharge accord
             const key = def.semanticId || def.id;
             if (!groupedBySemantic.has(key)) groupedBySemantic.set(key, []);
             groupedBySemantic.get(key).push(def);

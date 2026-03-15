@@ -198,6 +198,39 @@ describe('Arriérés - Calculs Fonctionnels', () => {
             expect(annuelAvecAccord).toBeGreaterThan(annuelSansAccord);
         });
 
+        it('devrait refléter les modalités nationales astreinte en mode complet pour les arriérés', () => {
+            const prevAstreinte = JSON.parse(JSON.stringify(CONFIG.MODALITES_NATIONALES.astreinteDisponibilite));
+            CONFIG.MODALITES_NATIONALES.astreinteDisponibilite.modeCalcul = 'horaire';
+            CONFIG.MODALITES_NATIONALES.astreinteDisponibilite.valeurHoraire = 2;
+            try {
+                const stateSans = {
+                    ...stateBase,
+                    accordInputs: { primeAstreinteDisponibilite: false, heuresAstreinteDisponibilite: 0 }
+                };
+                const stateAvec = {
+                    ...stateBase,
+                    accordInputs: { primeAstreinteDisponibilite: true, heuresAstreinteDisponibilite: 10 }
+                };
+                const annuelSans = calculateSalaireDuPourMois(
+                    new Date('2024-01-01'),
+                    new Date('2020-01-01'),
+                    stateSans,
+                    null,
+                    false
+                );
+                const annuelAvec = calculateSalaireDuPourMois(
+                    new Date('2024-01-01'),
+                    new Date('2020-01-01'),
+                    stateAvec,
+                    null,
+                    false
+                );
+                expect(annuelAvec - annuelSans).toBe(240); // 10h * 2€ * 12
+            } finally {
+                CONFIG.MODALITES_NATIONALES.astreinteDisponibilite = prevAstreinte;
+            }
+        });
+
         it('devrait proratiser le salaire dû en temps partiel', () => {
             const stateTempsPlein = {
                 ...stateBase,

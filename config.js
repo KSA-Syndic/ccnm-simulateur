@@ -28,6 +28,11 @@
  * Objectif :
  * - Permettre des mises à jour annuelles et juridiques sans réécriture structurelle
  *   du moteur de calcul ni contradictions entre UI, calcul et documentation.
+ *
+ * NOTE ARCHI:
+ * - `config.js` (ce fichier) sert au runtime navigateur legacy non-module via `window.CONFIG` (consommé par `app.js`).
+ * - `src/core/config.js` sert au runtime module ES (`src/*`) et aux tests.
+ * Les deux sont nécessaires tant que `app.js` n'est pas migré en module.
  */
 
 const CURRENT_DATA_YEAR = 2026;
@@ -201,6 +206,81 @@ const CONFIG = {
         dimanche: 1.00,     // +100% travail dimanche (exclu assiette SMH)
         heuresSup25: 0.25,  // +25% (8 premières HS) – inclus assiette SMH
         heuresSup50: 0.50   // +50% (HS suivantes) – inclus assiette SMH
+    },
+
+    // Modalités nationales paramétrables (Code du travail / CCN / usages)
+    // IMPORTANT: les valeurs ci-dessous sont volontairement configurables.
+    // Elles doivent être ajustées à la source juridique applicable à l'entreprise.
+    MODALITES_NATIONALES: {
+        astreinteDisponibilite: {
+            actif: true,
+            modeCalcul: 'horaire',            // 'horaire' | 'forfaitPeriode'
+            valeurHoraire: 0,                 // €/h de disponibilité astreinte (mode horaire)
+            valeurForfaitPeriode: 0,          // € par période d'astreinte (mode forfaitPeriode)
+            unit: '€/h',
+            stateKeyActif: 'primeAstreinteDisponibilite',
+            stateKeyHeures: 'heuresAstreinteDisponibilite',
+            defaultHeures: 0,
+            inputUnitLabel: 'heures/mois',
+            inclusDansSMH: false,
+            sourceArticle: 'Code du travail L3121-9, L3121-11, L3121-12',
+            conditionTexte: 'Contrepartie d’astreinte obligatoire (financière ou repos) selon accord ou règles supplétives.',
+            tooltip: 'Astreinte: contrepartie obligatoire de disponibilité (L3121-9). Organisation/compensation par accord (L3121-11) ou dispositif supplétif (L3121-12). Hors assiette SMH.'
+        },
+        interventionAstreinte: {
+            actif: true,
+            tauxMajoration: 0,                // % du taux horaire (ex: 0.5 = +50%)
+            inclureBaseHoraire: true,         // true => heures × tauxHoraire × (1 + majoration)
+            unit: '%',
+            stateKeyActif: 'majorationInterventionAstreinte',
+            stateKeyHeures: 'heuresInterventionAstreinte',
+            defaultHeures: 0,
+            inputUnitLabel: 'heures/mois',
+            inclusDansSMH: false,
+            requiresKeys: ['primeAstreinteDisponibilite'],
+            sourceArticle: 'Code du travail L3121-9 et L3121-10',
+            conditionTexte: 'Le temps d’intervention est du travail effectif; seule la période de disponibilité est astreinte.',
+            tooltip: 'Intervention pendant astreinte: temps de travail effectif. Formule paramétrée sur taux horaire de référence, hors assiette SMH.'
+        },
+        panierNuit: {
+            actif: true,
+            valeurHoraire: 0,                 // €/h ou équivalent paramétré entreprise
+            unit: '€/h',
+            stateKeyActif: 'primePanierNuit',
+            stateKeyHeures: 'heuresPanierNuit',
+            defaultHeures: 0,
+            inputUnitLabel: 'heures/mois',
+            inclusDansSMH: false,
+            sourceArticle: 'Accord collectif applicable / usage',
+            conditionTexte: 'Prime de sujétion/indemnisation selon accord, distincte des majorations légales.',
+            tooltip: 'Panier/repas de nuit selon accord applicable. Contrepartie de sujétion, hors assiette SMH.'
+        },
+        habillageDeshabillage: {
+            actif: true,
+            valeurHoraire: 0,                 // €/h ou équivalent paramétré entreprise
+            unit: '€/h',
+            stateKeyActif: 'primeHabillageDeshabillage',
+            stateKeyHeures: 'heuresHabillageDeshabillage',
+            defaultHeures: 0,
+            inputUnitLabel: 'heures/mois',
+            inclusDansSMH: false,
+            sourceArticle: 'Code du travail L3121-3',
+            conditionTexte: 'Contrepartie obligatoire lorsque habillage/déshabillage est imposé et sur le lieu de travail.',
+            tooltip: 'Habillage/déshabillage: contrepartie prévue par L3121-3, hors assiette SMH.'
+        },
+        deplacementProfessionnel: {
+            actif: true,
+            valeurHoraire: 0,                 // €/h ou base équivalente paramétrée
+            unit: '€/h',
+            stateKeyActif: 'primeDeplacementProfessionnel',
+            stateKeyHeures: 'heuresDeplacementProfessionnel',
+            defaultHeures: 0,
+            inputUnitLabel: 'heures/mois',
+            inclusDansSMH: false,
+            sourceArticle: 'Code du travail L3121-4',
+            conditionTexte: 'Dépassement du temps normal de trajet: contrepartie obligatoire, sans qualification de temps de travail effectif.',
+            tooltip: 'Déplacements/trajets professionnels: contrepartie selon L3121-4 et accord applicable, hors assiette SMH.'
+        }
     },
 
     // Proratisation entrée en cours de mois (CCNM Art. 139, 103.5.1, 103.5.2)

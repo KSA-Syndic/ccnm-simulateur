@@ -3359,6 +3359,22 @@ body.iframe-mode .simulator-container.iframe-container {
     margin-bottom: 0;
 }
 
+.conditions-autres-modalites {
+    margin-top: 10px;
+    border-top: 1px dashed var(--gray-300);
+    padding-top: 8px;
+}
+
+.conditions-autres-modalites > summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--gray-500);
+}
+
+.conditions-autres-modalites .accord-primes-horaires {
+    margin-top: 8px;
+}
+
 .taux-applique {
     display: block;
     margin-top: 4px;

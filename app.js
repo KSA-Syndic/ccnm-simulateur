@@ -69,6 +69,10 @@ let arreteesPdfStore = null;
 const ANALYTICS_CONSENT_KEY = 'simulator_analytics_consent';
 /** Envoi unique de l’événement "Resultat salaire" par chargement de page. */
 let umamiResultatSalaireSent = false;
+/** Définitions horaires actuellement affichées, indexées par stateKeyActif. */
+let currentHourlyPrimeDefsByStateKey = {};
+/** Définitions des options accord non-horaires, indexées par stateKeyActif. */
+let currentAccordOptionDefsByStateKey = {};
 
 /**
  * Parse robuste des champs numériques (accepte virgule et point).
@@ -1248,10 +1252,10 @@ function initControls() {
         });
     }
 
-    // Primes horaires accord (délégation sur le conteneur dynamique)
-    const accordPrimesHorairesContainer = document.getElementById('accord-primes-horaires-container');
-    if (accordPrimesHorairesContainer) {
-        accordPrimesHorairesContainer.addEventListener('change', (e) => {
+    // Modalités horaires dynamiques (CCNM/accord + section "Autres")
+    const attachHourlyPrimeContainerListeners = (container) => {
+        if (!container) return;
+        container.addEventListener('change', (e) => {
             const keyActif = e.target.dataset?.stateKeyActif;
             if (e.target.type === 'checkbox' && keyActif) {
                 const isChecked = e.target.checked;
@@ -1267,20 +1271,23 @@ function initControls() {
                     updateTauxInfo();
                 }
                 state.accordInputs[keyActif] = isChecked;
+                applyPrimeCompatibilityRules(keyActif, isChecked, currentHourlyPrimeDefsByStateKey);
                 const formGroup = e.target.closest('.form-group');
                 const subField = formGroup?.querySelector('[data-heures-field-for]');
                 if (subField) subField.classList.toggle('hidden', !isChecked);
                 updateAll();
             }
         });
-        accordPrimesHorairesContainer.addEventListener('input', (e) => {
+        container.addEventListener('input', (e) => {
             const keyHeures = e.target.dataset?.stateKeyHeures;
             if (keyHeures) {
                 state.accordInputs[keyHeures] = parseDecimalInput(e.target.value, 0);
                 updateAll();
             }
         });
-    }
+    };
+    attachHourlyPrimeContainerListeners(document.getElementById('accord-primes-horaires-container'));
+    attachHourlyPrimeContainerListeners(document.getElementById('autres-primes-nationales-container'));
 
     // ═══════════════════════════════════════════════════════════════
     // CONTRÔLES ACCORD ENTREPRISE (générique)
@@ -1348,6 +1355,7 @@ function initControls() {
                 const key = input.getAttribute('data-state-key-actif');
                 if (key) {
                     state.accordInputs[key] = input.checked;
+                    applyPrimeCompatibilityRules(key, input.checked, currentAccordOptionDefsByStateKey);
                     updateAll();
                 }
             }
@@ -1511,6 +1519,166 @@ function updateAccordDesactiveMessage() {
     block.textContent = prefix + modalites.join(', ') + '.';
 }
 
+function buildStateKeyPrimeMap(primes = []) {
+    const map = {};
+    for (const prime of primes) {
+        const key = prime?.stateKeyActif;
+        if (!key) continue;
+        map[key] = prime;
+    }
+    return map;
+}
+
+function applyPrimeCompatibilityRules(stateKeyActif, isChecked, defsByKey, options = {}) {
+    if (!isChecked || !stateKeyActif || !defsByKey || typeof defsByKey !== 'object') return;
+    const sourceDef = defsByKey[stateKeyActif];
+    if (!sourceDef) return;
+    const silent = options.silent === true;
+    const requires = Array.isArray(sourceDef.requiresKeys) ? sourceDef.requiresKeys : [];
+    const nonCumulAvec = Array.isArray(sourceDef.nonCumulAvec) ? sourceDef.nonCumulAvec : [];
+    let requiredActivated = 0;
+    let cumulDisabled = 0;
+
+    requires.forEach((requiredKey) => {
+        if (!requiredKey) return;
+        if (state.accordInputs[requiredKey] === true) return;
+        state.accordInputs[requiredKey] = true;
+        requiredActivated += 1;
+    });
+
+    nonCumulAvec.forEach((conflictKey) => {
+        if (!conflictKey) return;
+        if (state.accordInputs[conflictKey] !== true) return;
+        state.accordInputs[conflictKey] = false;
+        cumulDisabled += 1;
+    });
+
+    if (!silent && requiredActivated > 0) {
+        showToast('Une modalité dépendante a été activée automatiquement.', 'info', 2600);
+    }
+    if (!silent && cumulDisabled > 0) {
+        showToast('Une modalité incompatible a été désactivée automatiquement.', 'info', 2600);
+    }
+}
+
+function getNationalHourlyPrimeDefs(agreement) {
+    const modalites = CONFIG?.MODALITES_NATIONALES || {};
+    const astreinte = modalites.astreinteDisponibilite || {};
+    const intervention = modalites.interventionAstreinte || {};
+    const panier = modalites.panierNuit || {};
+    const habillage = modalites.habillageDeshabillage || {};
+    const deplacement = modalites.deplacementProfessionnel || {};
+
+    const ccnPrimeEquipeDef = {
+        id: 'primeEquipe',
+        semanticId: 'primeEquipe',
+        label: 'Prime d\'équipe',
+        source: 'convention',
+        valueType: 'horaire',
+        stateKeyActif: 'travailEquipe',
+        stateKeyHeures: 'heuresEquipe',
+        autoHeures: true,
+        unit: '€/h',
+        valeurAccord: null,
+        step: 0.01,
+        defaultHeures: CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67,
+        tooltip: buildPrimeEquipeTooltip(agreement, null),
+        requiresKeys: [],
+        nonCumulAvec: []
+    };
+
+    const defs = [
+        ccnPrimeEquipeDef,
+        {
+            id: 'primeAstreinteDisponibilite',
+            semanticId: 'primeAstreinteDisponibilite',
+            label: 'Prime astreinte disponibilité',
+            source: 'convention',
+            valueType: 'horaire',
+            stateKeyActif: astreinte.stateKeyActif || 'primeAstreinteDisponibilite',
+            stateKeyHeures: astreinte.stateKeyHeures || 'heuresAstreinteDisponibilite',
+            autoHeures: false,
+            unit: astreinte.modeCalcul === 'forfaitPeriode' ? '€/période' : (astreinte.unit || '€/h'),
+            valeurAccord: Number(astreinte.modeCalcul === 'forfaitPeriode' ? astreinte.valeurForfaitPeriode : astreinte.valeurHoraire) || 0,
+            defaultHeures: Number(astreinte.defaultHeures ?? 0),
+            inputUnitLabel: astreinte.inputUnitLabel || 'heures/mois',
+            tooltip: astreinte.tooltip || '',
+            requiresKeys: [],
+            nonCumulAvec: Array.isArray(astreinte.nonCumulAvec) ? astreinte.nonCumulAvec : []
+        },
+        {
+            id: 'majorationInterventionAstreinte',
+            semanticId: 'majorationInterventionAstreinte',
+            label: 'Majoration intervention astreinte',
+            source: 'convention',
+            valueType: 'majorationHoraire',
+            stateKeyActif: intervention.stateKeyActif || 'majorationInterventionAstreinte',
+            stateKeyHeures: intervention.stateKeyHeures || 'heuresInterventionAstreinte',
+            autoHeures: false,
+            unit: intervention.unit || '%',
+            valeurAccord: Number(intervention.tauxMajoration ?? 0),
+            defaultHeures: Number(intervention.defaultHeures ?? 0),
+            inputUnitLabel: intervention.inputUnitLabel || 'heures/mois',
+            tooltip: intervention.tooltip || '',
+            requiresKeys: Array.isArray(intervention.requiresKeys) ? intervention.requiresKeys : [],
+            nonCumulAvec: Array.isArray(intervention.nonCumulAvec) ? intervention.nonCumulAvec : []
+        },
+        {
+            id: 'primePanierNuit',
+            semanticId: 'primePanierNuit',
+            label: 'Prime panier nuit',
+            source: 'convention',
+            valueType: 'horaire',
+            stateKeyActif: panier.stateKeyActif || 'primePanierNuit',
+            stateKeyHeures: panier.stateKeyHeures || 'heuresPanierNuit',
+            autoHeures: false,
+            unit: panier.unit || '€/h',
+            valeurAccord: Number(panier.valeurHoraire ?? 0),
+            defaultHeures: Number(panier.defaultHeures ?? 0),
+            inputUnitLabel: panier.inputUnitLabel || 'heures/mois',
+            tooltip: panier.tooltip || '',
+            requiresKeys: [],
+            nonCumulAvec: Array.isArray(panier.nonCumulAvec) ? panier.nonCumulAvec : []
+        },
+        {
+            id: 'primeHabillageDeshabillage',
+            semanticId: 'primeHabillageDeshabillage',
+            label: 'Prime habillage / déshabillage',
+            source: 'convention',
+            valueType: 'horaire',
+            stateKeyActif: habillage.stateKeyActif || 'primeHabillageDeshabillage',
+            stateKeyHeures: habillage.stateKeyHeures || 'heuresHabillageDeshabillage',
+            autoHeures: false,
+            unit: habillage.unit || '€/h',
+            valeurAccord: Number(habillage.valeurHoraire ?? 0),
+            defaultHeures: Number(habillage.defaultHeures ?? 0),
+            inputUnitLabel: habillage.inputUnitLabel || 'heures/mois',
+            tooltip: habillage.tooltip || '',
+            requiresKeys: [],
+            nonCumulAvec: Array.isArray(habillage.nonCumulAvec) ? habillage.nonCumulAvec : []
+        },
+        {
+            id: 'primeDeplacementProfessionnel',
+            semanticId: 'primeDeplacementProfessionnel',
+            label: 'Prime déplacements professionnels',
+            source: 'convention',
+            valueType: 'horaire',
+            stateKeyActif: deplacement.stateKeyActif || 'primeDeplacementProfessionnel',
+            stateKeyHeures: deplacement.stateKeyHeures || 'heuresDeplacementProfessionnel',
+            autoHeures: false,
+            unit: deplacement.unit || '€/h',
+            valeurAccord: Number(deplacement.valeurHoraire ?? 0),
+            defaultHeures: Number(deplacement.defaultHeures ?? 0),
+            inputUnitLabel: deplacement.inputUnitLabel || 'heures/mois',
+            tooltip: deplacement.tooltip || '',
+            requiresKeys: [],
+            nonCumulAvec: Array.isArray(deplacement.nonCumulAvec) ? deplacement.nonCumulAvec : []
+        }
+    ];
+
+    return defs.filter((def) => def && def.stateKeyActif);
+}
+
 /**
  * Mettre à jour l'affichage des conditions de travail selon statut et forfait
  */
@@ -1524,130 +1692,66 @@ function updateConditionsTravailDisplay() {
     const groupDimanche = document.getElementById('group-dimanche');
     const groupHeuresSup = document.getElementById('group-heures-sup');
     const groupJoursSupForfait = document.getElementById('group-jours-sup-forfait');
-    const container = document.getElementById('accord-primes-horaires-container');
+    const mainContainer = document.getElementById('accord-primes-horaires-container');
+    const autresDetails = document.getElementById('conditions-autres-modalites');
+    const autresContainer = document.getElementById('autres-primes-nationales-container');
     
     const agreement = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
-    const ccnPrimeEquipeDef = {
-        id: 'primeEquipe',
-        label: 'Prime d\'équipe',
-        source: 'convention',
-        valueType: 'horaire',
-        stateKeyActif: 'travailEquipe',
-        stateKeyHeures: 'heuresEquipe',
-        autoHeures: true,
-        min: 0,
-        max: 200,
-        step: 0.01,
-        defaultHeures: CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67,
-        tooltip: buildPrimeEquipeTooltip(agreement, null)
-    };
+    const nationalPrimesHoraires = getNationalHourlyPrimeDefs(agreement);
+    const ccnPrimeEquipeDef = nationalPrimesHoraires.find((p) => p.id === 'primeEquipe') || null;
     const accordPrimesHorairesRaw = agreement && typeof window.AgreementHelpers?.getPrimes === 'function'
         ? window.AgreementHelpers.getPrimes(agreement).filter(p =>
             ((p.valueType === 'horaire' && (p.stateKeyHeures || p.autoHeures === true))
                 || (p.valueType === 'majorationHoraire' && p.stateKeyHeures)))
         : [];
-    const accordPrimeEquipe = accordPrimesHorairesRaw.find((p) => (p?.semanticId === 'primeEquipe' || p?.id === 'primeEquipe')) || null;
     const accordPrimesHoraires = accordPrimesHorairesRaw.map((prime) => {
         const isPrimeEquipe = (prime?.semanticId === 'primeEquipe' || prime?.id === 'primeEquipe');
         if (!isPrimeEquipe) return prime;
         return {
-            ...ccnPrimeEquipeDef,
-            stateKeyActif: prime.stateKeyActif || ccnPrimeEquipeDef.stateKeyActif,
+            ...(ccnPrimeEquipeDef || {}),
+            stateKeyActif: prime.stateKeyActif || ccnPrimeEquipeDef?.stateKeyActif,
             valeurAccord: prime.valeurAccord,
             unit: prime.unit || '€/h',
-            tooltip: buildPrimeEquipeTooltip(agreement, prime)
+            tooltip: buildPrimeEquipeTooltip(agreement, prime),
+            source: 'accord'
         };
     });
-    let primesHoraires = [];
-    if (state.accordActif && agreement) {
-        primesHoraires = [...accordPrimesHoraires];
-        const hasPrimeEquipeAccord = primesHoraires.some(p => p.id === 'primeEquipe');
-        if (!hasPrimeEquipeAccord) primesHoraires.push(ccnPrimeEquipeDef);
-    } else {
-        primesHoraires = [ccnPrimeEquipeDef];
-    }
-    const hasPrimeHeures = primesHoraires.length > 0;
-    
-    // Cadres au forfait jours : pas d'heures supplémentaires en heures,
-    // mais possibilité de rachat de jours de repos (L3121-59)
-    if (isCadre && isForfaitJours) {
-        groupNuit.classList.remove('hidden');
-        groupDimanche.classList.remove('hidden');
-        if (groupHeuresSup) groupHeuresSup.classList.add('hidden');
-        if (groupJoursSupForfait) groupJoursSupForfait.classList.remove('hidden');
-        if (container) {
-            container.innerHTML = '';
-            container.classList.add('hidden');
-        }
-        state.travailHeuresSup = false;
-        state.heuresSup = 0;
-        primesHoraires.forEach(p => {
-            if (p.stateKeyActif) state.accordInputs[p.stateKeyActif] = false;
-        });
-        const hsCb = document.getElementById('travail-heures-sup');
-        const hsInput = document.getElementById('heures-sup');
-        const jsfCb = document.getElementById('travail-jours-sup-forfait');
-        const jsfInput = document.getElementById('jours-sup-forfait');
-        const jsfField = document.getElementById('jours-sup-forfait-field');
-        if (hsCb) hsCb.checked = false;
-        if (hsInput) hsInput.value = '0';
-        const nuitCb = document.getElementById('travail-nuit');
-        const nuitInput = document.getElementById('heures-nuit');
-        const nuitField = document.getElementById('heures-nuit-field');
-        if (nuitCb) nuitCb.checked = state.typeNuit !== 'aucun';
-        if (nuitInput && document.activeElement !== nuitInput) nuitInput.value = String(state.heuresNuit ?? 0);
-        if (nuitField) nuitField.classList.toggle('hidden', state.typeNuit === 'aucun');
-        const dimCb = document.getElementById('travail-dimanche');
-        const dimInput = document.getElementById('heures-dimanche');
-        const dimField = document.getElementById('heures-dimanche-field');
-        if (dimCb) dimCb.checked = !!state.travailDimanche;
-        if (dimInput && document.activeElement !== dimInput) dimInput.value = String(state.heuresDimanche ?? 0);
-        if (dimField) dimField.classList.toggle('hidden', !state.travailDimanche);
-        if (jsfCb) jsfCb.checked = !!state.travailJoursSupForfait;
-        if (jsfInput && document.activeElement !== jsfInput) jsfInput.value = String(state.joursSupForfait ?? 0);
-        if (jsfField) jsfField.classList.toggle('hidden', !state.travailJoursSupForfait);
-        const hsField = document.getElementById('heures-sup-field');
-        if (hsField) hsField.classList.add('hidden');
-    } else {
-        groupDimanche.classList.remove('hidden');
-        groupNuit.classList.remove('hidden');
-        if (groupJoursSupForfait) groupJoursSupForfait.classList.add('hidden');
-        state.travailJoursSupForfait = false;
-        state.joursSupForfait = 0;
-        const jsfCb = document.getElementById('travail-jours-sup-forfait');
-        const jsfInput = document.getElementById('jours-sup-forfait');
-        const jsfField = document.getElementById('jours-sup-forfait-field');
-        if (jsfCb) jsfCb.checked = false;
-        if (jsfInput && document.activeElement !== jsfInput) jsfInput.value = '0';
-        if (jsfField) jsfField.classList.add('hidden');
-        if (groupHeuresSup) groupHeuresSup.classList.toggle('hidden', !hsAllowed);
-        const travailNuitCheckbox = document.getElementById('travail-nuit');
-        const heuresNuitEl = document.getElementById('heures-nuit');
-        if (travailNuitCheckbox) travailNuitCheckbox.checked = state.typeNuit !== 'aucun';
-        if (heuresNuitEl && document.activeElement !== heuresNuitEl) {
-            heuresNuitEl.value = String(state.heuresNuit ?? 0);
-        }
-        const hnf = document.getElementById('heures-nuit-field');
-        if (hnf) hnf.classList.toggle('hidden', state.typeNuit === 'aucun');
-        const hsCb = document.getElementById('travail-heures-sup');
-        const hsInput = document.getElementById('heures-sup');
-        const hsField = document.getElementById('heures-sup-field');
-        if (!hsAllowed) {
-            state.travailHeuresSup = false;
-            state.heuresSup = 0;
-            if (hsCb) hsCb.checked = false;
-            if (hsInput && document.activeElement !== hsInput) hsInput.value = '0';
-            if (hsField) hsField.classList.add('hidden');
-        } else {
-            if (hsCb) hsCb.checked = !!state.travailHeuresSup;
-            if (hsInput && document.activeElement !== hsInput) {
-                hsInput.value = String(state.heuresSup ?? 0);
-            }
-            if (hsField) hsField.classList.toggle('hidden', !state.travailHeuresSup);
-        }
-        
+    const extraSemanticIds = new Set([
+        'primeAstreinteDisponibilite',
+        'majorationInterventionAstreinte',
+        'primePanierNuit',
+        'primeHabillageDeshabillage',
+        'primeDeplacementProfessionnel'
+    ]);
+    const mergeBySemantic = (baseDefs, overrideDefs) => {
+        const orderedKeys = [];
+        const bySemantic = new Map();
+        const upsertPrime = (prime) => {
+            const key = prime.semanticId || prime.id;
+            if (!bySemantic.has(key)) orderedKeys.push(key);
+            bySemantic.set(key, prime);
+        };
+        (baseDefs || []).forEach(upsertPrime);
+        (overrideDefs || []).forEach(upsertPrime);
+        return orderedKeys.map((key) => bySemantic.get(key)).filter(Boolean);
+    };
+    const nationalMainPrimes = ccnPrimeEquipeDef ? [ccnPrimeEquipeDef] : [];
+    const nationalExtraPrimes = nationalPrimesHoraires.filter((p) => extraSemanticIds.has(p.semanticId || p.id));
+    const accordMainPrimes = accordPrimesHoraires.filter((p) => !extraSemanticIds.has(p.semanticId || p.id));
+    const accordExtraPrimes = accordPrimesHoraires.filter((p) => extraSemanticIds.has(p.semanticId || p.id));
+    const mainPrimes = (state.accordActif && agreement)
+        ? mergeBySemantic(nationalMainPrimes, accordMainPrimes)
+        : nationalMainPrimes;
+    const autresPrimes = (state.accordActif && agreement)
+        ? mergeBySemantic(nationalExtraPrimes, accordExtraPrimes)
+        : nationalExtraPrimes;
+    const allPrimeDefs = [...mainPrimes, ...autresPrimes];
+    currentHourlyPrimeDefsByStateKey = buildStateKeyPrimeMap(allPrimeDefs);
+
+    const renderHourlyPrimesInContainer = (container, signaturePrefix, primesHoraires) => {
         if (!container) return;
-        const accordPrimesSignature = (state.accordActif ? 'accord' : 'ccn') + '-' + (agreement?.id ?? 'none') + '-' + (primesHoraires.map(p => p.id).join('|'));
+        const hasPrimeHeures = primesHoraires.length > 0;
+        const accordPrimesSignature = `${signaturePrefix}-${state.accordActif ? 'accord' : 'ccn'}-${agreement?.id ?? 'none'}-${primesHoraires.map(p => p.id).join('|')}`;
         const alreadyBuilt = container.children.length > 0 && container.dataset.accordPrimesBuilt === accordPrimesSignature;
         if (!isCadre && hasPrimeHeures) {
             container.classList.remove('hidden');
@@ -1660,6 +1764,9 @@ function updateConditionsTravailDisplay() {
                         state.accordInputs[prime.stateKeyHeures] = prime.defaultHeures ?? (CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67);
                     }
                     const actif = state.accordInputs[prime.stateKeyActif] === true;
+                    if (actif && prime.stateKeyActif) {
+                        applyPrimeCompatibilityRules(prime.stateKeyActif, true, currentHourlyPrimeDefsByStateKey, { silent: true });
+                    }
                     const heures = prime.stateKeyHeures
                         ? (state.accordInputs[prime.stateKeyHeures] != null ? state.accordInputs[prime.stateKeyHeures] : (prime.defaultHeures ?? 151.67))
                         : (prime.defaultHeures ?? 151.67);
@@ -1687,6 +1794,9 @@ function updateConditionsTravailDisplay() {
                     state.accordInputs[prime.stateKeyHeures] = prime.defaultHeures ?? (CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67);
                 }
                 const actif = state.accordInputs[prime.stateKeyActif] === true;
+                if (actif && prime.stateKeyActif) {
+                    applyPrimeCompatibilityRules(prime.stateKeyActif, true, currentHourlyPrimeDefsByStateKey, { silent: true });
+                }
                 const heures = prime.stateKeyHeures
                     ? (state.accordInputs[prime.stateKeyHeures] != null ? state.accordInputs[prime.stateKeyHeures] : (prime.defaultHeures ?? 151.67))
                     : (prime.defaultHeures ?? 151.67);
@@ -1758,7 +1868,7 @@ function updateConditionsTravailDisplay() {
                     inputHeures.addEventListener('focus', function () { this.select(); });
                     const spanUnit = document.createElement('span');
                     spanUnit.className = 'input-unit';
-                    spanUnit.textContent = 'heures/mois';
+                    spanUnit.textContent = prime.inputUnitLabel || 'heures/mois';
                     inputWithUnit.appendChild(inputHeures);
                     inputWithUnit.appendChild(spanUnit);
                     subField.appendChild(inputWithUnit);
@@ -1769,7 +1879,6 @@ function updateConditionsTravailDisplay() {
                 }
                 container.appendChild(formGroup);
             });
-            // Initialiser Tippy sur les nouveaux "?" (sans réinitialiser toute la page)
             if (typeof tippy !== 'undefined') {
                 container.querySelectorAll('.tooltip-trigger[data-tippy-content]').forEach((el) => {
                     if (!el._tippy) {
@@ -1794,9 +1903,99 @@ function updateConditionsTravailDisplay() {
         } else {
             container.classList.add('hidden');
             delete container.dataset.accordPrimesBuilt;
-            primesHoraires.forEach(p => {
-                if (p.stateKeyActif) state.accordInputs[p.stateKeyActif] = false;
-            });
+            container.innerHTML = '';
+        }
+    };
+    
+    // Cadres au forfait jours : pas d'heures supplémentaires en heures,
+    // mais possibilité de rachat de jours de repos (L3121-59)
+    if (isCadre && isForfaitJours) {
+        groupNuit.classList.remove('hidden');
+        groupDimanche.classList.remove('hidden');
+        if (groupHeuresSup) groupHeuresSup.classList.add('hidden');
+        if (groupJoursSupForfait) groupJoursSupForfait.classList.remove('hidden');
+        if (mainContainer) {
+            mainContainer.innerHTML = '';
+            mainContainer.classList.add('hidden');
+        }
+        if (autresContainer) {
+            autresContainer.innerHTML = '';
+            autresContainer.classList.add('hidden');
+        }
+        if (autresDetails) {
+            autresDetails.classList.add('hidden');
+            autresDetails.open = false;
+        }
+        state.travailHeuresSup = false;
+        state.heuresSup = 0;
+        const hsCb = document.getElementById('travail-heures-sup');
+        const hsInput = document.getElementById('heures-sup');
+        const jsfCb = document.getElementById('travail-jours-sup-forfait');
+        const jsfInput = document.getElementById('jours-sup-forfait');
+        const jsfField = document.getElementById('jours-sup-forfait-field');
+        if (hsCb) hsCb.checked = false;
+        if (hsInput) hsInput.value = '0';
+        const nuitCb = document.getElementById('travail-nuit');
+        const nuitInput = document.getElementById('heures-nuit');
+        const nuitField = document.getElementById('heures-nuit-field');
+        if (nuitCb) nuitCb.checked = state.typeNuit !== 'aucun';
+        if (nuitInput && document.activeElement !== nuitInput) nuitInput.value = String(state.heuresNuit ?? 0);
+        if (nuitField) nuitField.classList.toggle('hidden', state.typeNuit === 'aucun');
+        const dimCb = document.getElementById('travail-dimanche');
+        const dimInput = document.getElementById('heures-dimanche');
+        const dimField = document.getElementById('heures-dimanche-field');
+        if (dimCb) dimCb.checked = !!state.travailDimanche;
+        if (dimInput && document.activeElement !== dimInput) dimInput.value = String(state.heuresDimanche ?? 0);
+        if (dimField) dimField.classList.toggle('hidden', !state.travailDimanche);
+        if (jsfCb) jsfCb.checked = !!state.travailJoursSupForfait;
+        if (jsfInput && document.activeElement !== jsfInput) jsfInput.value = String(state.joursSupForfait ?? 0);
+        if (jsfField) jsfField.classList.toggle('hidden', !state.travailJoursSupForfait);
+        const hsField = document.getElementById('heures-sup-field');
+        if (hsField) hsField.classList.add('hidden');
+    } else {
+        groupDimanche.classList.remove('hidden');
+        groupNuit.classList.remove('hidden');
+        if (groupJoursSupForfait) groupJoursSupForfait.classList.add('hidden');
+        state.travailJoursSupForfait = false;
+        state.joursSupForfait = 0;
+        const jsfCb = document.getElementById('travail-jours-sup-forfait');
+        const jsfInput = document.getElementById('jours-sup-forfait');
+        const jsfField = document.getElementById('jours-sup-forfait-field');
+        if (jsfCb) jsfCb.checked = false;
+        if (jsfInput && document.activeElement !== jsfInput) jsfInput.value = '0';
+        if (jsfField) jsfField.classList.add('hidden');
+        if (groupHeuresSup) groupHeuresSup.classList.toggle('hidden', !hsAllowed);
+        const travailNuitCheckbox = document.getElementById('travail-nuit');
+        const heuresNuitEl = document.getElementById('heures-nuit');
+        if (travailNuitCheckbox) travailNuitCheckbox.checked = state.typeNuit !== 'aucun';
+        if (heuresNuitEl && document.activeElement !== heuresNuitEl) {
+            heuresNuitEl.value = String(state.heuresNuit ?? 0);
+        }
+        const hnf = document.getElementById('heures-nuit-field');
+        if (hnf) hnf.classList.toggle('hidden', state.typeNuit === 'aucun');
+        const hsCb = document.getElementById('travail-heures-sup');
+        const hsInput = document.getElementById('heures-sup');
+        const hsField = document.getElementById('heures-sup-field');
+        if (!hsAllowed) {
+            state.travailHeuresSup = false;
+            state.heuresSup = 0;
+            if (hsCb) hsCb.checked = false;
+            if (hsInput && document.activeElement !== hsInput) hsInput.value = '0';
+            if (hsField) hsField.classList.add('hidden');
+        } else {
+            if (hsCb) hsCb.checked = !!state.travailHeuresSup;
+            if (hsInput && document.activeElement !== hsInput) {
+                hsInput.value = String(state.heuresSup ?? 0);
+            }
+            if (hsField) hsField.classList.toggle('hidden', !state.travailHeuresSup);
+        }
+        
+        renderHourlyPrimesInContainer(mainContainer, 'main', mainPrimes);
+        renderHourlyPrimesInContainer(autresContainer, 'autres', autresPrimes);
+        if (autresDetails) {
+            const showAutres = !isCadre && autresPrimes.length > 0;
+            autresDetails.classList.toggle('hidden', !showAutres);
+            if (!showAutres) autresDetails.open = false;
         }
     }
 }
@@ -1814,6 +2013,7 @@ function buildAccordOptionsUI() {
     if (!agreement || !state.accordActif) {
         container.innerHTML = '';
         container.classList.add('hidden');
+        currentAccordOptionDefsByStateKey = {};
         return;
     }
     const primes = typeof window.AgreementHelpers?.getPrimes === 'function'
@@ -1825,8 +2025,17 @@ function buildAccordOptionsUI() {
     if (primesTogglables.length === 0) {
         container.innerHTML = '';
         container.classList.add('hidden');
+        currentAccordOptionDefsByStateKey = {};
         return;
     }
+    currentAccordOptionDefsByStateKey = buildStateKeyPrimeMap(primesTogglables);
+    primesTogglables.forEach((prime) => {
+        const key = prime?.stateKeyActif;
+        if (!key) return;
+        if (state.accordInputs[key] === true) {
+            applyPrimeCompatibilityRules(key, true, currentAccordOptionDefsByStateKey, { silent: true });
+        }
+    });
     const moisNoms = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
     let html = '';
     for (const prime of primesTogglables) {
