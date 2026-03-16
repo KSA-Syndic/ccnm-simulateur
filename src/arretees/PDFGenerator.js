@@ -78,6 +78,13 @@ function getPrimeEquipeModaliteLabel(state, agreement) {
     return `Prime d'équipe CCN (base auto ${String(postes).replace('.', ',')} postes/mois × 30 min du SMH horaire de base)`;
 }
 
+function formatFrDateSafe(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleDateString('fr-FR');
+}
+
 function formatAgreementRawValue(value) {
     if (value === null) return 'null';
     if (value === undefined) return 'undefined';
@@ -290,6 +297,17 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
     const salaireDu = scopeMode === 'smh-only'
         ? getMontantAnnuelSMHSeul(state, agreement, { date: referenceDate })
         : (remunerationFull?.total || 0);
+    const detailsMoisSource = Array.isArray(data?.detailsTousMois) && data.detailsTousMois.length > 0
+        ? data.detailsTousMois
+        : (Array.isArray(data?.detailsArretees) ? data.detailsArretees : []);
+    const yearsFromAnnee = Array.isArray(data?.detailsParAnnee)
+        ? data.detailsParAnnee.map((entry) => Number(entry?.annee)).filter(Number.isFinite)
+        : [];
+    const yearsFromMois = detailsMoisSource
+        .map((entry) => Number(String(entry?.periodeKey || '').slice(0, 4)))
+        .filter(Number.isFinite);
+    const yearsUsed = [...new Set([...yearsFromAnnee, ...yearsFromMois])].sort((a, b) => a - b);
+    const yearsUsedLabel = yearsUsed.length > 0 ? yearsUsed.join(', ') : 'non déterminé';
 
     // ── Tableau identité / contrat ──
     const contractRows = [];
@@ -305,7 +323,10 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
         contractRows.push(['Statut du contrat', 'En cours']);
     }
     if (hasAccord && agreement) {
-        contractRows.push(['Accord d\'entreprise', `${agreement.nomCourt || agreement.nom} (${agreement.dateSignature || ''})`]);
+        const accordParts = [agreement.nomCourt || agreement.nom || agreement.id || '—'];
+        if (agreement.dateEffet) accordParts.push(`effet ${formatFrDateSafe(agreement.dateEffet)}`);
+        if (agreement.dateSignature) accordParts.push(`signé ${formatFrDateSafe(agreement.dateSignature)}`);
+        contractRows.push(['Accord d\'entreprise', accordParts.join(' — ')]);
     }
 
     if (contractRows.length > 0) {
@@ -467,6 +488,20 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
         ? `Principe (Art. 140 CCNM) : Le SMH s'apprécie sur l'année civile. L'assiette SMH inclut (actifs) : ${incluesStr}. Éléments exclus (actifs) : ${exclusTxt}.`
         : `Principe (option complète) : comparaison annuelle sur la rémunération brute totale reconstituée. Référence assiette SMH active : ${incluesStr}. Éléments hors assiette actifs : ${exclusTxt}.`;
     y = wrappedText(doc, principe, MARGIN, y, cw);
+    y = wrappedText(
+        doc,
+        `Jeu de données conventionnelles appliqué : grilles SMH annuelles et barèmes débutants, sélectionnés automatiquement selon l'année civile de chaque mois (années couvertes : ${yearsUsedLabel}).`,
+        MARGIN,
+        y,
+        cw
+    );
+    y = wrappedText(
+        doc,
+        `Données historiques de salaires perçus : montants mensuels saisis dans la période (${detailsMoisSource.length} mois renseigné(s)). Seuls les mois renseignés sont intégrés au calcul des arriérés.`,
+        MARGIN,
+        y,
+        cw
+    );
     y += 4;
     doc.setFont(undefined, 'bold');
     y = wrappedText(doc, 'Formule : Arriérés(année) = max(0 ; total SMH dû - total perçu).', MARGIN, y, cw);
@@ -590,6 +625,8 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
         'Code du travail, Art. L.3245-1 — Prescription triennale des salaires.',
         'Code du travail, Art. L.2254-2 — Principe de faveur.'
     ];
+    refs.push(`Jeu de données conventionnelles actif : millésime ${CONFIG.CURRENT_DATA_YEAR || '—'} ; mise à jour du ${formatFrDateSafe(smhUpdate.updatedAt) || '—'}.`);
+    refs.push(`Période réellement calculée (données saisies) : ${yearsUsedLabel} ; ${detailsMoisSource.length} mois renseigné(s) dans l'historique des salaires perçus.`);
     const yearlyRates = smhYearEntries.filter(entry => Number.isFinite(entry?.indicativeRate));
     if (yearlyRates.length > 0) {
         const rates = yearlyRates
@@ -603,13 +640,35 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
             .join(' | ');
         refs.push(`Historique revalorisation SMH intégré: ${histo}.`);
     }
+    const avenantsSMH = smhYearEntries.filter((entry) => {
+        const label = String(entry?.sourceLabel || '').toLowerCase();
+        return label.includes('avenant') || Boolean(entry?.sourceUrl);
+    });
+    if (avenantsSMH.length > 0) {
+        const lines = avenantsSMH.map((entry) => {
+            const parts = [`${entry.year}`];
+            if (entry?.effectiveDate) parts.push(`effet ${formatFrDateSafe(entry.effectiveDate)}`);
+            if (entry?.sourceLabel) parts.push(String(entry.sourceLabel));
+            if (entry?.sourceUrl) parts.push(String(entry.sourceUrl));
+            return parts.join(' — ');
+        });
+        refs.push(`Avenants / sources de mise à jour SMH pris en compte : ${lines.join(' | ')}.`);
+    }
     if (smhYearRef?.sourceLabel || smhYearRef?.sourceUrl) {
         refs.push(`Source grille SMH ${smhYearRef?.year || ''}: ${smhYearRef?.sourceLabel || 'Mise à jour interne'}${smhYearRef?.sourceUrl ? ` (${smhYearRef.sourceUrl})` : ''}.`);
     }
     if (hasAccord && agreement) {
         const accordNom = agreement.nomCourt || agreement.nom || agreement.id || 'sans nom';
-        const accordUrl = agreement.url ? ` (${agreement.url})` : '';
-        refs.push(`Accord d'entreprise appliqué: ${accordNom}${accordUrl}.`);
+        const accordDetails = [];
+        if (agreement.dateEffet) accordDetails.push(`effet ${formatFrDateSafe(agreement.dateEffet)}`);
+        if (agreement.dateSignature) accordDetails.push(`signé le ${formatFrDateSafe(agreement.dateSignature)}`);
+        if (agreement.metadata?.version) accordDetails.push(`version ${agreement.metadata.version}`);
+        if (agreement.metadata?.territoire) accordDetails.push(`territoire ${agreement.metadata.territoire}`);
+        if (agreement.metadata?.entreprise) accordDetails.push(`entreprise ${agreement.metadata.entreprise}`);
+        if (Array.isArray(agreement.metadata?.articlesSubstitues) && agreement.metadata.articlesSubstitues.length > 0) {
+            accordDetails.push(`articles substitués CCNM : ${agreement.metadata.articlesSubstitues.join(', ')}`);
+        }
+        refs.push(`Accord d'entreprise appliqué : ${accordNom}${accordDetails.length ? ` (${accordDetails.join(' ; ')})` : ''}${agreement.url ? ` — ${agreement.url}` : ''}.`);
     }
     refs.forEach(ref => {
         y = checkPageBreak(doc, y, 10);
