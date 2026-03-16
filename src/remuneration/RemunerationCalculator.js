@@ -205,11 +205,8 @@ function getAccordAnciennetePrimeConfig(agreement) {
     return primes.find((prime) => resolvePrimeSemanticId(prime) === SEMANTIC_ID.PRIME_ANCIENNETE) ?? null;
 }
 
-const ANCIENNETE_SMH_MODE_SURPLUS_ENTREPRISE = 'surplusEntrepriseInclus';
-
 function normalizeAncienneteSmhMode(value, source) {
     if (value === true || value === false) return value;
-    if (value === ANCIENNETE_SMH_MODE_SURPLUS_ENTREPRISE) return value;
     if (source === 'accord') return false;
     return getAncienneteConfigInclusion();
 }
@@ -239,7 +236,7 @@ function getRuntimeAncienneteInclusionOverride() {
     const runtimeValue = (typeof window !== 'undefined' && window?.CONFIG?.ANCIENNETE)
         ? window.CONFIG.ANCIENNETE.inclusDansSMH
         : undefined;
-    if (runtimeValue === true || runtimeValue === false || runtimeValue === ANCIENNETE_SMH_MODE_SURPLUS_ENTREPRISE) {
+    if (runtimeValue === true || runtimeValue === false) {
         return runtimeValue;
     }
     return undefined;
@@ -259,13 +256,11 @@ function resolveAncienneteSmhInclusion(explicitInclusion, source) {
 
 function resolveAnciennetePrime(state, context, convPrimeDefs, agreement, isCadreValue) {
     const candidates = [];
-    let ccnReferenceAmount = 0;
 
     const defAncienneteCCN = convPrimeDefs.find(d => d.semanticId === SEMANTIC_ID.PRIME_ANCIENNETE);
     if (!isCadreValue && defAncienneteCCN) {
         const rCCN = computePrime(defAncienneteCCN, context);
         if (rCCN.amount > 0) {
-            ccnReferenceAmount = rCCN.amount;
             candidates.push({
                 source: 'ccn',
                 result: rCCN,
@@ -300,10 +295,6 @@ function resolveAnciennetePrime(state, context, convPrimeDefs, agreement, isCadr
     const hasAlternative = candidates.length > 1;
     const inclusionMode = selected.inclusionMode;
     let smhIncludedAmount = inclusionMode === true ? selected.result.amount : 0;
-    if (selected.source === 'accord' && inclusionMode === ANCIENNETE_SMH_MODE_SURPLUS_ENTREPRISE) {
-        // Juridique 2025 : inclure uniquement le surplus accord au-delà de la référence branche.
-        smhIncludedAmount = Math.max(0, selected.result.amount - ccnReferenceAmount);
-    }
     const smhExcludedAmount = Math.max(0, selected.result.amount - smhIncludedAmount);
     const isSMHIncluded = smhIncludedAmount > 0;
 
@@ -447,9 +438,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         const ancienneteSmhAmount = ancienneteRetenue?.smhIncludedAmount ?? 0;
         if (ancienneteRetenue && ancienneteSmhAmount > 0) {
             detailsSmh.push({
-                label: ancienneteRetenue.inclusionMode === ANCIENNETE_SMH_MODE_SURPLUS_ENTREPRISE
-                    ? 'Prime ancienneté assiette SMH (surplus entreprise inclus)'
-                    : 'Prime ancienneté assiette SMH',
+                label: 'Prime ancienneté assiette SMH',
                 value: ancienneteSmhAmount,
                 isPositive: true,
                 isSMHIncluded: true,
@@ -583,11 +572,8 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         const includedAmount = ancienneteRetenue.smhIncludedAmount ?? 0;
 
         if (excludedAmount > 0) {
-            const excludedLabel = ancienneteRetenue.inclusionMode === ANCIENNETE_SMH_MODE_SURPLUS_ENTREPRISE
-                ? `${ancienneteRetenue.label} (part hors assiette)`
-                : ancienneteRetenue.label;
             details.push({
-                label: excludedLabel,
+                label: ancienneteRetenue.label,
                 value: excludedAmount,
                 isPositive: true,
                 isSMHIncluded: false,
@@ -600,11 +586,8 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         }
 
         if (includedAmount > 0) {
-            const includedLabel = ancienneteRetenue.inclusionMode === ANCIENNETE_SMH_MODE_SURPLUS_ENTREPRISE
-                ? `${ancienneteRetenue.label} (surplus entreprise inclus dans l'assiette SMH)`
-                : ancienneteRetenue.label;
             details.push({
-                label: includedLabel,
+                label: ancienneteRetenue.label,
                 value: includedAmount,
                 isPositive: false,
                 isSMHIncluded: true,

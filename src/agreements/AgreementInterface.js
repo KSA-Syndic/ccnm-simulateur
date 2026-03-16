@@ -88,10 +88,9 @@ import { SEMANTIC_ID } from '../core/RemunerationTypes.js';
  * @property {boolean} tousStatuts - true = Cadres et Non-cadres ; false = Non-cadres seuls (comportement CCN)
  * @property {'salaire'|'point'} baseCalcul - Base de calcul : 'salaire' = rémunération brute, 'point' = valeur du point
  * @property {Object|function} barème - Taux par année (ex. { 2: 0.02, 3: 0.03, ... }) ou fonction(annees) => taux
- * @property {boolean|'surplusEntrepriseInclus'} [inclusDansSMH=false] - Paramétrable selon doctrine/jurisprudence applicable dans l'entreprise.
+ * @property {boolean} [inclusDansSMH=false] - Paramétrable selon doctrine/jurisprudence applicable dans l'entreprise.
  *   - false : totalement exclue de l'assiette SMH
  *   - true : totalement incluse dans l'assiette SMH
- *   - 'surplusEntrepriseInclus' : seule la part au-delà de la référence branche est incluse
  */
 
 /**

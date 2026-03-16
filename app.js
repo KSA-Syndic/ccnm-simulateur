@@ -2639,13 +2639,8 @@ function aggregateRemunerationDetails(details) {
         // Primes incluses dans le SMH (Art. 140) : sous-lignes rattachées à la base SMH
         else if (detail.isSMHIncluded) {
             const rawLabel = String(detail.label || '');
-            const isAncienneteSurplus = /surplus entreprise inclus/i.test(rawLabel);
-            const compactLabel = isAncienneteSurplus
-                ? 'dont Prime ancienneté (surplus entreprise)'
-                : `dont ${rawLabel}`;
-            const compactTooltip = isAncienneteSurplus
-                ? `Calcul : ${rawLabel}. Seul le surplus entreprise (au-delà de la référence branche) est inclus dans l'assiette SMH.`
-                : `${rawLabel} — ${window.LABELS?.smhIncludedTooltipDetailSuffix || 'Répartie dans le SMH, sans ajout au total.'}`;
+            const compactLabel = `dont ${rawLabel}`;
+            const compactTooltip = `${rawLabel} — ${window.LABELS?.smhIncludedTooltipDetailSuffix || 'Répartie dans le SMH, sans ajout au total.'}`;
             // Prime incluse dans le SMH (Art. 140) : ne s'ajoute PAS au total, c'est une distribution
             // du salaire permettant d'atteindre le SMH grille. Affichée en sous-ligne informative.
             // Le mois de versement est déjà dans detail.label (ex. "Prime de vacances Kuhn (juillet)")
