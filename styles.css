@@ -3773,18 +3773,18 @@ body.iframe-mode .simulator-container.iframe-container {
 
 .toast.toast-info {
     border-left-color: var(--color-primary);
-    background: var(--color-primary-bg);
+    background: #fff3ea;
     color: var(--color-primary-dark);
 }
 
 .toast.toast-warning {
     border-left-color: var(--color-warning);
-    background: rgba(202, 138, 4, 0.08);
+    background: #fef3c7;
     color: #92400e;
 }
 
 .toast.toast-success {
     border-left-color: var(--color-success);
-    background: rgba(22, 163, 74, 0.06);
+    background: #ecfdf3;
     color: var(--color-success);
 }
