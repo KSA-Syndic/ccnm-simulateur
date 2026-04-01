@@ -10,6 +10,7 @@ Pour toute **analyse juridique**, **veille** (avenants, jurisprudence) ou **inte
 ## Code et données « paie / convention »
 
 - Ne pas **inventer** de montants, pourcentages ou obligations : les valeurs par défaut du code sont des **paramètres de simulation**, pas des minima légaux ou conventionnels garantis sans vérification du texte applicable.
+- **Exemples chiffrés** dans un texte juridique, une synthèse ou un mail d’expert (profil type, « soit X € », pourcentages reconstitués) : les **analyser** (règle vs illustration, assiette, arrondi, hypothèses cachées). N’en faire ni des **constantes** ni des **vérités par défaut** dans le code si ce ne sont que des conséquences d’un cas ; intégrer plutôt la **formule** et les **paramètres sourcés** (annexe, ACOSS, point territorial daté). En cas d’écart entre l’exemple et le calcul du moteur, corriger la **compréhension** ou les données sourcées, pas bêtement le résultat affiché pour coller au chiffre cité.
 - Lors de l’ajout ou la modification d’éléments de rémunération ou de modalités : conserver ou compléter **`sourceArticle`**, **`conditionTexte`** et **tooltip** quand le schéma du catalogue / accord le prévoit (`ConventionCatalog`, définitions d’accord, etc.).
 - Ne pas retirer les métadonnées juridiques existantes pour « simplifier » sans demande explicite de l’utilisateur.
 
@@ -19,3 +20,5 @@ Pour toute **analyse juridique**, **veille** (avenants, jurisprudence) ou **inte
 - **Jurisprudence** : distinguer **Cour de cassation** (référence nationale) et **premiers jugements** ; citer **Légifrance** pour les arrêts, pas uniquement la presse.
 
 Pour un **mode juridique détaillé** (structure de réponse type, checklists longues), préférer ouvertement l’**agent** `juriste-social` dans le chat.
+
+Pour **intégrer dans le code** un retour d’expert (assimilation, cartographie des modules, changements minimaux, tests) sans copier-coller brut : utiliser l’**agent** `integrateur-retours-juridiques` (`.cursor/agents/integrateur-retours-juridiques.mdc`).
