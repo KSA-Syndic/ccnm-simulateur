@@ -13,12 +13,14 @@ import { getActiveClassification, isCadre } from '../classification/Classificati
 import { computePrime } from './PrimeCalculator.js';
 import { computeMajoration } from './MajorationCalculator.js';
 import { computeForfait } from './ForfaitCalculator.js';
-import { formatMoney } from '../utils/formatters.js';
+import { formatMoney, formatEurosDetail, formatHeuresDetail } from '../utils/formatters.js';
 import { getAccordInput, getAccordPrimeDefsAsElements, resolvePrimeSemanticId } from '../agreements/AgreementInterface.js';
 import { getConventionPrimeDefs, getConventionMajorationDefs, getConventionForfaitDefs } from '../convention/ConventionCatalog.js';
 import { SEMANTIC_ID, SOURCE_ACCORD } from '../core/RemunerationTypes.js';
 import { roundToEuro } from '../utils/rounding.js';
 import { getSmhHourlyBaseRate } from './RateCalculator.js';
+
+const TOOLTIP_PRIME_ANCIENNETE_CADRE_ACCORD = 'La branche (CCNM) ne prévoit pas de prime d\'ancienneté pour les cadres. Votre prime actuelle est issue exclusivement de votre accord d\'entreprise.';
 
 function resolveReferenceYear(date) {
     const selectedYear = date instanceof Date && !Number.isNaN(date.getTime())
@@ -69,12 +71,13 @@ function getActivityRate(state) {
 }
 
 function resolveDerivedNationalValue(config = {}, fallbackValue = 0) {
+    const explicit = Number(fallbackValue);
+    if (Number.isFinite(explicit) && explicit > 0) return explicit;
     if (config?.deriveFrom === 'majorations.heuresSup25') {
         const derived = Number(CONFIG?.MAJORATIONS_CCN?.heuresSup25);
         if (Number.isFinite(derived) && derived > 0) return derived;
     }
-    const fallback = Number(fallbackValue);
-    return Number.isFinite(fallback) ? fallback : 0;
+    return Number.isFinite(explicit) ? explicit : 0;
 }
 
 function applyNationalPrimeOverridesToDefs(defs, state) {
@@ -85,8 +88,7 @@ function applyNationalPrimeOverridesToDefs(defs, state) {
     return defs.map((def) => {
         const semanticId = def?.semanticId;
         if (!semanticId) return def;
-        const isNationalTarget = semanticId === SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE
-            || semanticId === SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE
+        const isNationalTarget = semanticId === SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE
             || semanticId === SEMANTIC_ID.PRIME_PANIER_NUIT
             || semanticId === SEMANTIC_ID.PRIME_HABILLAGE_DESHABILLAGE
             || semanticId === SEMANTIC_ID.PRIME_DEPLACEMENT_PRO;
@@ -100,11 +102,6 @@ function applyNationalPrimeOverridesToDefs(defs, state) {
         if (semanticId === SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE) {
             const base = resolveDerivedNationalValue(cfg, cfg.taux);
             cfg.taux = (allowOverride && Number.isFinite(overrideValue) && overrideValue >= 0)
-                ? overrideValue
-                : base;
-        } else if (semanticId === SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE && cfg.modeCalcul === 'forfaitPeriode') {
-            const base = resolveDerivedNationalValue(cfg, cfg.valeurForfaitPeriode);
-            cfg.valeurForfaitPeriode = (allowOverride && Number.isFinite(overrideValue) && overrideValue >= 0)
                 ? overrideValue
                 : base;
         } else {
@@ -206,6 +203,7 @@ function getAccordAnciennetePrimeConfig(agreement) {
 }
 
 function normalizeAncienneteSmhMode(value, source) {
+    if (value === 'ifSuperiorToConvention' && source === 'accord') return value;
     if (value === true || value === false) return value;
     if (source === 'accord') return false;
     return getAncienneteConfigInclusion();
@@ -220,7 +218,8 @@ function resolveAccordAncienneteSmhInclusion(agreement, primeAncienneteAccord = 
     if (primeOverride !== undefined) return normalizeAncienneteSmhMode(primeOverride, 'accord');
     const accordOverride = agreement?.anciennete?.inclusDansSMH;
     if (accordOverride !== undefined) return normalizeAncienneteSmhMode(accordOverride, 'accord');
-    return false;
+    // Par défaut accord : inclure dans l'assiette uniquement si l'accord est plus favorable que la branche.
+    return 'ifSuperiorToConvention';
 }
 
 function getAncienneteConfigInclusion() {
@@ -266,7 +265,7 @@ function resolveAnciennetePrime(state, context, convPrimeDefs, agreement, isCadr
                 result: rCCN,
                 isAgreement: false,
                 inclusionMode: resolveAncienneteSmhInclusion(defAncienneteCCN.config?.inclusDansSMH, 'ccn'),
-                label: `Prime ancienneté conventionnelle (${state.pointTerritorial}€ × ${rCCN.meta?.taux ?? 0}% × ${rCCN.meta?.annees ?? 0} ans × 12)`
+                label: `Prime ancienneté conventionnelle (${formatEurosDetail(state.pointTerritorial)} € × ${rCCN.meta?.taux ?? 0}% × ${rCCN.meta?.annees ?? 0} ans × 12)`
             });
         }
     }
@@ -294,7 +293,19 @@ function resolveAnciennetePrime(state, context, convPrimeDefs, agreement, isCadr
     const selected = candidates.reduce((best, cur) => (cur.result.amount > best.result.amount ? cur : best), candidates[0]);
     const hasAlternative = candidates.length > 1;
     const inclusionMode = selected.inclusionMode;
-    let smhIncludedAmount = inclusionMode === true ? selected.result.amount : 0;
+    let conventionReferenceAmount = 0;
+    if (defAncienneteCCN) {
+        const rConvRef = computePrime(defAncienneteCCN, context);
+        conventionReferenceAmount = Number(rConvRef?.amount || 0);
+    }
+    const isStrictlySuperiorToCcn = selected.source === 'accord'
+        && Number(selected?.result?.amount || 0) > conventionReferenceAmount;
+    let smhIncludedAmount = 0;
+    if (inclusionMode === true) {
+        smhIncludedAmount = selected.result.amount;
+    } else if (inclusionMode === 'ifSuperiorToConvention' && isStrictlySuperiorToCcn) {
+        smhIncludedAmount = selected.result.amount;
+    }
     const smhExcludedAmount = Math.max(0, selected.result.amount - smhIncludedAmount);
     const isSMHIncluded = smhIncludedAmount > 0;
 
@@ -444,7 +455,10 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                 isSMHIncluded: true,
                 isAgreement: ancienneteRetenue.isAgreement,
                 semanticId: SEMANTIC_ID.PRIME_ANCIENNETE,
-                note: ancienneteRetenue.note
+                note: ancienneteRetenue.note,
+                tooltipDetail: isCadreValue && ancienneteRetenue.isAgreement
+                    ? TOOLTIP_PRIME_ANCIENNETE_CADRE_ACCORD
+                    : undefined
             });
             totalSmh += ancienneteSmhAmount;
         }
@@ -465,7 +479,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                 const rHs25 = computeMajoration(defHs25, context);
                 if (rHs25.amount > 0) {
                     detailsSmh.push({
-                        label: `Heures supplémentaires assiette SMH (+${rHs25.meta?.taux ?? 0}%) (${Math.round((rHs25.meta?.heures ?? 0) * 100) / 100}h/mois)`,
+                        label: `Heures supplémentaires assiette SMH (+${rHs25.meta?.taux ?? 0}%) (${formatHeuresDetail(rHs25.meta?.heures ?? 0)} h/mois)`,
                         value: rHs25.amount,
                         isPositive: true,
                         isSMHIncluded: true,
@@ -478,7 +492,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                 const rHs50 = computeMajoration(defHs50, context);
                 if (rHs50.amount > 0) {
                     detailsSmh.push({
-                        label: `Heures supplémentaires assiette SMH (+${rHs50.meta?.taux ?? 0}%) (${Math.round((rHs50.meta?.heures ?? 0) * 100) / 100}h/mois)`,
+                        label: `Heures supplémentaires assiette SMH (+${rHs50.meta?.taux ?? 0}%) (${formatHeuresDetail(rHs50.meta?.heures ?? 0)} h/mois)`,
                         value: rHs50.amount,
                         isPositive: true,
                         isSMHIncluded: true,
@@ -570,6 +584,9 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
     if (ancienneteRetenue) {
         const excludedAmount = ancienneteRetenue.smhExcludedAmount ?? ancienneteRetenue.result.amount;
         const includedAmount = ancienneteRetenue.smhIncludedAmount ?? 0;
+        const tooltipAncienneteCadreAccord = isCadreValue && ancienneteRetenue.isAgreement
+            ? TOOLTIP_PRIME_ANCIENNETE_CADRE_ACCORD
+            : undefined;
 
         if (excludedAmount > 0) {
             details.push({
@@ -580,7 +597,8 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                 isAgreement: ancienneteRetenue.isAgreement,
                 agreementId: ancienneteRetenue.isAgreement ? agreement?.id : undefined,
                 semanticId: SEMANTIC_ID.PRIME_ANCIENNETE,
-                note: ancienneteRetenue.note
+                note: ancienneteRetenue.note,
+                tooltipDetail: tooltipAncienneteCadreAccord
             });
             total += excludedAmount;
         }
@@ -594,7 +612,8 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                 isAgreement: ancienneteRetenue.isAgreement,
                 agreementId: ancienneteRetenue.isAgreement ? agreement?.id : undefined,
                 semanticId: SEMANTIC_ID.PRIME_ANCIENNETE,
-                note: ancienneteRetenue.note
+                note: ancienneteRetenue.note,
+                tooltipDetail: tooltipAncienneteCadreAccord
             });
         }
     }
@@ -612,8 +631,8 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
             const taux = equipeRetenue.meta?.tauxHoraire ?? 0;
             const suffixAccord = agreement ? ` ${agreement.nomCourt}` : '';
             const labelCalcul = equipeRetenue.source === SOURCE_ACCORD
-                ? `(${equipeRetenue.meta?.heures ?? (state.heuresEquipe ?? 0)}h × ${taux}€)`
-                : `(${equipeRetenue.meta?.postesMensuels ?? 0} postes/mois × ${equipeRetenue.meta?.minutesParPoste ?? 30} min × ${taux}€)`;
+                ? `(${formatHeuresDetail(equipeRetenue.meta?.heures ?? (state.heuresEquipe ?? 0))} h × ${formatEurosDetail(taux)} €)`
+                : `(${equipeRetenue.meta?.postesMensuels ?? 0} postes/mois × ${equipeRetenue.meta?.minutesParPoste ?? 30} min × ${formatEurosDetail(taux)} €)`;
             details.push({
                 label: `Prime d'équipe${equipeRetenue.source === SOURCE_ACCORD ? suffixAccord : ' conventionnelle'} ${labelCalcul}`,
                 value: equipeRetenue.amount,
@@ -628,11 +647,13 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
     // Modalités nationales paramétrables (astreinte, panier, habillage, déplacements/sujétions)
     // et éventuelles surcharges accord d'entreprise par semanticId.
     const modalitesNationales = [
-        SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE,
         SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE,
+        SEMANTIC_ID.PRIME_ASTREINTE_PERIODE_REPOS_QUOTIDIEN,
+        SEMANTIC_ID.PRIME_ASTREINTE_PERIODE_JOUR_REPOS,
         SEMANTIC_ID.PRIME_PANIER_NUIT,
         SEMANTIC_ID.PRIME_HABILLAGE_DESHABILLAGE,
-        SEMANTIC_ID.PRIME_DEPLACEMENT_PRO
+        SEMANTIC_ID.PRIME_DEPLACEMENT_PRO,
+        SEMANTIC_ID.PRIME_INVENTION_BREVETABLE
     ];
     const resolveQuantiteSuffix = (def) => {
         const inputUnitLabel = String(def?.config?.inputUnitLabel || '').toLowerCase();
@@ -664,25 +685,29 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         const isSMHIncluded = def.config?.inclusDansSMH === true;
 
         let label = r.label;
-        if (semanticId === SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE && r.meta?.modeCalcul === 'forfaitPeriode') {
-            const nbPeriodes = Number(r.meta?.nbPeriodes ?? 0);
-            const valeurForfaitPeriode = Number(r.meta?.valeurForfaitPeriode ?? 0);
-            label = `${r.label} (${nbPeriodes} périodes/mois × ${valeurForfaitPeriode}€)`;
+        if (r.meta?.modeCalcul === 'periodesAstreinteSMH') {
+            const ep = r.meta.euroPerPeriode ?? 0;
+            const pm = r.meta.periodesMois ?? 0;
+            label = `${r.label} (${formatHeuresDetail(pm)} périodes/mois × ${formatEurosDetail(ep)} €)`;
+        } else if (r.meta?.modeCalcul === 'inventionForfaitAn') {
+            label = `${r.label} (${r.meta.nombre} × ${formatEurosDetail(r.meta.montantMinimumParUnite)} €)`;
         } else if (def.valueKind === 'horaire' && r.meta?.heures != null) {
             const taux = r.meta.tauxHoraire ?? 0;
             const quantiteSuffix = resolveQuantiteSuffix(def);
             const quantite = Number(r.meta.heures ?? 0);
-            const quantiteLabel = quantiteSuffix === 'h' ? `${quantite}h` : `${quantite} ${quantiteSuffix}`;
+            const quantiteLabel = quantiteSuffix === 'h'
+                ? `${formatHeuresDetail(quantite)} h`
+                : `${formatHeuresDetail(quantite)} ${quantiteSuffix}`;
             if (isAgreementPrime) {
-                label = `${r.label} (${quantiteLabel} × ${taux}€ ${agreement?.nomCourt || 'accord'})`;
+                label = `${r.label} (${quantiteLabel} × ${formatEurosDetail(taux)} € ${agreement?.nomCourt || 'accord'})`;
             } else {
-                label = `${r.label} (${quantiteLabel} × ${taux}€)`;
+                label = `${r.label} (${quantiteLabel} × ${formatEurosDetail(taux)} €)`;
             }
         } else if (def.valueKind === 'majorationHoraire' && r.meta?.heures != null) {
             if (semanticId === SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE && r.meta?.inclureBaseHoraire === true) {
-                label = `${r.label} (base +${r.meta.taux ?? 0}%) (${r.meta.heures}h/mois)`;
+                label = `${r.label} (base +${r.meta.taux ?? 0}%) (${formatHeuresDetail(r.meta.heures)} h/mois)`;
             } else {
-                label = `${r.label} (+${r.meta.taux ?? 0}%) (${r.meta.heures}h/mois)`;
+                label = `${r.label} (+${r.meta.taux ?? 0}%) (${formatHeuresDetail(r.meta.heures)} h/mois)`;
             }
         }
 
@@ -715,7 +740,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         const rNuit = computeMajoration(defNuit, context);
         if (rNuit.amount > 0) {
             details.push({
-                label: `Majoration nuit (+${rNuit.meta?.taux ?? 0}%) (${state.heuresNuit}h/mois)`,
+                label: `Majoration nuit (+${rNuit.meta?.taux ?? 0}%) (${formatHeuresDetail(state.heuresNuit)} h/mois)`,
                 value: rNuit.amount,
                 isPositive: true,
                 isAgreement: rNuit.source === SOURCE_ACCORD,
@@ -732,7 +757,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         const rDim = computeMajoration(defDim, context);
         if (rDim.amount > 0) {
             details.push({
-                label: `Majoration dimanche (+${rDim.meta?.taux ?? 0}%) (${state.heuresDimanche}h/mois)`,
+                label: `Majoration dimanche (+${rDim.meta?.taux ?? 0}%) (${formatHeuresDetail(state.heuresDimanche)} h/mois)`,
                 value: rDim.amount,
                 isPositive: true,
                 isAgreement: rDim.source === SOURCE_ACCORD,
@@ -754,7 +779,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
             const rHs25 = computeMajoration(defHs25, context);
             if (rHs25.amount > 0) {
                 details.push({
-                    label: `Majoration heures supplémentaires (+${rHs25.meta?.taux ?? 0}%) (${Math.round((rHs25.meta?.heures ?? 0) * 100) / 100}h/mois)`,
+                    label: `Majoration heures supplémentaires (+${rHs25.meta?.taux ?? 0}%) (${formatHeuresDetail(rHs25.meta?.heures ?? 0)} h/mois)`,
                     value: rHs25.amount,
                     isPositive: true,
                     isAgreement: rHs25.source === SOURCE_ACCORD,
@@ -767,7 +792,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
             const rHs50 = computeMajoration(defHs50, context);
             if (rHs50.amount > 0) {
                 details.push({
-                    label: `Majoration heures supplémentaires (+${rHs50.meta?.taux ?? 0}%) (${Math.round((rHs50.meta?.heures ?? 0) * 100) / 100}h/mois)`,
+                    label: `Majoration heures supplémentaires (+${rHs50.meta?.taux ?? 0}%) (${formatHeuresDetail(rHs50.meta?.heures ?? 0)} h/mois)`,
                     value: rHs50.amount,
                     isPositive: true,
                     isAgreement: rHs50.source === SOURCE_ACCORD,
@@ -786,11 +811,13 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         for (const def of accordPrimeDefs) {
             if (def.semanticId === SEMANTIC_ID.PRIME_ANCIENNETE || def.semanticId === SEMANTIC_ID.PRIME_EQUIPE) continue; // déjà traitées au-dessus
             if (
-                def.semanticId === SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE
-                || def.semanticId === SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE
+                def.semanticId === SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE
+                || def.semanticId === SEMANTIC_ID.PRIME_ASTREINTE_PERIODE_REPOS_QUOTIDIEN
+                || def.semanticId === SEMANTIC_ID.PRIME_ASTREINTE_PERIODE_JOUR_REPOS
                 || def.semanticId === SEMANTIC_ID.PRIME_PANIER_NUIT
                 || def.semanticId === SEMANTIC_ID.PRIME_HABILLAGE_DESHABILLAGE
                 || def.semanticId === SEMANTIC_ID.PRIME_DEPLACEMENT_PRO
+                || def.semanticId === SEMANTIC_ID.PRIME_INVENTION_BREVETABLE
             ) continue; // traitées dans le bloc modalités nationales/surcharge accord
             const key = def.semanticId || def.id;
             if (!groupedBySemantic.has(key)) groupedBySemantic.set(key, []);
@@ -821,10 +848,12 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                 const taux = r.meta.tauxHoraire ?? 0;
                 const quantiteSuffix = resolveQuantiteSuffix(def);
                 const quantite = Number(r.meta.heures ?? 0);
-                const quantiteLabel = quantiteSuffix === 'h' ? `${quantite}h` : `${quantite} ${quantiteSuffix}`;
-                label = `${r.label} (${quantiteLabel} × ${taux}€ ${agreement.nomCourt})`;
+                const quantiteLabel = quantiteSuffix === 'h'
+                    ? `${formatHeuresDetail(quantite)} h`
+                    : `${formatHeuresDetail(quantite)} ${quantiteSuffix}`;
+                label = `${r.label} (${quantiteLabel} × ${formatEurosDetail(taux)} € ${agreement.nomCourt})`;
             } else if (def.valueKind === 'majorationHoraire' && r.meta?.heures != null) {
-                label = `${r.label} (+${r.meta.taux ?? 0}%) (${r.meta.heures}h/mois)`;
+                label = `${r.label} (+${r.meta.taux ?? 0}%) (${formatHeuresDetail(r.meta.heures)} h/mois)`;
             } else if (def.valueKind === 'montant' && def.config?.moisVersement != null) {
                 const moisNom = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'][def.config.moisVersement - 1];
                 label = `${r.label} ${agreement.nomCourt} (${moisNom})`;

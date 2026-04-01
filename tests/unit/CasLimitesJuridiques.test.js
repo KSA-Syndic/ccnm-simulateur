@@ -86,8 +86,10 @@ describe('Cas Limites Juridiques - CCNM 2024', () => {
             const primeDetail = result.details.find(d => d.label.includes('ancienneté'));
             
             expect(primeDetail).toBeDefined();
-            // Le système doit avoir comparé et choisi la plus avantageuse
-            expect(result.total).toBeGreaterThan(CONFIG.SMH[5]);
+            // Le système compare et retient la plus favorable ; si l'accord est supérieur,
+            // elle est ici intégrée dans l'assiette SMH (non additive au total).
+            expect(primeDetail.isSMHIncluded).toBe(true);
+            expect(result.total).toBe(CONFIG.SMH[5]);
         });
 
         it('devrait appliquer CCN si plus avantageuse que l\'accord (cas limite)', () => {

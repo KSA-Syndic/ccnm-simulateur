@@ -73,10 +73,29 @@ const BAREME_DEBUTANTS_BY_YEAR = {
 // Indemnité repas de nuit (CCNM Art. 147)
 // Référence de montant : plafond ACOSS/Urssaf "repas sur lieu de travail".
 const INDEMNITE_REPAS_NUIT_ACOSS_BY_YEAR = {
+    2025: {
+        surLieuTravail: 7.40,
+        horsLocauxEntreprise: 10.30,
+        restaurantDeplacement: 21.20
+    },
     2026: {
         surLieuTravail: 7.50,
         horsLocauxEntreprise: 10.40,
         restaurantDeplacement: 21.40
+    }
+};
+
+const CCNM_CONTREPARTIES_ORGANISATION = {
+    astreinteDisponibiliteSMHParPeriode: {
+        surReposQuotidienDansAstreinte: 1,
+        surJourRepos: 2
+    },
+    habillageHeuresSMHParSemaine: 0.5,
+    panierNuitHeuresMinParPoste: 6,
+    inventionBrevetableMinimumEuros: 300,
+    rolesSimulation: {
+        horsAssietteComparaisonSMH: true,
+        noteAssimilee: 'Les contreparties liées à l\'organisation du travail sont calculées en sus du SMH et ne réduisent pas la base servant à vérifier le minimum hiérarchique (paramétrage du simulateur ; jurisprudence et texte applicable à confirmer sur chaque dossier).'
     }
 };
 
@@ -134,8 +153,9 @@ const CONFIG = {
     
     BAREME_DEBUTANTS_BY_YEAR,
     INDEMNITE_REPAS_NUIT_ACOSS_BY_YEAR,
+    CCNM_CONTREPARTIES_ORGANISATION,
 
-    // Taux pour calcul Prime d'ancienneté (non-cadres uniquement, CCNM Art. 142)
+    // Taux annexe CCNM (groupes A–E, classes 1 à 10). Pas de prime branche pour F–I (classes ≥ SEUIL_CADRE). Art. 142.
     // Formule : Point territorial × Taux (classe) × Années = montant mensuel ; annuel = mensuel × 12
     TAUX_ANCIENNETE: {
         1: 1.45,    // A1

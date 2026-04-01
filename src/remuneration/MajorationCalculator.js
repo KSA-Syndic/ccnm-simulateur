@@ -72,7 +72,10 @@ function computeMajorationConvention(def, context) {
     if (heures === 0) {
         return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
     }
-    const baseForCalc = (def.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_25 || def.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_50)
+    // Nuit « habituelle » CCNM : majoration exprimée en % du taux horaire SMH ; dimanche / autres sur taux horaire effectif du contexte.
+    const baseForCalc = (def.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_25
+        || def.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_50
+        || def.semanticId === SEMANTIC_ID.MAJORATION_NUIT)
         ? tauxHoraireBase
         : tauxHoraire;
     const montantMensuel = roundToCents(heures * baseForCalc * taux);

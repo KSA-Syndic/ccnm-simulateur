@@ -57,10 +57,35 @@ const BAREME_DEBUTANTS_BY_YEAR = {
 // Indemnité repas de nuit (CCNM Art. 147)
 // Référence de montant : plafond ACOSS/Urssaf "repas sur lieu de travail".
 const INDEMNITE_REPAS_NUIT_ACOSS_BY_YEAR = {
+    2025: {
+        surLieuTravail: 7.40,
+        horsLocauxEntreprise: 10.30,
+        restaurantDeplacement: 21.20
+    },
     2026: {
         surLieuTravail: 7.50,
         horsLocauxEntreprise: 10.40,
         restaurantDeplacement: 21.40
+    }
+};
+
+/**
+ * Barème et règles assimilées CCNM pour contreparties liées à l'organisation du travail
+ * (hors assiette de comparaison au SMH dans le simulateur : voir rolesSimulation).
+ * Les coefficients multiplicateur SMH / période d'astreinte hors travail effectif sont paramétriques.
+ */
+const CCNM_CONTREPARTIES_ORGANISATION = {
+    astreinteDisponibiliteSMHParPeriode: {
+        surReposQuotidienDansAstreinte: 1,
+        surJourRepos: 2
+    },
+    habillageHeuresSMHParSemaine: 0.5,
+    panierNuitHeuresMinParPoste: 6,
+    inventionBrevetableMinimumEuros: 300,
+    /** Pilotage métier : ces éléments s'ajoutent au-delà du SMH dans les totaux affichés. */
+    rolesSimulation: {
+        horsAssietteComparaisonSMH: true,
+        noteAssimilee: 'Les contreparties liées à l\'organisation du travail sont calculées en sus du SMH et ne réduisent pas la base servant à vérifier le minimum hiérarchique (paramétrage du simulateur ; jurisprudence et texte applicable à confirmer sur chaque dossier).'
     }
 };
 
@@ -112,8 +137,9 @@ export const CONFIG = {
     BAREME_DEBUTANTS: BAREME_DEBUTANTS_BY_YEAR[CURRENT_DATA_YEAR],
     BAREME_DEBUTANTS_BY_YEAR,
     INDEMNITE_REPAS_NUIT_ACOSS_BY_YEAR,
+    CCNM_CONTREPARTIES_ORGANISATION,
 
-    // Taux pour calcul Prime d'Ancienneté (Non-Cadres uniquement)
+    // Taux annexe CCNM (groupes A–E, classes 1 à 10). Pas de prime d’ancienneté branche pour F–I (classes ≥ SEUIL_CADRE).
     TAUX_ANCIENNETE: {
         1: 1.45,    // A1
         2: 1.60,    // A2

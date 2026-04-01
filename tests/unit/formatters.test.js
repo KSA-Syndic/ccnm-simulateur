@@ -3,7 +3,13 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { formatMoney, formatMoneyPDF, escapeHTML } from '../../src/utils/formatters.js';
+import {
+    formatMoney,
+    formatMoneyPDF,
+    escapeHTML,
+    formatEurosDetail,
+    formatHeuresDetail
+} from '../../src/utils/formatters.js';
 
 describe('formatters', () => {
     describe('formatMoney', () => {
@@ -44,6 +50,20 @@ describe('formatters', () => {
             const result1 = formatMoney(montant);
             const result2 = formatMoneyPDF(montant);
             expect(result1).toBe(result2);
+        });
+    });
+
+    describe('formatEurosDetail', () => {
+        it('devrait arrondir à 2 décimales (affichage détail libellés)', () => {
+            expect(formatEurosDetail(12.076657655875696)).toBe('12,08');
+            expect(formatEurosDetail(300)).toBe('300,00');
+        });
+    });
+
+    describe('formatHeuresDetail', () => {
+        it('devrait arrondir les heures à 2 décimales max', () => {
+            expect(formatHeuresDetail(2.166666666)).toBe('2,17');
+            expect(formatHeuresDetail(20)).toBe('20');
         });
     });
 

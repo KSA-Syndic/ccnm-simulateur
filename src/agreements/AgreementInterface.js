@@ -418,6 +418,20 @@ export function resolvePrimeSemanticId(primeDef) {
     if (key.includes('anciennete')) return SEMANTIC_ID.PRIME_ANCIENNETE;
     if (key.includes('equipe')) return SEMANTIC_ID.PRIME_EQUIPE;
     if (key.includes('vacances')) return SEMANTIC_ID.PRIME_VACANCES;
+    if (key.includes('intervention') && key.includes('astreinte')) {
+        return SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE;
+    }
+    if (key.includes('invention') && key.includes('mission')) {
+        return SEMANTIC_ID.PRIME_INVENTION_BREVETABLE;
+    }
+    if (key.includes('astreinte') || key.includes('disponibilite')) {
+        if (key.includes('jourrepos') || key.includes('jourde') || key.includes('reposhebdo')) {
+            return SEMANTIC_ID.PRIME_ASTREINTE_PERIODE_JOUR_REPOS;
+        }
+        if (key.includes('reposquotidien') || key.includes('repoquotidien')) {
+            return SEMANTIC_ID.PRIME_ASTREINTE_PERIODE_REPOS_QUOTIDIEN;
+        }
+    }
     if (key.includes('astreinte')) return SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE;
     if (key.includes('panier')) return SEMANTIC_ID.PRIME_PANIER_NUIT;
     if (key.includes('habillage') || key.includes('deshabillage')) return SEMANTIC_ID.PRIME_HABILLAGE_DESHABILLAGE;

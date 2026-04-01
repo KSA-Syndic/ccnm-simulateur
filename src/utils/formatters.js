@@ -6,6 +6,34 @@
  * Fonctions utilitaires pour le formatage des montants et autres données.
  */
 
+import { roundToCents } from './rounding.js';
+
+/**
+ * Montant ou taux en euros pour libellés de détail (2 décimales, séparateur français).
+ * @param {number} amount
+ * @returns {string}
+ */
+export function formatEurosDetail(amount) {
+    const n = roundToCents(Number(amount) || 0);
+    return new Intl.NumberFormat('fr-FR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(n).replace(/\u202f/g, ' ');
+}
+
+/**
+ * Quantité d'heures pour libellés de détail (jusqu'à 2 décimales, sans zéros superflus à droite au-delà de l'usage métier).
+ * @param {number} heures
+ * @returns {string}
+ */
+export function formatHeuresDetail(heures) {
+    const n = Math.round((Number(heures) || 0) * 100) / 100;
+    return new Intl.NumberFormat('fr-FR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+    }).format(n).replace(/\u202f/g, ' ');
+}
+
 /**
  * Formater un montant en euros (affichage écran)
  * @param {number} amount - Montant à formater

@@ -217,7 +217,7 @@ describe('RemunerationCalculator', () => {
             expect(primeEquipe).toBeDefined();
             expect(primeEquipe.isAgreement).toBe(false);
             const tauxHoraireBase = CONFIG.SMH[5] / 12 / (CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67);
-            const expected = Math.round((CONFIG.PRIME_EQUIPE_POSTES_MENSUELS_DEFAUT ?? 22) * ((CONFIG.PRIME_EQUIPE_MINUTES_PAR_POSTE ?? 30) / 60) * (tauxHoraireBase * 0.5) * 12);
+            const expected = Math.round((CONFIG.PRIME_EQUIPE_POSTES_MENSUELS_DEFAUT ?? 22) * ((CONFIG.PRIME_EQUIPE_MINUTES_PAR_POSTE ?? 30) / 60) * tauxHoraireBase * 12);
             expect(primeEquipe.value).toBe(expected);
         });
 
@@ -234,11 +234,8 @@ describe('RemunerationCalculator', () => {
             expect(primeEquipe.value).toBeGreaterThan(0);
         });
 
-        it('devrait intégrer les modalités nationales d’astreinte dans le total full', () => {
-            const prevAstreinte = JSON.parse(JSON.stringify(CONVENTION_MODALITES_PRIMES.astreinteDisponibilite));
+        it('devrait intégrer l’intervention sous astreinte (modalité nationale) dans le total full', () => {
             const prevInter = JSON.parse(JSON.stringify(CONVENTION_MODALITES_PRIMES.interventionAstreinte));
-            CONVENTION_MODALITES_PRIMES.astreinteDisponibilite.modeCalcul = 'horaire';
-            CONVENTION_MODALITES_PRIMES.astreinteDisponibilite.valeurHoraire = 3;
             CONVENTION_MODALITES_PRIMES.interventionAstreinte.tauxMajoration = 0.25;
             CONVENTION_MODALITES_PRIMES.interventionAstreinte.inclureBaseHoraire = true;
             try {
@@ -247,21 +244,18 @@ describe('RemunerationCalculator', () => {
                     scores: [3, 3, 3, 3, 3, 3], // C5
                     accordInputs: {
                         ...stateBase.accordInputs,
-                        primeAstreinteDisponibilite: true,
-                        heuresAstreinteDisponibilite: 8,
                         majorationInterventionAstreinte: true,
                         heuresInterventionAstreinte: 4
                     }
                 };
                 const result = calculateAnnualRemuneration(state, null, { mode: 'full' });
-                const astreinte = result.details.find(d => d.semanticId === 'primeAstreinteDisponibilite');
                 const intervention = result.details.find(d => d.semanticId === 'majorationInterventionAstreinte');
-                expect(astreinte).toBeDefined();
+                const disponibilite = result.details.find(d => d.semanticId === 'primeAstreinteDisponibilite');
                 expect(intervention).toBeDefined();
-                expect(astreinte.value).toBe(288); // 8h * 3€ * 12
-                expect(result.total).toBeGreaterThan(CONFIG.SMH[5] + 288);
+                expect(intervention.value).toBeGreaterThan(0);
+                expect(disponibilite).toBeUndefined();
+                expect(result.total).toBeGreaterThan(CONFIG.SMH[5]);
             } finally {
-                CONVENTION_MODALITES_PRIMES.astreinteDisponibilite = prevAstreinte;
                 CONVENTION_MODALITES_PRIMES.interventionAstreinte = prevInter;
             }
         });
@@ -423,7 +417,7 @@ describe('RemunerationCalculator', () => {
             }
         });
 
-        it('doit garder ancienneté exclue du SMH par défaut avec accord actif si aucune surcharge explicite', () => {
+        it('doit inclure ancienneté accord dans le SMH par défaut si elle est strictement plus favorable que la branche', () => {
             const previous = CONFIG.ANCIENNETE.inclusDansSMH;
             CONFIG.ANCIENNETE.inclusDansSMH = true;
             try {
@@ -436,8 +430,40 @@ describe('RemunerationCalculator', () => {
                 const result = calculateAnnualRemuneration(state, accordKuhn, { mode: 'full' });
                 const primeAnc = result.details.find(d => d.semanticId === 'primeAnciennete');
                 expect(primeAnc).toBeDefined();
-                expect(primeAnc.isSMHIncluded).toBe(false);
-                expect(result.total).toBeGreaterThan(CONFIG.SMH[5]);
+                expect(primeAnc.isSMHIncluded).toBe(true);
+                expect(result.total).toBe(CONFIG.SMH[5]);
+            } finally {
+                CONFIG.ANCIENNETE.inclusDansSMH = previous;
+            }
+        });
+
+        it('cadre F11 : référence branche 0 € — ifSuperiorToConvention inclut la prime accord d’entreprise dans l’assiette SMH', () => {
+            const previous = CONFIG.ANCIENNETE.inclusDansSMH;
+            CONFIG.ANCIENNETE.inclusDansSMH = true;
+            const accordCadre = {
+                ...accordKuhn,
+                anciennete: {
+                    seuil: 2,
+                    plafond: 25,
+                    tousStatuts: true,
+                    baseCalcul: 'salaire',
+                    inclusDansSMH: 'ifSuperiorToConvention',
+                    barème: { 5: 0.004 }
+                }
+            };
+            try {
+                const state = {
+                    ...stateBase,
+                    scores: [7, 7, 6, 6, 6, 6],
+                    experiencePro: 5,
+                    anciennete: 5,
+                    accordActif: true
+                };
+                const result = calculateAnnualRemuneration(state, accordCadre, { mode: 'full' });
+                const primeAnc = result.details.filter((d) => d.semanticId === 'primeAnciennete');
+                expect(primeAnc.length).toBeGreaterThan(0);
+                const incluse = primeAnc.find((d) => d.isSMHIncluded === true);
+                expect(incluse).toBeDefined();
             } finally {
                 CONFIG.ANCIENNETE.inclusDansSMH = previous;
             }
@@ -505,9 +531,10 @@ describe('RemunerationCalculator', () => {
                 accordActif: true
             };
             const result = calculateAnnualRemuneration(state, accordKuhn, { mode: 'full' });
-            expect(result.total).toBeGreaterThan(CONFIG.SMH[5]);
-            const primeAnciennete = result.details.find(d => d.isAgreement);
+            const primeAnciennete = result.details.find(d => d.isAgreement && d.semanticId === 'primeAnciennete');
             expect(primeAnciennete).toBeDefined();
+            expect(primeAnciennete.isSMHIncluded).toBe(true);
+            expect(result.total).toBe(CONFIG.SMH[5]);
         });
 
         it('devrait inclure la prime d\'équipe Kuhn pour non-cadre', () => {
@@ -585,7 +612,7 @@ describe('RemunerationCalculator', () => {
                 accordInputs: { majorationNuitPosteMatin: true, heuresMajorationNuitPosteMatin: 10 }
             };
             const result = calculateAnnualRemuneration(state, accordKuhn, { mode: 'full' });
-            const majNuit = result.details.find(d => d.label.includes('Majoration nuit (+20%)') && d.label.includes('20h/mois'));
+            const majNuit = result.details.find(d => d.label.includes('Majoration nuit (+20%)') && d.label.includes('20 h/mois'));
             const majPosteMatin = result.details.find(d => d.label.includes('poste matin / Après-Midi') && d.label.includes('15%'));
             expect(majNuit).toBeDefined();
             expect(majPosteMatin).toBeDefined();

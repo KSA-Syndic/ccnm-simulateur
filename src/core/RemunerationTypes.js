@@ -33,8 +33,14 @@ export const SEMANTIC_ID = {
     PRIME_ANCIENNETE: 'primeAnciennete',
     PRIME_EQUIPE: 'primeEquipe',
     PRIME_VACANCES: 'primeVacances',
+    /** Réservé aux primes d’accord (autres profils de contrepartie astreinte / disponibilité). */
     PRIME_ASTREINTE_DISPONIBILITE: 'primeAstreinteDisponibilite',
+    /** Astreinte : période sur emploi du temps / repos quotidien (hors TTE), coeff. SMH depuis CONFIG. */
+    PRIME_ASTREINTE_PERIODE_REPOS_QUOTIDIEN: 'primeAstreintePeriodeReposQuotidien',
+    /** Astreinte : période un jour de repos, coeff. SMH depuis CONFIG. */
+    PRIME_ASTREINTE_PERIODE_JOUR_REPOS: 'primeAstreintePeriodeJourRepos',
     PRIME_PANIER_NUIT: 'primePanierNuit',
+    PRIME_INVENTION_BREVETABLE: 'primeInventionBrevetable',
     PRIME_HABILLAGE_DESHABILLAGE: 'primeHabillageDeshabillage',
     PRIME_DEPLACEMENT_PRO: 'primeDeplacementProfessionnel',
     MAJORATION_NUIT: 'majorationNuit',

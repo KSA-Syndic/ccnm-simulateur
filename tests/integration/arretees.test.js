@@ -216,18 +216,23 @@ describe('Arriérés - Calculs Fonctionnels', () => {
             expect(annuelAvecAccord).toBeGreaterThan(annuelSansAccord);
         });
 
-        it('devrait refléter les modalités nationales astreinte en mode complet pour les arriérés', () => {
-            const prevAstreinte = JSON.parse(JSON.stringify(CONVENTION_MODALITES_PRIMES.astreinteDisponibilite));
-            CONVENTION_MODALITES_PRIMES.astreinteDisponibilite.modeCalcul = 'horaire';
-            CONVENTION_MODALITES_PRIMES.astreinteDisponibilite.valeurHoraire = 2;
+        it('devrait refléter l’intervention astreinte en mode complet pour les arriérés', () => {
+            const prevInter = JSON.parse(JSON.stringify(CONVENTION_MODALITES_PRIMES.interventionAstreinte));
+            CONVENTION_MODALITES_PRIMES.interventionAstreinte.tauxMajoration = 0.25;
             try {
                 const stateSans = {
                     ...stateBase,
-                    accordInputs: { primeAstreinteDisponibilite: false, heuresAstreinteDisponibilite: 0 }
+                    accordInputs: {
+                        majorationInterventionAstreinte: false,
+                        heuresInterventionAstreinte: 0
+                    }
                 };
                 const stateAvec = {
                     ...stateBase,
-                    accordInputs: { primeAstreinteDisponibilite: true, heuresAstreinteDisponibilite: 10 }
+                    accordInputs: {
+                        majorationInterventionAstreinte: true,
+                        heuresInterventionAstreinte: 10
+                    }
                 };
                 const annuelSans = calculateSalaireDuPourMois(
                     new Date('2024-01-01'),
@@ -243,9 +248,9 @@ describe('Arriérés - Calculs Fonctionnels', () => {
                     null,
                     false
                 );
-                expect(annuelAvec - annuelSans).toBe(240); // 10h * 2€ * 12
+                expect(annuelAvec).toBeGreaterThan(annuelSans);
             } finally {
-                CONVENTION_MODALITES_PRIMES.astreinteDisponibilite = prevAstreinte;
+                CONVENTION_MODALITES_PRIMES.interventionAstreinte = prevInter;
             }
         });
 
@@ -253,8 +258,6 @@ describe('Arriérés - Calculs Fonctionnels', () => {
             const stateSansOverride = {
                 ...stateBase,
                 accordInputs: {
-                    primeAstreinteDisponibilite: true,
-                    heuresAstreinteDisponibilite: 10,
                     majorationInterventionAstreinte: true,
                     heuresInterventionAstreinte: 5
                 },

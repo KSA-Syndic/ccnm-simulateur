@@ -20,34 +20,13 @@ import {
     SEMANTIC_ID
 } from '../core/RemunerationTypes.js';
 
-// Source unique des modalités conventionnelles (hors accord d'entreprise).
-// Ces valeurs sont modifiables en tests pour vérifier les scénarios de calcul.
-// Il faudra à l'avenir mieux interfacer ces valeurs avec les modalités nationales 
-// afin de les rendre plus modulaires et intégrables aux autres primes.
+// Modalités nationales CCNM / Code : montants indexés sur CONFIG (SMH, ACOSS, barème contreparties organisation).
+// Hors assiette de comparaison au SMH : CONFIG.CCNM_CONTREPARTIES_ORGANISATION.rolesSimulation.
 export const CONVENTION_MODALITES_PRIMES = {
-    astreinteDisponibilite: {
-        stateKeyActif: 'primeAstreinteDisponibilite',
-        stateKeyHeures: 'heuresAstreinteDisponibilite',
-        modeCalcul: 'horaire',            // 'horaire' | 'forfaitPeriode'
-        valeurHoraire: 1.2,
-        valeurForfaitPeriode: 0,
-        unit: '€/h',
-        defaultHeures: 0,
-        inputUnitLabel: "heures d'astreinte/mois",
-        inclusDansSMH: false,
-        uiSection: 'extra',
-        allowUserOverride: false,
-        deriveFrom: null,
-        sourceArticle: 'Code du travail L3121-9, L3121-11, L3121-12',
-        conditionTexte: 'Contrepartie d’astreinte obligatoire (financière ou repos) selon accord ou règles supplétives.',
-        tooltip: 'Astreinte: contrepartie obligatoire de disponibilité (L3121-9). Organisation/compensation par accord (L3121-11) ou dispositif supplétif (L3121-12). Hors assiette SMH.',
-        requiresKeys: [],
-        nonCumulAvec: []
-    },
     interventionAstreinte: {
         stateKeyActif: 'majorationInterventionAstreinte',
         stateKeyHeures: 'heuresInterventionAstreinte',
-        tauxMajoration: 0.25,
+        tauxMajoration: 0,
         inclureBaseHoraire: true,
         unit: '%',
         defaultHeures: 0,
@@ -56,60 +35,104 @@ export const CONVENTION_MODALITES_PRIMES = {
         uiSection: 'extra',
         allowUserOverride: true,
         deriveFrom: 'majorations.heuresSup25',
-        sourceArticle: 'Code du travail L3121-9 et L3121-10',
-        conditionTexte: 'Le temps d’intervention est du travail effectif; seule la période de disponibilité est astreinte.',
-        tooltip: "Intervention pendant astreinte: temps de travail effectif (L3121-9). Non-cumul recommandé avec HS sur les mêmes heures.",
-        requiresKeys: ['primeAstreinteDisponibilite'],
-        nonCumulAvec: ['travailHeuresSup']
+        sourceArticle: 'Code du travail L3121-9, L3121-10 ; CCNM (travail effectif)',
+        conditionTexte: 'Les heures d\'intervention pendant une astreinte sont du travail effectif.',
+        tooltip: 'Indiquez les heures réellement travaillées en intervention. Les périodes de simple disponibilité sont traitées par les lignes « astreinte » ci-dessous (hors TTE).',
+        requiresKeys: [],
+        nonCumulAvec: []
+    },
+    astreintePeriodeReposQuotidien: {
+        stateKeyActif: 'primeAstreintePeriodeReposQuotidien',
+        stateKeyHeures: 'periodesAstreinteReposQuotidienMois',
+        inclusDansSMH: false,
+        uiSection: 'extra',
+        allowUserOverride: false,
+        defaultHeures: 0,
+        inputUnitLabel: 'périodes/mois',
+        unit: '€/période',
+        sourceArticle: 'CCNM (organisation du travail, astreinte hors temps de travail effectif)',
+        conditionTexte: 'Périodes d\'astreinte sur les temps de repos quotidiens prévus par l\'emploi du temps, hors travail effectif.',
+        tooltip: 'Nombre de périodes concernées par mois. Le montant par période suit le taux SMH horaire de votre classe, selon les coefficients prévus par la branche dans cet outil.',
+        requiresKeys: [],
+        nonCumulAvec: []
+    },
+    astreintePeriodeJourRepos: {
+        stateKeyActif: 'primeAstreintePeriodeJourRepos',
+        stateKeyHeures: 'periodesAstreinteJourReposMois',
+        inclusDansSMH: false,
+        uiSection: 'extra',
+        allowUserOverride: false,
+        defaultHeures: 0,
+        inputUnitLabel: 'périodes/mois',
+        unit: '€/période',
+        sourceArticle: 'CCNM (organisation du travail, astreinte hors temps de travail effectif)',
+        conditionTexte: 'Périodes d\'astreinte un jour de repos, hors travail effectif.',
+        tooltip: 'Nombre de périodes concernées par mois. Le montant par période applique le coefficient « jour de repos » sur le SMH horaire de votre classe (comme dans le détail du calcul).',
+        requiresKeys: [],
+        nonCumulAvec: []
     },
     panierNuit: {
         stateKeyActif: 'primePanierNuit',
         stateKeyHeures: 'nbPaniersNuit',
-        valeurHoraire: Number(CONFIG?.INDEMNITE_REPAS_NUIT_ACOSS_BY_YEAR?.[CONFIG.CURRENT_DATA_YEAR]?.surLieuTravail ?? 7.5),
+        valeurHoraire: Number(CONFIG?.INDEMNITE_REPAS_NUIT_ACOSS_BY_YEAR?.[CONFIG.CURRENT_DATA_YEAR]?.surLieuTravail ?? 0),
         unit: '€/unité',
         defaultHeures: 0,
-        inputUnitLabel: 'unités/mois',
+        inputUnitLabel: 'postes indemnisables/mois',
         inclusDansSMH: false,
         uiSection: 'extra',
         allowUserOverride: false,
         deriveFrom: null,
-        sourceArticle: 'CCNM Art. 147 (indemnité de repas de nuit)',
-        conditionTexte: 'Due au travailleur de nuit si au moins 6h sont effectuées entre 21h et 6h, et si les conditions de travail imposent la prise de repas sur le lieu de travail.',
-        tooltip: "Remboursement de frais professionnels (pas une majoration salariale). Montant de référence aligné sur le plafond ACOSS/Urssaf annuel pour repas sur lieu de travail ; non due les jours non travaillés ; hors assiette SMH.",
+        sourceArticle: 'CCNM Art. 147 ; barème fiscal repas (ACOSS / Urssaf)',
+        conditionTexte: 'Indemnité de repas de nuit lorsque les critères de la branche et la durée minimale de poste sont réunis.',
+        tooltip: 'Une unité correspond en principe à un poste éligible (durée minimale fixée par la branche). Le montant unitaire est celui du barème repas de nuit applicable pour l\'année affichée dans le simulateur.',
         requiresKeys: [],
         nonCumulAvec: []
     },
     habillageDeshabillage: {
         stateKeyActif: 'primeHabillageDeshabillage',
-        stateKeyHeures: 'heuresHabillageDeshabillage',
-        valeurHoraire: 0.8,
+        heuresSMHReferenceParSemaine: Number(CONFIG?.CCNM_CONTREPARTIES_ORGANISATION?.habillageHeuresSMHParSemaine ?? 0),
         unit: '€/h',
-        defaultHeures: 0,
-        inputUnitLabel: 'heures/mois',
         inclusDansSMH: false,
         uiSection: 'extra',
         allowUserOverride: false,
         deriveFrom: null,
-        sourceArticle: 'Code du travail L3121-3',
-        conditionTexte: 'Contrepartie obligatoire lorsque habillage/déshabillage est imposé et sur le lieu de travail.',
-        tooltip: 'Habillage/déshabillage: contrepartie prévue par L3121-3, hors assiette SMH.',
+        sourceArticle: 'Code du travail L3121-3 ; CCNM',
+        conditionTexte: 'Contrepartie lorsque la tenue est imposée et que l\'habillage ou le déshabillage s\'effectue sur le lieu de travail.',
+        tooltip: 'Lorsque la case est cochée, le simulateur applique chaque semaine l\'équivalent d\'une demi-heure au taux SMH horaire de votre classe (réparti sur le mois, comme indiqué dans le détail du résultat).',
         requiresKeys: [],
         nonCumulAvec: []
     },
     deplacementProfessionnel: {
         stateKeyActif: 'primeDeplacementProfessionnel',
         stateKeyHeures: 'heuresDeplacementCompense',
-        valeurHoraire: 1,
+        valeurHoraire: 0,
+        baseTauxSmhHierarchique: true,
         unit: '€/h',
         defaultHeures: 0,
-        inputUnitLabel: 'heures/mois',
+        inputUnitLabel: 'heures indemnisées/mois',
         inclusDansSMH: false,
         uiSection: 'extra',
         allowUserOverride: false,
         deriveFrom: null,
-        sourceArticle: 'Code du travail L3121-4',
-        conditionTexte: 'Dépassement du temps normal de trajet: contrepartie obligatoire, sans qualification de temps de travail effectif.',
-        tooltip: 'Déplacements/trajets professionnels: contrepartie selon L3121-4 et accord applicable, hors assiette SMH.',
+        sourceArticle: 'Code du travail L3121-4 ; CCNM',
+        conditionTexte: 'Temps de trajet professionnel dépassant le temps habituel : indemnisation du temps excédentaire assimilée au SMH horaire de la classe.',
+        tooltip: 'Saisir les heures excédentaires à indemniser ; le taux horaire retenu est le SMH de la classification (hors accord plus favorable).',
+        requiresKeys: [],
+        nonCumulAvec: []
+    },
+    inventionBrevetable: {
+        stateKeyActif: 'primeInventionBrevetable',
+        stateKeyHeures: 'nombreInventionsBrevetablesAn',
+        montantMinimumParUnite: Number(CONFIG?.CCNM_CONTREPARTIES_ORGANISATION?.inventionBrevetableMinimumEuros ?? 0),
+        unit: '€',
+        defaultHeures: 0,
+        inputUnitLabel: 'inventions éligibles/an',
+        inclusDansSMH: false,
+        uiSection: 'extra',
+        allowUserOverride: false,
+        sourceArticle: 'CCNM (invention de mission brevetable)',
+        conditionTexte: 'Rémunération minimale assimilée par invention de mission donnant lieu à brevet, lorsque le droit s\'ouvre.',
+        tooltip: 'Nombre d\'inventions concernées sur l\'année. Le minimum conventionnel utilisé par le simulateur par invention figure dans le détail du calcul ; un accord peut prévoir un montant plus favorable.',
         requiresKeys: [],
         nonCumulAvec: []
     }
@@ -120,11 +143,13 @@ export const CONVENTION_MODALITES_PRIMES = {
  * @returns {import('../core/RemunerationTypes.js').ElementDef[]}
  */
 export function getConventionPrimeDefs() {
-    const astreinte = CONVENTION_MODALITES_PRIMES.astreinteDisponibilite;
     const interventionAstreinte = CONVENTION_MODALITES_PRIMES.interventionAstreinte;
+    const astreinteReposQuotidien = CONVENTION_MODALITES_PRIMES.astreintePeriodeReposQuotidien;
+    const astreinteJourRepos = CONVENTION_MODALITES_PRIMES.astreintePeriodeJourRepos;
     const panierNuit = CONVENTION_MODALITES_PRIMES.panierNuit;
     const habillage = CONVENTION_MODALITES_PRIMES.habillageDeshabillage;
     const deplacement = CONVENTION_MODALITES_PRIMES.deplacementProfessionnel;
+    const invention = CONVENTION_MODALITES_PRIMES.inventionBrevetable;
 
     return [
         {
@@ -155,33 +180,8 @@ export function getConventionPrimeDefs() {
                 minutesParPoste: CONFIG.PRIME_EQUIPE_MINUTES_PAR_POSTE ?? 30,
                 inclusDansSMH: false,
                 uiSection: 'main',
-                ratioSMHHoraire: 0.5,
-                formule: 'Nombre de postes/mois × (30 min × SMH horaire de base 35h) × 12'
-            }
-        },
-        {
-            id: 'primeAstreinteDisponibilite',
-            semanticId: SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE,
-            kind: ELEMENT_KIND_PRIME,
-            source: SOURCE_CONVENTION,
-            valueKind: VALUE_KIND_HORAIRE,
-            label: 'Prime astreinte disponibilité',
-            config: {
-                stateKeyActif: astreinte.stateKeyActif || 'primeAstreinteDisponibilite',
-                stateKeyHeures: astreinte.stateKeyHeures || 'heuresAstreinteDisponibilite',
-                modeCalcul: astreinte.modeCalcul || 'horaire',
-                tauxHoraire: Number(astreinte.valeurHoraire ?? 0),
-                valeurForfaitPeriode: Number(astreinte.valeurForfaitPeriode ?? 0),
-                unit: astreinte.unit || '€/h',
-                defaultHeures: Number(astreinte.defaultHeures ?? 0),
-                inputUnitLabel: astreinte.inputUnitLabel || 'heures/mois',
-                inclusDansSMH: astreinte.inclusDansSMH === true,
-                uiSection: astreinte.uiSection || 'extra',
-                allowUserOverride: astreinte.allowUserOverride === true,
-                deriveFrom: astreinte.deriveFrom || null,
-                sourceArticle: astreinte.sourceArticle || '',
-                conditionTexte: astreinte.conditionTexte || '',
-                tooltip: astreinte.tooltip || ''
+                ratioSMHHoraire: 1,
+                formule: 'Nombre de postes/mois × (30 min en heures SMH / poste) × 12'
             }
         },
         {
@@ -190,7 +190,7 @@ export function getConventionPrimeDefs() {
             kind: ELEMENT_KIND_PRIME,
             source: SOURCE_CONVENTION,
             valueKind: VALUE_KIND_MAJORATION_HORAIRE,
-            label: 'Majoration intervention astreinte',
+            label: 'Intervention sous astreinte (travail effectif)',
             config: {
                 stateKeyActif: interventionAstreinte.stateKeyActif || 'majorationInterventionAstreinte',
                 stateKeyHeures: interventionAstreinte.stateKeyHeures || 'heuresInterventionAstreinte',
@@ -211,6 +211,52 @@ export function getConventionPrimeDefs() {
             }
         },
         {
+            id: 'primeAstreintePeriodeReposQuotidien',
+            semanticId: SEMANTIC_ID.PRIME_ASTREINTE_PERIODE_REPOS_QUOTIDIEN,
+            kind: ELEMENT_KIND_PRIME,
+            source: SOURCE_CONVENTION,
+            valueKind: VALUE_KIND_HORAIRE,
+            label: 'Astreinte (périodes sur repos quotidien, hors TTE)',
+            config: {
+                stateKeyActif: astreinteReposQuotidien.stateKeyActif,
+                stateKeyHeures: astreinteReposQuotidien.stateKeyHeures,
+                tauxHoraire: 0,
+                unit: astreinteReposQuotidien.unit || '€/période',
+                defaultHeures: Number(astreinteReposQuotidien.defaultHeures ?? 0),
+                inputUnitLabel: astreinteReposQuotidien.inputUnitLabel || 'périodes/mois',
+                inclusDansSMH: astreinteReposQuotidien.inclusDansSMH === true,
+                uiSection: astreinteReposQuotidien.uiSection || 'extra',
+                allowUserOverride: astreinteReposQuotidien.allowUserOverride === true,
+                modeCalcul: 'periodesAstreinteSMH',
+                sourceArticle: astreinteReposQuotidien.sourceArticle || '',
+                conditionTexte: astreinteReposQuotidien.conditionTexte || '',
+                tooltip: astreinteReposQuotidien.tooltip || ''
+            }
+        },
+        {
+            id: 'primeAstreintePeriodeJourRepos',
+            semanticId: SEMANTIC_ID.PRIME_ASTREINTE_PERIODE_JOUR_REPOS,
+            kind: ELEMENT_KIND_PRIME,
+            source: SOURCE_CONVENTION,
+            valueKind: VALUE_KIND_HORAIRE,
+            label: 'Astreinte (périodes jour de repos, hors TTE)',
+            config: {
+                stateKeyActif: astreinteJourRepos.stateKeyActif,
+                stateKeyHeures: astreinteJourRepos.stateKeyHeures,
+                tauxHoraire: 0,
+                unit: astreinteJourRepos.unit || '€/période',
+                defaultHeures: Number(astreinteJourRepos.defaultHeures ?? 0),
+                inputUnitLabel: astreinteJourRepos.inputUnitLabel || 'périodes/mois',
+                inclusDansSMH: astreinteJourRepos.inclusDansSMH === true,
+                uiSection: astreinteJourRepos.uiSection || 'extra',
+                allowUserOverride: astreinteJourRepos.allowUserOverride === true,
+                modeCalcul: 'periodesAstreinteSMH',
+                sourceArticle: astreinteJourRepos.sourceArticle || '',
+                conditionTexte: astreinteJourRepos.conditionTexte || '',
+                tooltip: astreinteJourRepos.tooltip || ''
+            }
+        },
+        {
             id: 'primePanierNuit',
             semanticId: SEMANTIC_ID.PRIME_PANIER_NUIT,
             kind: ELEMENT_KIND_PRIME,
@@ -225,7 +271,7 @@ export function getConventionPrimeDefs() {
                 defaultHeures: Number(panierNuit.defaultHeures ?? 0),
                 inputUnitLabel: panierNuit.inputUnitLabel || 'heures/mois',
                 inclusDansSMH: panierNuit.inclusDansSMH === true,
-                uiSection: panierNuit.uiSection || 'main',
+                uiSection: panierNuit.uiSection || 'extra',
                 allowUserOverride: panierNuit.allowUserOverride === true,
                 deriveFrom: panierNuit.deriveFrom || null,
                 sourceArticle: panierNuit.sourceArticle || '',
@@ -242,7 +288,8 @@ export function getConventionPrimeDefs() {
             label: 'Prime habillage / déshabillage',
             config: {
                 stateKeyActif: habillage.stateKeyActif || 'primeHabillageDeshabillage',
-                stateKeyHeures: habillage.stateKeyHeures || 'heuresHabillageDeshabillage',
+                stateKeyHeures: habillage.stateKeyHeures || null,
+                heuresSMHReferenceParSemaine: Number(habillage.heuresSMHReferenceParSemaine ?? 0),
                 tauxHoraire: Number(habillage.valeurHoraire ?? 0),
                 unit: habillage.unit || '€/h',
                 defaultHeures: Number(habillage.defaultHeures ?? 0),
@@ -265,8 +312,9 @@ export function getConventionPrimeDefs() {
             label: 'Prime déplacements professionnels',
             config: {
                 stateKeyActif: deplacement.stateKeyActif || 'primeDeplacementProfessionnel',
-                stateKeyHeures: deplacement.stateKeyHeures || 'heuresDeplacementProfessionnel',
+                stateKeyHeures: deplacement.stateKeyHeures || 'heuresDeplacementCompense',
                 tauxHoraire: Number(deplacement.valeurHoraire ?? 0),
+                baseTauxSmhHierarchique: deplacement.baseTauxSmhHierarchique === true,
                 unit: deplacement.unit || '€/h',
                 defaultHeures: Number(deplacement.defaultHeures ?? 0),
                 inputUnitLabel: deplacement.inputUnitLabel || 'heures/mois',
@@ -277,6 +325,30 @@ export function getConventionPrimeDefs() {
                 sourceArticle: deplacement.sourceArticle || '',
                 conditionTexte: deplacement.conditionTexte || '',
                 tooltip: deplacement.tooltip || ''
+            }
+        },
+        {
+            id: 'primeInventionBrevetable',
+            semanticId: SEMANTIC_ID.PRIME_INVENTION_BREVETABLE,
+            kind: ELEMENT_KIND_PRIME,
+            source: SOURCE_CONVENTION,
+            valueKind: VALUE_KIND_HORAIRE,
+            label: 'Invention de mission (brevetable)',
+            config: {
+                stateKeyActif: invention.stateKeyActif || 'primeInventionBrevetable',
+                stateKeyHeures: invention.stateKeyHeures || 'nombreInventionsBrevetablesAn',
+                tauxHoraire: 0,
+                montantMinimumParUnite: Number(invention.montantMinimumParUnite ?? 0),
+                unit: invention.unit || '€',
+                defaultHeures: Number(invention.defaultHeures ?? 0),
+                inputUnitLabel: invention.inputUnitLabel || 'inventions/an',
+                inclusDansSMH: invention.inclusDansSMH === true,
+                uiSection: invention.uiSection || 'extra',
+                allowUserOverride: invention.allowUserOverride === true,
+                modeCalcul: 'inventionForfaitAn',
+                sourceArticle: invention.sourceArticle || '',
+                conditionTexte: invention.conditionTexte || '',
+                tooltip: invention.tooltip || ''
             }
         }
     ];

@@ -256,10 +256,13 @@ function buildPrimeConditionTooltip(prime, options = {}) {
     let ratePart = '';
     if (prime?.valueType === 'majorationHoraire' && prime?.valeurAccord != null) {
         const pct = Math.round(Number(prime.valeurAccord) * 100);
-        ratePart = `+${pct}%.`;
+        if (pct > 0) ratePart = `+${pct}%.`;
     } else if (prime?.valeurAccord != null) {
-        const unit = prime?.unit || '€/h';
-        ratePart = `+${formatNumberFr(Number(prime.valeurAccord), 2)} ${unit}.`;
+        const v = Number(prime.valeurAccord);
+        if (Number.isFinite(v) && v > 0) {
+            const unit = prime?.unit || '€/h';
+            ratePart = `+${formatNumberFr(v, 2)} ${unit}.`;
+        }
     }
     const description = composeTooltipDescription([ratePart, baseTooltip || prime?.conditionTexte]);
     return buildLegalTooltipContent(sourceTitle, description || baseTooltip || sourceTitle);
@@ -1706,11 +1709,13 @@ function getNationalHourlyPrimeDefs(agreement) {
         : [];
     const targetSemanticIds = new Set([
         'primeEquipe',
-        'primeAstreinteDisponibilite',
         'majorationInterventionAstreinte',
+        'primeAstreintePeriodeReposQuotidien',
+        'primeAstreintePeriodeJourRepos',
         'primePanierNuit',
         'primeHabillageDeshabillage',
-        'primeDeplacementProfessionnel'
+        'primeDeplacementProfessionnel',
+        'primeInventionBrevetable'
     ]);
     const primeEquipeTexts = CONFIG?.TOOLTIP_TEXTS?.primeEquipe || {};
     const defs = conventionDefs
@@ -1825,7 +1830,10 @@ function updateConditionsTravailDisplay() {
     const renderHourlyPrimesInContainer = (container, signaturePrefix, primesHoraires) => {
         if (!container) return;
         const hasPrimeHeures = primesHoraires.length > 0;
-        const accordPrimesSignature = `${signaturePrefix}-${state.accordActif ? 'accord' : 'ccn'}-${agreement?.id ?? 'none'}-${primesHoraires.map(p => p.id).join('|')}`;
+        const primesLayoutKey = primesHoraires
+            .map((p) => `${p.id}:${p.inputUnitLabel ?? ''}:${p.unit ?? ''}`)
+            .join('|');
+        const accordPrimesSignature = `${signaturePrefix}-${state.accordActif ? 'accord' : 'ccn'}-${agreement?.id ?? 'none'}-${primesLayoutKey}`;
         const alreadyBuilt = container.children.length > 0 && container.dataset.accordPrimesBuilt === accordPrimesSignature;
         if (!isCadre && hasPrimeHeures) {
             container.classList.remove('hidden');
@@ -1854,6 +1862,10 @@ function updateConditionsTravailDisplay() {
                         if (inputHeures && !prime.autoHeures && document.activeElement !== inputHeures) {
                             inputHeures.value = String(heures);
                         }
+                        const spanUnitHeures = inputHeures?.nextElementSibling;
+                        if (spanUnitHeures?.classList?.contains('input-unit')) {
+                            spanUnitHeures.textContent = prime.inputUnitLabel || 'heures/mois';
+                        }
                         if (overrideInput && document.activeElement !== overrideInput) {
                             const currentOverride = state?.nationalPrimeOverrides?.[prime.semanticId];
                             const value = Number.isFinite(Number(currentOverride))
@@ -1861,6 +1873,10 @@ function updateConditionsTravailDisplay() {
                                 : prime.valeurAccord;
                             overrideInput.value = value != null ? String(value) : '';
                         }
+                        const overrideUnitEl = overrideInput?.nextElementSibling;
+                        prime.allowUserOverride === true
+                            && overrideUnitEl?.classList?.contains('input-unit')
+                            && (overrideUnitEl.textContent = `taux (${prime.unit || ''})`);
                         if (subField) subField.classList.toggle('hidden', !actif);
                     }
                 });
@@ -2640,7 +2656,10 @@ function aggregateRemunerationDetails(details) {
         else if (detail.isSMHIncluded) {
             const rawLabel = String(detail.label || '');
             const compactLabel = `dont ${rawLabel}`;
-            const compactTooltip = `${rawLabel} — ${window.LABELS?.smhIncludedTooltipDetailSuffix || 'Répartie dans le SMH, sans ajout au total.'}`;
+            const suffixSmh = window.LABELS?.smhIncludedTooltipDetailSuffix || 'Répartie dans le SMH, sans ajout au total.';
+            const compactTooltip = detail.tooltipDetail
+                ? `${rawLabel} — ${detail.tooltipDetail}`
+                : `${rawLabel} — ${suffixSmh}`;
             // Prime incluse dans le SMH (Art. 140) : ne s'ajoute PAS au total, c'est une distribution
             // du salaire permettant d'atteindre le SMH grille. Affichée en sous-ligne informative.
             // Le mois de versement est déjà dans detail.label (ex. "Prime de vacances Kuhn (juillet)")
@@ -2676,7 +2695,7 @@ function aggregateRemunerationDetails(details) {
                 aggregated.push({
                     ...detail,
                     tooltipOrigin: classifyOriginFromSourceArticle(detail.sourceArticle, fallbackOrigin),
-                    tooltipDetail: detail.label
+                    tooltipDetail: detail.tooltipDetail || detail.label
                 });
             } else {
                 const fallbackOrigin = isAccordDetail(detail)
@@ -2685,7 +2704,7 @@ function aggregateRemunerationDetails(details) {
                 aggregated.push({
                     ...detail,
                     tooltipOrigin: classifyOriginFromSourceArticle(detail.sourceArticle, fallbackOrigin),
-                    tooltipDetail: detail.label
+                    tooltipDetail: detail.tooltipDetail || detail.label
                 });
             }
         }
@@ -2795,10 +2814,13 @@ function updateHintDisplay(remuneration) {
     if (hints.length === 0) {
         const isCadre = typeof remuneration.classe === 'number' && remuneration.classe >= CONFIG.SEUIL_CADRE;
         if (isCadre) {
-            // Cadres : pas de prime d'ancienneté CCNM, message neutre
+            const agreementHint = typeof window.AgreementLoader?.getActiveAgreement === 'function' ? window.AgreementLoader.getActiveAgreement() : null;
+            const ancienneteAccordCadre = state.accordActif && agreementHint?.anciennete?.tousStatuts === true;
             hints.push({
                 type: 'info',
-                content: 'Ce montant est le minimum conventionnel.'
+                content: ancienneteAccordCadre
+                    ? 'La branche (CCNM) ne prévoit pas de prime d\'ancienneté pour les cadres. Les montants d\'ancienneté affichés relèvent de votre accord d\'entreprise.'
+                    : 'Ce montant est le minimum conventionnel.'
             });
         } else {
             // Non-cadres : prime d'ancienneté CCNM (ou accord si accord actif)
@@ -3595,8 +3617,8 @@ function getSmhScopeDynamic(options = {}) {
     const isCadre = classification.classe >= CONFIG.SEUIL_CADRE;
     const isForfaitJoursCadre = isCadre && state.forfait === 'jours';
     const primes = isAccordActif && Array.isArray(agreement?.primes) ? agreement.primes : [];
-    const included = [];
-    const excluded = [];
+    const includedMap = new Map();
+    const excludedMap = new Map();
 
     const formatScopeLabel = (rawLabel) => {
         const input = String(rawLabel || '').trim();
@@ -3607,46 +3629,84 @@ function getSmhScopeDynamic(options = {}) {
             input.replace(/\s*\([^)]*\)/g, '').replace(/\s{2,}/g, ' ').trim()
         );
     };
-    const addUnique = (arr, label) => {
+    const normalizeScopeKey = (value) => String(value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '');
+    const resolveScopeSemanticKey = (candidate = {}) => {
+        const explicit = String(candidate.semanticId || '').trim();
+        if (explicit) return normalizeScopeKey(explicit);
+        const idKey = normalizeScopeKey(candidate.id);
+        const labelKey = normalizeScopeKey(
+            simplifyResultDisplayLabel(String(candidate.label || '')).replace(/\s*\([^)]*\)/g, ' ')
+        );
+        const key = `${idKey} ${labelKey}`;
+        if (key.includes('primevacances') || key.includes('vacances')) return 'primevacances';
+        if (key.includes('primeanciennete') || key.includes('anciennete')) return 'primeanciennete';
+        if (key.includes('primeequipe') || key.includes('equipe')) return 'primeequipe';
+        if (key.includes('primepaniernuit') || key.includes('panier')) return 'primepaniernuit';
+        if (key.includes('primehabillage') || key.includes('deshabillage')) return 'primehabillagedeshabillage';
+        if (key.includes('deplacement') || key.includes('trajet')) return 'primedeplacementprofessionnel';
+        if (key.includes('intervention') && key.includes('astreinte')) return 'majorationinterventionastreinte';
+        if (idKey) return idKey;
+        return labelKey;
+    };
+    const upsertScopeItem = (map, label, options = {}) => {
+        const { keyHint = '', isAgreement = false } = options;
         const formatted = formatScopeLabel(label);
         if (!formatted) return;
-        const normalized = formatted.toLowerCase();
-        if (arr.some((v) => String(v).toLowerCase() === normalized)) return;
-        arr.push(formatted);
+        const key = normalizeScopeKey(keyHint || formatted);
+        if (!key) return;
+        const current = map.get(key);
+        const incomingPriority = isAgreement ? 2 : 1;
+        const currentPriority = current?.priority ?? 0;
+        if (!current || incomingPriority >= currentPriority) {
+            map.set(key, { label: formatted, priority: incomingPriority });
+        }
+    };
+    const addIncluded = (label, options = {}) => upsertScopeItem(includedMap, label, options);
+    const addExcluded = (label, options = {}) => upsertScopeItem(excludedMap, label, options);
+    const moveToIncluded = (label, options = {}) => {
+        const key = normalizeScopeKey(options?.keyHint || label);
+        excludedMap.delete(key);
+        addIncluded(label, options);
+    };
+    const moveToExcluded = (label, options = {}) => {
+        const key = normalizeScopeKey(options?.keyHint || label);
+        includedMap.delete(key);
+        addExcluded(label, options);
     };
 
     // Primes accord dynamiques selon inclusDansSMH.
     for (const p of primes) {
         const actif = p.stateKeyActif ? (state.accordInputs?.[p.stateKeyActif] === true || state[p.stateKeyActif] === true) : true;
         if (includeOnlyActivePrimes && !actif) continue;
-        if (p.inclusDansSMH === true) addUnique(included, p.label.toLowerCase());
-        else addUnique(excluded, p.label.toLowerCase());
+        const scopeKey = resolveScopeSemanticKey(p);
+        if (p.inclusDansSMH === true) moveToIncluded(p.label, { keyHint: scopeKey, isAgreement: true });
+        else moveToExcluded(p.label, { keyHint: scopeKey, isAgreement: true });
     }
 
     // Base SMH : toujours présente dans l'assiette.
-    addUnique(included, 'salaire de base');
+    addIncluded('salaire de base', { keyHint: 'salaireBase' });
     if (state.travailTempsPartiel === true) {
         const taux = Math.round((Number(state.tauxActivite) || (CONFIG.TAUX_ACTIVITE_DEFAUT ?? 100)) * 100) / 100;
-        addUnique(included, `prorata temps partiel (${String(taux).replace('.', ',')}%)`);
+        addIncluded(`prorata temps partiel (${String(taux).replace('.', ',')}%)`, { keyHint: 'prorataTempsPartiel' });
     }
 
     // 13e mois et forfaits font partie du SMH.
     if (isAccordActif && agreement?.repartition13Mois?.actif && agreement?.repartition13Mois?.inclusDansSMH === true) {
-        addUnique(included, '13e mois');
+        addIncluded('13e mois', { keyHint: 'prime13eMois' });
     }
-    if (state.forfait === 'heures') addUnique(included, 'majoration forfait heures (+15%)');
-    if (state.forfait === 'jours') addUnique(included, 'majoration forfait jours (+30%)');
+    if (state.forfait === 'heures') addIncluded('majoration forfait heures (+15%)', { keyHint: 'forfaitHeures' });
+    if (state.forfait === 'jours') addIncluded('majoration forfait jours (+30%)', { keyHint: 'forfaitJours' });
 
     // Heures supplémentaires (si actives).
     if (!isForfaitJoursCadre && state.travailHeuresSup === true && Number(state.heuresSup || 0) > 0) {
-        addUnique(included, 'majorations d\'heures supplémentaires');
+        addIncluded('majorations d\'heures supplémentaires', { keyHint: 'majorationsHeuresSup' });
     }
 
-    const normalizePrimeKey = (value) => String(value ?? '')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, '');
+    const normalizePrimeKey = normalizeScopeKey;
     const isPrimeAncienneteSemantic = (prime) => {
         const explicit = typeof prime?.semanticId === 'string' ? prime.semanticId.trim() : '';
         if (explicit) return explicit === 'primeAnciennete';
@@ -3670,6 +3730,10 @@ function getSmhScopeDynamic(options = {}) {
         return false;
     };
 
+    const rawAccordAncienneteSmh = isAccordActif
+        ? (primes.find(isPrimeAncienneteSemantic)?.inclusDansSMH ?? agreement?.anciennete?.inclusDansSMH)
+        : undefined;
+
     // Ancienneté dynamiquement incluse/exclue selon paramétrage.
     const ancienneteCfg = (isAccordActif && agreement?.anciennete) ? agreement.anciennete : CONFIG.ANCIENNETE;
     const ancienneteIncluse = isAccordActif
@@ -3681,21 +3745,21 @@ function getSmhScopeDynamic(options = {}) {
             ? ((agreement?.anciennete?.tousStatuts === true || !isCadre) && state.anciennete >= seuilAnciennete)
             : (!isCadre && state.anciennete >= seuilAnciennete))
         : true;
-    if (eligibleAnciennete) {
-        if (ancienneteIncluse) addUnique(included, 'prime d\'ancienneté');
-        else addUnique(excluded, 'prime d\'ancienneté');
+    if (eligibleAnciennete && rawAccordAncienneteSmh !== 'ifSuperiorToConvention') {
+        if (ancienneteIncluse) moveToIncluded('prime d\'ancienneté', { keyHint: 'primeAnciennete', isAgreement: isAccordActif });
+        else moveToExcluded('prime d\'ancienneté', { keyHint: 'primeAnciennete', isAgreement: isAccordActif });
     }
 
     // Majorations de pénibilité / contraintes (si actives) hors SMH.
-    if (state.typeNuit !== 'aucun' && Number(state.heuresNuit || 0) > 0) addUnique(excluded, 'majoration nuit');
-    if (state.travailDimanche === true && Number(state.heuresDimanche || 0) > 0) addUnique(excluded, 'majoration dimanche');
+    if (state.typeNuit !== 'aucun' && Number(state.heuresNuit || 0) > 0) addExcluded('majoration de nuit', { keyHint: 'majorationNuit' });
+    if (state.travailDimanche === true && Number(state.heuresDimanche || 0) > 0) addExcluded('majoration dimanche', { keyHint: 'majorationDimanche' });
     if (isForfaitJoursCadre && state.travailJoursSupForfait === true && Number(state.joursSupForfait || 0) > 0) {
-        addUnique(excluded, 'rachat de jours de repos (forfait jours)');
+        addExcluded('rachat de jours de repos (forfait jours)', { keyHint: 'rachatJoursForfait' });
     }
     const travailEquipeActif = (state.accordInputs?.travailEquipe === true || state.travailEquipe === true);
     const travailEquipeExiste = (!isCadre) || primes.some(p => String(p.id || '').toLowerCase().includes('equipe'));
     if ((includeOnlyActivePrimes && travailEquipeActif) || (!includeOnlyActivePrimes && travailEquipeExiste)) {
-        addUnique(excluded, 'prime d\'équipe');
+        addExcluded('prime d\'équipe', { keyHint: 'primeEquipe' });
     }
 
     // Complément générique via le moteur de rémunération (anciens + nouveaux éléments actifs).
@@ -3706,13 +3770,21 @@ function getSmhScopeDynamic(options = {}) {
         const value = Number(d?.value || 0);
         if (!Number.isFinite(value) || value <= 0) continue;
         if (d?.isBase) continue;
-        const label = String(d?.label || '').trim().toLowerCase();
+        const label = String(d?.label || '').trim();
         if (!label) continue;
-        if (d?.isSMHIncluded === true) addUnique(included, label);
-        else addUnique(excluded, label);
+        const scopeKey = resolveScopeSemanticKey({
+            semanticId: d?.semanticId,
+            label,
+            id: d?.semanticId || label
+        });
+        if (d?.isSMHIncluded === true) moveToIncluded(label, { keyHint: scopeKey, isAgreement: d?.isAgreement === true });
+        else moveToExcluded(label, { keyHint: scopeKey, isAgreement: d?.isAgreement === true });
     }
 
-    return { included, excluded };
+    return {
+        included: Array.from(includedMap.values()).map((v) => v.label),
+        excluded: Array.from(excludedMap.values()).map((v) => v.label)
+    };
 }
 
 /**
@@ -3724,7 +3796,7 @@ function buildSmhHintHtml() {
     const { included, excluded } = getSmhScopeLabels();
     const includedLabel = included.length ? included.join(', ') : 'aucun élément additionnel actif';
     const excludedLabel = excluded.length ? excluded.join(', ') : 'aucun';
-    return `<strong>Comment saisir votre brut (Art. 140 CCNM)</strong><br><strong>Pris en compte</strong> : salaire minima + éléments inclus.<br><strong>À inclure</strong> : ${includedLabel}.<br><strong>À exclure</strong> : ${excludedLabel}.`;
+    return `<strong>Comment saisir votre brut (Art. 140 CCNM)</strong><br><strong>Pris en compte</strong> : assiette du salaire minima (SMH) et seuls les éléments juridiquement inclus.<br><strong>À inclure dans votre brut saisi</strong> : ${includedLabel}.<br><strong>À exclure de votre brut saisi</strong> : ${excludedLabel}.`;
 }
 
 function getSmhScopeLabels(options = {}) {

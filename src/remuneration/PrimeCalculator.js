@@ -13,6 +13,28 @@ import { getPrimeValue, getAccordInput } from '../agreements/AgreementInterface.
 import { SEMANTIC_ID, SOURCE_CONVENTION, SOURCE_ACCORD } from '../core/RemunerationTypes.js';
 import { roundToCents, roundToEuro, annualFromMonthly } from '../utils/rounding.js';
 
+function resolveAstreintePeriodeSmhMultiplier(semanticId) {
+    const m = CONFIG?.CCNM_CONTREPARTIES_ORGANISATION?.astreinteDisponibiliteSMHParPeriode;
+    if (semanticId === SEMANTIC_ID.PRIME_ASTREINTE_PERIODE_REPOS_QUOTIDIEN) {
+        return Number(m?.surReposQuotidienDansAstreinte ?? 1);
+    }
+    if (semanticId === SEMANTIC_ID.PRIME_ASTREINTE_PERIODE_JOUR_REPOS) {
+        return Number(m?.surJourRepos ?? 2);
+    }
+    return 0;
+}
+
+/** Taux majoration : taux catalogue si > 0, sinon barème CCN (deriveFrom). */
+function resolveDerivedMajorationTaux(cfg = {}) {
+    const explicit = Number(cfg.taux ?? 0);
+    if (Number.isFinite(explicit) && explicit > 0) return explicit;
+    if (cfg.deriveFrom === 'majorations.heuresSup25') {
+        const derived = Number(CONFIG?.MAJORATIONS_CCN?.heuresSup25);
+        if (Number.isFinite(derived) && derived > 0) return derived;
+    }
+    return 0;
+}
+
 function resolvePrimeHeures(def, context) {
     const cfg = def.config || {};
     const state = context?.state ?? {};
@@ -69,12 +91,23 @@ function computePrimeConvention(def, context) {
         const pointTerritorial = context.pointTerritorial ?? 0;
         const classe = context.classe ?? 0;
         const anciennete = (context.state && context.state.anciennete) ?? 0;
+        const seuilCadre = CONFIG.SEUIL_CADRE ?? 11;
+
+        if (classe >= seuilCadre) {
+            return {
+                amount: 0,
+                label: def.label,
+                source: SOURCE_CONVENTION,
+                semanticId: def.semanticId,
+                meta: { taux: 0, annees: 0 }
+            };
+        }
 
         if (anciennete < (seuil ?? CONFIG.ANCIENNETE.seuil)) {
             return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
         }
         const anneesPrime = Math.min(anciennete, plafond ?? CONFIG.ANCIENNETE.plafond);
-        const tauxClasse = (tauxParClasse && tauxParClasse[classe]) ?? CONFIG.TAUX_ANCIENNETE[classe] ?? 0;
+        const tauxClasse = (tauxParClasse && tauxParClasse[classe]) ?? CONFIG.TAUX_ANCIENNETE?.[classe] ?? 0;
         const activityRate = Number(context?.activityRate ?? 1);
         const prorata = Number.isFinite(activityRate) && activityRate > 0 ? activityRate : 1;
         const montantMensuel = pointTerritorial * tauxClasse * anneesPrime * prorata;
@@ -129,10 +162,101 @@ function computePrimeConvention(def, context) {
         };
     }
 
+    if (def.semanticId === SEMANTIC_ID.PRIME_ASTREINTE_PERIODE_REPOS_QUOTIDIEN
+        || def.semanticId === SEMANTIC_ID.PRIME_ASTREINTE_PERIODE_JOUR_REPOS) {
+        const cfg = def.config || {};
+        const state = context?.state ?? {};
+        const actif = cfg.stateKeyActif
+            ? (getAccordInput(state, cfg.stateKeyActif) === true || state[cfg.stateKeyActif] === true)
+            : false;
+        if (!actif) {
+            return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
+        }
+        const periodes = resolvePrimeHeures(def, context);
+        const mult = resolveAstreintePeriodeSmhMultiplier(def.semanticId);
+        const th = Number(context?.tauxHoraireBase ?? 0);
+        const euroPerPeriode = roundToCents(mult * th);
+        if (!(periodes > 0) || !(euroPerPeriode > 0)) {
+            return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
+        }
+        const montantMensuel = roundToCents(periodes * euroPerPeriode);
+        const montantAnnuel = annualFromMonthly(montantMensuel);
+        return {
+            amount: montantAnnuel,
+            label: def.label,
+            source: SOURCE_CONVENTION,
+            semanticId: def.semanticId,
+            meta: {
+                modeCalcul: 'periodesAstreinteSMH',
+                periodesMois: periodes,
+                euroPerPeriode,
+                multiplicateurSMH: mult
+            }
+        };
+    }
+
+    if (def.semanticId === SEMANTIC_ID.PRIME_INVENTION_BREVETABLE) {
+        const cfg = def.config || {};
+        const state = context?.state ?? {};
+        const actif = cfg.stateKeyActif
+            ? (getAccordInput(state, cfg.stateKeyActif) === true || state[cfg.stateKeyActif] === true)
+            : false;
+        if (!actif) {
+            return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
+        }
+        const n = Math.max(0, Math.floor(Number(resolvePrimeHeures(def, context)) || 0));
+        const minU = Number(
+            cfg.montantMinimumParUnite ?? CONFIG?.CCNM_CONTREPARTIES_ORGANISATION?.inventionBrevetableMinimumEuros ?? 0
+        );
+        if (n < 1 || !(minU > 0)) {
+            return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
+        }
+        const amount = roundToEuro(n * minU);
+        return {
+            amount,
+            label: def.label,
+            source: SOURCE_CONVENTION,
+            semanticId: def.semanticId,
+            meta: { modeCalcul: 'inventionForfaitAn', nombre: n, montantMinimumParUnite: minU }
+        };
+    }
+
+    if (def.semanticId === SEMANTIC_ID.PRIME_HABILLAGE_DESHABILLAGE) {
+        const cfg = def.config || {};
+        const state = context?.state ?? {};
+        const actif = cfg.stateKeyActif
+            ? (getAccordInput(state, cfg.stateKeyActif) === true || state[cfg.stateKeyActif] === true)
+            : false;
+        const hWeek = Number(
+            cfg.heuresSMHReferenceParSemaine ?? CONFIG?.CCNM_CONTREPARTIES_ORGANISATION?.habillageHeuresSMHParSemaine ?? 0
+        );
+        if (hWeek > 0) {
+            if (!actif) {
+                return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
+            }
+            const th = Number(context?.tauxHoraireBase ?? 0);
+            const heuresMois = hWeek * (52 / 12);
+            if (!(th > 0)) {
+                return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
+            }
+            const montantMensuel = roundToCents(heuresMois * th);
+            const montantAnnuel = annualFromMonthly(montantMensuel);
+            return {
+                amount: montantAnnuel,
+                label: def.label,
+                source: SOURCE_CONVENTION,
+                semanticId: def.semanticId,
+                meta: {
+                    tauxHoraire: th,
+                    heures: roundToCents(heuresMois),
+                    modeCalcul: 'habillageHebdoSMH'
+                }
+            };
+        }
+    }
+
     if (
-        def.semanticId === SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE
-        || def.semanticId === SEMANTIC_ID.PRIME_PANIER_NUIT
-        || def.semanticId === SEMANTIC_ID.PRIME_HABILLAGE_DESHABILLAGE
+        def.semanticId === SEMANTIC_ID.PRIME_PANIER_NUIT
         || def.semanticId === SEMANTIC_ID.PRIME_DEPLACEMENT_PRO
     ) {
         const cfg = def.config || {};
@@ -143,25 +267,11 @@ function computePrimeConvention(def, context) {
         if (!actif) {
             return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
         }
-        const modeCalcul = String(cfg.modeCalcul || 'horaire');
-        if (def.semanticId === SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE && modeCalcul === 'forfaitPeriode') {
-            const nbPeriodes = resolvePrimeHeures(def, context);
-            const valeurForfaitPeriode = Number(cfg.valeurForfaitPeriode ?? 0);
-            if (!(nbPeriodes > 0) || !(valeurForfaitPeriode > 0)) {
-                return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
-            }
-            const montantMensuel = roundToCents(nbPeriodes * valeurForfaitPeriode);
-            const montantAnnuel = annualFromMonthly(montantMensuel);
-            return {
-                amount: montantAnnuel,
-                label: def.label,
-                source: SOURCE_CONVENTION,
-                semanticId: def.semanticId,
-                meta: { nbPeriodes, valeurForfaitPeriode, modeCalcul: 'forfaitPeriode' }
-            };
-        }
         const heures = resolvePrimeHeures(def, context);
-        const tauxHoraire = Number(cfg.tauxHoraire ?? 0);
+        let tauxHoraire = Number(cfg.tauxHoraire ?? 0);
+        if (cfg.baseTauxSmhHierarchique === true) {
+            tauxHoraire = Number(context?.tauxHoraireBase ?? context?.tauxHoraire ?? 0);
+        }
         if (!(heures > 0) || !(tauxHoraire > 0)) {
             return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
         }
@@ -186,7 +296,7 @@ function computePrimeConvention(def, context) {
             return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };
         }
         const heures = resolvePrimeHeures(def, context);
-        const tauxMaj = Number(cfg.taux ?? 0);
+        const tauxMaj = resolveDerivedMajorationTaux(cfg);
         const tauxHoraire = Number(context?.tauxHoraire ?? 0);
         if (!(heures > 0) || !(tauxMaj > 0) || !(tauxHoraire > 0)) {
             return { amount: 0, label: def.label, source: SOURCE_CONVENTION, semanticId: def.semanticId };

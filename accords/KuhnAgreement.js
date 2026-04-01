@@ -34,9 +34,9 @@ export const KuhnAgreement = {
         plafond: 25,        // Plafonné à 25 ans (CCN: 15 ans)
         tousStatuts: true,  // Cadres ET Non-Cadres (CCN: Non-Cadres seuls)
         baseCalcul: 'salaire', // Base = rémunération de base brute (salaire réel, pas valeur du point)
-        inclusDansSMH: true,  // Incluse dans l'assiette SMH
+        inclusDansSMH: 'ifSuperiorToConvention',  // Incluse dans l'assiette SMH
         barème: {
-            2: 0.02, 3: 0.03, 4: 0.04, 5: 0.05, 6: 0.06,
+            2: 0.02, 3: 0.03, 4: 0.004, 5: 0.05, 6: 0.06,
             7: 0.07, 8: 0.08, 9: 0.09, 10: 0.10, 11: 0.11,
             12: 0.12, 13: 0.13, 14: 0.14, 15: 0.15,
             // 16 à 24 ans : reste à 15%

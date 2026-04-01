@@ -85,6 +85,11 @@ describe('PrimeCalculator', () => {
             const r = computePrime(defCCN, { state: { anciennete: 20 }, pointTerritorial: 5.90, classe: 5 });
             expect(r.meta?.annees).toBe(15);
         });
+
+        it('devrait retourner 0 pour la prime CCNM si classe cadre (≥ SEUIL_CADRE)', () => {
+            const r = computePrime(defCCN, { state: { anciennete: 10 }, pointTerritorial: 5.90, classe: 11 });
+            expect(r.amount).toBe(0);
+        });
     });
 
     describe('computePrime - prime équipe (horaire)', () => {
@@ -140,10 +145,11 @@ describe('PrimeCalculator', () => {
         it('devrait calculer la prime équipe CCN si active', () => {
             const r = computePrime(defEquipeCCN, {
                 state: { accordInputs: { travailEquipe: true, heuresEquipe: 151.67 } },
-                tauxHoraire: 12
+                tauxHoraire: 12,
+                tauxHoraireBase: 12
             });
-            expect(r.amount).toBe(792); // 22 postes/mois * (30min -> 0.5h) * (12 * 0.5)
-            expect(r.meta?.tauxHoraire).toBe(6);
+            expect(r.amount).toBe(1584); // 22 postes × 0,5 h × 12 €/h × 12 mois
+            expect(r.meta?.tauxHoraire).toBe(12);
             expect(r.meta?.heures).toBe(11);
             expect(r.meta?.postesMensuels).toBe(22);
         });
@@ -215,38 +221,6 @@ describe('PrimeCalculator', () => {
     });
 
     describe('computePrime - modalités nationales astreinte', () => {
-        it('calcule l’astreinte disponibilité en mode horaire', () => {
-            const previous = JSON.parse(JSON.stringify(CONVENTION_MODALITES_PRIMES.astreinteDisponibilite));
-            CONVENTION_MODALITES_PRIMES.astreinteDisponibilite.modeCalcul = 'horaire';
-            CONVENTION_MODALITES_PRIMES.astreinteDisponibilite.valeurHoraire = 4;
-            try {
-                const def = getConventionPrimeDefs().find(d => d.semanticId === SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE);
-                const r = computePrime(def, {
-                    state: { accordInputs: { primeAstreinteDisponibilite: true, heuresAstreinteDisponibilite: 10 } }
-                });
-                expect(r.amount).toBe(480); // 10h * 4€ * 12
-                expect(r.meta?.modeCalcul).toBe('horaire');
-            } finally {
-                CONVENTION_MODALITES_PRIMES.astreinteDisponibilite = previous;
-            }
-        });
-
-        it('calcule l’astreinte disponibilité en mode forfait par période', () => {
-            const previous = JSON.parse(JSON.stringify(CONVENTION_MODALITES_PRIMES.astreinteDisponibilite));
-            CONVENTION_MODALITES_PRIMES.astreinteDisponibilite.modeCalcul = 'forfaitPeriode';
-            CONVENTION_MODALITES_PRIMES.astreinteDisponibilite.valeurForfaitPeriode = 35;
-            try {
-                const def = getConventionPrimeDefs().find(d => d.semanticId === SEMANTIC_ID.PRIME_ASTREINTE_DISPONIBILITE);
-                const r = computePrime(def, {
-                    state: { accordInputs: { primeAstreinteDisponibilite: true, heuresAstreinteDisponibilite: 4 } }
-                });
-                expect(r.amount).toBe(1680); // 4 périodes * 35€ * 12
-                expect(r.meta?.modeCalcul).toBe('forfaitPeriode');
-            } finally {
-                CONVENTION_MODALITES_PRIMES.astreinteDisponibilite = previous;
-            }
-        });
-
         it('calcule l’intervention d’astreinte avec base horaire incluse', () => {
             const previous = JSON.parse(JSON.stringify(CONVENTION_MODALITES_PRIMES.interventionAstreinte));
             CONVENTION_MODALITES_PRIMES.interventionAstreinte.tauxMajoration = 0.5;
@@ -256,7 +230,6 @@ describe('PrimeCalculator', () => {
                 const r = computePrime(def, {
                     state: {
                         accordInputs: {
-                            primeAstreinteDisponibilite: true,
                             majorationInterventionAstreinte: true,
                             heuresInterventionAstreinte: 10
                         }
