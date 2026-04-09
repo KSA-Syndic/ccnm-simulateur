@@ -49,7 +49,9 @@ export const SEMANTIC_ID = {
     MAJORATION_HEURES_SUP_50: 'majorationHeuresSup50',
     MAJORATION_INTERVENTION_ASTREINTE: 'majorationInterventionAstreinte',
     FORFAIT_HEURES: 'forfaitHeures',
-    FORFAIT_JOURS: 'forfaitJours'
+    FORFAIT_JOURS: 'forfaitJours',
+    /** Rachat / jours supplémentaires en forfait jours (hors assiette SMH, hint arriérés). */
+    RACHAT_JOURS_REPOS_FORFAIT: 'rachatJoursForfait'
 };
 
 /**

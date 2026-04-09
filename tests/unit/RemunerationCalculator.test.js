@@ -55,9 +55,12 @@ describe('RemunerationCalculator', () => {
             const smhBase = CONFIG.SMH[11];
             const forfaitMontant = Math.round(smhBase * 0.30);
             expect(result.total).toBe(smhBase + forfaitMontant);
+            const forfaitLine = result.details.find((d) => d.isSMHIncluded === true && d.semanticId === 'forfaitJours');
+            expect(forfaitLine).toBeDefined();
+            expect(forfaitLine.value).toBe(forfaitMontant);
         });
 
-        it('devrait inclure les majorations heures supplémentaires dans l\'assiette SMH', () => {
+        it('ne devrait pas intégrer les heures supplémentaires au salaire dû en mode SMH seul', () => {
             const state = {
                 ...stateBase,
                 scores: [3, 3, 3, 3, 3, 3], // C5
@@ -65,8 +68,8 @@ describe('RemunerationCalculator', () => {
                 heuresSup: 20
             };
             const result = calculateAnnualRemuneration(state, null, { mode: 'smh-only' });
-            expect(result.total).toBeGreaterThan(CONFIG.SMH[5]);
-            expect(result.details.some(d => d.label.includes('Heures supplémentaires assiette SMH'))).toBe(true);
+            expect(result.total).toBe(CONFIG.SMH[5]);
+            expect(result.details.some(d => String(d.label).includes('Heures supplémentaires'))).toBe(false);
         });
 
         it('devrait appliquer les heures supplémentaires pour un cadre au forfait heures', () => {
@@ -81,8 +84,8 @@ describe('RemunerationCalculator', () => {
             const result = calculateAnnualRemuneration(state, null, { mode: 'smh-only' });
             const smhBase = CONFIG.SMH[11];
             const forfaitMontant = Math.round(smhBase * 0.15);
-            expect(result.total).toBeGreaterThan(smhBase + forfaitMontant);
-            expect(result.details.some(d => String(d.label).includes('Heures supplémentaires assiette SMH'))).toBe(true);
+            expect(result.total).toBe(smhBase + forfaitMontant);
+            expect(result.details.some(d => String(d.label).includes('Heures supplémentaires'))).toBe(false);
         });
 
         it('ne devrait pas appliquer les heures supplémentaires pour un cadre au forfait jours', () => {
@@ -98,7 +101,7 @@ describe('RemunerationCalculator', () => {
             const smhBase = CONFIG.SMH[11];
             const forfaitMontant = Math.round(smhBase * 0.30);
             expect(result.total).toBe(smhBase + forfaitMontant);
-            expect(result.details.some(d => String(d.label).includes('Heures supplémentaires assiette SMH'))).toBe(false);
+            expect(result.details.some(d => String(d.label).includes('Heures supplémentaires'))).toBe(false);
         });
 
         it('devrait inclure la prime d\'ancienneté dans l\'assiette SMH si inclusDansSMH=true', () => {
@@ -680,6 +683,20 @@ describe('RemunerationCalculator', () => {
             const hsLine = result.details.find(d => String(d.label).includes('Majoration heures supplémentaires'));
             expect(hsLine).toBeDefined();
             expect(hsLine.value).toBeGreaterThan(0);
+            expect(hsLine.isSMHIncluded).toBe(false);
+        });
+
+        it('devrait marquer le forfait cadre comme inclus dans l\'assiette SMH (mode full, hint / PDF)', () => {
+            const state = {
+                ...stateBase,
+                scores: [7, 7, 6, 6, 6, 6],
+                experiencePro: 6,
+                forfait: 'jours'
+            };
+            const result = calculateAnnualRemuneration(state, null, { mode: 'full' });
+            const forfaitLine = result.details.find((d) => d.semanticId === 'forfaitJours');
+            expect(forfaitLine).toBeDefined();
+            expect(forfaitLine.isSMHIncluded).toBe(true);
         });
 
         it('devrait permettre les majorations nuit/dimanche pour un cadre au forfait jours', () => {

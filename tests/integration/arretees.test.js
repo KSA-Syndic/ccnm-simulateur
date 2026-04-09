@@ -184,7 +184,7 @@ describe('Arriérés - Calculs Fonctionnels', () => {
             expect(result.detailsTousMois[0]).toHaveProperty('primesVerseesCeMois');
         });
 
-        it('devrait appliquer les taux HS de l\'accord dans le salaire dû SMH seul', () => {
+        it('ne doit pas intégrer les heures sup au salaire dû en SMH seul (taux accord sans effet)', () => {
             const accordHS = {
                 id: 'test-hs',
                 majorations: {
@@ -212,6 +212,38 @@ describe('Arriérés - Calculs Fonctionnels', () => {
                 state,
                 accordHS,
                 true
+            );
+            expect(annuelAvecAccord).toBe(annuelSansAccord);
+        });
+
+        it('devrait appliquer les taux HS de l\'accord en mode rémunération complète (hors SMH seul)', () => {
+            const accordHS = {
+                id: 'test-hs',
+                majorations: {
+                    heuresSupplementaires: {
+                        majoration25: 0.30,
+                        majoration50: 0.60
+                    }
+                }
+            };
+            const state = {
+                ...stateBase,
+                travailHeuresSup: true,
+                heuresSup: 20
+            };
+            const annuelSansAccord = calculateSalaireDuPourMois(
+                new Date('2024-01-01'),
+                new Date('2020-01-01'),
+                state,
+                null,
+                false
+            );
+            const annuelAvecAccord = calculateSalaireDuPourMois(
+                new Date('2024-01-01'),
+                new Date('2020-01-01'),
+                state,
+                accordHS,
+                false
             );
             expect(annuelAvecAccord).toBeGreaterThan(annuelSansAccord);
         });

@@ -18,7 +18,7 @@ const state = {
     ruptureContratArretees: false,
     dateRuptureArretees: null,
     accordEcritArretees: false,
-    arretesSurSMHSeul: true,     // true = assiette SMH (base + forfait). Primes avec inclusDansSMH (Art. 140) gérées dans distribution mensuelle.
+    arretesSurSMHSeul: true,     // true = assiette SMH (base + forfait cadre) ; hors heures sup., jours supp., nuit/dimanche. Primes inclusDansSMH (Art. 140) en distribution mensuelle.
     
     // === CLASSIFICATION ===
     scores: [1, 1, 1, 1, 1, 1],  // Scores des 6 critères (1-10)
@@ -3634,14 +3634,28 @@ function getSmhScopeDynamic(options = {}) {
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
         .replace(/[^a-z0-9]/g, '');
+    /** Libellés compacts alignés sur les entrées explicites (évite doublon détail moteur vs hint). */
+    const SMH_SCOPE_LOOP_LABEL_BY_KEY = {
+        rachatjoursforfait: 'rachat de jours de repos (forfait jours)',
+        majorationnuit: 'majoration de nuit',
+        majorationdimanche: 'majoration dimanche',
+        primeequipe: 'prime d\'équipe',
+        majorationsheuressup: 'majorations d\'heures supplémentaires',
+        forfaitheures: 'majoration forfait heures (+15%)',
+        forfaitjours: 'majoration forfait jours (+30%)'
+    };
     const resolveScopeSemanticKey = (candidate = {}) => {
-        const explicit = String(candidate.semanticId || '').trim();
-        if (explicit) return normalizeScopeKey(explicit);
-        const idKey = normalizeScopeKey(candidate.id);
+        const explicitRaw = String(candidate.semanticId || '').trim();
+        if (explicitRaw) {
+            const n = normalizeScopeKey(explicitRaw);
+            if (n === 'majorationheuressup25' || n === 'majorationheuressup50') return 'majorationsheuressup';
+            return n;
+        }
+        const idKey = normalizeScopeKey(candidate.id || '');
         const labelKey = normalizeScopeKey(
             simplifyResultDisplayLabel(String(candidate.label || '')).replace(/\s*\([^)]*\)/g, ' ')
         );
-        const key = `${idKey} ${labelKey}`;
+        const key = `${idKey} ${labelKey}`.trim();
         if (key.includes('primevacances') || key.includes('vacances')) return 'primevacances';
         if (key.includes('primeanciennete') || key.includes('anciennete')) return 'primeanciennete';
         if (key.includes('primeequipe') || key.includes('equipe')) return 'primeequipe';
@@ -3649,6 +3663,7 @@ function getSmhScopeDynamic(options = {}) {
         if (key.includes('primehabillage') || key.includes('deshabillage')) return 'primehabillagedeshabillage';
         if (key.includes('deplacement') || key.includes('trajet')) return 'primedeplacementprofessionnel';
         if (key.includes('intervention') && key.includes('astreinte')) return 'majorationinterventionastreinte';
+        if (key.includes('rachat') && (key.includes('repos') || key.includes('forfait'))) return 'rachatjoursforfait';
         if (idKey) return idKey;
         return labelKey;
     };
@@ -3701,10 +3716,7 @@ function getSmhScopeDynamic(options = {}) {
     if (state.forfait === 'heures') addIncluded('majoration forfait heures (+15%)', { keyHint: 'forfaitHeures' });
     if (state.forfait === 'jours') addIncluded('majoration forfait jours (+30%)', { keyHint: 'forfaitJours' });
 
-    // Heures supplémentaires (si actives).
-    if (!isForfaitJoursCadre && state.travailHeuresSup === true && Number(state.heuresSup || 0) > 0) {
-        addIncluded('majorations d\'heures supplémentaires', { keyHint: 'majorationsHeuresSup' });
-    }
+    // Heures supplémentaires : hors assiette SMH (libellés issus du détail rémunération mode full ci-dessous).
 
     const normalizePrimeKey = normalizeScopeKey;
     const isPrimeAncienneteSemantic = (prime) => {
@@ -3775,10 +3787,11 @@ function getSmhScopeDynamic(options = {}) {
         const scopeKey = resolveScopeSemanticKey({
             semanticId: d?.semanticId,
             label,
-            id: d?.semanticId || label
+            id: d?.id
         });
-        if (d?.isSMHIncluded === true) moveToIncluded(label, { keyHint: scopeKey, isAgreement: d?.isAgreement === true });
-        else moveToExcluded(label, { keyHint: scopeKey, isAgreement: d?.isAgreement === true });
+        const loopLabel = SMH_SCOPE_LOOP_LABEL_BY_KEY[scopeKey] ?? label;
+        if (d?.isSMHIncluded === true) moveToIncluded(loopLabel, { keyHint: scopeKey, isAgreement: d?.isAgreement === true });
+        else moveToExcluded(loopLabel, { keyHint: scopeKey, isAgreement: d?.isAgreement === true });
     }
 
     return {

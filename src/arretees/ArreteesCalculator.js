@@ -56,9 +56,9 @@ function computeMensuelDueProfile({ salaireAnnuelDuMois, stateMois, agreement, s
  * @returns {number} Salaire annuel dû pour ce mois
  */
 export function calculateSalaireDuPourMois(dateMois, dateEmbauche, stateSnapshot, agreement, smhSeul) {
-    // Option « SMH seul » : salaire dû = assiette SMH (base + forfait).
-    // Les primes marquées inclusDansSMH (Art. 140 CCNM, ex. prime de vacances)
-    // ne changent pas le total annuel dû mais sont gérées dans la distribution mensuelle.
+    // Option « SMH seul » : salaire dû = assiette SMH (base + forfait cadre si applicable).
+    // Hors heures supplémentaires, jours supplémentaires, majorations nuit/dimanche.
+    // Les primes inclusDansSMH (Art. 140 CCNM) sont gérées dans la distribution mensuelle.
     if (smhSeul) {
         return getMontantAnnuelSMHSeul(stateSnapshot, agreement ?? null, { date: dateMois });
     }

@@ -444,6 +444,15 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
             ? `Salaire de base (${groupe}${classe}) au prorata ${tauxActivitePct}%`
             : `Salaire de base (${groupe}${classe})`;
         const detailsSmh = [{ label: baseLabel, value: baseSMH, isBase: true }];
+        if (forfaitMontant > 0 && forfaitResult.label) {
+            detailsSmh.push({
+                label: forfaitResult.label,
+                value: forfaitMontant,
+                isPositive: true,
+                isSMHIncluded: true,
+                semanticId: state.forfait === 'jours' ? SEMANTIC_ID.FORFAIT_JOURS : SEMANTIC_ID.FORFAIT_HEURES
+            });
+        }
 
         const ancienneteRetenue = resolveAnciennetePrime(state, context, convPrimeDefs, agreement, isCadreValue);
         const ancienneteSmhAmount = ancienneteRetenue?.smhIncludedAmount ?? 0;
@@ -463,45 +472,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
             totalSmh += ancienneteSmhAmount;
         }
 
-        // Assiette SMH (Art. 140) : inclure les majorations d'heures supplémentaires,
-        // avec taux CCN par défaut et surcharge accord si disponible.
-        const isForfaitJours = isCadreForfaitJours(classe, state);
-        if (!isForfaitJours && state.travailHeuresSup === true && (Number(state.heuresSup) || 0) > 0) {
-            const convMajDefs = getConventionMajorationDefs();
-            const accordMajDefs = buildAccordMajorationDefs(agreement);
-            const defHs25 = (accordMajDefs.length)
-                ? accordMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_25) ?? convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_25)
-                : convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_25);
-            const defHs50 = (accordMajDefs.length)
-                ? accordMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_50) ?? convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_50)
-                : convMajDefs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_HEURES_SUP_50);
-            if (defHs25) {
-                const rHs25 = computeMajoration(defHs25, context);
-                if (rHs25.amount > 0) {
-                    detailsSmh.push({
-                        label: `Heures supplémentaires assiette SMH (+${rHs25.meta?.taux ?? 0}%) (${formatHeuresDetail(rHs25.meta?.heures ?? 0)} h/mois)`,
-                        value: rHs25.amount,
-                        isPositive: true,
-                        isSMHIncluded: true,
-                        isAgreement: rHs25.source === SOURCE_ACCORD
-                    });
-                    totalSmh += rHs25.amount;
-                }
-            }
-            if (defHs50) {
-                const rHs50 = computeMajoration(defHs50, context);
-                if (rHs50.amount > 0) {
-                    detailsSmh.push({
-                        label: `Heures supplémentaires assiette SMH (+${rHs50.meta?.taux ?? 0}%) (${formatHeuresDetail(rHs50.meta?.heures ?? 0)} h/mois)`,
-                        value: rHs50.amount,
-                        isPositive: true,
-                        isSMHIncluded: true,
-                        isAgreement: rHs50.source === SOURCE_ACCORD
-                    });
-                    totalSmh += rHs50.amount;
-                }
-            }
-        }
+        // Heures supplémentaires : hors assiette SMH (ne font pas partie du salaire minima dû en mode arriérés SMH seul).
         return {
             scenario: 'smh-only',
             baseSMH,
@@ -542,7 +513,13 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         if (forfaitDef) {
             const rForfait = computeForfait(forfaitDef, context);
             if (rForfait.amount > 0) {
-                details.push({ label: rForfait.label, value: rForfait.amount, isPositive: true });
+                details.push({
+                    label: rForfait.label,
+                    value: rForfait.amount,
+                    isPositive: true,
+                    isSMHIncluded: true,
+                    semanticId: state.forfait === 'jours' ? SEMANTIC_ID.FORFAIT_JOURS : SEMANTIC_ID.FORFAIT_HEURES
+                });
                 total += rForfait.amount;
             }
         }
@@ -559,7 +536,13 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
         if (forfaitDef) {
             const rForfait = computeForfait(forfaitDef, context);
             if (rForfait.amount > 0) {
-                details.push({ label: rForfait.label, value: rForfait.amount, isPositive: true });
+                details.push({
+                    label: rForfait.label,
+                    value: rForfait.amount,
+                    isPositive: true,
+                    isSMHIncluded: true,
+                    semanticId: state.forfait === 'jours' ? SEMANTIC_ID.FORFAIT_JOURS : SEMANTIC_ID.FORFAIT_HEURES
+                });
                 total += rForfait.amount;
             }
         }
@@ -573,7 +556,9 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
             details.push({
                 label: `Rachat jours de repos forfait jours (+${pct}%) (${rachat.jours} j/an)`,
                 value: rachat.amount,
-                isPositive: true
+                isPositive: true,
+                isSMHIncluded: false,
+                semanticId: SEMANTIC_ID.RACHAT_JOURS_REPOS_FORFAIT
             });
             total += rachat.amount;
         }
@@ -637,6 +622,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                 label: `Prime d'équipe${equipeRetenue.source === SOURCE_ACCORD ? suffixAccord : ' conventionnelle'} ${labelCalcul}`,
                 value: equipeRetenue.amount,
                 isPositive: true,
+                semanticId: SEMANTIC_ID.PRIME_EQUIPE,
                 isAgreement: equipeRetenue.source === SOURCE_ACCORD,
                 agreementId: equipeRetenue.source === SOURCE_ACCORD ? agreement?.id : undefined
             });
@@ -743,6 +729,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                 label: `Majoration nuit (+${rNuit.meta?.taux ?? 0}%) (${formatHeuresDetail(state.heuresNuit)} h/mois)`,
                 value: rNuit.amount,
                 isPositive: true,
+                semanticId: SEMANTIC_ID.MAJORATION_NUIT,
                 isAgreement: rNuit.source === SOURCE_ACCORD,
                 agreementId: agreement?.id
             });
@@ -760,6 +747,7 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                 label: `Majoration dimanche (+${rDim.meta?.taux ?? 0}%) (${formatHeuresDetail(state.heuresDimanche)} h/mois)`,
                 value: rDim.amount,
                 isPositive: true,
+                semanticId: SEMANTIC_ID.MAJORATION_DIMANCHE,
                 isAgreement: rDim.source === SOURCE_ACCORD,
                 agreementId: agreement?.id
             });
@@ -782,6 +770,8 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                     label: `Majoration heures supplémentaires (+${rHs25.meta?.taux ?? 0}%) (${formatHeuresDetail(rHs25.meta?.heures ?? 0)} h/mois)`,
                     value: rHs25.amount,
                     isPositive: true,
+                    isSMHIncluded: false,
+                    semanticId: SEMANTIC_ID.MAJORATION_HEURES_SUP_25,
                     isAgreement: rHs25.source === SOURCE_ACCORD,
                     agreementId: agreement?.id
                 });
@@ -795,6 +785,8 @@ export function calculateAnnualRemuneration(state, agreement, options = {}) {
                     label: `Majoration heures supplémentaires (+${rHs50.meta?.taux ?? 0}%) (${formatHeuresDetail(rHs50.meta?.heures ?? 0)} h/mois)`,
                     value: rHs50.amount,
                     isPositive: true,
+                    isSMHIncluded: false,
+                    semanticId: SEMANTIC_ID.MAJORATION_HEURES_SUP_50,
                     isAgreement: rHs50.source === SOURCE_ACCORD,
                     agreementId: agreement?.id
                 });
