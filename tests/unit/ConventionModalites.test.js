@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { getConventionPrimeDefs } from '../../src/convention/ConventionCatalog.js';
+import {
+    getConventionPrimeDefs,
+    isModaliteVisiblePourProfil,
+    UI_VISIBLE_MODALITE
+} from '../../src/convention/ConventionCatalog.js';
 import { SEMANTIC_ID } from '../../src/core/RemunerationTypes.js';
 
 describe('ConventionCatalog - modalités nationales génériques', () => {
@@ -23,5 +27,18 @@ describe('ConventionCatalog - modalités nationales génériques', () => {
         expect(interventionAstreinte?.config?.sourceArticle).toContain('L3121-9');
         expect(habillage?.config?.sourceArticle).toContain('L3121-3');
         expect(deplacement?.config?.sourceArticle).toContain('L3121-4');
+    });
+
+    it('masque les astreintes en comptage horaire pour le cadre au forfait-jours, pas les autres modalités', () => {
+        const defs = getConventionPrimeDefs();
+        const intervention = defs.find(d => d.semanticId === SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE);
+        const panier = defs.find(d => d.semanticId === SEMANTIC_ID.PRIME_PANIER_NUIT);
+        expect(intervention?.config?.uiVisibleQuand).toBe(UI_VISIBLE_MODALITE.COMPTAGE_HORAIRE_CONVENTIONNEL);
+        expect(panier?.config?.uiVisibleQuand).toBe(UI_VISIBLE_MODALITE.TOUJOURS);
+
+        expect(isModaliteVisiblePourProfil(intervention?.config?.uiVisibleQuand, { isCadre: true, forfait: 'jours' })).toBe(false);
+        expect(isModaliteVisiblePourProfil(intervention?.config?.uiVisibleQuand, { isCadre: true, forfait: 'heures' })).toBe(true);
+        expect(isModaliteVisiblePourProfil(intervention?.config?.uiVisibleQuand, { isCadre: false, forfait: '35h' })).toBe(true);
+        expect(isModaliteVisiblePourProfil(panier?.config?.uiVisibleQuand, { isCadre: true, forfait: 'jours' })).toBe(true);
     });
 });

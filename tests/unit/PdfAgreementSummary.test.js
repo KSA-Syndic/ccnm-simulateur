@@ -30,4 +30,13 @@ describe('buildAgreementSummaryRows (PDF accord)', () => {
         expect(flat).toContain('UES KUHN');
         expect(flat).toContain('Référence dans le simulateur : kuhn');
     });
+
+    it('ne doit pas contenir de glyphes PDF problématiques (ex. ≥) sur les majorations nuit', () => {
+        const rows = buildAgreementSummaryRows(KuhnAgreement, { accordInputs: {} });
+        const flat = rows.map((r) => r.join(' ')).join('\n');
+        expect(flat).not.toContain('\u2265');
+        expect(flat).toMatch(/Majorations - travail de nuit/);
+        expect(flat).toMatch(/poste de nuit : \+20/);
+        expect(flat).toMatch(/plage 20h-6h/);
+    });
 });

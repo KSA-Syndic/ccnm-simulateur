@@ -16,7 +16,7 @@ import { getActiveAgreement } from '../agreements/AgreementLoader.js';
 import { state as moduleState } from '../core/state.js';
 import { computeSalaireProrataEntree } from '../utils/dateUtils.js';
 import { getSmhHourlyBaseRate, getSmhDailyBaseRate } from '../remuneration/RateCalculator.js';
-import { getConventionPrimeDefs } from '../convention/ConventionCatalog.js';
+import { getConventionPrimeDefs, isModaliteVisiblePourProfil } from '../convention/ConventionCatalog.js';
 
 /**
  * Synchroniser le state de app.js vers le state des modules
@@ -216,3 +216,5 @@ window.getSmhDailyBaseRateFromModules = function(smhAnnual, options = {}) {
 window.getConventionPrimeDefsFromModules = function() {
     return getConventionPrimeDefs();
 };
+
+window.isModaliteVisiblePourProfil = isModaliteVisiblePourProfil;

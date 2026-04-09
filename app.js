@@ -1751,7 +1751,8 @@ function getNationalHourlyPrimeDefs(agreement) {
                 conditionTexte: cfg.conditionTexte || (isPrimeEquipe ? (primeEquipeTexts.conditionTexte || '') : ''),
                 requiresKeys: Array.isArray(cfg.requiresKeys) ? cfg.requiresKeys : [],
                 nonCumulAvec: Array.isArray(cfg.nonCumulAvec) ? cfg.nonCumulAvec : [],
-                uiSection: cfg.uiSection || 'main'
+                uiSection: cfg.uiSection || 'main',
+                uiVisibleQuand: cfg.uiVisibleQuand || 'toujours'
             };
         });
 
@@ -1824,18 +1825,31 @@ function updateConditionsTravailDisplay() {
     const autresPrimes = (state.accordActif && agreement)
         ? mergeBySemantic(nationalExtraPrimes, accordExtraPrimes)
         : nationalExtraPrimes;
-    const allPrimeDefs = [...mainPrimes, ...autresPrimes];
+    const visibiliteModaliteParSemantic = new Map();
+    nationalPrimesHoraires.forEach((p) => {
+        const k = p.semanticId || p.id;
+        if (k) visibiliteModaliteParSemantic.set(k, p.uiVisibleQuand || 'toujours');
+    });
+    const modaliteVisiblePourProfil = typeof window.isModaliteVisiblePourProfil === 'function'
+        ? window.isModaliteVisiblePourProfil
+        : function () { return true; };
+    const autresPrimesVisibles = autresPrimes.filter((p) => modaliteVisiblePourProfil(
+        visibiliteModaliteParSemantic.get(p.semanticId || p.id) || 'toujours',
+        { isCadre, forfait: state.forfait }
+    ));
+    const allPrimeDefs = [...mainPrimes, ...autresPrimesVisibles];
     currentHourlyPrimeDefsByStateKey = buildStateKeyPrimeMap(allPrimeDefs);
 
-    const renderHourlyPrimesInContainer = (container, signaturePrefix, primesHoraires) => {
+    const renderHourlyPrimesInContainer = (container, signaturePrefix, primesHoraires, renderOpts = {}) => {
         if (!container) return;
+        const allowCadre = renderOpts.allowCadre === true;
         const hasPrimeHeures = primesHoraires.length > 0;
         const primesLayoutKey = primesHoraires
             .map((p) => `${p.id}:${p.inputUnitLabel ?? ''}:${p.unit ?? ''}`)
             .join('|');
         const accordPrimesSignature = `${signaturePrefix}-${state.accordActif ? 'accord' : 'ccn'}-${agreement?.id ?? 'none'}-${primesLayoutKey}`;
         const alreadyBuilt = container.children.length > 0 && container.dataset.accordPrimesBuilt === accordPrimesSignature;
-        if (!isCadre && hasPrimeHeures) {
+        if ((allowCadre || !isCadre) && hasPrimeHeures) {
             container.classList.remove('hidden');
             if (alreadyBuilt) {
                 primesHoraires.forEach(prime => {
@@ -2023,13 +2037,26 @@ function updateConditionsTravailDisplay() {
             mainContainer.innerHTML = '';
             mainContainer.classList.add('hidden');
         }
+        if (state.accordInputs && typeof state.accordInputs === 'object') {
+            state.accordInputs.majorationInterventionAstreinte = false;
+            state.accordInputs.heuresInterventionAstreinte = 0;
+            state.accordInputs.primeAstreintePeriodeReposQuotidien = false;
+            state.accordInputs.periodesAstreinteReposQuotidienMois = 0;
+            state.accordInputs.primeAstreintePeriodeJourRepos = false;
+            state.accordInputs.periodesAstreinteJourReposMois = 0;
+        }
         if (autresContainer) {
-            autresContainer.innerHTML = '';
-            autresContainer.classList.add('hidden');
+            if (autresPrimesVisibles.length > 0) {
+                renderHourlyPrimesInContainer(autresContainer, 'autres', autresPrimesVisibles, { allowCadre: true });
+            } else {
+                autresContainer.innerHTML = '';
+                autresContainer.classList.add('hidden');
+                delete autresContainer.dataset.accordPrimesBuilt;
+            }
         }
         if (autresDetails) {
-            autresDetails.classList.add('hidden');
-            autresDetails.open = false;
+            autresDetails.classList.toggle('hidden', autresPrimesVisibles.length === 0);
+            if (autresPrimesVisibles.length === 0) autresDetails.open = false;
         }
         state.travailHeuresSup = false;
         state.heuresSup = 0;
@@ -2095,10 +2122,10 @@ function updateConditionsTravailDisplay() {
             if (hsField) hsField.classList.toggle('hidden', !state.travailHeuresSup);
         }
         
-        renderHourlyPrimesInContainer(mainContainer, 'main', mainPrimes);
-        renderHourlyPrimesInContainer(autresContainer, 'autres', autresPrimes);
+        renderHourlyPrimesInContainer(mainContainer, 'main', mainPrimes, {});
+        renderHourlyPrimesInContainer(autresContainer, 'autres', autresPrimesVisibles, { allowCadre: true });
         if (autresDetails) {
-            const showAutres = !isCadre && autresPrimes.length > 0;
+            const showAutres = autresPrimesVisibles.length > 0;
             autresDetails.classList.toggle('hidden', !showAutres);
             if (!showAutres) autresDetails.open = false;
         }

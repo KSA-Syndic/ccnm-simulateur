@@ -103,6 +103,25 @@ function pctFromFraction(f) {
     return `${frNumStr(p)} %`;
 }
 
+/**
+ * Glyphes Unicode souvent absents ou mal mesurés avec les polices standard PDF (Helvetica) :
+ * jsPDF peut alors étirer ou espacer les caractères de façon aberrante dans autoTable.
+ * @param {unknown} value
+ * @returns {string}
+ */
+function sanitizePdfStandardFontText(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/\u00a0/g, ' ')
+        .replace(/[\u200b-\u200d\ufeff]/g, '')
+        .replace(/\u2265/g, '>=')
+        .replace(/\u2264/g, '<=')
+        .replace(/\u2013|\u2014|\u2212/g, '-')
+        .replace(/\u2026/g, '...')
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201c\u201d]/g, '"');
+}
+
 function describeInclusDansSMHFlag(v) {
     if (v === true) return 'Incluse dans l\'assiette SMH (Art. 140 CCNM, distribution du salaire)';
     if (v === false) return 'Hors assiette SMH (condition de travail ou supplément)';
@@ -136,9 +155,9 @@ function majorationRowsFromAccord(maj) {
     if (maj.nuit && typeof maj.nuit === 'object') {
         const n = maj.nuit;
         const parts = [];
-        if (n.posteNuit != null) parts.push(`poste de nuit (≥ seuil) : +${pctFromFraction(n.posteNuit)}`);
+        if (n.posteNuit != null) parts.push(`poste de nuit : +${pctFromFraction(n.posteNuit)}`);
         if (n.posteMatin != null) parts.push(`poste matin : +${pctFromFraction(n.posteMatin)}`);
-        if (n.plageDebut != null && n.plageFin != null) parts.push(`plage ${n.plageDebut}h–${n.plageFin}h`);
+        if (n.plageDebut != null && n.plageFin != null) parts.push(`plage ${n.plageDebut}h-${n.plageFin}h`);
         if (n.seuilHeuresPosteNuit != null) parts.push(`seuil poste nuit : ${frNumStr(n.seuilHeuresPosteNuit)} h`);
         rows.push(['Majorations — travail de nuit', parts.length ? parts.join(' ; ') : '—']);
     }
@@ -322,7 +341,10 @@ export function buildAgreementSummaryRows(agreement, state) {
         rows.push(['Contact syndical (indicatif)', synd]);
     }
 
-    return rows;
+    return rows.map(([a, b]) => [
+        sanitizePdfStandardFontText(a),
+        sanitizePdfStandardFontText(b)
+    ]);
 }
 
 // Style commun pour autoTable — compact pour tenir en ~1 page
@@ -795,8 +817,17 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
                 head: [['Rubrique', 'Détail']],
                 body: accordRows,
                 ...TABLE_STYLES,
-                styles: { ...TABLE_STYLES.styles, fontSize: 7 },
-                columnStyles: { 0: { cellWidth: 62 }, 1: { cellWidth: 88 } }
+                styles: {
+                    ...TABLE_STYLES.styles,
+                    fontSize: 7,
+                    halign: 'left',
+                    valign: 'top'
+                },
+                headStyles: { ...TABLE_STYLES.headStyles, halign: 'left' },
+                columnStyles: {
+                    0: { fontStyle: 'bold', cellWidth: 62, halign: 'left', valign: 'top' },
+                    1: { cellWidth: 88, halign: 'left', valign: 'top' }
+                }
             });
             y = (doc.lastAutoTable?.finalY ?? y) + 4;
         } else {
