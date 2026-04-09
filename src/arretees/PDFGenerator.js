@@ -16,7 +16,12 @@ import { getActiveClassification } from '../classification/ClassificationEngine.
 import { state as defaultState } from '../core/state.js';
 import { CONFIG } from '../core/config.js';
 import { getActiveAgreement } from '../agreements/AgreementLoader.js';
-import { getPrimes } from '../agreements/AgreementInterface.js';
+import {
+    getPrimes,
+    getElements,
+    getAccordInput,
+    isPrimeActive
+} from '../agreements/AgreementInterface.js';
 
 // ═══════════════════════════════════════════════════════════════
 // Utilitaires communs
@@ -85,47 +90,238 @@ function formatFrDateSafe(value) {
     return date.toLocaleDateString('fr-FR');
 }
 
-function formatAgreementRawValue(value) {
-    if (value === null) return 'null';
-    if (value === undefined) return 'undefined';
-    if (typeof value === 'function') return '[function]';
-    if (typeof value === 'string') return value;
-    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-    try {
-        return JSON.stringify(value);
-    } catch {
-        return String(value);
-    }
+const MOIS_NOMS_LONGS_PDF = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
+function frNumStr(n) {
+    if (typeof n !== 'number' || !Number.isFinite(n)) return '';
+    return String(n).replace('.', ',');
 }
 
-function flattenAgreementToRows(agreement) {
+function pctFromFraction(f) {
+    if (typeof f !== 'number' || !Number.isFinite(f)) return '';
+    const p = Math.round(f * 10000) / 100;
+    return `${frNumStr(p)} %`;
+}
+
+function describeInclusDansSMHFlag(v) {
+    if (v === true) return 'Incluse dans l\'assiette SMH (Art. 140 CCNM, distribution du salaire)';
+    if (v === false) return 'Hors assiette SMH (condition de travail ou supplément)';
+    if (v === 'ifSuperiorToConvention') return 'Inclusion dans l\'assiette SMH si plus favorable que la CCN';
+    return '';
+}
+
+function formatAncienneteAccordBloc(anc) {
+    if (!anc || typeof anc !== 'object') return '';
+    const bits = [];
+    if (Number.isFinite(anc.seuil)) bits.push(`droit à partir de ${anc.seuil} an(s) révolu(s)`);
+    if (Number.isFinite(anc.plafond)) bits.push(`barème plafonné à ${anc.plafond} ans`);
+    if (anc.tousStatuts === true) bits.push('périmètre : cadres et non-cadres');
+    else if (anc.tousStatuts === false) bits.push('périmètre : non-cadres');
+    if (anc.baseCalcul === 'salaire') bits.push('base de calcul : rémunération de base brute');
+    else if (anc.baseCalcul === 'point') bits.push('base de calcul : valeur du point');
+    const inc = describeInclusDansSMHFlag(anc.inclusDansSMH);
+    if (inc) bits.push(inc);
+    if (anc.barème && typeof anc.barème === 'object' && !Array.isArray(anc.barème)) {
+        const ys = Object.keys(anc.barème).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+        if (ys.length) bits.push(`${ys.length} paliers d'ancienneté dans le barème (détail dans le texte de l'accord)`);
+    } else if (typeof anc.barème === 'function') {
+        bits.push('barème défini par l\'accord (calcul dans le simulateur)');
+    }
+    return bits.join(' — ');
+}
+
+function majorationRowsFromAccord(maj) {
     const rows = [];
-    const walk = (path, value) => {
-        if (value === undefined) return;
-        const isPrimitive = value === null || ['string', 'number', 'boolean', 'function'].includes(typeof value);
-        if (isPrimitive) {
-            rows.push([path || '(racine)', formatAgreementRawValue(value)]);
-            return;
+    if (!maj || typeof maj !== 'object') return rows;
+    if (maj.nuit && typeof maj.nuit === 'object') {
+        const n = maj.nuit;
+        const parts = [];
+        if (n.posteNuit != null) parts.push(`poste de nuit (≥ seuil) : +${pctFromFraction(n.posteNuit)}`);
+        if (n.posteMatin != null) parts.push(`poste matin : +${pctFromFraction(n.posteMatin)}`);
+        if (n.plageDebut != null && n.plageFin != null) parts.push(`plage ${n.plageDebut}h–${n.plageFin}h`);
+        if (n.seuilHeuresPosteNuit != null) parts.push(`seuil poste nuit : ${frNumStr(n.seuilHeuresPosteNuit)} h`);
+        rows.push(['Majorations — travail de nuit', parts.length ? parts.join(' ; ') : '—']);
+    }
+    if (typeof maj.dimanche === 'number' && Number.isFinite(maj.dimanche)) {
+        rows.push(['Majorations — dimanche / jours fériés', `+${pctFromFraction(maj.dimanche)}`]);
+    }
+    if (maj.heuresSupplementaires && typeof maj.heuresSupplementaires === 'object') {
+        const h = maj.heuresSupplementaires;
+        const p = [];
+        if (h.majoration25 != null) p.push(`8 premières h : +${pctFromFraction(h.majoration25)}`);
+        if (h.majoration50 != null) p.push(`au-delà : +${pctFromFraction(h.majoration50)}`);
+        if (h.contingent != null) p.push(`contingent annuel : ${frNumStr(h.contingent)} h`);
+        rows.push(['Majorations — heures supplémentaires', p.length ? p.join(' ; ') : '—']);
+    }
+    if (maj.penibilite && typeof maj.penibilite === 'object' && Object.keys(maj.penibilite).length > 0) {
+        rows.push(['Majorations — pénibilité', 'Paramètres définis dans l\'accord (voir texte)']);
+    }
+    const handled = new Set(['nuit', 'dimanche', 'heuresSupplementaires', 'penibilite']);
+    for (const key of Object.keys(maj)) {
+        if (handled.has(key)) continue;
+        const v = maj[key];
+        if (typeof v === 'number' && Number.isFinite(v)) {
+            rows.push([`Majorations — ${key}`, frNumStr(v)]);
+        } else if (v && typeof v === 'object' && !Array.isArray(v)) {
+            rows.push([`Majorations — ${key}`, 'Paramètres définis dans l\'accord (voir texte)']);
         }
-        if (Array.isArray(value)) {
-            if (value.length === 0) {
-                rows.push([path, '[]']);
-                return;
-            }
-            value.forEach((item, idx) => walk(`${path}[${idx}]`, item));
-            return;
-        }
-        const keys = Object.keys(value);
-        if (keys.length === 0) {
-            rows.push([path, '{}']);
-            return;
-        }
-        keys.forEach((key) => {
-            const nextPath = path ? `${path}.${key}` : key;
-            walk(nextPath, value[key]);
-        });
+    }
+    return rows;
+}
+
+function primeValueTypeLabelFr(vt) {
+    const map = {
+        horaire: 'montant horaire × base mensuelle',
+        montant: 'montant annuel forfaitaire',
+        pourcentage: 'pourcentage d\'une assiette',
+        majorationHoraire: 'majoration en % du taux horaire × heures'
     };
-    walk('', agreement);
+    return map[vt] || (vt ? String(vt) : '');
+}
+
+function formatPrimeDetailForPdf(prime, state, agreement) {
+    const parts = [];
+    if (prime.sourceValeur === 'accord' && prime.valeurAccord != null) {
+        parts.push(`Valeur fixée par l'accord : ${frNumStr(Number(prime.valeurAccord))} ${prime.unit || ''}`.trim());
+    } else {
+        parts.push('Valeur : selon modalité ou saisie utilisateur');
+        const modal = getAccordInput(state, prime.id) ?? state?.primesModalites?.[prime.id];
+        if (modal != null && modal !== '' && Number.isFinite(Number(modal))) {
+            parts.push(`Saisie actuelle : ${frNumStr(Number(modal))} ${prime.unit || ''}`.trim());
+        }
+    }
+    const vt = primeValueTypeLabelFr(prime.valueType);
+    if (vt) parts.push(`Mode de calcul : ${vt}`);
+    if (prime.moisVersement >= 1 && prime.moisVersement <= 12) {
+        parts.push(`Mois de versement indicatif : ${MOIS_NOMS_LONGS_PDF[prime.moisVersement - 1]}`);
+    }
+    const cond = prime.conditionAnciennete?.description || prime.conditionTexte;
+    if (cond) parts.push(`Condition d'attribution : ${cond}`);
+    if (prime.sourceArticle) parts.push(`Référence : ${prime.sourceArticle}`);
+    const smhLbl = describeInclusDansSMHFlag(prime.inclusDansSMH);
+    if (smhLbl) parts.push(smhLbl);
+    if (prime.inclusDansSMH !== true) {
+        const on = isPrimeActive(agreement, prime.id, state);
+        parts.push(on ? 'Sélection dans le simulateur : oui' : 'Sélection dans le simulateur : non');
+        if ((prime.valueType === 'horaire' || prime.valueType === 'majorationHoraire') && prime.stateKeyHeures) {
+            const h = getAccordInput(state, prime.stateKeyHeures);
+            if (h != null && Number.isFinite(Number(h)) && Number(h) >= 0) {
+                parts.push(`Heures mensuelles retenues pour le calcul : ${frNumStr(Number(h))} h`);
+            }
+        }
+    }
+    return parts.join(' — ');
+}
+
+function elementDroitRows(elements) {
+    if (!Array.isArray(elements) || elements.length === 0) return [];
+    return elements.map((el) => {
+        const label = el.label || el.id || 'Élément';
+        const bits = [];
+        if (el.source) bits.push(el.source);
+        if (el.conditionAnciennete?.description) bits.push(el.conditionAnciennete.description);
+        if (el.dateCle) bits.push(el.dateCle);
+        if (el.note) bits.push(el.note);
+        return [`Synthèse conventionnelle — ${label}`, bits.join(' — ')];
+    });
+}
+
+function formatCongesAccord(conges) {
+    if (!conges || typeof conges !== 'object') return '';
+    const lines = [];
+    if (Array.isArray(conges.nonCadres)) {
+        conges.nonCadres.forEach((c) => {
+            if (c && Number.isFinite(c.anciennete) && Number.isFinite(c.jours)) {
+                lines.push(`non-cadres : +${c.jours} jour(s) à partir de ${c.anciennete} ans`);
+            }
+        });
+    }
+    if (Array.isArray(conges.cadres)) {
+        conges.cadres.forEach((c) => {
+            if (c && Number.isFinite(c.jours)) {
+                const p = [`cadres : +${c.jours} jour(s)`];
+                if (Number.isFinite(c.age)) p.push(`âge ${c.age} ans ou plus`);
+                if (Number.isFinite(c.anciennete)) p.push(`${c.anciennete} an(s) d'ancienneté`);
+                lines.push(p.join(', '));
+            }
+        });
+    }
+    return lines.join(' ; ');
+}
+
+/**
+ * Lignes [rubrique, détail lisible] pour le tableau « accord » du PDF,
+ * alignées sur le schéma Agreement / PrimeDef / ElementDroit (sans dump technique JSON).
+ * @param {Object|null} agreement - Accord au schéma AgreementInterface
+ * @param {Object|null} state
+ * @returns {string[][]}
+ */
+export function buildAgreementSummaryRows(agreement, state) {
+    if (!agreement || typeof agreement !== 'object') return [];
+
+    const rows = [];
+    const st = state || defaultState;
+
+    const desc = agreement.labels?.description || agreement.labels?.tooltipHeader || agreement.labels?.tooltipPage3 || agreement.labels?.tooltip;
+    if (desc && String(desc).trim()) {
+        rows.push(['Présentation', String(desc).trim()]);
+    }
+
+    const ident = [];
+    if (agreement.nom && agreement.nom !== agreement.nomCourt) ident.push(agreement.nom);
+    if (agreement.nomCourt) ident.push(`Nom court : ${agreement.nomCourt}`);
+    if (agreement.id) ident.push(`Référence dans le simulateur : ${agreement.id}`);
+    if (agreement.dateEffet) ident.push(`Entrée en vigueur : ${formatFrDateSafe(agreement.dateEffet)}`);
+    if (agreement.dateSignature) ident.push(`Date de signature : ${formatFrDateSafe(agreement.dateSignature)}`);
+    if (agreement.metadata?.version) ident.push(`Version des données : ${agreement.metadata.version}`);
+    if (agreement.metadata?.entreprise) ident.push(`Entreprise / UES : ${agreement.metadata.entreprise}`);
+    if (agreement.metadata?.territoire) ident.push(`Territoire : ${agreement.metadata.territoire}`);
+    if (Array.isArray(agreement.metadata?.articlesSubstitues) && agreement.metadata.articlesSubstitues.length > 0) {
+        ident.push(`Articles CCNM concernés (substitution) : ${agreement.metadata.articlesSubstitues.join(', ')}`);
+    }
+    if (agreement.url) ident.push(`Lien vers le texte ou la fiche : ${agreement.url}`);
+    if (ident.length) rows.push(['Identification', ident.join(' — ')]);
+
+    const ancTxt = formatAncienneteAccordBloc(agreement.anciennete);
+    if (ancTxt) rows.push(['Prime d\'ancienneté (paramètres de l\'accord)', ancTxt]);
+
+    const r13 = agreement.repartition13Mois;
+    if (r13 && typeof r13 === 'object') {
+        if (r13.actif) {
+            const m = r13.moisVersement >= 1 && r13.moisVersement <= 12
+                ? MOIS_NOMS_LONGS_PDF[r13.moisVersement - 1]
+                : '—';
+            const inc = describeInclusDansSMHFlag(r13.inclusDansSMH);
+            rows.push(['13e mois / douzièmes', `Répartition sur 13 mois — versement en ${m}${inc ? ` — ${inc}` : ''}`]);
+        } else {
+            rows.push(['13e mois / douzièmes', 'Non prévu comme 13e mois dans la définition chargée']);
+        }
+    }
+
+    rows.push(...majorationRowsFromAccord(agreement.majorations));
+
+    const primes = getPrimes(agreement);
+    for (const p of primes) {
+        const lib = p.label || 'Élément d\'accord';
+        const mode = primeValueTypeLabelFr(p.valueType);
+        const titre = mode ? `Prime / indemnité — ${lib} (${mode})` : `Prime / indemnité — ${lib}`;
+        rows.push([titre, formatPrimeDetailForPdf(p, st, agreement)]);
+    }
+
+    rows.push(...elementDroitRows(getElements(agreement)));
+
+    if (Array.isArray(agreement.pointsVigilance) && agreement.pointsVigilance.length > 0) {
+        rows.push(['Points de vigilance', agreement.pointsVigilance.map((x, i) => `${i + 1}. ${x}`).join(' ')]);
+    }
+
+    const congTxt = formatCongesAccord(agreement.conges);
+    if (congTxt) rows.push(['Congés d\'ancienneté (informatif)', congTxt]);
+
+    if ((agreement.syndicatNom || '').trim() || (agreement.syndicatEmail || '').trim()) {
+        const synd = [(agreement.syndicatNom || '').trim(), (agreement.syndicatEmail || '').trim()].filter(Boolean).join(' — ');
+        rows.push(['Contact syndical (indicatif)', synd]);
+    }
+
     return rows;
 }
 
@@ -592,11 +788,11 @@ export function genererPDFAnnexeTechnique(data, infos = {}, stateParam = null) {
         doc.setFontSize(12); doc.setFont(undefined, 'bold'); doc.setTextColor(55, 65, 81);
         doc.text(`5. Accord d'entreprise (${agreement.nomCourt})`, MARGIN, y); y += 8;
         doc.setTextColor(0, 0, 0);
-        const accordRows = flattenAgreementToRows(agreement);
+        const accordRows = buildAgreementSummaryRows(agreement, state);
         if (accordRows.length > 0) {
             addAutoTable(doc, {
                 startY: y,
-                head: [['Champ accord', 'Valeur brute']],
+                head: [['Rubrique', 'Détail']],
                 body: accordRows,
                 ...TABLE_STYLES,
                 styles: { ...TABLE_STYLES.styles, fontSize: 7 },
