@@ -2979,42 +2979,98 @@ let inflationSource = 'Données locales';
 let inflationPeriod = '';
 let isUpdatingChart = false;
 
+/** Délai max par appel réseau (sources distantes) — pas d’attente longue sur l’API indicateurs Banque mondiale (souvent lente). */
+const INFLATION_API_TIMEOUT_MS = 5000;
+
+/**
+ * fetch avec timeout explicite (compatible navigateurs sans AbortSignal.timeout).
+ * @param {string} url
+ * @param {number} ms
+ * @returns {Promise<Response>}
+ */
+function fetchWithTimeout(url, ms) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
+/**
+ * Parse la réponse JSON Eurostat (jeu prc_hicp_aind, unité taux de variation annuel moyen).
+ * @param {object} json
+ * @returns {Object<string, number>|null}
+ */
+function parseEurostatHicpInflation(json) {
+    try {
+        const timeIdx = json?.dimension?.time?.category?.index;
+        const values = json?.value;
+        if (!timeIdx || !values || typeof values !== 'object') return null;
+        const inflation = {};
+        for (const [year, pos] of Object.entries(timeIdx)) {
+            const v = values[String(pos)];
+            if (v != null && Number.isFinite(Number(v))) {
+                inflation[year] = Math.round(Number(v) * 100) / 100;
+            }
+        }
+        return Object.keys(inflation).length >= 5 ? inflation : null;
+    } catch {
+        return null;
+    }
+}
+
 /**
  * Récupérer les données d'inflation depuis plusieurs sources officielles
  */
 async function fetchInflationData() {
-    // 1. Essayer l'API Banque Mondiale (source officielle internationale)
+    const yearEnd = new Date().getFullYear();
+
+    // 1. Eurostat (IPCH France, taux annuel — équivalent macroéconomique de l’inflation harmonisée UE ; API en général bien plus réactive que l’indicateurs API de la Banque mondiale)
+    const eurostatUrl = 'https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/prc_hicp_aind'
+        + '?format=JSON&lang=fr&geo=FR&coicop=CP00&unit=RCH_A_AVG&lastTimePeriod=50';
     try {
-        const response = await fetch(
-            `https://api.worldbank.org/v2/country/FR/indicator/FP.CPI.TOTL.ZG?format=json&date=1975:${new Date().getFullYear()}`,
-            { signal: AbortSignal.timeout(5000) }
-        );
-        
-        if (response.ok) {
-            const data = await response.json();
-            
+        const resEu = await fetchWithTimeout(eurostatUrl, INFLATION_API_TIMEOUT_MS);
+        if (resEu.ok) {
+            const jsonEu = await resEu.json();
+            const fromEu = parseEurostatHicpInflation(jsonEu);
+            if (fromEu) {
+                const years = Object.keys(fromEu).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+                inflationSource = 'Eurostat (IPCH France)';
+                inflationPeriod = `${years[0]}-${years[years.length - 1]}`;
+                console.log('Données inflation Eurostat chargées:', fromEu);
+                return fromEu;
+            }
+        }
+    } catch (e) {
+        console.warn('API Eurostat indisponible:', e?.name === 'AbortError' ? 'délai dépassé' : (e.message || e));
+    }
+
+    // 2. Banque mondiale (même indicateur FP.CPI.TOTL.ZG — requête courte uniquement : gros historiques = réponses très lentes, pas d’autre endpoint « rapide » documenté)
+    const wbFrom = Math.max(1995, yearEnd - 34);
+    const wbUrl = `https://api.worldbank.org/v2/country/FR/indicator/FP.CPI.TOTL.ZG?format=json&date=${wbFrom}:${yearEnd}&per_page=50`;
+    try {
+        const resWb = await fetchWithTimeout(wbUrl, INFLATION_API_TIMEOUT_MS);
+        if (resWb.ok) {
+            const data = await resWb.json();
             if (data && data[1] && data[1].length > 0) {
                 const inflation = {};
-                data[1].forEach(item => {
+                data[1].forEach((item) => {
                     if (item.value !== null) {
                         inflation[item.date] = parseFloat(item.value.toFixed(2));
                     }
                 });
-                
                 if (Object.keys(inflation).length >= 5) {
                     const years = Object.keys(inflation).map(Number).sort((a, b) => a - b);
-                    inflationSource = 'Banque Mondiale';
+                    inflationSource = 'Banque mondiale (IPC, fenêtre récente)';
                     inflationPeriod = `${years[0]}-${years[years.length - 1]}`;
-                    console.log('Données inflation Banque Mondiale chargées:', inflation);
+                    console.log('Données inflation Banque mondiale chargées:', inflation);
                     return inflation;
                 }
             }
         }
-    } catch (error) {
-        console.warn('API Banque Mondiale non disponible:', error.message);
+    } catch (e) {
+        console.warn('API Banque mondiale indisponible:', e?.name === 'AbortError' ? 'délai dépassé' : (e.message || e));
     }
-    
-    // 2. Données de secours INSEE (source officielle France - mise à jour manuellement)
+
+    // 3. Données de secours INSEE (source officielle France - mise à jour manuellement)
     console.log('Utilisation des données INSEE de secours');
     inflationSource = 'INSEE (données intégrées)';
     inflationPeriod = '2010-2025';
