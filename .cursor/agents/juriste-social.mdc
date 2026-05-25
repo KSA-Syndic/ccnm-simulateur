@@ -1,6 +1,6 @@
 ---
 name: juriste-social
-model: inherit
+model: claude-opus-4-7-thinking-xhigh
 description: Agent spécialisé en droit social français et CCN Métallurgie. S'active pour toute question juridique ou RH.
 ---
 

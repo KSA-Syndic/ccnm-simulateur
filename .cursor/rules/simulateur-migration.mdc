@@ -1,0 +1,89 @@
+---
+description: Règles permanentes pour la migration JS→Vue/TS du simulateur CCNM. Appliquées à toute édition de fichiers src/ tests/ e2e/ et de la matrice de parité.
+globs:
+  - src/**
+  - tests/**
+  - e2e/**
+  - docs/PARITE_MATRIX.md
+  - docs/LACUNES_UI_CIBLES.md
+---
+
+# Règles permanentes — Migration CCNM JS → Vue 3 / TS
+
+## 1. Architecture 4 couches (vérifiée par ESLint)
+
+- `src/domain/**` : TypeScript pur. ZÉRO import de `vue`, `pinia`, `vue-router`, `@/components/**`, `@/features/**`, `@/stores/**`, `@legacy/**`.
+- `src/stores/**` : peut importer `@/domain/**`, jamais `@/components/**` ni `@/features/**`.
+- `src/composables/**` : peut importer `@/domain/**` + `@/stores/**`.
+- `src/components/**` et `src/features/**` : tout en bas, peuvent tout importer sauf `@legacy/**`.
+- `src/legacy/**` : lecture seule après J1.0. Personne n'importe depuis là (sauf `tests/legacy/`).
+
+## 2. Précision monétaire et temporelle
+
+- `decimal.js` obligatoire pour tout calcul de salaire, taux, heures, jours, ancienneté.
+- Configuration globale : `Decimal.set({ rounding: Decimal.ROUND_HALF_UP, precision: 20 })` dans `src/main.ts` et `tests/setup.ts`.
+- Niveaux d'arrondi (centralisés dans `src/domain/utils/rounding.ts`) :
+  - Bruts horaires/journaliers : 4 décimales internes.
+  - Mensuels intermédiaires : `roundToCents` (2 décimales).
+  - Annuels et affichage : `roundToEuro` (entier).
+- Interdiction d'utiliser `Math.round`, `Math.floor`, `Math.ceil` directement sur des montants. Toujours passer par `roundToCents`/`roundToEuro`.
+
+## 3. Textes et internationalisation
+
+- **Passe 1** : textes legacy reportés verbatim, aucune modification.
+- **Passe 2** : tout texte affiché à l'utilisateur (formulaire, tooltip, modal, toast, PDF, mention légale) **doit** provenir de `src/domain/ui/labels.ts` via `getLabel(id, surface)`.
+- Interdiction de chaînes de caractères françaises hardcodées dans `.vue` ou `.ts` UI après J9.
+- Audit grep : `rg "['\"][A-ZÀÉ][a-zàéèêïô ]{15,}['\"]" src/ --include="*.{vue,ts}" -l` doit retourner uniquement `src/domain/ui/labels.ts` après passe 2.
+
+## 4. Traçabilité legacy
+
+- Tout fichier porté depuis le legacy commence par `// Source: src/legacy/<chemin>::<symbole>` (un commentaire par symbole importé).
+- Tout `ElementDef` du catalogue convention conserve `sourceArticle`, `conditionTexte`, `tooltip` (si présents dans le legacy).
+- Aucune métadonnée juridique du legacy supprimée pour « simplifier ».
+
+## 5. Tests obligatoires
+
+- Tout fichier `src/domain/**/*.ts` a son test `tests/unit/domain/**/*.test.ts`.
+- Tout fichier `src/stores/**/*.ts` a son test `tests/unit/stores/**/*.test.ts`.
+- Tout composant `.vue` clé (étapes wizard, modals, charts) a son test E2E Playwright avec snapshot.
+- Aucune ligne matrice marquée `completed` sans preuve test.
+
+## 6. Plafond d'itérations
+
+- Maximum **2 itérations** d'un agent sur la même tâche. À la 3e tentative : stop, décomposer ou changer d'agent/modèle.
+- Pas de « rerun pour voir » sur Opus.
+
+## 7. Budget modèles IA
+
+- `composer-2.5-fast` par défaut : édition mécanique, port simple, génération test, snapshots.
+- `claude-4.6-sonnet-medium-thinking` : code Vue/TS non trivial, debug 1ère passe, fichiers > 200 lignes.
+- `claude-4.5-sonnet-thinking` : edge case engine (corrections M1-M12), debug 2e passe.
+- `claude-opus-4-7-thinking-xhigh` **uniquement** pour : planning macro, audit archi cross-module, `juriste-uniformisation` passe 2.
+- `auto` / `composer-2-fast` : commits, docs, messages.
+
+## 8. Style de code
+
+- TS strict (`noUncheckedIndexedAccess: true`, `exactOptionalPropertyTypes: true`).
+- Composition API `<script setup lang="ts">` exclusivement.
+- Imports absolus via alias `@/` et `@legacy/`.
+- Pas de `any` sans commentaire `// any: <raison explicite>`.
+- Schémas Zod pour toute entrée externe (URL params, accord chargé, état persisté sessionStorage).
+
+## 9. Workflow Git
+
+- Une tâche matrice = un commit.
+- Format : `feat(domain): port SMHCalculator [D1.05]` ou `fix(ui): align step3 result with legacy [D3.07]`.
+- Pré-commit `lint-staged` actif (eslint --fix + prettier sur fichiers modifiés uniquement).
+- Husky ne lance **jamais** la suite de tests complète en pré-commit.
+
+## 10. CSS sanctuarisé
+
+- `src/assets/styles/main.css` (copie verbatim de `src/legacy/styles.css`) ne se modifie pas en passe 1.
+- Si l'UI Vue casse visuellement, c'est le HTML/Vue qui est incorrect, jamais le CSS.
+- Passe 2 : améliorations CSS uniquement dans `src/assets/styles/extensions.css` (fichier séparé), strictement limitées aux items de `docs/LACUNES_UI_CIBLES.md`.
+
+## 11. Communication agents
+
+- Chaque agent rend une synthèse de 3 lignes max après chaque tâche.
+- En cas de blocage : lever un drapeau explicite « Recommande bascule vers <modèle> » plutôt que tenter une 3e itération.
+- L'agent ne modifie jamais un fichier hors de ses `globs` définis dans son `.mdc`.

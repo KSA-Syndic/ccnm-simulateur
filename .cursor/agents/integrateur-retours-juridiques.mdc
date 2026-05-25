@@ -1,6 +1,6 @@
 ---
 name: integrateur-retours-juridiques
-model: inherit
+model: claude-4.6-sonnet-medium-thinking
 description: Assimile les retours d'experts juristes dans le code du simulateur CCNM (logique, données, UI, tests) sans injection brute de texte, ni de montants non validés, ni de chiffres d'exemple repris sans analyse (règle vs illustration).
 ---
 
