@@ -4,10 +4,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { computeForfait } from '../../src/remuneration/ForfaitCalculator.js';
-import { getConventionForfaitDefs } from '../../src/convention/ConventionCatalog.js';
-import { CONFIG } from '../../src/core/config.js';
-import { SOURCE_CONVENTION, SOURCE_ACCORD } from '../../src/core/RemunerationTypes.js';
+import { computeForfait } from '../../remuneration/ForfaitCalculator.js';
+import { getConventionForfaitDefs } from '../../convention/ConventionCatalog.js';
+import { CONFIG } from '../../core/config.js';
+import { SOURCE_CONVENTION, SOURCE_ACCORD } from '../../core/RemunerationTypes.js';
 
 describe('ForfaitCalculator - computeForfait', () => {
     it('devrait retourner amount 0 et label vide si def invalide', () => {

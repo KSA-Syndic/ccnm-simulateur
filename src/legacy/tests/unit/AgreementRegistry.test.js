@@ -9,7 +9,7 @@ import {
     getAllAgreements,
     hasAgreement,
     getAgreementIds
-} from '../../src/agreements/AgreementRegistry.js';
+} from '../../agreements/AgreementRegistry.js';
 import { KuhnAgreement } from '../../accords/KuhnAgreement.js';
 
 describe('AgreementRegistry', () => {

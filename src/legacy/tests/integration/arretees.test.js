@@ -6,9 +6,9 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
     calculerArreteesMoisParMois,
     calculateSalaireDuPourMois
-} from '../../src/arretees/ArreteesCalculator.js';
-import { CONFIG } from '../../src/core/config.js';
-import { CONVENTION_MODALITES_PRIMES } from '../../src/convention/ConventionCatalog.js';
+} from '../../arretees/ArreteesCalculator.js';
+import { CONFIG } from '../../core/config.js';
+import { CONVENTION_MODALITES_PRIMES } from '../../convention/ConventionCatalog.js';
 
 describe('Arriérés - Calculs Fonctionnels', () => {
     const stateBase = {

@@ -4,9 +4,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { computePrime } from '../../src/remuneration/PrimeCalculator.js';
-import { getConventionPrimeDefs, CONVENTION_MODALITES_PRIMES } from '../../src/convention/ConventionCatalog.js';
-import { SEMANTIC_ID, SOURCE_ACCORD, SOURCE_CONVENTION } from '../../src/core/RemunerationTypes.js';
+import { computePrime } from '../../remuneration/PrimeCalculator.js';
+import { getConventionPrimeDefs, CONVENTION_MODALITES_PRIMES } from '../../convention/ConventionCatalog.js';
+import { SEMANTIC_ID, SOURCE_ACCORD, SOURCE_CONVENTION } from '../../core/RemunerationTypes.js';
 
 describe('PrimeCalculator', () => {
     describe('computePrime - prime ancienneté accord', () => {

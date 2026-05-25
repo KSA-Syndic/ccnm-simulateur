@@ -5,8 +5,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { calculateAnnualRemuneration, getMontantAnnuelSMHSeul } from '../../src/remuneration/RemunerationCalculator.js';
-import { CONFIG } from '../../src/core/config.js';
+import { calculateAnnualRemuneration, getMontantAnnuelSMHSeul } from '../../remuneration/RemunerationCalculator.js';
+import { CONFIG } from '../../core/config.js';
 
 /** State minimal sans accord, pour forcer la CCN */
 function stateCCN(overrides = {}) {

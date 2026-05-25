@@ -3,8 +3,8 @@ import {
     getConventionPrimeDefs,
     isModaliteVisiblePourProfil,
     UI_VISIBLE_MODALITE
-} from '../../src/convention/ConventionCatalog.js';
-import { SEMANTIC_ID } from '../../src/core/RemunerationTypes.js';
+} from '../../convention/ConventionCatalog.js';
+import { SEMANTIC_ID } from '../../core/RemunerationTypes.js';
 
 describe('ConventionCatalog - modalités nationales génériques', () => {
     it('expose les primes/majorations nationales avec semanticId attendus', () => {

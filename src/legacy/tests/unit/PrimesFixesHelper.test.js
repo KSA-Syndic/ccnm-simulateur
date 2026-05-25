@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { getMontantPrimesFixesAnnuel, getMontantPrimesVerseesCeMois } from '../../src/remuneration/PrimesFixesHelper.js';
+import { getMontantPrimesFixesAnnuel, getMontantPrimesVerseesCeMois } from '../../remuneration/PrimesFixesHelper.js';
 import { KuhnAgreement } from '../../accords/KuhnAgreement.js';
 
 /** Accord avec une prime montant (vacances) et une prime horaire (équipe) */

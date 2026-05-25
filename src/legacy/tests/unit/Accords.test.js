@@ -18,10 +18,10 @@ import {
     primeDefToElementDef,
     getAccordPrimeDefsAsElements,
     resolvePrimeSemanticId
-} from '../../src/agreements/AgreementInterface.js';
+} from '../../agreements/AgreementInterface.js';
 import { KuhnAgreement } from '../../accords/KuhnAgreement.js';
-import { computePrime } from '../../src/remuneration/PrimeCalculator.js';
-import { SOURCE_ACCORD } from '../../src/core/RemunerationTypes.js';
+import { computePrime } from '../../remuneration/PrimeCalculator.js';
+import { SOURCE_ACCORD } from '../../core/RemunerationTypes.js';
 
 /** Accord minimal valide pour tests génériques */
 function accordMinimal(primes = []) {

@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { calculateClassification, getActiveClassification, isCadre, getClassesForGroupe } from '../../src/classification/ClassificationEngine.js';
+import { calculateClassification, getActiveClassification, isCadre, getClassesForGroupe } from '../../classification/ClassificationEngine.js';
 
 describe('ClassificationEngine', () => {
     describe('calculateClassification', () => {

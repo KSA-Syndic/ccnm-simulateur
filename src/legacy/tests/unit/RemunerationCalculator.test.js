@@ -4,9 +4,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { calculateAnnualRemuneration, getMontantAnnuelSMHSeul } from '../../src/remuneration/RemunerationCalculator.js';
-import { CONFIG } from '../../src/core/config.js';
-import { CONVENTION_MODALITES_PRIMES } from '../../src/convention/ConventionCatalog.js';
+import { calculateAnnualRemuneration, getMontantAnnuelSMHSeul } from '../../remuneration/RemunerationCalculator.js';
+import { CONFIG } from '../../core/config.js';
+import { CONVENTION_MODALITES_PRIMES } from '../../convention/ConventionCatalog.js';
 
 describe('RemunerationCalculator', () => {
     const stateBase = {

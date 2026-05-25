@@ -10,8 +10,8 @@ import {
     resetActiveAgreement,
     loadAgreementFromURL,
     getAvailableAgreements
-} from '../../src/agreements/AgreementLoader.js';
-import { getAgreement } from '../../src/agreements/AgreementRegistry.js';
+} from '../../agreements/AgreementLoader.js';
+import { getAgreement } from '../../agreements/AgreementRegistry.js';
 
 describe('AgreementLoader', () => {
     beforeEach(() => {

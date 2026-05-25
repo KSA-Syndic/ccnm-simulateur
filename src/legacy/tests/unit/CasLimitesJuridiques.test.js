@@ -4,8 +4,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { calculateAnnualRemuneration } from '../../src/remuneration/RemunerationCalculator.js';
-import { CONFIG } from '../../src/core/config.js';
+import { calculateAnnualRemuneration } from '../../remuneration/RemunerationCalculator.js';
+import { CONFIG } from '../../core/config.js';
 
 describe('Cas Limites Juridiques - CCNM 2024', () => {
     const stateBase = {

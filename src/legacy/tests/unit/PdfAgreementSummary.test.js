@@ -2,7 +2,7 @@
  * Résumé « accord » pour PDF : texte lisible, pas de dump JSON / clés state.
  */
 import { describe, it, expect } from 'vitest';
-import { buildAgreementSummaryRows } from '../../src/arretees/PDFGenerator.js';
+import { buildAgreementSummaryRows } from '../../arretees/PDFGenerator.js';
 import { KuhnAgreement } from '../../accords/KuhnAgreement.js';
 
 describe('buildAgreementSummaryRows (PDF accord)', () => {

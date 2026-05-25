@@ -3,9 +3,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { genererPDFArretees, genererPDFAnnexeTechnique } from '../../src/arretees/PDFGenerator.js';
-import { CONFIG } from '../../src/core/config.js';
-import { getMontantAnnuelSMHSeul } from '../../src/remuneration/RemunerationCalculator.js';
+import { genererPDFArretees, genererPDFAnnexeTechnique } from '../../arretees/PDFGenerator.js';
+import { CONFIG } from '../../core/config.js';
+import { getMontantAnnuelSMHSeul } from '../../remuneration/RemunerationCalculator.js';
 
 describe('PDF - Génération', () => {
     beforeEach(() => {

@@ -9,7 +9,7 @@ import {
     escapeHTML,
     formatEurosDetail,
     formatHeuresDetail
-} from '../../src/utils/formatters.js';
+} from '../../utils/formatters.js';
 
 describe('formatters', () => {
     describe('formatMoney', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizePrimeSelectionState } from '../../src/ui/PrimeDependencies.js';
+import { normalizePrimeSelectionState } from '../../ui/PrimeDependencies.js';
 
 describe('PrimeDependencies - normalizePrimeSelectionState', () => {
     const defsByKey = {

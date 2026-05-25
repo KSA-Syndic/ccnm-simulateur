@@ -4,9 +4,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { computeMajoration } from '../../src/remuneration/MajorationCalculator.js';
-import { getConventionMajorationDefs } from '../../src/convention/ConventionCatalog.js';
-import { SEMANTIC_ID, SOURCE_ACCORD, SOURCE_CONVENTION } from '../../src/core/RemunerationTypes.js';
+import { computeMajoration } from '../../remuneration/MajorationCalculator.js';
+import { getConventionMajorationDefs } from '../../convention/ConventionCatalog.js';
+import { SEMANTIC_ID, SOURCE_ACCORD, SOURCE_CONVENTION } from '../../core/RemunerationTypes.js';
 
 function sourceLabel(r, agreement) {
     if (r.source === SOURCE_ACCORD) return agreement?.nomCourt ?? 'Accord';

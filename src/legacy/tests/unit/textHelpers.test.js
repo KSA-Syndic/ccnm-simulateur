@@ -8,7 +8,7 @@ import {
     resetAcronymsRegistry,
     getAcronymFullForm,
     formatWithUnit
-} from '../../src/utils/textHelpers.js';
+} from '../../utils/textHelpers.js';
 
 describe('textHelpers', () => {
     beforeEach(() => {
