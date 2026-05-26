@@ -1,0 +1,66 @@
+.tooltip-content {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  max-width: 320px;
+}
+
+.tooltip-summary {
+  margin: 0 0 0.5em;
+}
+
+.tooltip-source {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-top: 0.5em;
+  font-size: 0.78rem;
+}
+
+.tooltip-badge {
+  display: inline-block;
+  padding: 0.1em 0.5em;
+  border-radius: 3px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tooltip-badge-ccnm {
+  background: var(--tooltip-badge-ccnm);
+  color: #fff;
+}
+.tooltip-badge-accord {
+  background: var(--tooltip-badge-accord);
+  color: #fff;
+}
+.tooltip-badge-code-travail {
+  background: var(--tooltip-badge-code-travail);
+  color: #fff;
+}
+.tooltip-badge-acoss {
+  background: var(--tooltip-badge-acoss);
+  color: #fff;
+}
+
+.tooltip-ref {
+  color: var(--tooltip-text);
+  opacity: 0.85;
+}
+
+.tooltip-calc {
+  margin-top: 0.5em;
+  padding-top: 0.5em;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.tooltip-calc-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  font-size: 0.78rem;
+}
+
+.tooltip-calc-line + .tooltip-calc-line {
+  margin-top: 0.2em;
+}

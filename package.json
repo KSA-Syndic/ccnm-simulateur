@@ -1,0 +1,63 @@
+{
+  "name": "simulateur-metallurgie",
+  "version": "1.0.0",
+  "description": "Simulateur de Classification et Rémunération - Métallurgie 2024",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --open",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint src/ --ext .ts,.vue",
+    "format": "prettier --write \"src/**/*.{ts,vue,css,json}\"",
+    "e2e": "playwright test",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,vue}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{css,md,json,yml}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.11.1",
+    "@fast-check/vitest": "^0.3.0",
+    "@playwright/test": "^1.59.1",
+    "@testing-library/dom": "^9.3.3",
+    "@testing-library/jest-dom": "^6.1.5",
+    "@typescript-eslint/eslint-plugin": "^8.58.0",
+    "@typescript-eslint/parser": "^8.58.0",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "@vitest/ui": "^1.0.4",
+    "chart.js": "^4.5.1",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-vue": "^10.8.0",
+    "husky": "^9.1.7",
+    "jsdom": "^23.0.1",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.8.1",
+    "serve": "^14.2.6",
+    "tippy.js": "^6.3.7",
+    "typescript": "^6.0.2",
+    "vite": "^6.4.1",
+    "vitest": "^1.0.4",
+    "vue-tsc": "^3.2.6"
+  },
+  "dependencies": {
+    "decimal.js": "^10.6.0",
+    "pinia": "^3.0.4",
+    "pinia-plugin-persistedstate": "^4.7.1",
+    "vue": "^3.5.31",
+    "vue-router": "^5.0.4",
+    "zod": "^4.3.6"
+  }
+}

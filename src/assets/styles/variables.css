@@ -1,0 +1,97 @@
+:root {
+  /* Primary palette — WCAG AA compliant (4.5:1+ on white) */
+  --color-primary: #1a56db;
+  --color-primary-hover: #1e40af;
+  --color-primary-light: #dbeafe;
+  --color-primary-text: #ffffff;
+
+  /* Semantic */
+  --color-success: #047857;
+  --color-warning: #b45309;
+  --color-error: #b91c1c;
+  --color-danger: #b91c1c;
+
+  /* Text — AA compliant */
+  --color-text: #1f2937;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #6b7280;
+
+  /* Surfaces */
+  --color-bg: #ffffff;
+  --color-bg-secondary: #f9fafb;
+  --color-bg-tertiary: #e5e7eb;
+  --color-border: #e5e7eb;
+  --color-border-light: #f3f4f6;
+
+  /* Accord badge */
+  --color-accord: #7c3aed;
+  --color-accord-bg: #ede9fe;
+
+  /* Tooltip */
+  --tooltip-bg: #1a1a2e;
+  --tooltip-text: #e8e8e8;
+  --tooltip-badge-ccnm: #4a90d9;
+  --tooltip-badge-accord: #e67e22;
+  --tooltip-badge-code-travail: #27ae60;
+  --tooltip-badge-acoss: #8e44ad;
+
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+
+  /* Typography */
+  --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+
+  /* Borders */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+}
+
+/* Dark theme */
+[data-theme='dark'] {
+  --color-primary: #60a5fa;
+  --color-primary-hover: #93bbfd;
+  --color-primary-light: #1e3a5f;
+  --color-primary-text: #ffffff;
+
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-error: #f87171;
+  --color-danger: #f87171;
+
+  --color-text: #f3f4f6;
+  --color-text-secondary: #d1d5db;
+  --color-text-muted: #9ca3af;
+
+  --color-bg: #111827;
+  --color-bg-secondary: #1f2937;
+  --color-bg-tertiary: #374151;
+  --color-border: #374151;
+  --color-border-light: #4b5563;
+
+  --color-accord: #a78bfa;
+  --color-accord-bg: #2e1065;
+
+  --tooltip-bg: #e8e8e8;
+  --tooltip-text: #1a1a2e;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+}
