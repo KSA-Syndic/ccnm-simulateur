@@ -24,7 +24,7 @@ Document **indicatif** : état du dépôt après consolidation passe 1. **Code a
 
 ## Déploiement
 
-- **GitHub Pages** : **`.github/workflows/deploy.yml`** — Vue sous **`/v2/`** (branche migration) ; racine peut encore servir l’ancien bundle le temps de la bascule (**`docs/DEPLOIEMENT_PAGES.md`**).
+- **GitHub Pages** (temporaire) : **`.github/workflows/deploy.yml`** — Vue sous **`/v2/`** + legacy à la racine ; voir **`docs/DEPLOIEMENT_PAGES.md`**. À la suppression du legacy : suivre la checklist _Bascule finale_ dans ce doc pour repasser à un déploiement **racine seule** (`VITE_BASE=/`) sans trace du setup bêta.
 
 ## Hors périmètre / différé (documenté ailleurs)
 

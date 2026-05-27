@@ -1,5 +1,5 @@
-# GitHub Pages — legacy (racine, sources main) + Vue (/v2/, sources experiment/vue-migration-3).
-# Mode par défaut « both » : un seul déploiement atomique (évite d’écraser l’autre version).
+# TEMPORAIRE (bêta) : legacy racine (main) + Vue /v2/ (experiment/vue-migration-3).
+# Retrait prévu : docs/DEPLOIEMENT_PAGES.md § « Bascule finale ».
 name: Deploy to GitHub Pages
 
 on:

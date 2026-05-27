@@ -18,15 +18,15 @@
 
 ## Documents projet
 
-| Document                     | Usage                                             |
-| ---------------------------- | ------------------------------------------------- |
-| `docs/PARITE_MATRIX.md`      | Avancement D1–D7 + liens preuves                  |
-| `docs/LACUNES_UI_CIBLES.md`  | Liste fermée passe 2                              |
-| `docs/GATE_PASSE2.md`        | Critères avant uniformisation                     |
-| `docs/LEGACY_RUN.md`         | Oracle JS **optionnel** (`legacy-archive/`)       |
-| `docs/DEPLOIEMENT_PAGES.md`  | GitHub Pages — Vue cible, ancien bundle optionnel |
-| `src/accords/README.md`      | Ajout d’accords d’entreprise (TS)                 |
-| `docs/MIGRATION_COMPLETE.md` | Synthèse clôture passe 1 + preuves                |
+| Document                     | Usage                                                                   |
+| ---------------------------- | ----------------------------------------------------------------------- |
+| `docs/PARITE_MATRIX.md`      | Avancement D1–D7 + liens preuves                                        |
+| `docs/LACUNES_UI_CIBLES.md`  | Liste fermée passe 2                                                    |
+| `docs/GATE_PASSE2.md`        | Critères avant uniformisation                                           |
+| `docs/LEGACY_RUN.md`         | Oracle JS **optionnel** (`legacy-archive/`)                             |
+| `docs/DEPLOIEMENT_PAGES.md`  | Pages — coexistence temporaire `/v2/` + legacy ; checklist retrait bêta |
+| `src/accords/README.md`      | Ajout d’accords d’entreprise (TS)                                       |
+| `docs/MIGRATION_COMPLETE.md` | Synthèse clôture passe 1 + preuves                                      |
 
 ## Fichiers applicatifs récents (référence rapide)
 

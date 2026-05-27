@@ -127,16 +127,16 @@ Commande : `npm run test:run`.
 
 ## Jalons plan ↔ ce dépôt
 
-| Jalon plan  | État synthétique                                                                            |
-| ----------- | ------------------------------------------------------------------------------------------- |
-| J0          | Lacunes + agents + règle migration                                                          |
-| J1.0–1.2    | Dual-run, scaffold, CI deploy                                                               |
-| J1.5 pilote | D1.01 rounding + tests + source                                                             |
-| J2          | Tests Vitest `src/` + `tests/` + smoke Vue                                                  |
-| J3–J7       | Domain largement porté ; PDF/UI raffinage continu                                           |
-| J8          | E2E parité dual (`parite-visuelle` + CI), accessibilité axe (`a11y-wizard`), CI PR `ci.yml` |
-| J8.1        | Tests Pinia `tests/unit/stores`, tests composants `tests/components`                        |
-| J9          | `labels.ts` + disclaimer L4 résultat                                                        |
-| J10         | Bundle Vue seul ; **`legacy-archive/`** hors `dist/` — dossier supprimable côté ops.        |
+| Jalon plan  | État synthétique                                                                                                                                                      |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| J0          | Lacunes + agents + règle migration                                                                                                                                    |
+| J1.0–1.2    | Dual-run, scaffold, CI deploy                                                                                                                                         |
+| J1.5 pilote | D1.01 rounding + tests + source                                                                                                                                       |
+| J2          | Tests Vitest `src/` + `tests/` + smoke Vue                                                                                                                            |
+| J3–J7       | Domain largement porté ; PDF/UI raffinage continu                                                                                                                     |
+| J8          | E2E parité dual (`parite-visuelle` + CI), accessibilité axe (`a11y-wizard`), CI PR `ci.yml`                                                                           |
+| J8.1        | Tests Pinia `tests/unit/stores`, tests composants `tests/components`                                                                                                  |
+| J9          | `labels.ts` + disclaimer L4 résultat                                                                                                                                  |
+| J10         | Bundle Vue seul ; **`legacy-archive/`** hors `dist/` — dossier supprimable côté ops. Retrait déploiement `/v2/` : **`docs/DEPLOIEMENT_PAGES.md`** (_Bascule finale_). |
 
 Synthèse de clôture technique (preuves, commandes, différés) : **`docs/MIGRATION_COMPLETE.md`**.

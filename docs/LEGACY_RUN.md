@@ -11,6 +11,8 @@ L'application **officielle** est **Vue 3** (`npm run dev`, port **5173**). Le do
 2. adaptez ou supprimez `tests/parity/remuneration-oracle.test.ts` ;
 3. n'utilisez plus `npm run legacy` / `dual:parity`.
 
+Puis retirer le **déploiement bêta `/v2/`** (workflow dual Pages, `build:pages:v2`, etc.) : checklist **`docs/DEPLOIEMENT_PAGES.md`** → _Bascule finale_.
+
 Aucun fichier sous **`src/`** ne doit importer `legacy-archive/` pour le fonctionnement normal.
 
 ## Vue seule (développement courant)
