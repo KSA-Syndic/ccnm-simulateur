@@ -96,6 +96,7 @@ jobs:
       - name: Assembler le site Pages
         env:
           DEPLOY_MODE: ${{ steps.target.outputs.mode }}
+          LEGACY_SRC: src-legacy
         run: |
           chmod +x scripts/prepare-github-pages.sh
           rm -rf _site
@@ -103,10 +104,6 @@ jobs:
 
           case "$DEPLOY_MODE" in
             legacy)
-              cp -f src-legacy/index-legacy.html .
-              rm -rf legacy-archive
-              cp -a src-legacy/legacy-archive ./legacy-archive
-              [ -f src-legacy/favicon.svg ] && cp -f src-legacy/favicon.svg ./favicon.svg || true
               ./scripts/prepare-github-pages.sh legacy
               ;;
             vue-v2)
@@ -115,10 +112,6 @@ jobs:
               ./scripts/prepare-github-pages.sh vue
               ;;
             both)
-              cp -f src-legacy/index-legacy.html .
-              rm -rf legacy-archive
-              cp -a src-legacy/legacy-archive ./legacy-archive
-              [ -f src-legacy/favicon.svg ] && cp -f src-legacy/favicon.svg ./favicon.svg || true
               rm -rf dist
               cp -a src-vue/dist ./dist
               ./scripts/prepare-github-pages.sh both

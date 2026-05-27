@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Assemble le répertoire publié sur GitHub Pages (legacy racine + Vue dans v2/).
-# Usage : ./scripts/prepare-github-pages.sh legacy|vue|both
+# Usage : LEGACY_SRC=src-legacy ./scripts/prepare-github-pages.sh legacy|vue|both
 set -euo pipefail
 
 MODE="${1:?usage: prepare-github-pages.sh legacy|vue|both}"
 SITE_DIR="${SITE_DIR:-_site}"
+LEGACY_SRC="${LEGACY_SRC:-.}"
 
 mkdir -p "$SITE_DIR"
 touch "$SITE_DIR/.nojekyll"
@@ -15,12 +16,24 @@ if [ -d "_gh_pages" ] && [ -n "$(ls -A _gh_pages 2>/dev/null)" ]; then
 fi
 
 deploy_legacy() {
-  echo "Publication legacy à la racine (préservation de v2/ si présent)…"
-  cp -f index-legacy.html "$SITE_DIR/index.html"
-  rm -rf "$SITE_DIR/legacy-archive"
-  cp -a legacy-archive "$SITE_DIR/legacy-archive"
-  if [ -f favicon.svg ]; then
-    cp -f favicon.svg "$SITE_DIR/favicon.svg"
+  echo "Publication legacy à la racine depuis ${LEGACY_SRC} (préservation de v2/ si présent)…"
+
+  if [ -f "${LEGACY_SRC}/index-legacy.html" ] && [ -d "${LEGACY_SRC}/legacy-archive" ]; then
+    echo "  → layout legacy-archive (branche migration)"
+    cp -f "${LEGACY_SRC}/index-legacy.html" "$SITE_DIR/index.html"
+    rm -rf "$SITE_DIR/legacy-archive"
+    cp -a "${LEGACY_SRC}/legacy-archive" "$SITE_DIR/legacy-archive"
+  elif [ -f "${LEGACY_SRC}/index.html" ]; then
+    echo "  → layout monolithe main (index.html, app.js, src/, accords/)"
+    for item in index.html app.js config.js styles.css favicon.svg accords src; do
+      if [ -e "${LEGACY_SRC}/${item}" ]; then
+        rm -rf "$SITE_DIR/${item}"
+        cp -a "${LEGACY_SRC}/${item}" "$SITE_DIR/${item}"
+      fi
+    done
+  else
+    echo "Erreur : aucune entrée legacy dans ${LEGACY_SRC} (index-legacy.html ou index.html attendu)." >&2
+    exit 1
   fi
 }
 

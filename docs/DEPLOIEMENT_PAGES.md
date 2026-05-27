@@ -28,6 +28,8 @@ Chaque **push** sur `main` ou `experiment/vue-migration-3` lance un déploiement
 | Legacy | `main`                       | https://simulateur.cfdt-kuhn.fr/    |
 | Vue 3  | `experiment/vue-migration-3` | https://simulateur.cfdt-kuhn.fr/v2/ |
 
+Sur **`main`**, le legacy est le monolithe (`index.html`, `app.js`, `src/`, `accords/`). Sur la branche migration : `index-legacy.html` + `legacy-archive/`. `prepare-github-pages.sh` choisit le layout automatiquement.
+
 Un seul artefact Pages est publié : **plus d’écrasement** de `/v2/` quand vous poussez `main`, ni de la racine quand vous poussez la branche Vue.
 
 Manuel : **Actions → Deploy to GitHub Pages** → cible **`both`** (défaut).
