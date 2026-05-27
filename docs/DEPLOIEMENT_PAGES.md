@@ -19,10 +19,22 @@ Le build Vue utilise **`VITE_BASE=/v2/`** (chemins absolus `/v2/assets/…`). Pa
 
 Fichier : **`.github/workflows/deploy.yml`**
 
-- Push **`experiment/vue-migration-3`** → `npm run build` avec `VITE_BASE=/v2/`, copie dans `v2/` sur la branche `gh-pages`.
-- Push **`main`** → peut mettre à jour la racine (legacy) tout en conservant `v2/`.
+### Déployer legacy **et** Vue en même temps (recommandé)
 
-Déclenchement manuel : **Actions → Deploy to GitHub Pages** (cible `vue-v2` ou `auto`).
+Chaque **push** sur `main` ou `experiment/vue-migration-3` lance un déploiement **`both`** :
+
+| Partie | Branche source               | URL                                 |
+| ------ | ---------------------------- | ----------------------------------- |
+| Legacy | `main`                       | https://simulateur.cfdt-kuhn.fr/    |
+| Vue 3  | `experiment/vue-migration-3` | https://simulateur.cfdt-kuhn.fr/v2/ |
+
+Un seul artefact Pages est publié : **plus d’écrasement** de `/v2/` quand vous poussez `main`, ni de la racine quand vous poussez la branche Vue.
+
+Manuel : **Actions → Deploy to GitHub Pages** → cible **`both`** (défaut).
+
+### Modes partiels (déconseillés)
+
+- **`legacy`** ou **`vue-v2`** seuls : tentent de fusionner l’ancien contenu via la branche `gh-pages` (souvent vide avec `deploy-pages`) → risque de supprimer l’autre moitié du site. Réserver à un dépannage ciblé.
 
 ## Build local (Vue)
 
