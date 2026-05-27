@@ -20,5 +20,11 @@ desktop.ini
 *.tmp
 *.temp
 
+# Build / déploiement local et tests E2E
+dist/
+_gh_pages/
+test-results/
+playwright-report/
+
 # Troll
 Ne pas prendre en compte*
