@@ -211,7 +211,7 @@ function validate() {
               @blocked-by-min="onExperienceProBlockedByMin"
             />
           </div>
-          <p v-if="showSmhDebutantIndicatif" class="cadre-debutant-smh">
+          <p v-if="showSmhDebutantIndicatif && smhDebutantPreview" class="cadre-debutant-smh">
             <strong>Salaire minimum indicatif</strong> (barème débutants, tranche
             {{ smhDebutantPreview.tranche }}) :
             {{

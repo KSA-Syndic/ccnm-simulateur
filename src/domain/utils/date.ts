@@ -14,7 +14,10 @@ export function isCompleteIsoDateString(
   const trimmed = v.trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return false;
 
-  const [y, m, d] = trimmed.split('-').map((part) => Number.parseInt(part, 10));
+  const parts = trimmed.split('-');
+  const y = Number.parseInt(parts[0] ?? '', 10);
+  const m = Number.parseInt(parts[1] ?? '', 10);
+  const d = Number.parseInt(parts[2] ?? '', 10);
   if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return false;
 
   const minYear = options?.minYear ?? HIRE_DATE_MIN_YEAR;

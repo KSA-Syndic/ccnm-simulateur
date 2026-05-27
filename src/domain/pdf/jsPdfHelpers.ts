@@ -20,6 +20,11 @@ export interface PdfDocWithAutoTable {
   lastAutoTable?: { finalY: number };
 }
 
+export function readPdfAutoTableFinalY(doc: object, fallbackY: number): number {
+  const withTable = doc as PdfDocWithAutoTable;
+  return withTable.lastAutoTable?.finalY ?? fallbackY;
+}
+
 /** jspdf-autotable v5 : `autoTable(doc, opts)` — l’import side-effect ne branche plus `doc.autoTable` en ESM. */
 export async function importPdfAutoTable(): Promise<(doc: object, options: UserOptions) => void> {
   const mod = await import('jspdf-autotable');
@@ -71,36 +76,44 @@ function sanitizeTableRows(rows: RowInput[] | undefined): RowInput[] | undefined
   return rows?.map(sanitizeRowInput);
 }
 
-function mergePdfTableMargin(margin: UserOptions['margin']): UserOptions['margin'] {
+function mergePdfTableMargin(margin: UserOptions['margin']): NonNullable<UserOptions['margin']> {
   const base = {
+    top: PDF_MARGIN_MM,
     left: PDF_MARGIN_MM,
     right: PDF_MARGIN_MM,
     bottom: PDF_FOOTER_RESERVE_MM,
   };
   if (margin === undefined) return base;
   if (typeof margin === 'number') {
-    return { top: margin, ...base };
+    return { ...base, top: margin };
   }
   if (Array.isArray(margin)) {
     const [top, right, bottom, left] = margin;
     return {
-      top,
+      top: top ?? base.top,
       right: right ?? base.right,
       bottom: bottom ?? base.bottom,
       left: left ?? base.left,
     };
   }
-  return { ...base, ...margin };
+  return {
+    top: margin.top ?? base.top,
+    right: margin.right ?? base.right,
+    bottom: margin.bottom ?? base.bottom,
+    left: margin.left ?? base.left,
+  };
 }
 
 /** Nettoie head/body/foot avant autoTable — évite l’espacement aberrant des glyphes non Helvetica. */
 export function sanitizePdfAutoTableOptions(options: UserOptions): UserOptions {
-  return {
-    ...options,
-    head: sanitizeTableRows(options.head as RowInput[] | undefined),
-    body: sanitizeTableRows(options.body as RowInput[] | undefined),
-    foot: sanitizeTableRows(options.foot as RowInput[] | undefined),
-  };
+  const out: UserOptions = { ...options };
+  const head = sanitizeTableRows(options.head as RowInput[] | undefined);
+  const body = sanitizeTableRows(options.body as RowInput[] | undefined);
+  const foot = sanitizeTableRows(options.foot as RowInput[] | undefined);
+  if (head !== undefined) out.head = head;
+  if (body !== undefined) out.body = body;
+  if (foot !== undefined) out.foot = foot;
+  return out;
 }
 
 /**
@@ -109,7 +122,7 @@ export function sanitizePdfAutoTableOptions(options: UserOptions): UserOptions {
  */
 export function pdfEcartCell(ecart: number, opts?: { bold?: boolean }): CellInput {
   const n = roundToCents(ecart);
-  const fontStyle = opts?.bold ? 'bold' : 'normal';
+  const fontStyle: 'bold' | 'normal' = opts?.bold ? 'bold' : 'normal';
   const base = { halign: 'right' as const, fontStyle };
 
   if (n > 0) {
@@ -131,19 +144,15 @@ export function pdfEcartCell(ecart: number, opts?: { bold?: boolean }): CellInpu
 }
 
 export function drawPdfAutoTable(
-  doc: PdfDocWithAutoTable,
+  doc: object,
   autoTable: (doc: object, options: UserOptions) => void,
   options: UserOptions,
 ): number {
   const startY = typeof options.startY === 'number' ? options.startY : PDF_MARGIN_MM;
-  autoTable(
-    doc,
-    sanitizePdfAutoTableOptions({
-      ...options,
-      margin: mergePdfTableMargin(options.margin),
-    }),
-  );
-  return doc.lastAutoTable?.finalY ?? startY;
+  const tableOpts: UserOptions = { ...sanitizePdfAutoTableOptions(options) };
+  tableOpts.margin = mergePdfTableMargin(options.margin);
+  autoTable(doc, tableOpts);
+  return readPdfAutoTableFinalY(doc, startY);
 }
 
 export const PDF_FOOTER_DISCLAIMER =

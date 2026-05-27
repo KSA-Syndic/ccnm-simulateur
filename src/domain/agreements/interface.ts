@@ -87,6 +87,8 @@ export const AgreementSchema = z.object({
   labels: z.object({
     nomCourt: z.string(),
     description: z.string().optional(),
+    tooltip: z.string().optional(),
+    tooltipHeader: z.string().optional(),
   }),
   metadata: z.object({
     version: z.string(),

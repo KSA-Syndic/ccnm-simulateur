@@ -29,8 +29,7 @@ function buildConfetti(): ConfettiPiece[] {
     left: 5 + Math.random() * 90,
     delay: Math.random() * 0.8,
     duration: 1.8 + Math.random() * 0.6,
-    color:
-      CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)] ?? CONFETTI_COLORS[0],
+    color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)] ?? '#E15C12',
     size: 6 + Math.floor(Math.random() * 4),
   }));
 }

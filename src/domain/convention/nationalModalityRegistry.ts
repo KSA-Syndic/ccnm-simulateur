@@ -74,7 +74,11 @@ const interventionAstreinteTauxMaj = Number(CONFIG.MAJORATIONS_CCN.heuresSup25);
 const habillageHeuresMensuelles = habillageHeures * (52 / 12);
 
 function mod<K extends NationalModalityCatalogKey>(key: K): ModalityRaw {
-  return CONVENTION_MODALITES_PRIMES[key];
+  const raw = CONVENTION_MODALITES_PRIMES[key];
+  if (!raw) {
+    throw new Error(`Modalité absente du catalogue : ${String(key)}`);
+  }
+  return raw;
 }
 
 /**
@@ -300,7 +304,7 @@ export function getNationalModalityOverrideKindBySemanticId(): ReadonlyMap<
 
 function registryEntryToUiRow(entry: NationalModalityRegistryEntry): NationalPrimeOverrideRow {
   const m = mod(entry.catalogKey);
-  return {
+  const row: NationalPrimeOverrideRow = {
     semanticId: entry.semanticId,
     label: entry.ui.label,
     unit: entry.ui.unit,
@@ -308,19 +312,20 @@ function registryEntryToUiRow(entry: NationalModalityRegistryEntry): NationalPri
     title: entry.ui.label,
     sourceArticle: m.sourceArticle,
     stateKeyActif: m.stateKeyActif,
-    quantityKey: m.stateKeyHeures,
-    quantityLabel: entry.ui.quantityLabel,
-    quantityUnitLabel: entry.ui.quantityUnitLabel,
-    quantityMode: entry.ui.quantityMode,
-    valueLabel: entry.ui.valueLabel,
-    defaultQuantity: entry.ui.defaultQuantity,
     valueField: entry.ui.valueField,
     defaultValue: entry.ui.defaultValue,
     seedOverrideOnActivate: entry.ui.seedOverrideOnActivate,
-    valueStep: entry.ui.valueStep,
-    uiVisibleQuand: m.uiVisibleQuand,
-    hideValueField: entry.ui.hideValueField,
   };
+  if (m.stateKeyHeures) row.quantityKey = m.stateKeyHeures;
+  if (entry.ui.quantityLabel !== undefined) row.quantityLabel = entry.ui.quantityLabel;
+  if (entry.ui.quantityUnitLabel !== undefined) row.quantityUnitLabel = entry.ui.quantityUnitLabel;
+  if (entry.ui.quantityMode !== undefined) row.quantityMode = entry.ui.quantityMode;
+  if (entry.ui.valueLabel !== undefined) row.valueLabel = entry.ui.valueLabel;
+  if (entry.ui.defaultQuantity !== undefined) row.defaultQuantity = entry.ui.defaultQuantity;
+  if (entry.ui.valueStep !== undefined) row.valueStep = entry.ui.valueStep;
+  if (m.uiVisibleQuand !== undefined) row.uiVisibleQuand = m.uiVisibleQuand;
+  if (entry.ui.hideValueField !== undefined) row.hideValueField = entry.ui.hideValueField;
+  return row;
 }
 
 /** Lignes UI « Autres » — dérivées du registre (ne pas dupliquer ailleurs). */

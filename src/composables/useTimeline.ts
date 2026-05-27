@@ -105,9 +105,9 @@ export function enrichPeriodesSalaireDuMensuel(
     if (cc && p.periodKey < cc) cl = classeAvant;
     const annual = getSmhForClasse(cl, y, params.experiencePro);
     p.salaireDu = roundToEuro((annual * rate) / 12);
-    p.mensuelDuBase = undefined;
-    p.primesVerseesCeMois = undefined;
-    p.primesVerseesLabels = undefined;
-    p.estMois13eMois = undefined;
+    delete p.mensuelDuBase;
+    delete p.primesVerseesCeMois;
+    delete p.primesVerseesLabels;
+    delete p.estMois13eMois;
   }
 }

@@ -176,7 +176,7 @@ export function resolveWizardRemunerationElements(
     : [];
   const accordDefs = applyAccordPrimeRateOverridesFromSituation(
     accordDefsRaw,
-    state.nationalPrimeOverrides ?? {},
+    state.nationalPrimeOverrides as Record<string, unknown>,
   );
   const resolved = resolveBySubstitution(convDefs, accordDefs, ctx);
   const details = enrichResolvedElementsTooltips(resolved, ctx, accDoc);

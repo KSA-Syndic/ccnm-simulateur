@@ -227,16 +227,16 @@ export function buildAccordSummaryTooltip(
 }
 
 export interface PrimeTooltipInput {
-  id?: string;
-  semanticId?: string;
+  id?: string | undefined;
+  semanticId?: string | undefined;
   /** Libellé affiché dans l'UI (titre de l'infobulle, comme les modalités CCNM). */
-  label?: string;
-  tooltip?: string;
-  valueType?: string;
-  valeurAccord?: number | null;
-  unit?: string;
-  conditionTexte?: string;
-  sourceArticle?: string;
+  label?: string | undefined;
+  tooltip?: string | undefined;
+  valueType?: string | undefined;
+  valeurAccord?: number | null | undefined;
+  unit?: string | undefined;
+  conditionTexte?: string | undefined;
+  sourceArticle?: string | undefined;
 }
 
 export interface BuildPrimeConditionOptions {
@@ -299,13 +299,13 @@ export interface ResultBreakdownLine {
 }
 
 export interface ResultTooltipDetailInput {
-  label?: string;
-  value?: number;
-  sourceArticle?: string;
-  conditionTexte?: string;
-  tooltipDetail?: string;
-  tooltipOrigin?: string;
-  breakdown?: ResultBreakdownLine[];
+  label?: string | undefined;
+  value?: number | undefined;
+  sourceArticle?: string | undefined;
+  conditionTexte?: string | undefined;
+  tooltipDetail?: string | undefined;
+  tooltipOrigin?: string | undefined;
+  breakdown?: ResultBreakdownLine[] | undefined;
 }
 
 export function buildResultTooltipContent(
