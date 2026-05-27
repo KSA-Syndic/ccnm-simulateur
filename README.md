@@ -64,7 +64,7 @@ L'outil supporte les **accords d'entreprise** qui peuvent améliorer votre rému
 - ✅ **Primes spécifiques** (équipe, vacances, etc.)
 - ✅ **Répartition sur 13 mois** au lieu de 12
 
-**Exemple : accord d'entreprise** (défini dans le dossier `accords/`, ex. Kuhn)
+**Exemple : accord d'entreprise** (défini dans `src/accords/`, ex. Kuhn — id `kuhn`)
 
 - Ancienneté dès 2 ans (au lieu de 3 ans)
 - Plafond à 25 ans (au lieu de 15 ans)
@@ -88,11 +88,11 @@ L'outil supporte les **accords d'entreprise** qui peuvent améliorer votre rému
 
 ### Pour les Développeurs et Syndicats
 
-- **[Documentation technique](README_TECHNIQUE.md)** : Architecture legacy + point d’entrée Vue 3
-- **[Matrice de parité migration](docs/PARITE_MATRIX.md)** : Avancement JS → Vue, preuves tests
-- **[Déploiement GitHub Pages](docs/DEPLOIEMENT_PAGES.md)** : Legacy (`main`) + Vue (`/v2/` sur branche `experiment/vue-migration-3`)
-- **[Lancer l’oracle legacy](docs/LEGACY_RUN.md)** : `npm run legacy`, dual-run `npm run dual`
-- **[Guide des tests](tests/README.md)** : Vitest, Playwright, parité oracle
+- **[Documentation technique](README_TECHNIQUE.md)** : Architecture Vue 3 (`src/`), moteur, stores, tests
+- **[Matrice de parité](docs/PARITE_MATRIX.md)** : Jalons migration et preuves (tests `src/` + `tests/`)
+- **[Déploiement GitHub Pages](docs/DEPLOIEMENT_PAGES.md)** : Publication Vue (et bascule depuis l’ancien bundle si besoin)
+- **[Oracle JS optionnel](docs/LEGACY_RUN.md)** : `legacy-archive/` — parité dual, **supprimable** quand vous le décidez
+- **[Guide des tests](tests/README.md)** : Vitest, Playwright
 - **[Guide technique pour ajouter un accord](docs/AJOUTER_ACCORD.md)** : Instructions détaillées pour développeurs
 - **[Intégrer un accord via texte complet + prompt IA](docs/INTEGRER_ACCORD_TEXTE_ET_IA.md)** : Fournir le texte de l'accord et un prompt pour générer le fichier JS avec un assistant IA
 - **[PRD (Product Requirements Document)](PRD.md)** : Spécifications complètes de l'application
@@ -107,10 +107,10 @@ npm install
 # App Vue 3 (développement)
 npm run dev
 
-# Oracle legacy (port 5174) + Vue (5173) pour parité
+# Parité dual optionnelle (Vue 5173 + archive JS 5174) — voir docs/LEGACY_RUN.md
 npm run dual
 
-npm run test:run   # Vitest (domaine + oracle legacy)
+npm run test:run   # Vitest (moteur TS + tests app ; oracle legacy si encore présent)
 npm run e2e        # Playwright sur l’app Vue
 ```
 

@@ -53,9 +53,10 @@ Un même paragraphe mélange souvent **la règle** (formule, taux issu d'une ann
 
 ## Phase 2 — Cartographie code
 
-- Parcourir ou rechercher dans le dépôt les points d'ancrage : `ConventionCatalog.js`, `config.js` / `src/core/config.js`, `PrimeCalculator.js`, `RemunerationCalculator.js`, `MajorationCalculator.js`, `AgreementInterface.js`, `app.js`, `accords/*.js`, `RemunerationTypes.js`, tests `tests/unit`, `tests/integration`.
+- Parcourir les points d'ancrage **Vue / TS** : `src/domain/convention/catalog.ts`, `src/domain/config/`, `src/domain/remuneration/` (`engine.ts`, `compute.ts`, `aggregate.ts`), `src/domain/agreements/` (`interface.ts`, `accord-element-defs.ts`), `src/accords/*.ts`, `src/domain/ui/labels.ts`, `src/features/`, `src/stores/`, tests `tests/domain/`, `src/**/__tests__`.
+- Oracle JS optionnel : `legacy-archive/` (lecture comparative uniquement — pas source de vérité pour les nouveaux changements).
 - Pour chaque règle extraite, associer **un ou plusieurs emplacements** (définition d'élément, calcul, agrégation SMH, hint arriérés, affichage résultat).
-- Vérifier les **doublons** (racine vs `src/core`) et la **cohérence** des sémantiques (`semanticId`).
+- Vérifier la **cohérence** des sémantiques (`semanticId`).
 
 ## Phase 3 — Conception technique (assimilation)
 

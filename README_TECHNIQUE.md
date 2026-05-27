@@ -1,202 +1,134 @@
-# README Technique - Simulateur Métallurgie
+# README technique — Simulateur Métallurgie (Vue 3 / TypeScript)
 
-> **Branche migration Vue 3 / TypeScript** : le code actif est sous `src/` (domain, features, stores, composables). L’oracle JS historique est dans `legacy-archive/`. Voir **`docs/PARITE_MATRIX.md`**, **`docs/MIGRATION_COMPLETE.md`**, **`docs/DEPLOIEMENT_PAGES.md`** (Vue publiée sous `/v2/`).
+Application **Vue 3**, **Pinia**, moteur métier sous **`src/domain/`**. Point d'entrée : **`src/main.ts`** (import `./accords` pour enregistrer les accords d'entreprise).
 
-## Application Vue 3 (résumé)
+> **`legacy-archive/`** : copie optionnelle de l'ancien simulateur JS (parité historique, dual-run E2E). **Non requis** pour développer, tester ni déployer l'app Vue. Suppression possible dès que vous retirez les tests/oracles qui l'importent encore (`vitest.config.js`, `tests/parity/`, scripts `npm run legacy`).
 
-| Domaine              | Emplacement                                                             |
-| -------------------- | ----------------------------------------------------------------------- |
-| Wizard UI            | `src/features/wizard/`, `SimulatorLayout.vue`                           |
-| Moteur               | `src/domain/` (rémunération, classification, arriérés, accords)         |
-| État                 | `src/stores/*.ts` + `useWizardRemunerationInput`                        |
-| PDF arriérés + Word  | `src/composables/usePdfGeneration.ts`, `src/domain/pdf/jsPdfHelpers.ts` |
-| Post-export syndicat | `src/features/pdf/PostPdfFlow.vue`, `CelebrationOverlay.vue`            |
-| Tests                | `tests/**`, `src/domain/**/__tests__`, `e2e/**`                         |
+## Cartographie rapide
 
-**PDF annexe** : jspdf-autotable **v5** — appeler `autoTable(doc, options)` via `importPdfAutoTable()` / `drawPdfAutoTable()` ; un simple `import 'jspdf-autotable'` ne branche plus `doc.autoTable` en ESM.
+| Domaine                           | Emplacement                                                                        |
+| --------------------------------- | ---------------------------------------------------------------------------------- |
+| Wizard (4 étapes)                 | `src/features/wizard/`, `src/components/SimulatorLayout.vue`, `WizardShell.vue`    |
+| Classification                    | `src/domain/classification/engine.ts`                                              |
+| Convention / modalités nationales | `src/domain/convention/catalog.ts`, `nationalModalityRegistry.ts`                  |
+| Rémunération                      | `src/domain/remuneration/` (`engine.ts`, `compute.ts`, `aggregate.ts`, `smh.ts`)   |
+| Accords d'entreprise              | `src/accords/*.ts`, `src/domain/agreements/`                                       |
+| Arriérés                          | `src/domain/arretees/`, `src/composables/useTimeline.ts`, `src/stores/arretees.ts` |
+| Évolution / inflation             | `src/domain/evolution/inflationFetch.ts`, `projection.ts`                          |
+| Tooltips & libellés               | `src/domain/tooltip/`, `src/domain/ui/labels.ts`, `glossary.ts`                    |
+| PDF / Word / post-export          | `src/composables/usePdfGeneration.ts`, `src/domain/pdf/`, `src/features/pdf/`      |
+| État global                       | `src/stores/*.ts`, `useWizardRemunerationInput.ts`                                 |
+| Tests                             | `src/**/__tests__`, `tests/**`, `e2e/**`                                           |
 
----
+**PDF annexe arriérés** : jspdf-autotable **v5** — `importPdfAutoTable()` / `drawPdfAutoTable()` dans `src/domain/pdf/jsPdfHelpers.ts` (un simple `import 'jspdf-autotable'` ne branche plus `doc.autoTable` en ESM).
 
-## Conformité Juridique
+## Conformité juridique
 
-**Sources Juridiques de Référence :**
+- **CCNM (IDCC 3248)** : grilles et paramètres dans `src/domain/config/`
+- **Code du travail** : principe de faveur (Art. L2254-2) dans le moteur de comparaison CCN / accord
+- **Accords d'entreprise** : `src/accords/` (ex. `kuhn.ts`)
 
-- **CCNM (IDCC 3248) :** base 2024 + grilles annuelles intégrées jusqu'en 2026 (SMH/Baremes par année pour arriérés)
-- **Code du Travail :** Art. L2254-2 (Principe de faveur)
-- **Accords d'entreprise :** Définis dans le dossier `accords/` (ex. KuhnAgreement.js), chargés à l'exécution
+Les montants par défaut sont des **paramètres de simulation** ; les métadonnées juridiques (`sourceArticle`, `conditionTexte`, tooltips) doivent être conservées ou complétées lors des évolutions catalogue / accord.
 
-**Principe de Faveur :** Le système applique systématiquement le principe de faveur (Art. L2254-2 Code du Travail) en comparant les règles CCN et Accord et en choisissant la plus avantageuse pour le salarié.
-
-## Architecture
-
-L'application est structurée de manière modulaire pour faciliter la maintenance et l'extension.
-
-### Structure des Modules
+## Architecture (structure cible)
 
 ```
-projet/
-├── accords/                 # Définitions des accords (à la racine, hors code app)
-│   └── KuhnAgreement.js     # Exemple d'accord d'entreprise (schéma générique)
-└── src/                     # Code applicatif
-    ├── core/                # Modules fondamentaux
-    │   ├── state.js
-    │   ├── config.js
-    │   ├── constants.js
-    │   └── URLParams.js
-    ├── agreements/          # Moteur accords (registre, chargement, schéma)
-    │   ├── AgreementInterface.js
-    │   ├── AgreementRegistry.js   # importe depuis ../../accords/
-    │   └── AgreementLoader.js
-    ├── classification/      # Moteur de classification
-    │   └── ClassificationEngine.js
-    ├── remuneration/       # Calculs de rémunération
-    │   ├── RemunerationCalculator.js
-    │   ├── PrimeCalculator.js
-    │   ├── MajorationCalculator.js
-    │   └── ForfaitCalculator.js
-    ├── arretees/           # Arriérés, timeline, PDF
-    ├── ui/                 # Composants UI
-    └── utils/
+src/
+├── main.ts                 # createApp, Pinia, import accords
+├── App.vue
+├── accords/                # Définitions accords (registerAgreement)
+│   ├── index.ts
+│   └── kuhn.ts
+├── components/             # Layout, header, footer, UI générique
+├── composables/            # PDF, timeline, navigation, bootstrap URL
+├── domain/                 # Moteur pur (sans Vue)
+│   ├── agreements/
+│   ├── arretees/
+│   ├── classification/
+│   ├── config/
+│   ├── convention/
+│   ├── evolution/
+│   ├── hints/
+│   ├── pdf/
+│   ├── remuneration/
+│   ├── tooltip/
+│   ├── ui/
+│   └── utils/
+├── features/               # Écrans métier par zone
+│   ├── wizard/
+│   ├── agreement-options/
+│   ├── arretees/
+│   ├── results/
+│   └── pdf/
+├── infra/                  # Adapters (Chart.js, jsPDF)
+└── stores/                 # Pinia (wizard, situation, agreement, arretees, ui)
 ```
 
-## Flux de Données
+## Flux de données
 
-### 1. Initialisation
+### 1. Bootstrap
 
-1. `app-integration.js` charge les paramètres URL
-2. Charge l'accord d'entreprise si présent dans l'URL
-3. Applique les styles iframe si nécessaire
-4. Met à jour le header avec l'accord sélectionné
+1. `src/main.ts` charge Pinia et **`import './accords'`** (registre rempli).
+2. `useUrlBootstrap()` lit `?accord=` et active l'accord via `loadAgreement` (`domain/agreements/loader.ts`).
 
-### 2. Classification
+### 2. Classification (étape 1)
 
-1. L'utilisateur saisit les scores des 6 critères
-2. `ClassificationEngine.calculateClassification()` calcule le score total
-3. Mapping vers groupe/classe via `CONFIG.MAPPING_POINTS`
-4. Affichage de la classification dans l'UI
+Saisie des 6 critères → `ClassificationEngine` → groupe/classe (`CONFIG.MAPPING_POINTS`).
 
-### 3. Calcul de Rémunération
+### 3. Rémunération (étapes 2–3)
 
-1. `RemunerationCalculator.calculateAnnualRemuneration()` est appelé avec :
-   - État de l'application (`state`)
-   - Accord d'entreprise actif (ou `null` pour CCN seule)
-   - Options (`mode: 'full'` ou `'smh-only'`)
-2. Le calculateur utilise les modules spécialisés :
-   - `PrimeCalculator` pour les primes (CCN + accord), dont prime d'équipe sur base 35h (151,67h/mois)
-   - `MajorationCalculator` pour nuit/dimanche/heures supplémentaires
-   - `ForfaitCalculator` pour les forfaits cadres
-3. Retourne un objet avec `total`, `details`, `scenario`
+1. Stores Pinia (`situation`, `agreement`, `wizard`) + `useWizardRemunerationInput()`.
+2. `computeAnnualRemunerationFromWizardStores` (`domain/remuneration/compute.ts`) agrège convention, modalités nationales et accord actif.
+3. Affichage : `RemunerationResult.vue`, tooltips via `domain/tooltip/builders.ts`.
 
-### 4. Arriérés
+### 4. Arriérés (étape 4)
 
-1. L'utilisateur saisit les dates et salaires mois par mois
-2. `TimelineManager` gère la frise chronologique interactive
-3. `ArreteesCalculator.calculerArreteesMoisParMois()` calcule les arriérés
-4. `SalaryCurve` affiche le graphique Chart.js
-5. `PDFGenerator` génère le PDF final
+1. `useTimeline.ts` construit les périodes ; `mensuelDue.ts` / `salaireDuPourMois.ts` pour le dû mensuel accord.
+2. Saisie : `FloatingBlock.vue`, `SalaryModal.vue` ; courbe : `SalaryCurveView.vue`.
+3. Export : `usePdfGeneration.ts`, lettre Word, flux syndicat (`PostPdfFlow.vue`).
 
-## État du refactoring
+## Ajouter un accord d'entreprise
 
-Le refactoring est **terminé**. L’architecture actuelle :
+Voir **`docs/AJOUTER_ACCORD.md`** et **`src/accords/README.md`**.
 
-- **`app.js`** : orchestre l’UI (wizard, écrans, événements) et délègue tous les calculs aux modules via `src/compat/expose-to-app.js`. Il ne contient plus de formules métier dupliquées.
-- **Calculs** : `RemunerationCalculator`, `ArreteesCalculator`, `PDFGenerator`, etc. sont la source unique pour rémunération, arriérés et PDF.
-- **Compat** : `expose-to-app.js` expose sur `window` les wrappers qui synchronisent le state puis appellent les modules ; il est chargé avant `app.js` (modules ES6 chargés en premier).
+## Modifier un calcul
 
-## Principes de Conception
-
-### Source Unique de Vérité
-
-- **Calculs** : `RemunerationCalculator` est la source unique pour tous les calculs
-- **État** : `state.js` centralise toutes les valeurs saisies
-- **Configuration** : `config.js` contient toutes les données CCN
-
-### Modularité
-
-- Chaque module a une responsabilité unique
-- Pas de dépendances circulaires
-- Tests unitaires par module
-
-### Extensibilité
-
-- Système d'accords générique : ajout facile de nouveaux accords
-- Interface standardisée : `AgreementInterface.js`
-- Registre centralisé : `AgreementRegistry.js`
-
-## Guide de Développement
-
-### Ajouter un Nouvel Accord
-
-Voir `docs/AJOUTER_ACCORD.md` pour le guide complet.
-
-### Modifier un Calcul
-
-1. Identifier le module concerné dans `src/remuneration/`
-2. Modifier la logique dans le module
-3. Mettre à jour les tests unitaires
-4. Vérifier la cohérence avec les autres calculs
-
-### Ajouter une Fonctionnalité
-
-1. Créer le module dans le dossier approprié
-2. Exporter les fonctions publiques
-3. Importer dans `app-integration.js` si nécessaire
-4. Ajouter les tests unitaires
+1. Identifier le module sous `src/domain/` (souvent `remuneration/` ou `convention/`).
+2. Ajuster la logique + tests colocalisés (`__tests__` ou `tests/domain/`).
+3. Si impact affichage : composant `src/features/` ou `labels.ts` / tooltips.
 
 ## Tests
 
-### Configuration
-
-- Vitest pour les tests unitaires et fonctionnels
-- jsdom pour l'environnement DOM
-- @testing-library/dom pour les tests DOM
-
-### Exécution
-
 ```bash
-npm test              # Exécuter tous les tests
-npm run test:ui       # Interface graphique
-npm run test:coverage # Avec couverture de code
+npm run test:run      # Vitest : src/**, tests/** (+ legacy-archive si encore configuré)
+npm run e2e           # Playwright sur Vue (port 5173)
+npm run lint
+npm run build
 ```
 
-### Structure des Tests
-
-```
-tests/
-├── setup.js              # Configuration globale
-├── unit/                 # Tests unitaires par module
-│   ├── classification/
-│   ├── remuneration/
-│   └── agreements/
-└── integration/          # Tests fonctionnels
-    ├── wizard.test.js
-    ├── arretees.test.js
-    └── pdf.test.js
-```
+Détail : **`tests/README.md`**, matrice : **`docs/PARITE_MATRIX.md`**.
 
 ## Déploiement
 
-L'application est déployée sur GitHub Pages. Voir `.github/workflows/deploy.yml` pour la configuration CI/CD.
+GitHub Pages : **`docs/DEPLOIEMENT_PAGES.md`**. L'app Vue est la cible principale ; la racine Pages peut encore servir l'ancien bundle le temps de la bascule.
 
-## Maintenance Annuelle
+## Maintenance annuelle (SMH / barèmes)
 
-### Mise à Jour des SMH
-
-1. Modifier `src/core/config.js`
-2. Mettre à jour les grilles annuelles (`SMH_BY_YEAR`, `BAREME_DEBUTANTS_BY_YEAR`)
-3. Mettre à jour `SMH_UPDATE.years[année]` avec date/source et `indicativeRate` (informatif uniquement)
-4. Tester les calculs avec les nouvelles valeurs (rémunération + arriérés + PDF)
-
-### Ajout d'un Nouvel Accord
-
-1. Créer un nouveau fichier dans `src/agreements/` (ex: `MonAccord.js`)
-2. Suivre le schéma défini dans `AgreementInterface.js`
-3. Enregistrer l'accord dans `AgreementRegistry.js`
-4. Documenter dans `docs/AJOUTER_ACCORD.md`
+1. `src/domain/config/index.ts` et constantes associées.
+2. Grilles `SMH_BY_YEAR`, `BAREME_DEBUTANTS_BY_YEAR`, métadonnées `SMH_UPDATE`.
+3. `npm run test:run` + scénarios arriérés / PDF.
 
 ## Compatibilité
 
-- Navigateurs modernes (Chrome, Firefox, Safari, Edge)
-- Support ES6 modules
-- Chart.js pour les graphiques
-- jsPDF pour la génération PDF
+- Navigateurs modernes (ES modules via Vite).
+- Chart.js (`src/infra/adapters/chartjs.ts`), jsPDF + autotable v5.
+
+## Documentation associée
+
+| Document                     | Contenu                                 |
+| ---------------------------- | --------------------------------------- |
+| `docs/PARITE_MATRIX.md`      | Historique migration + preuves tests    |
+| `docs/MIGRATION_COMPLETE.md` | Synthèse clôture passe 1                |
+| `docs/GATE_PASSE2.md`        | Avant uniformisation libellés (passe 2) |
+| `docs/LEGACY_RUN.md`         | Oracle JS optionnel (`legacy-archive/`) |
+| `PRD.md`                     | Exigences produit                       |

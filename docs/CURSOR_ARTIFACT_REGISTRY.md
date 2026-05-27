@@ -18,14 +18,15 @@
 
 ## Documents projet
 
-| Document                     | Usage                              |
-| ---------------------------- | ---------------------------------- |
-| `docs/PARITE_MATRIX.md`      | Avancement D1–D7 + liens preuves   |
-| `docs/LACUNES_UI_CIBLES.md`  | Liste fermée passe 2               |
-| `docs/GATE_PASSE2.md`        | Critères avant uniformisation      |
-| `docs/LEGACY_RUN.md`         | Lancement oracle `legacy-archive/` |
-| `docs/DEPLOIEMENT_PAGES.md`  | GitHub Pages legacy + `/v2/` Vue   |
-| `docs/MIGRATION_COMPLETE.md` | Synthèse clôture passe 1 + preuves |
+| Document                     | Usage                                             |
+| ---------------------------- | ------------------------------------------------- |
+| `docs/PARITE_MATRIX.md`      | Avancement D1–D7 + liens preuves                  |
+| `docs/LACUNES_UI_CIBLES.md`  | Liste fermée passe 2                              |
+| `docs/GATE_PASSE2.md`        | Critères avant uniformisation                     |
+| `docs/LEGACY_RUN.md`         | Oracle JS **optionnel** (`legacy-archive/`)       |
+| `docs/DEPLOIEMENT_PAGES.md`  | GitHub Pages — Vue cible, ancien bundle optionnel |
+| `src/accords/README.md`      | Ajout d’accords d’entreprise (TS)                 |
+| `docs/MIGRATION_COMPLETE.md` | Synthèse clôture passe 1 + preuves                |
 
 ## Fichiers applicatifs récents (référence rapide)
 
@@ -39,13 +40,13 @@
 
 ## `legacy-archive/` — statut
 
-**Conservation obligatoire** tant que la gate `docs/GATE_PASSE2.md` n’est pas validée : dual-run, référence DOM/HTML, réexécution des tests oracle.
+**Non requis** pour le code Vue (`src/`). Dossier **supprimable** quand vous retirez :
 
-Le jalon plan « suppression de l’oracle fichier + tag v2.0 » est **reporté** après :
+- `legacy-archive/tests/**` de `vitest.config.js` ;
+- `tests/parity/remuneration-oracle.test.ts` (ou remplacement par fixtures figées) ;
+- scripts / E2E dual si plus utiles.
 
-- gate passe 2 validée ;
-- stratégie d’hébergement du seul bundle Vue validée ;
-- tag / merge documentés hors agent (ops).
+La gate passe 2 (`docs/GATE_PASSE2.md`) ne impose **pas** de conserver l’archive.
 
 ## Orchestration multi-agents (gates)
 

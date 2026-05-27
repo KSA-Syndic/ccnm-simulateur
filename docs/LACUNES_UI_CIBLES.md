@@ -85,7 +85,7 @@ utilisée ni la source légale de chaque ligne de détail.
 - Chaque ligne affiche : libellé officiel | formule synthétique | montant | provenance juridique
 - Exemple : `Prime d'ancienneté | pointTerritorial × tauxClasse × min(ancienneté, 15 ans) × 12 | 1 240 € | Art. 142 CCNM 2024`
 - L'annexe technique (rapport arriérés) reprend le même format.
-- Police et espacements doivent rester identiques au legacy pour ne pas créer de décalage.
+- Police et espacements alignés sur la charte actuelle (`src/assets/styles/`) et les snapshots Playwright `e2e/baseline` (pas de référence à l’ancien bundle JS).
 
 ---
 

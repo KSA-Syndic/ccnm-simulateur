@@ -1,26 +1,36 @@
-# Déploiement GitHub Pages (legacy + Vue v2)
+# Déploiement GitHub Pages
 
-## URLs
+## Cible produit
 
-| Version                    | Branche(s)                              | Chemin sur Pages                                          |
-| -------------------------- | --------------------------------------- | --------------------------------------------------------- |
-| **Legacy** (JS historique) | `main`                                  | `https://<org>.github.io/Classification_simulateur_2/`    |
-| **Vue 3** (migration)      | `experiment/vue-migration-3` uniquement | `https://<org>.github.io/Classification_simulateur_2/v2/` |
+L'application **Vue 3** (build Vite) est la **référence** : code sous `src/`, entrée `index.html` à la racine du dépôt pour le dev, build dans `dist/`.
 
-Les deux coexistent : un déploiement ne supprime pas l’autre (fusion via la branche `gh-pages`).
+L'ancien bundle **vanilla** (`legacy-archive/` + `index-legacy.html`) peut encore être publié à la **racine** Pages le temps d'une bascule ; il n'est **pas** requis pour développer ni maintenir Vue.
+
+## URLs (configuration actuelle)
+
+| Version                   | Branche(s) typique(s)                                  | Chemin Pages                                              |
+| ------------------------- | ------------------------------------------------------ | --------------------------------------------------------- |
+| **Vue 3** (cible)         | `experiment/vue-migration-3` (puis `main` après merge) | `https://<org>.github.io/Classification_simulateur_2/v2/` |
+| **Ancien JS** (optionnel) | `main`                                                 | `https://<org>.github.io/Classification_simulateur_2/`    |
+
+Les déploiements peuvent coexister sur la branche `gh-pages` (fusion par le workflow).
 
 ## Workflow
 
-Fichier : `.github/workflows/deploy.yml`
+Fichier : **`.github/workflows/deploy.yml`**
 
-- Push sur **`main`** → met à jour la racine (`index.html` + `legacy-archive/`), conserve `v2/` si déjà publié.
-- Push sur **`experiment/vue-migration-3`** → build Vite avec `VITE_BASE=/Classification_simulateur_2/v2/`, publie dans `v2/`, conserve le legacy à la racine.
+- Push **`experiment/vue-migration-3`** → build `VITE_BASE=/Classification_simulateur_2/v2/`, publie dans `v2/`.
+- Push **`main`** → peut mettre à jour la racine (`index-legacy.html` + `legacy-archive/`) tout en conservant `v2/` si déjà publié.
 
-Déclenchement manuel : **Actions → Deploy to GitHub Pages → Run workflow** (choix `legacy`, `vue-v2` ou `auto`).
+Déclenchement manuel : **Actions → Deploy to GitHub Pages** (`legacy`, `vue-v2` ou `auto`).
 
-## Build local (Vue v2)
+**Après bascule complète** : un seul mode « vue » sur `main` à la racine (sans sous-chemin `/v2/`) — adapter `VITE_BASE` et le workflow en conséquence.
+
+## Build local (Vue)
 
 ```bash
+npm run build
+# ou préfixe Pages :
 npm run build:pages:v2
 npx vite preview --base /Classification_simulateur_2/v2/
 ```
@@ -28,4 +38,3 @@ npx vite preview --base /Classification_simulateur_2/v2/
 ## Prérequis GitHub
 
 - **Settings → Pages → Source** : **GitHub Actions**.
-- Premier déploiement conseillé : pousser **`main`** (legacy), puis la branche Vue (pour que `v2/` existe à côté du legacy).
