@@ -28,8 +28,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  PAGES_ROOT: /Classification_simulateur_2/
-  VITE_BASE_V2: /Classification_simulateur_2/v2/
+  # Chemins absolus (slash final) — requis pour /v2/ sur GitHub Pages project site
+  VITE_BASE_V2: /${{ github.event.repository.name }}/v2/
 
 jobs:
   deploy:
@@ -76,7 +76,9 @@ jobs:
           VITE_BASE: ${{ env.VITE_BASE_V2 }}
         run: |
           npm ci
+          echo "VITE_BASE=${VITE_BASE}"
           npm run build
+          grep -E 'src=|href=' dist/index.html | head -5
 
       - name: Assembler le site Pages
         run: |

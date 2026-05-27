@@ -2,10 +2,18 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { resolve } from 'path';
 
+/** Base absolue avec slash final pour GitHub Pages (sous-dossier /v2/). Évite les 404 si l’URL n’a pas de slash final. */
+function resolveViteBase(): string {
+  const raw = process.env.VITE_BASE?.trim();
+  if (!raw) return './';
+  const withLeading = raw.startsWith('/') ? raw : `/${raw}`;
+  return withLeading.endsWith('/') ? withLeading : `${withLeading}/`;
+}
+
 export default defineConfig({
   plugins: [vue()],
-  /** Définir `VITE_BASE=/Classification_simulateur_2/` en CI (GitHub Pages). Défaut `./` pour le dev local. */
-  base: process.env.VITE_BASE ?? './',
+  /** CI Pages Vue : `VITE_BASE=/NomDuRepo/v2/` (voir deploy.yml). Local : `./` par défaut. */
+  base: resolveViteBase(),
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),

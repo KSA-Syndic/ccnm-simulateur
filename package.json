@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite --open",
     "build": "vue-tsc --noEmit && vite build",
-    "build:pages:v2": "cross-env VITE_BASE=/Classification_simulateur_2/v2/ npm run build",
-    "build:pages:root": "cross-env VITE_BASE=/Classification_simulateur_2/ npm run build",
+    "build:pages:v2": "npx cross-env VITE_BASE=/Classification_simulateur_2/v2/ npm run build",
+    "build:pages:root": "npx cross-env VITE_BASE=/Classification_simulateur_2/ npm run build",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
