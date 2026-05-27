@@ -123,6 +123,10 @@ GitHub Pages : **`docs/DEPLOIEMENT_PAGES.md`**. L'app Vue est la cible principal
 - Navigateurs modernes (ES modules via Vite).
 - Chart.js (`src/infra/adapters/chartjs.ts`), jsPDF + autotable v5.
 
+## Conventions code (agents / contributeurs)
+
+- **`.cursor/rules/ts-vue-code-quality.mdc`** : pas de `delete` sur objets métier ; immutabilité ; `exactOptionalPropertyTypes` ; helper `omitRecordKeys` (`src/domain/utils/record.ts`).
+
 ## Documentation associée
 
 | Document                     | Contenu                                 |

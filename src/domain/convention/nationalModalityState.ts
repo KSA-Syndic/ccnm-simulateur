@@ -1,3 +1,4 @@
+import { omitRecordKeys } from '../utils/record';
 import type { NationalPrimeOverrideRow } from './catalog';
 
 /** Clés dynamiques modalités CCNM (legacy `state.accordInputs` pour les primes « extra »). */
@@ -42,14 +43,14 @@ export function clearNationalModality(
   overrides: Record<string, number>,
   row: NationalPrimeOverrideRow,
 ): { modalityState: ModalityState; nationalPrimeOverrides: Record<string, number> } {
-  const nextModality = { ...modalityState };
-  delete nextModality[row.stateKeyActif];
-  if (row.quantityKey) delete nextModality[row.quantityKey];
+  const modalityKeys = row.quantityKey
+    ? ([row.stateKeyActif, row.quantityKey] as const)
+    : ([row.stateKeyActif] as const);
 
-  const nextOverrides = { ...overrides };
-  delete nextOverrides[row.semanticId];
-
-  return { modalityState: nextModality, nationalPrimeOverrides: nextOverrides };
+  return {
+    modalityState: omitRecordKeys(modalityState, modalityKeys),
+    nationalPrimeOverrides: omitRecordKeys(overrides, [row.semanticId]),
+  };
 }
 
 export function activateNationalModality(
@@ -86,11 +87,8 @@ export function setNationalPrimeOverride(
   row: NationalPrimeOverrideRow,
   value: number,
 ): Record<string, number> {
-  const next = { ...overrides };
   if (row.valueField === 'optionalRate' && !(value > 0)) {
-    delete next[row.semanticId];
-    return next;
+    return omitRecordKeys(overrides, [row.semanticId]);
   }
-  next[row.semanticId] = value;
-  return next;
+  return { ...overrides, [row.semanticId]: value };
 }

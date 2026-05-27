@@ -1,0 +1,29 @@
+---
+description: Qualité TypeScript/Vue — immutabilité, pas de delete, exactOptionalPropertyTypes
+globs: "{src/**/*.{ts,vue},tests/**/*.{ts,vue}}"
+alwaysApply: true
+---
+
+# Qualité TypeScript / Vue (simulateur)
+
+## Interdit
+
+- **`delete obj.prop`** (ou `delete obj[key]`) pour retirer une propriété d’un objet métier, d’état Pinia, ou d’un DTO passé au moteur. Préférer une **copie sans la clé** (`omitRecordKeys` dans `src/domain/utils/record.ts`, déstructuration + spread, ou remplacement de l’objet entier).
+- **Mutation partielle ambiguë** : laisser des champs optionnels obsolètes sur un objet réutilisé (ex. retirer le détail accord en ne mettant à jour que `salaireDu`). **Remplacer** l’objet par une forme explicite (spread / nouvel objet) quand le sens métier change.
+- **Assigner `undefined`** à une propriété optionnelle quand `exactOptionalPropertyTypes` est actif : soit **omettre** la clé, soit typer explicitement `prop?: T | undefined` à l’interface si `undefined` a un sens métier.
+- Contournements fragiles : `as any`, `@ts-ignore` sans justification courte en commentaire.
+
+## À privilégier
+
+- **Immutabilité** pour l’état dérivé : `{ ...prev, [key]: value }`, `map` / `filter` sur tableaux, retour de nouveaux objets depuis le domaine.
+- **Objets complets** pour les transitions de mode (ex. période arriérés « SMH seul » vs « avec accord ») : reconstruire `{ label, periodKey, salaireDu, salaireVerse, … }` plutôt que effacer des champs au cas par cas.
+- **Garde-fous typés** : `if (!raw) throw …` plutôt que `!` non documenté ; parsing ISO avec variables validées (`Number.isFinite`).
+- **Helpers partagés** déjà dans le dépôt : `omitRecordKeys`, `roundToEuro`, validation Zod des accords.
+
+## PDF / jspdf
+
+- Passer `doc` en `object` à `drawPdfAutoTable` ; ne pas supposer `doc.autoTable` après import ESM seul (v5 : `autoTable(doc, opts)`).
+
+## Tests
+
+- Après refactor immuable, vérifier qu’aucune propriété « fantôme » ne reste (ex. `mensuelDuBase` absent hors mode accord).

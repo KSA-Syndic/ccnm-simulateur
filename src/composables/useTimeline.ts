@@ -80,8 +80,9 @@ export function enrichPeriodesSalaireDuMensuel(
 
   const hasAccord = params.agreement != null && params.wizardInput.agreement.accordActif;
 
-  for (const p of periodes) {
-    if (!p.periodKey) continue;
+  for (let i = 0; i < periodes.length; i++) {
+    const p = periodes[i];
+    if (!p?.periodKey) continue;
 
     if (hasAccord) {
       const calc = calculateSalaireMensuelDuPourPeriode(params.wizardInput, {
@@ -92,11 +93,14 @@ export function enrichPeriodesSalaireDuMensuel(
         agreement: params.agreement,
         classe: classeApres,
       });
-      p.salaireDu = calc.salaireMensuelDu;
-      p.mensuelDuBase = calc.mensuelDuBase;
-      p.primesVerseesCeMois = calc.primesVerseesCeMois;
-      p.primesVerseesLabels = calc.primesVerseesLabels;
-      p.estMois13eMois = calc.estMois13eMois;
+      periodes[i] = {
+        ...p,
+        salaireDu: calc.salaireMensuelDu,
+        mensuelDuBase: calc.mensuelDuBase,
+        primesVerseesCeMois: calc.primesVerseesCeMois,
+        primesVerseesLabels: calc.primesVerseesLabels,
+        estMois13eMois: calc.estMois13eMois,
+      };
       continue;
     }
 
@@ -104,10 +108,11 @@ export function enrichPeriodesSalaireDuMensuel(
     let cl = classeApres;
     if (cc && p.periodKey < cc) cl = classeAvant;
     const annual = getSmhForClasse(cl, y, params.experiencePro);
-    p.salaireDu = roundToEuro((annual * rate) / 12);
-    delete p.mensuelDuBase;
-    delete p.primesVerseesCeMois;
-    delete p.primesVerseesLabels;
-    delete p.estMois13eMois;
+    periodes[i] = {
+      label: p.label,
+      periodKey: p.periodKey,
+      salaireDu: roundToEuro((annual * rate) / 12),
+      salaireVerse: p.salaireVerse,
+    };
   }
 }
