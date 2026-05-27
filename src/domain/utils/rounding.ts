@@ -1,3 +1,7 @@
+/**
+ * Arrondis monétaires — équivalent fonctionnel du module vanilla (decimal.js pour la stabilité).
+ */
+// Source: legacy-archive/utils/rounding.js
 import Decimal from 'decimal.js';
 
 Decimal.set({ precision: 20, rounding: Decimal.ROUND_HALF_UP });
@@ -14,6 +18,11 @@ export function roundToCents(value: unknown): number {
 
 export function roundToEuro(value: unknown): number {
   return new Decimal(toNumber(value)).toDecimalPlaces(0, Decimal.ROUND_HALF_UP).toNumber();
+}
+
+/** Taux horaire (€/h) — 2 décimales pour affichage et saisie. */
+export function roundHourlyRate(value: unknown): number {
+  return roundToCents(value);
 }
 
 export function annualFromMonthly(monthlyAmount: unknown): number {

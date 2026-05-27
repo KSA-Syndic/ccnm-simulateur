@@ -1,0 +1,155 @@
+<script setup lang="ts">
+import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { AppTooltip } from '@/components/ui';
+import { CONFIG } from '@/domain/config';
+import { buildLegalTooltipContent } from '@/domain/tooltip/builders';
+
+const props = defineProps<{
+  critere: (typeof CONFIG.CRITERES)[number];
+  critereIndex: number;
+  modelValue: number;
+}>();
+
+const emit = defineEmits<{
+  'update:modelValue': [value: number];
+}>();
+
+const wrapperRef = ref<HTMLElement | null>(null);
+const scrollRef = ref<HTMLElement | null>(null);
+
+function tooltipHtml() {
+  const c = props.critere;
+  return buildLegalTooltipContent(CONFIG.TOOLTIP_TEXTS, c.nom, c.description, {
+    sourceArticle: c.sourceArticle,
+  });
+}
+
+function updateRouletteDisplay() {
+  const scroll = scrollRef.value;
+  const wrapper = wrapperRef.value;
+  if (!scroll || !wrapper) return;
+  const firstValue = scroll.querySelector('.roulette-value') as HTMLElement | null;
+  const rootFont = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  const itemWidth = firstValue?.offsetWidth ?? rootFont * 12;
+  const wrapperWidth = Math.max(wrapper.offsetWidth, itemWidth);
+  const centerOffset = wrapperWidth / 2 - itemWidth / 2;
+  const value = props.modelValue;
+  const offset = -((value - 1) * itemWidth) + centerOffset;
+  scroll.style.transform = `translateX(${offset}px)`;
+}
+
+let resizeScheduled = false;
+function scheduleRouletteLayout() {
+  if (resizeScheduled) return;
+  resizeScheduled = true;
+  requestAnimationFrame(() => {
+    resizeScheduled = false;
+    updateRouletteDisplay();
+  });
+}
+
+function onWindowResize() {
+  scheduleRouletteLayout();
+}
+
+const fullDesc = computed(() => {
+  const d = props.critere.degres[props.modelValue as keyof typeof props.critere.degres];
+  return d ?? '';
+});
+
+watch(
+  () => [props.modelValue, props.critereIndex, props.critere.id],
+  () => {
+    void nextTick(() => updateRouletteDisplay());
+  },
+);
+
+onMounted(() => {
+  void nextTick(() => updateRouletteDisplay());
+  window.addEventListener('resize', onWindowResize);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', onWindowResize);
+});
+
+function clampDeg(v: number): number {
+  return Math.min(10, Math.max(1, Math.round(v)));
+}
+
+function change(delta: number) {
+  emit('update:modelValue', clampDeg(props.modelValue + delta));
+}
+
+function setValue(v: number) {
+  emit('update:modelValue', clampDeg(v));
+}
+
+function onWheel(ev: WheelEvent) {
+  const delta = ev.deltaX !== 0 ? ev.deltaX : ev.deltaY;
+  if (delta > 0) change(1);
+  else if (delta < 0) change(-1);
+}
+
+const touchStartX = ref(0);
+
+function onTouchStart(e: TouchEvent) {
+  touchStartX.value = e.touches[0]?.clientX ?? 0;
+}
+
+function onTouchEnd(e: TouchEvent) {
+  const endX = e.changedTouches[0]?.clientX ?? touchStartX.value;
+  const dx = endX - touchStartX.value;
+  if (Math.abs(dx) > 40) {
+    if (dx < 0) change(1);
+    else change(-1);
+  }
+}
+
+function labelFor(deg: number): string {
+  return String(props.critere.labels[deg as keyof typeof props.critere.labels] ?? '');
+}
+</script>
+
+<template>
+  <div class="roulette-item" :data-critere="critereIndex">
+    <div class="roulette-header">
+      <div class="roulette-label">
+        {{ critere.nom }}
+        <AppTooltip :content="tooltipHtml()" variant="result" position="top" />
+      </div>
+      <div class="degree-badge">
+        Degré <span :id="`degree-label-${critereIndex}`">{{ modelValue }}</span
+        >/10
+      </div>
+    </div>
+    <div
+      :id="`roulette-${critereIndex}`"
+      ref="wrapperRef"
+      class="roulette-wrapper"
+      @wheel.prevent="onWheel"
+      @touchstart.passive="onTouchStart"
+      @touchend.prevent="onTouchEnd"
+    >
+      <div class="roulette-chevron chevron-up" @click.stop="change(-1)" />
+      <div class="roulette-indicator" />
+      <div :id="`scroll-${critereIndex}`" ref="scrollRef" class="roulette-scroll">
+        <div
+          v-for="deg in 10"
+          :key="deg"
+          class="roulette-value"
+          :class="{ selected: deg === modelValue }"
+          :data-value="deg"
+          @click="setValue(deg)"
+        >
+          <span class="degree-number">{{ deg }}</span>
+          <span class="degree-text">{{ labelFor(deg) }}</span>
+        </div>
+      </div>
+      <div class="roulette-chevron chevron-down" @click.stop="change(1)" />
+    </div>
+    <div :id="`full-desc-${critereIndex}`" class="roulette-full-description">
+      <p>{{ fullDesc }}</p>
+    </div>
+  </div>
+</template>

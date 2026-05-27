@@ -1,3 +1,4 @@
+import { CONFIG } from '../domain/config';
 import { type Agreement } from '../domain/agreements/interface';
 import { registerAgreement } from '../domain/agreements/registry';
 
@@ -169,7 +170,7 @@ const KuhnAgreement: Agreement = {
   metadata: {
     version: '1.0',
     articlesSubstitues: ['142', '143', '144', '145', '146', '153-1'],
-    territoire: 'Bas-Rhin (67)',
+    territoire: CONFIG.POINT_TERRITORIAL.territoire,
     entreprise: 'UES KUHN SAS/KUHN MGM SAS',
   },
 

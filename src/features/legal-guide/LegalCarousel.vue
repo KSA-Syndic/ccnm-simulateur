@@ -1,62 +1,108 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { WIZARD_LEGACY_LABELS } from '../../domain/ui/labels';
+import { buildLegalCarouselSteps } from '../../domain/legal/legalCarouselSteps';
 
-const slides = [
-  {
-    title: "Qu'est-ce que le SMH ?",
-    content:
-      'Le Salaire Minimum Hiérarchique (SMH) est le salaire plancher fixé par la Convention Collective Nationale de la Métallurgie pour chaque classification. Il constitue le minimum garanti pour votre poste.',
-  },
-  {
-    title: 'Classification',
-    content:
-      'La nouvelle convention métallurgie (CCNM 2024) classe les postes selon 6 critères cotés de 1 à 10 : complexité, connaissances, autonomie, contribution, encadrement/coopération et communication.',
-  },
-  {
-    title: 'Principe de faveur',
-    content:
-      "Quand un accord d'entreprise et la convention prévoient des dispositions différentes, c'est la plus avantageuse pour le salarié qui s'applique, sauf disposition légale contraire.",
-  },
-  {
-    title: 'Arriérés de salaire',
-    content:
-      'Si votre salaire versé est inférieur au SMH applicable, vous pouvez réclamer la différence (arriérés) sur les 3 dernières années (prescription triennale, Code du travail).',
-  },
-  {
-    title: "Accord d'entreprise",
-    content:
-      "Un accord d'entreprise peut compléter ou se substituer à certaines dispositions de la convention. Les primes, majorations et conditions peuvent être spécifiques à votre entreprise.",
-  },
-  {
-    title: 'Limites du simulateur',
-    content:
-      'Ce simulateur fournit une estimation indicative basée sur les données saisies. Il ne remplace pas un conseil juridique. Les montants réels peuvent varier selon votre situation individuelle.',
-  },
-] as const;
-
+const slides = buildLegalCarouselSteps();
 const currentIndex = ref(0);
 const total = slides.length;
-const currentSlide = computed(() => slides[currentIndex.value]!);
+const lastIndex = total - 1;
+
+const isAtFirst = computed(() => currentIndex.value <= 0);
+const isAtLast = computed(() => currentIndex.value >= lastIndex);
 
 function prev() {
-  currentIndex.value = (currentIndex.value - 1 + total) % total;
+  if (currentIndex.value > 0) currentIndex.value -= 1;
 }
 
 function next() {
-  currentIndex.value = (currentIndex.value + 1) % total;
+  if (currentIndex.value < lastIndex) currentIndex.value += 1;
+}
+
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'ArrowLeft' && !isAtFirst.value) {
+    e.preventDefault();
+    prev();
+  } else if (e.key === 'ArrowRight' && !isAtLast.value) {
+    e.preventDefault();
+    next();
+  }
 }
 </script>
 
 <template>
-  <div class="legal-carousel" role="region" aria-label="Guide juridique">
-    <div class="carousel-header">
-      <button class="carousel-btn" aria-label="Précédent" @click="prev">‹</button>
-      <span class="carousel-counter">{{ currentIndex + 1 }} / {{ total }}</span>
-      <button class="carousel-btn" aria-label="Suivant" @click="next">›</button>
+  <div
+    id="legal-instructions"
+    class="legal-guide-section"
+    role="region"
+    aria-label="Guide juridique"
+    tabindex="0"
+    @keydown="onKeydown"
+  >
+    <div class="legal-guide-header">
+      <h3 class="legal-guide-title">
+        {{ WIZARD_LEGACY_LABELS.legalGuideTitle }}
+      </h3>
+      <div class="legal-guide-nav">
+        <button
+          id="legal-carousel-prev"
+          type="button"
+          class="carousel-btn carousel-btn-prev"
+          aria-label="Précédent"
+          :disabled="isAtFirst"
+          @click="prev"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+          >
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <span class="carousel-counter"
+          ><span id="legal-carousel-current">{{ currentIndex + 1 }}</span> /
+          <span id="legal-carousel-total">{{ total }}</span></span
+        >
+        <button
+          id="legal-carousel-next"
+          type="button"
+          class="carousel-btn carousel-btn-next"
+          aria-label="Suivant"
+          :disabled="isAtLast"
+          @click="next"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+          >
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+      </div>
     </div>
-    <div class="legal-guide-content">
-      <h4>{{ currentSlide.title }}</h4>
-      <p>{{ currentSlide.content }}</p>
+    <div id="legal-carousel-content" class="legal-guide-content">
+      <div
+        v-for="(slide, i) in slides"
+        :key="i"
+        class="carousel-slide legal-step"
+        :class="{ active: i === currentIndex }"
+        :data-index="i"
+      >
+        <h4>
+          <span class="legal-step-number">{{ i + 1 }}</span> {{ slide.title }}
+        </h4>
+        <div class="legal-step-content" v-html="slide.contentHtml" />
+      </div>
     </div>
   </div>
 </template>

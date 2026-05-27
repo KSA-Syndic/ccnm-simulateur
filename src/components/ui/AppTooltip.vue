@@ -1,18 +1,48 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, useAttrs } from 'vue';
+import { computePosition, flip, shift, offset, autoUpdate } from '@floating-ui/dom';
+import type { Placement } from '@floating-ui/dom';
 import type { TooltipContent, TooltipVariant } from '@/domain/tooltip/model';
 import { formatTooltipHtml } from '@/domain/tooltip/model';
+import { A11Y_LABELS } from '@/domain/ui/labels';
 
 const props = defineProps<{
   content: string | TooltipContent;
   position?: 'top' | 'bottom' | 'left' | 'right';
   variant?: TooltipVariant;
+  /**
+   * Apparence du picto « i » :
+   * - `default` : pastille grise, survol orange (fonds clairs)
+   * - `on-dark` : picto clair sans pastille orange (en-tête orange)
+   */
+  triggerTone?: 'default' | 'on-dark';
+  /** Accessible name du déclencheur (requis pour `role="button"` + lecteurs d’écran). */
+  triggerAriaLabel?: string;
+  /** Délai (ms) avant fermeture au mouseleave — permet de survoler le popper. */
+  hideDelayMs?: number;
 }>();
 
+const triggerClass = computed(() => [
+  'app-tooltip-trigger',
+  props.triggerTone === 'on-dark' ? 'app-tooltip-trigger--on-dark' : '',
+]);
+
+const attrs = useAttrs();
 const visible = ref(false);
 const triggerRef = ref<HTMLElement | null>(null);
+const floatingRef = ref<HTMLElement | null>(null);
+
+let stopAutoUpdate: (() => void) | undefined;
+let hideTimer: ReturnType<typeof setTimeout> | null = null;
 
 const resolvedVariant = computed<TooltipVariant>(() => props.variant ?? 'compact');
+const hideDelay = computed(() => Math.max(0, props.hideDelayMs ?? 200));
+
+const placement = computed<Placement>(() => {
+  const p = props.position ?? 'top';
+  if (p === 'bottom' || p === 'left' || p === 'right' || p === 'top') return p;
+  return 'top';
+});
 
 const renderedHtml = computed(() => {
   if (typeof props.content === 'string') {
@@ -21,36 +51,120 @@ const renderedHtml = computed(() => {
   return formatTooltipHtml(props.content, resolvedVariant.value);
 });
 
+function cancelHide() {
+  if (hideTimer != null) {
+    clearTimeout(hideTimer);
+    hideTimer = null;
+  }
+}
+
+function scheduleHide() {
+  cancelHide();
+  hideTimer = setTimeout(() => {
+    hideTimer = null;
+    visible.value = false;
+  }, hideDelay.value);
+}
+
+async function reposition() {
+  await nextTick();
+  const trig = triggerRef.value;
+  const float = floatingRef.value;
+  if (!trig || !float || !visible.value) return;
+
+  stopAutoUpdate?.();
+  stopAutoUpdate = autoUpdate(trig, float, () => {
+    void computePosition(trig, float, {
+      /** Évite les dérives (ancêtres `transform` / `overflow`) — repère viewport comme le CSS `fixed`. */
+      strategy: 'fixed',
+      placement: placement.value,
+      middleware: [
+        offset(8),
+        flip({ fallbackAxisSideDirection: 'start', padding: 8 }),
+        shift({ padding: 8 }),
+      ],
+    }).then(({ x, y }) => {
+      float.style.setProperty('left', `${Math.round(x)}px`);
+      float.style.setProperty('top', `${Math.round(y)}px`);
+    });
+  });
+}
+
 function show() {
+  cancelHide();
   visible.value = true;
 }
 function hide() {
+  cancelHide();
   visible.value = false;
 }
 function toggle() {
+  cancelHide();
   visible.value = !visible.value;
 }
 
+function onTriggerMouseEnter() {
+  cancelHide();
+  show();
+}
+function onTriggerMouseLeave() {
+  scheduleHide();
+}
+
+function onPopperMouseEnter() {
+  cancelHide();
+}
+function onPopperMouseLeave() {
+  scheduleHide();
+}
+
 function onClickOutside(e: MouseEvent) {
-  if (triggerRef.value && !triggerRef.value.contains(e.target as Node)) {
+  const t = e.target as Node;
+  if (floatingRef.value?.contains(t)) return;
+  if (triggerRef.value && !triggerRef.value.contains(t)) {
+    cancelHide();
     visible.value = false;
   }
 }
 
+watch(visible, (v) => {
+  if (v) {
+    void reposition();
+  } else {
+    cancelHide();
+    stopAutoUpdate?.();
+    stopAutoUpdate = undefined;
+  }
+});
+
+watch(
+  () => [props.position, renderedHtml.value] as const,
+  () => {
+    if (visible.value) void reposition();
+  },
+);
+
 onMounted(() => document.addEventListener('click', onClickOutside, true));
-onUnmounted(() => document.removeEventListener('click', onClickOutside, true));
+onUnmounted(() => {
+  document.removeEventListener('click', onClickOutside, true);
+  cancelHide();
+  stopAutoUpdate?.();
+  stopAutoUpdate = undefined;
+});
 </script>
 
 <template>
   <span
     ref="triggerRef"
-    class="tooltip-trigger__light"
+    :class="triggerClass"
+    v-bind="attrs"
     tabindex="0"
     role="button"
+    :aria-label="props.triggerAriaLabel ?? A11Y_LABELS.tooltipTriggerDefault"
     :aria-expanded="visible"
     aria-haspopup="true"
-    @mouseenter="show"
-    @mouseleave="hide"
+    @mouseenter="onTriggerMouseEnter"
+    @mouseleave="onTriggerMouseLeave"
     @focus="show"
     @blur="hide"
     @click.prevent="toggle"
@@ -72,66 +186,26 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside, true));
         <line x1="12" y1="8" x2="12.01" y2="8" />
       </svg>
     </slot>
+  </span>
+
+  <Teleport to="body">
     <Transition name="tooltip-fade">
       <div
-        v-if="visible"
-        class="app-tooltip"
-        :class="[`app-tooltip--${position ?? 'top'}`, `app-tooltip--${resolvedVariant}`]"
+        v-show="visible"
+        ref="floatingRef"
+        class="app-tooltip-popper"
+        :class="[`app-tooltip--${placement}`, `app-tooltip--${resolvedVariant}`]"
         role="tooltip"
+        @mouseenter="onPopperMouseEnter"
+        @mouseleave="onPopperMouseLeave"
       >
         <div class="app-tooltip__content" v-html="renderedHtml" />
       </div>
     </Transition>
-  </span>
+  </Teleport>
 </template>
 
 <style scoped>
-.tooltip-trigger__light {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  cursor: help;
-  color: var(--color-text-secondary, #888);
-}
-.app-tooltip {
-  position: absolute;
-  z-index: 1000;
-  padding: 0.6rem 0.9rem;
-  background: var(--tooltip-bg, #1e293b);
-  color: var(--tooltip-text, #f8fafc);
-  border-radius: var(--radius-md, 8px);
-  font-size: 0.82rem;
-  line-height: 1.45;
-  max-width: 320px;
-  width: max-content;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-  pointer-events: auto;
-}
-.app-tooltip--top {
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-}
-.app-tooltip--bottom {
-  top: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-}
-.app-tooltip--left {
-  right: calc(100% + 8px);
-  top: 50%;
-  transform: translateY(-50%);
-}
-.app-tooltip--right {
-  left: calc(100% + 8px);
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.app-tooltip--result {
-  max-width: 380px;
-}
-
 .tooltip-fade-enter-active,
 .tooltip-fade-leave-active {
   transition: opacity var(--transition-fast, 150ms ease);

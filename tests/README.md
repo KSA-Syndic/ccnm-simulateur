@@ -6,19 +6,48 @@ Ce dépôt combine des tests **Vitest** (unitaires et d'intégration), des tests
 
 ```
 tests/
-├── setup.js                 # Configuration globale Vitest (jsdom)
+├── setup.js
+├── unit/stores/              # Pinia (wizard, situation, agreement, arretees, ui)
+├── components/               # @vue/test-utils (étapes, tooltips, header…)
+├── composables/
+│   └── useTimeline.test.ts
+├── domain/
+│   ├── arretees/             # mensuelDue Kuhn, agrégats
+│   ├── pdf/                  # jsPdfHelpers, syndicatMail
+│   ├── hints/                # buildSmhAssietteHintBlocks
+│   ├── remuneration/         # barèmes 2026, formules, registre modalités
+│   ├── evolution/, legal/, convention/, tooltip/, ui/, utils/, input/
+│   └── features/arretees/    # chartPointCoords
+├── fixtures/
+│   └── profils-remuneration.json
+├── invariants/
+│   └── remuneration-sanity.test.ts
+├── parity/
+│   ├── remuneration-oracle.test.ts
+│   └── remunerationParityHelpers.ts
+├── utils/
+│   └── url-params.test.ts
 └── integration/
-    └── wizard.test.js       # Parcours wizard (DOM)
+    └── wizard.test.js
 
-src/domain/**/__tests__/     # Tests colocalisés au domaine (TypeScript)
-├── remuneration/
-│   ├── engine.test.ts           # 15 tests moteur paramétrique
-│   └── engine.property.test.ts  # 8 tests fast-check
-└── agreements/
-    └── mock-agreement.ts        # Pattern d'accord factice pour les tests moteur
+src/domain/**/__tests__/       # moteur (engine, smh, builders, agreements…)
+legacy-archive/tests/**        # oracle JS (import Vitest racine)
 
 e2e/
-└── baseline.spec.ts         # 14+ scénarios E2E Playwright
+├── baseline.spec.ts          # smoke + 14 captures d’écran
+├── wizard-helpers.ts
+├── wizard-ui-coverage.spec.ts # P5.2 : situation / header accord / footer / hints / évolution / carrousel / export PDF
+├── remuneration-values.spec.ts
+├── dom-critical-elements.spec.ts
+├── accord-kuhn.spec.ts
+├── tooltips.spec.ts
+├── arretees-curve.spec.ts
+├── a11y-wizard.spec.ts       # P5.5 : axe-core sur les 4 étapes (hors contraste couleur)
+├── parite-visuelle.spec.ts   # dual : sondes HTTP (opt-in)
+├── parite-visuelle-pixels.spec.ts # D6.04 : 12 comparaisons pixel legacy vs Vue (opt-in)
+├── legacy-parity-nav.ts
+└── helpers/
+    └── comparePng.ts         # pixelmatch
 ```
 
 ## Exécution
@@ -51,13 +80,27 @@ npm run test:run -- tests/integration/wizard.test.js
 npm run e2e
 ```
 
-Fichier principal : **`e2e/baseline.spec.ts`**. Il contient **14 scénarios** de capture d'écran (régression visuelle) couvrant les **4 étapes** du wizard et des variantes :
+Fichiers principaux : **`e2e/baseline.spec.ts`** (smoke + **14** captures `toHaveScreenshot`), **`e2e/wizard-ui-coverage.spec.ts`** (étapes 2–4 : modalités, en-tête accord URL, pied de page, hints, graphique évolution, carrousel juridique, modale export PDF), **`e2e/a11y-wizard.spec.ts`** (violations axe `critical` / `serious`, règle `color-contrast` désactivée), **`e2e/remuneration-values.spec.ts`**, **`e2e/dom-critical-elements.spec.ts`**, **`e2e/accord-kuhn.spec.ts`**, **`e2e/tooltips.spec.ts`**, **`e2e/arretees-curve.spec.ts`**.
 
-- **Étape 1** : choix du mode, saisie directe (ex. groupe C), estimation par critères, roulettes modifiées
-- **Étape 2** : page vierge, modalités non-cadre, cadre avec forfait
-- **Étape 3** : résultats (non-cadre, cadre), bascule 12 / 13 mois
-- **Étape 4** : formulaire arriérés, courbe après date, saisie via bloc flottant
-- **En-tête** : bannière du simulateur
+#### CI GitHub Actions
+
+- Fichier **`.github/workflows/ci.yml`** : sur chaque PR / push `main` → `npm ci`, **`npm run lint`**, **`npm run build`** (avec `VITE_BASE` Pages), **`npm run test:run`**, puis **Playwright** (Chromium installé dans le job ; `CI=true` pour forcer un `webServer` Vite propre, sans réutiliser un serveur local — le port **5173** doit être libre dans le runner).
+- **Parité dual serveurs** : job **`dual-parity`** (label PR `dual-parity` ou _workflow_dispatch_) lance **`DUAL_PARITE_E2E=1 npm run e2e:parite-dual`** (équivalent local après `npm run dual` : **`npm run dual:parity`**, définit `DUAL_PARITE_E2E=1` via `cross-env`) : sondes **`e2e/parite-visuelle.spec.ts`** (dont `GET …/legacy-archive/index.html`) + **12 comparaisons pixel** legacy vs Vue **`e2e/parite-visuelle-pixels.spec.ts`** (`pixelmatch`, bandes en-tête + corps). Seuil global : variable **`PW_PARITE_MAX_DIFF_RATIO`** (défaut **0,82**). Le `webServer` Playwright est désactivé quand `DUAL_PARITE_E2E=1` pour libérer le port 5173.
+
+#### Parité dual en local
+
+1. **`npm run dual`** (Vue **5173** + static legacy **5174** via `serve .`).
+2. Dans un second terminal : **`npm run dual:parity`** (`cross-env` définit `DUAL_PARITE_E2E=1` pour activer les sondes + **12** comparaisons pixel).
+   - Alternative manuelle : `npm run legacy` + `npx vite --port 5173 --strictPort`, puis `DUAL_PARITE_E2E=1 npm run e2e:parite-dual` (PowerShell : `$env:DUAL_PARITE_E2E='1'; npm run e2e:parite-dual`).
+   - Optionnel : `PW_PARITE_MAX_DIFF_RATIO=0.75` pour un contrôle plus strict des différences visuelles.
+
+### Parité chiffrée (Vitest)
+
+- **`tests/parity/remuneration-oracle.test.ts`** : pour chaque entrée de **`tests/fixtures/profils-remuneration.json`**, comparaison oracle legacy (`calculateAnnualRemuneration` avec accord **`getAgreement`** si `accordActif` + `accordId`) et moteur domaine (`wizardStoresInputFromLegacyState` → `computeAnnualRemunerationFromWizardStores`), puis **montants agrégés par `semanticId`** (hors ligne `isBase`) et **lissage 12 / 13 mois** via `aggregateRemunerationDetails`.
+- **`tests/parity/remunerationParityHelpers.ts`** : construction des cartes `semanticId → montant` pour l’assertion ligne à ligne (somme si plusieurs lignes legacy, ex. ancienneté SMH incluse / exclue).
+- **`tests/invariants/remuneration-sanity.test.ts`** : bornes / cohérence mensuelle sur l’oracle.
+
+Les captures **`baseline.spec.ts`** couvrent notamment : étapes 1–4 (variantes groupe C, estimation, cadre F forfait jours, résultat 12/13 mois, arriérés avec courbe), plus l’en-tête.
 
 ## Types de tests
 
@@ -65,6 +108,8 @@ Fichier principal : **`e2e/baseline.spec.ts`**. Il contient **14 scénarios** de
 
 - **Moteur de rémunération** : `computeElement`, `resolveBySubstitution`, `buildComputeContext`, `aggregateRemunerationDetails`
 - **Classification** : critères → groupe / classe
+- **Stores Pinia** : `tests/unit/stores/*.test.ts` (`createFreshPinia` + `pinia-plugin-persistedstate`, pas de collision d’`activePinia` entre fichiers)
+- **Composants Vue** : `tests/components/*.spec.ts` (`@vue/test-utils` + Pinia quand nécessaire ; stubs ciblés : `AppTooltip`, `HourlyPrimesList`, `PrivacyModal`)
 - **Wizard** : parcours DOM (jsdom)
 
 ### Tests par propriétés (fast-check)

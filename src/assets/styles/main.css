@@ -24,11 +24,119 @@
   --color-danger: #dc2626;
   --color-info: #e15c12;
   --border-radius: 0px;
+  /* Tooltip : fond brun-ardoise (contraste orange header + texte blanc) */
+  --color-bg-tooltip: #2d2418;
+  --tooltip-bg: var(--color-bg-tooltip);
+  --tooltip-text: #ffffff;
+  --tooltip-border: rgba(255, 255, 255, 0.08);
+  --tooltip-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
   --shadow-sm: none;
   --shadow-md: none;
   --shadow-lg: 0 1px 0 rgba(0, 0, 0, 0.05);
   --transition-fast: 0.12s ease;
   --transition-normal: 0.2s ease;
+}
+
+/* Tooltips AppTooltip (Teleport body) — thème orange, variables pour MAJ globale */
+.app-tooltip-popper {
+  position: fixed;
+  z-index: 10050;
+  margin: 0;
+  padding: 0.6rem 0.9rem;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  border: 1px solid var(--tooltip-border);
+  border-radius: var(--radius-md, 8px);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  max-width: min(420px, calc(100vw - 16px));
+  width: max-content;
+  box-shadow: var(--tooltip-shadow);
+  pointer-events: auto;
+  text-align: left;
+}
+.app-tooltip-popper.app-tooltip--result {
+  max-width: min(480px, calc(100vw - 16px));
+}
+.app-tooltip-popper .app-tooltip__content a.tooltip-link {
+  color: var(--tooltip-text);
+  text-decoration: underline;
+  font-weight: 600;
+}
+.app-tooltip-popper .app-tooltip__content a.tooltip-link:hover {
+  opacity: 0.92;
+}
+.app-tooltip-popper .tooltip-source {
+  margin-top: 0.4rem;
+  padding-top: 0.3rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  opacity: 0.88;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 0.35em;
+  align-items: start;
+  justify-items: start;
+  text-align: left;
+}
+.app-tooltip-popper .tooltip-source .tooltip-source-label {
+  grid-column: 1;
+  grid-row: 1;
+  white-space: nowrap;
+}
+.app-tooltip-popper .tooltip-source .tooltip-source-article {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+/* Déclencheur unique AppTooltip (pastille « i ») — ne pas mélanger avec .tooltip-trigger legacy */
+.app-tooltip-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--gray-600);
+  cursor: help;
+  vertical-align: middle;
+  transition: color var(--transition-fast);
+}
+
+.app-tooltip-trigger svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+.app-tooltip-trigger:hover,
+.app-tooltip-trigger:focus-visible {
+  background: transparent;
+  color: var(--color-primary);
+  outline: none;
+}
+
+.app-tooltip-trigger--on-dark {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.app-tooltip-trigger--on-dark:hover,
+.app-tooltip-trigger--on-dark:focus-visible {
+  background: transparent;
+  color: #fff;
+}
+
+.checkbox-label .app-tooltip-trigger {
+  margin-left: 5px;
 }
 
 /* Reset & Base */
@@ -98,6 +206,14 @@ body.iframe-mode .simulator-container.iframe-container {
   margin: 0;
   opacity: 0.9;
   font-size: 0.9rem;
+}
+
+.simulator-header__subtitle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .header-info {
@@ -462,7 +578,10 @@ body.iframe-mode .simulator-container.iframe-container {
 }
 
 .input-with-unit .book-input {
-  width: 100px;
+  flex: 0 1 auto;
+  width: 6.5rem;
+  min-width: 5.5rem;
+  max-width: 7.5rem;
 }
 
 .input-unit {
@@ -509,6 +628,7 @@ body.iframe-mode .simulator-container.iframe-container {
 
 .conditions-content {
   padding: 15px;
+  padding-bottom: 0;
 }
 
 /* Transitions pour les champs qui apparaissent */
@@ -542,6 +662,15 @@ body.iframe-mode .simulator-container.iframe-container {
 }
 .sub-field-inline .input-with-unit {
   margin-top: 6px;
+}
+
+/* Plusieurs champs sous une modalité : empilés (une ligne par saisie) */
+.sub-field.sub-field-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: none;
+  overflow: visible;
 }
 
 /* Animation pour les groupes qui apparaissent */
@@ -604,6 +733,16 @@ body.iframe-mode .simulator-container.iframe-container {
   padding: 30px 20px;
   border-radius: var(--border-radius);
   margin: 20px 0;
+}
+
+.result-disclaimer {
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--gray-600);
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  background: var(--gray-100);
+  border-left: 3px solid var(--color-primary);
 }
 
 .result-main .result-value {
@@ -700,10 +839,24 @@ body.iframe-mode .simulator-container.iframe-container {
   border-radius: var(--border-radius);
 }
 
-.evolution-details summary {
+.evolution-details summary.evolution-details-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   padding: 12px 15px;
   cursor: pointer;
   font-weight: 500;
+}
+
+.evolution-details-summary-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.evolution-details-summary-tooltip {
+  display: inline-flex;
+  flex-shrink: 0;
+  cursor: default;
 }
 
 .evolution-details .evolution-panel {
@@ -796,22 +949,138 @@ body.iframe-mode .simulator-container.iframe-container {
   overflow: visible; /* Permettre au bloc flottant de dépasser */
 }
 
+.curve-host {
+  overflow: visible;
+}
+
+#salary-curve-container {
+  scroll-margin-top: 1.25rem;
+}
+
+.salary-curve-container--reveal {
+  animation: salary-curve-reveal 0.55s ease-out;
+}
+
+@keyframes salary-curve-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ancrage du bloc de saisie sur le point actif du graphique */
+.floating-anchor {
+  position: absolute;
+  z-index: 12;
+  pointer-events: none;
+  transition:
+    left 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+    top 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.floating-anchor--animating {
+  transition-duration: 0.42s;
+}
+
+.chart-point-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border: 2px solid var(--color-primary);
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0.6);
+  animation: chart-point-ring-pulse 1.6s ease-out infinite;
+}
+
+.floating-anchor--ready .chart-point-ring {
+  opacity: 1;
+}
+
+.chart-point-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  background: var(--color-primary);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--color-primary-border);
+  opacity: 0;
+}
+
+.floating-anchor--ready .chart-point-dot {
+  opacity: 1;
+}
+
+@keyframes chart-point-ring-pulse {
+  0%,
+  100% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
 /* Bloc flottant pour saisie */
 .floating-input-block {
   position: absolute;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  top: 0;
+  transform: translate(-50%, calc(-100% - 36px));
   background: white;
   padding: 20px;
   padding-top: 36px;
   border-radius: var(--border-radius);
-  box-shadow: none;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
   border: 2px solid var(--color-primary);
-  z-index: 10;
+  z-index: 2;
   min-width: 280px;
-  transition: all 0.3s ease;
+  max-width: min(320px, 92vw);
+  pointer-events: auto;
   opacity: 1;
+}
+
+.floating-input-block::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -34px;
+  width: 2px;
+  height: 34px;
+  background: linear-gradient(to bottom, var(--color-primary), var(--color-primary-light));
+  transform: translateX(-50%);
+  border-radius: 1px;
+}
+
+.floating-input-block--pop {
+  animation: floating-block-pop 0.4s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@keyframes floating-block-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 36px)) scale(0.88);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, calc(-100% - 36px)) scale(1);
+  }
 }
 
 /* Bouton fermer (mobile + desktop) */
@@ -870,7 +1139,8 @@ body.iframe-mode .simulator-container.iframe-container {
   transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.floating-input-block.floating-block-hidden {
+.floating-input-block.floating-block-hidden,
+.floating-anchor.floating-block-hidden {
   visibility: hidden;
   pointer-events: none;
 }
@@ -907,6 +1177,20 @@ body.iframe-mode .simulator-container.iframe-container {
   font-size: 0.85rem;
   color: var(--gray-600);
   text-align: center;
+}
+
+.floating-hint--compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin-top: 6px;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  color: var(--gray-500);
+}
+
+.floating-hint--compact .floating-hint-line {
+  display: block;
 }
 
 .floating-hint kbd {
@@ -1355,6 +1639,17 @@ body.iframe-mode .simulator-container.iframe-container {
   flex-wrap: wrap;
   gap: 10px;
   justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .celebration-overlay.celebration-animated .celebration-confetti {
+    animation: none;
+    opacity: 0;
+  }
+
+  .celebration-overlay.celebration-animated .celebration-card {
+    animation: none;
+  }
 }
 
 .label-optional {
@@ -1869,10 +2164,9 @@ body.iframe-mode .simulator-container.iframe-container {
   }
   #step-4 .floating-input-block {
     min-width: 0;
-    width: calc(100% - 24px);
-    max-width: 320px;
+    width: min(300px, calc(100vw - 3rem));
+    max-width: 300px;
     padding: 14px;
-    left: 50%;
   }
   #step-4 .curve-legend {
     flex-wrap: wrap;
@@ -2420,16 +2714,85 @@ body.iframe-mode .simulator-container.iframe-container {
 .evolution-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 15px;
-  margin-bottom: 15px;
+  align-items: center;
+  gap: 12px 18px;
+  margin-bottom: 12px;
   font-size: 0.85rem;
+  color: var(--gray-600);
 }
 
 .evolution-controls label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   white-space: nowrap;
+  margin: 0;
+}
+
+.evolution-panel .evolution-controls .book-input-small {
+  width: 4.25rem;
+  min-width: 4.25rem;
+  flex: 0 0 auto;
+}
+
+.evolution-panel .evolution-controls .book-select-inline {
+  min-width: 5.5rem;
+}
+
+.evolution-augmentation-field {
+  position: relative;
+}
+
+.evolution-augmentation-field--prompt {
+  padding: 6px 10px;
+  margin: -6px -10px;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--border-radius);
+  background: var(--color-primary-bg);
+  animation: evolution-augmentation-pulse 1.6s ease-in-out 3;
+}
+
+@keyframes evolution-augmentation-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(225, 92, 18, 0.35);
+  }
+
+  50% {
+    box-shadow: 0 0 0 6px rgba(225, 92, 18, 0.12);
+  }
+}
+
+.evolution-augmentation-callout {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  z-index: 20;
+  max-width: min(18rem, 85vw);
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--gray-800);
+  white-space: normal;
+  background: #fff;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--border-radius);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  animation: fadeIn 0.35s ease-out;
+}
+
+.evolution-augmentation-callout::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 1.25rem;
+  border: 8px solid transparent;
+  border-top-color: var(--color-primary);
+}
+
+#age-input-wrapper.hidden {
+  display: none;
 }
 
 /* Legacy - à conserver */
@@ -2514,7 +2877,8 @@ body.iframe-mode .simulator-container.iframe-container {
   color: var(--body-font-color);
 }
 
-.tooltip-trigger {
+/* Legacy index-legacy / roulette « ? » — l’app Vue utilise .app-tooltip-trigger via AppTooltip */
+.tooltip-trigger:not(.tooltip-trigger__light) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2529,21 +2893,9 @@ body.iframe-mode .simulator-container.iframe-container {
   transition: var(--transition-fast);
 }
 
-.tooltip-trigger__light {
-  background: transparent;
-  color: inherit;
-  border: none;
-  font-size: inherit;
-  width: auto;
-  height: auto;
-  min-width: 0;
-  padding: 0;
-  vertical-align: baseline;
-}
-
-.tooltip-trigger:hover {
-  background: var(--color-link);
-  color: white;
+.tooltip-trigger:not(.tooltip-trigger__light):hover {
+  background: var(--color-primary);
+  color: #fff;
 }
 
 .tooltip-trigger.info-trigger {
@@ -2981,6 +3333,15 @@ body.iframe-mode .simulator-container.iframe-container {
   color: white;
 }
 
+/* Alignement des lignes sans infobulle (même emprise que .app-tooltip-trigger 20px) */
+.result-detail-tooltip-spacer {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
 .result-detail-value {
   font-weight: 600;
   color: var(--body-font-color);
@@ -3389,16 +3750,26 @@ body.iframe-mode .simulator-container.iframe-container {
   margin-bottom: 0;
 }
 
-.conditions-autres-modalites {
-  margin-top: 10px;
-  border-top: 1px dashed var(--gray-300);
-  padding-top: 8px;
+/* Sous-accordéon dans « Conditions de travail » — summary aligné sur .conditions-details */
+.conditions-details .conditions-autres-modalites {
+  margin: 12px -15px 0;
+  width: calc(100% + 30px);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius);
+  box-sizing: border-box;
 }
 
 .conditions-autres-modalites > summary {
+  padding: 12px 15px;
   cursor: pointer;
-  font-weight: 600;
-  color: var(--gray-500);
+  font-weight: 500;
+  background: var(--gray-100);
+  border-radius: var(--border-radius);
+}
+
+.conditions-autres-modalites[open] > summary {
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  border-bottom: 1px solid var(--gray-200);
 }
 
 .conditions-autres-modalites .accord-primes-horaires {
@@ -3444,10 +3815,6 @@ body.iframe-mode .simulator-container.iframe-container {
   height: 18px;
   accent-color: var(--color-link);
   cursor: pointer;
-}
-
-.checkbox-label .tooltip-trigger {
-  margin-left: 5px;
 }
 
 .accord-kuhn-anciennete,
@@ -3686,10 +4053,12 @@ body.iframe-mode .simulator-container.iframe-container {
   gap: 8px;
 }
 
-.evolution-summary p {
+.evolution-summary p,
+.evolution-summary .evolution-summary-text {
   margin: 0;
   font-size: 0.85rem;
   color: var(--body-font-color);
+  line-height: 1.4;
 }
 
 .evolution-summary .data-source {

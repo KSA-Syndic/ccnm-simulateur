@@ -20,6 +20,7 @@ export const SEMANTIC_ID = {
   MAJORATION_INTERVENTION_ASTREINTE: 'majorationInterventionAstreinte',
   FORFAIT_HEURES: 'forfaitHeures',
   FORFAIT_JOURS: 'forfaitJours',
+  RACHAT_JOURS_REPOS_FORFAIT: 'rachatJoursForfait',
 } as const;
 
 export type SemanticId = (typeof SEMANTIC_ID)[keyof typeof SEMANTIC_ID] | string;
@@ -32,7 +33,25 @@ export type ComputeRef =
   | { ref: 'context'; key: string }
   | { ref: 'state'; key: string }
   | { ref: 'input'; stateKey: string }
-  | { ref: 'bareme'; table: Record<number, number>; lookupKey: 'anciennete' | 'classe' };
+  /** `getAccordInput(state, key) ?? state[key]` — aligné legacy `AgreementInterface`. */
+  | {
+      ref: 'accordInputOrState';
+      key: string;
+      /** Si `raw` est `null` / `undefined` / `''` : cette valeur (ex. `defaultHeures` accord). */
+      defaultIfMissing?: number;
+    }
+  | {
+      ref: 'bareme';
+      table: Record<number, number>;
+      lookupKey: 'anciennete' | 'classe' | 'ancienneteAccordPrime';
+    }
+  | {
+      /** Heures HS tranche 25 % ou 50 % à partir de `state[stateKeyHeures]` et du seuil (legacy `MajorationCalculator`). */
+      ref: 'heuresSupTranche';
+      stateKeyHeures: string;
+      seuilMensuel: number;
+      tranche: '25' | '50';
+    };
 
 // ── ComputeMode ──
 
@@ -43,6 +62,8 @@ export type ComputeMode =
       taux: ComputeRef;
       base: ComputeRef;
       period: 'monthly' | 'annual';
+      /** `true` : heures × base × taux (majoration seule, ex. accord Kuhn Art. 2). Sinon : heures × base × (1 + taux). */
+      majorationSeule?: boolean;
     }
   | {
       mode: 'pourcentageXbase';
@@ -56,6 +77,18 @@ export type ComputeMode =
       unites: ComputeRef;
       montant: ComputeRef;
       period: 'monthly' | 'annual';
+      /**
+       * Si vrai avec `period: 'annual'` : `roundToEuro(unites × montant)` sans mensualisation ×12
+       * (ex. inventions brevetables, aligné `PrimeCalculator` convention).
+       */
+      forfaitAnnuel?: boolean;
+    }
+  | {
+      /** Périodes/mois × arrondi(coeff × SMH horaire de base) — astreintes hors TTE (legacy). */
+      mode: 'periodesIndemniteSmh';
+      periodes: ComputeRef;
+      coefficientSmhParPeriode: number;
+      period: 'monthly' | 'annual';
     }
   | { mode: 'montantFixe'; montant: ComputeRef; period: 'monthly' | 'annual' }
   | {
@@ -64,6 +97,8 @@ export type ComputeMode =
       dureeMinutes: ComputeRef;
       taux: ComputeRef;
       period: 'monthly' | 'annual';
+      /** Si vrai : `postes × context.activityRate` (ex. prime équipe CCN, aligné `PrimeCalculator`). */
+      prorataActivite?: boolean;
     }
   | { mode: 'custom'; compute: (ctx: ComputeContext) => number };
 
@@ -140,7 +175,7 @@ export interface ElementResult {
   conditionTexte?: string | undefined;
   tooltip?: string | undefined;
   breakdown?: { label: string; value: number }[] | undefined;
-  inclusDansSMH: boolean;
+  inclusDansSMH: boolean | 'ifSuperiorToConvention';
   isAgreementSpecific: boolean;
   meta?: Record<string, unknown> | undefined;
 }

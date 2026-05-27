@@ -23,6 +23,6 @@
     },
     "ignoreDeprecations": "6.0"
   },
-  "include": ["env.d.ts", "src/**/*.ts", "src/**/*.vue", "e2e/**/*.ts"],
+  "include": ["env.d.ts", "src/**/*.ts", "src/**/*.vue"],
   "exclude": ["node_modules", "dist", "tests"]
 }

@@ -33,6 +33,8 @@ const CritereSchema = z.object({
   id: z.string(),
   nom: z.string(),
   description: z.string(),
+  /** Référence textuelle sourcée pour l’infobulle (CCNM — annexe classification). */
+  sourceArticle: z.string(),
   labels: z.record(z.coerce.number(), z.string()),
   degres: z.record(z.coerce.number(), z.string()),
 });
@@ -69,11 +71,15 @@ export const ConfigSchema = z.object({
   }),
   BAREME_DEBUTANTS: z.record(z.coerce.number(), z.record(z.coerce.number(), z.number())),
   BAREME_DEBUTANTS_BY_YEAR: z.record(z.coerce.number(), BaremeDebutantsSchema),
+  /** Années d’expérience professionnelle totale : strictement en-deçà → barème débutants F11/F12 (paramètre catalogue). */
+  BAREME_DEBUTANTS_SEUIL_EXP_PRO: z.number().int().positive(),
   INDEMNITE_REPAS_NUIT_ACOSS_BY_YEAR: z.record(z.coerce.number(), IndemniteRepasSchema),
   CCNM_CONTREPARTIES_ORGANISATION: ContrepartiesOrganisationSchema,
   TAUX_ANCIENNETE: z.record(z.coerce.number(), z.number()),
-  POINT_TERRITORIAL_DEFAUT: z.number(),
-  TERRITOIRE: z.string(),
+  POINT_TERRITORIAL: z.object({
+    valeurDefaut: z.number(),
+    territoire: z.string(),
+  }),
   MAPPING_POINTS: z.array(MappingPointEntrySchema),
   GROUPE_CLASSES: z.record(z.string(), z.array(z.number())),
   SEUIL_CADRE: z.number().int(),
@@ -103,6 +109,11 @@ export const ConfigSchema = z.object({
   CRITERES: z.array(CritereSchema),
   UMAMI_WEBSITE_ID: z.string(),
   UMAMI_SCRIPT_URL: z.string(),
+  /** Taux d’inflation annuels (%) — secours si APIs indisponibles (aligné legacy INSEE 2010–2025, mises à jour manuelles). */
+  INFLATION_FALLBACK_SERIES: z.record(z.coerce.number(), z.number()),
+  INFLATION_FALLBACK_PERIOD: z.string(),
+  /** Nombre d’années pour la moyenne d’inflation (fenêtre glissante récente) et `lastTimePeriod` Eurostat. */
+  INFLATION_AVG_WINDOW_YEARS: z.number().int().positive(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -204,6 +215,40 @@ if (!smhForYear || !baremeForYear) {
   throw new Error(`[CONFIG] Données annuelles incomplètes pour ${CURRENT_DATA_YEAR}.`);
 }
 
+/** Seuil (années) : expérience pro &lt; seuil → barème débutants F11/F12 (paramètre catalogue / aligné CCNM). */
+const BAREME_DEBUTANTS_SEUIL_EXP_PRO = 6;
+
+/** Référence unique pour les infobulles des 6 critères de classification. */
+const CCNM_SOURCE_ANNEXE_CLASSIFICATION_6_CRITERES =
+  'CCNM — annexe de classification (grille à 6 critères)';
+
+/**
+ * IPC France — taux annuels (%) intégrés en secours (legacy `app.js` — source INSEE / projections indicatives).
+ * Ne pas utiliser comme vérité juridique : paramètre de simulation uniquement.
+ */
+const INFLATION_FALLBACK_SERIES: Record<number, number> = {
+  2025: 1.8,
+  2024: 2.0,
+  2023: 4.9,
+  2022: 5.2,
+  2021: 1.6,
+  2020: 0.5,
+  2019: 1.1,
+  2018: 1.8,
+  2017: 1.0,
+  2016: 0.2,
+  2015: 0.0,
+  2014: 0.5,
+  2013: 0.9,
+  2012: 2.0,
+  2011: 2.1,
+  2010: 1.5,
+};
+
+const INFLATION_FALLBACK_PERIOD = '2010-2025';
+
+const INFLATION_AVG_WINDOW_YEARS = 20;
+
 export const CONFIG: Config = ConfigSchema.parse({
   CURRENT_DATA_YEAR,
   SMH: smhForYear,
@@ -238,6 +283,7 @@ export const CONFIG: Config = ConfigSchema.parse({
   },
   BAREME_DEBUTANTS: baremeForYear,
   BAREME_DEBUTANTS_BY_YEAR,
+  BAREME_DEBUTANTS_SEUIL_EXP_PRO,
   INDEMNITE_REPAS_NUIT_ACOSS_BY_YEAR,
   CCNM_CONTREPARTIES_ORGANISATION: {
     astreinteDisponibiliteSMHParPeriode: { surReposQuotidienDansAstreinte: 1, surJourRepos: 2 },
@@ -262,8 +308,10 @@ export const CONFIG: Config = ConfigSchema.parse({
     9: 3.3,
     10: 3.8,
   },
-  POINT_TERRITORIAL_DEFAUT: 5.9,
-  TERRITOIRE: 'Bas-Rhin (67)',
+  POINT_TERRITORIAL: {
+    valeurDefaut: 5.9,
+    territoire: 'Bas-Rhin (67)',
+  },
   MAPPING_POINTS: [
     [6, 8, 'A', 1],
     [9, 11, 'A', 2],
@@ -306,7 +354,7 @@ export const CONFIG: Config = ConfigSchema.parse({
       accordEntreprise: "Accord d'entreprise",
       accordCollectif: 'Accord collectif / usage',
     },
-    templates: { legalBlock: '<strong>{title} :</strong><br>{description}' },
+    templates: { legalBlock: '<strong>{title}\u00A0:</strong><br>{description}' },
     conditions: {
       nuitRateTemplate: '+{pct}%.',
       dimancheRateTemplate: '+{pct}%.',
@@ -349,6 +397,7 @@ export const CONFIG: Config = ConfigSchema.parse({
       id: 'complexite',
       nom: 'Complexité',
       description: 'Technicité et diversité des tâches à accomplir',
+      sourceArticle: CCNM_SOURCE_ANNEXE_CLASSIFICATION_6_CRITERES,
       labels: {
         1: 'Tâches simples et répétitives',
         2: 'Tâches simples et variées',
@@ -378,6 +427,7 @@ export const CONFIG: Config = ConfigSchema.parse({
       id: 'connaissances',
       nom: 'Connaissances',
       description: 'Savoirs requis pour le poste (diplôme, expérience équivalente)',
+      sourceArticle: CCNM_SOURCE_ANNEXE_CLASSIFICATION_6_CRITERES,
       labels: {
         1: 'Connaissances de base',
         2: "Compréhension d'un environnement",
@@ -407,6 +457,7 @@ export const CONFIG: Config = ConfigSchema.parse({
       id: 'autonomie',
       nom: 'Autonomie',
       description: 'Latitude décisionnelle et niveau de contrôle',
+      sourceArticle: CCNM_SOURCE_ANNEXE_CLASSIFICATION_6_CRITERES,
       labels: {
         1: 'Consignes précises, contrôle permanent',
         2: 'Consignes générales, contrôle fréquent',
@@ -436,6 +487,7 @@ export const CONFIG: Config = ConfigSchema.parse({
       id: 'contribution',
       nom: 'Contribution',
       description: "Impact du poste sur l'organisation et les résultats",
+      sourceArticle: CCNM_SOURCE_ANNEXE_CLASSIFICATION_6_CRITERES,
       labels: {
         1: 'Impact sur son poste',
         2: "Impact sur l'équipe proche",
@@ -465,6 +517,7 @@ export const CONFIG: Config = ConfigSchema.parse({
       id: 'encadrement',
       nom: 'Encadrement / Coopération',
       description: 'Dimension managériale ou appui technique aux autres',
+      sourceArticle: CCNM_SOURCE_ANNEXE_CLASSIFICATION_6_CRITERES,
       labels: {
         1: 'Aucun encadrement',
         2: 'Transmission ponctuelle',
@@ -494,6 +547,7 @@ export const CONFIG: Config = ConfigSchema.parse({
       id: 'communication',
       nom: 'Communication',
       description: 'Nature et complexité des échanges professionnels',
+      sourceArticle: CCNM_SOURCE_ANNEXE_CLASSIFICATION_6_CRITERES,
       labels: {
         1: 'Échanges simples',
         2: 'Échanges techniques élargis',
@@ -522,4 +576,7 @@ export const CONFIG: Config = ConfigSchema.parse({
   ],
   UMAMI_WEBSITE_ID: '9859e5b8-305a-4b6d-a36e-a320c44e5c6e',
   UMAMI_SCRIPT_URL: 'https://cloud.umami.is/script.js',
+  INFLATION_FALLBACK_SERIES,
+  INFLATION_FALLBACK_PERIOD,
+  INFLATION_AVG_WINDOW_YEARS,
 });

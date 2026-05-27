@@ -1,45 +1,99 @@
-# Workflow pour déployer l'application sur GitHub Pages
+# GitHub Pages — legacy (main, racine) + Vue 3 (experiment/vue-migration-3 uniquement, sous /v2/).
+# Les déploiements fusionnent avec le site déjà publié pour ne pas écraser l'autre version.
 name: Deploy to GitHub Pages
 
 on:
-  # Se déclenche sur les push vers la branche main
   push:
-    branches: ["main"]
-  
-  # Permet de lancer le workflow manuellement depuis l'onglet Actions
+    branches:
+      - main
+      - experiment/vue-migration-3
   workflow_dispatch:
+    inputs:
+      target:
+        description: 'Cible à publier (auto = selon la branche)'
+        type: choice
+        options:
+          - auto
+          - legacy
+          - vue-v2
+        default: auto
 
-# Définit les permissions du GITHUB_TOKEN pour permettre le déploiement sur GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Permet un seul déploiement concurrent
 concurrency:
-  group: "pages"
+  group: pages
   cancel-in-progress: false
 
+env:
+  PAGES_ROOT: /Classification_simulateur_2/
+  VITE_BASE_V2: /Classification_simulateur_2/v2/
+
 jobs:
-  # Job de déploiement
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - uses: actions/checkout@v4
+
+      - name: Récupérer le site déjà publié (gh-pages)
         uses: actions/checkout@v4
-      
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-      
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        continue-on-error: true
         with:
-          # Upload du répertoire racine (tous les fichiers statiques)
-          path: '.'
-      
-      - name: Deploy to GitHub Pages
-        id: deployment
+          ref: gh-pages
+          path: _gh_pages
+
+      - name: Déterminer la cible
+        id: target
+        run: |
+          INPUT="${{ github.event.inputs.target || 'auto' }}"
+          if [ "$INPUT" = "legacy" ]; then
+            echo "mode=legacy" >> "$GITHUB_OUTPUT"
+          elif [ "$INPUT" = "vue-v2" ]; then
+            echo "mode=vue" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "mode=legacy" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.ref }}" = "refs/heads/experiment/vue-migration-3" ]; then
+            echo "mode=vue" >> "$GITHUB_OUTPUT"
+          else
+            echo "Branche non prise en charge pour le déploiement : ${{ github.ref }}" >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.target.outputs.mode == 'vue'
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install & build Vue (v2)
+        if: steps.target.outputs.mode == 'vue'
+        env:
+          VITE_BASE: ${{ env.VITE_BASE_V2 }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Assembler le site Pages
+        run: |
+          chmod +x scripts/prepare-github-pages.sh
+          ./scripts/prepare-github-pages.sh "${{ steps.target.outputs.mode }}"
+
+      - uses: actions/configure-pages@v4
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: URL de prévisualisation
+        run: |
+          echo "Site : ${{ steps.deployment.outputs.page_url }}"
+          echo "Legacy (racine) : ${{ steps.deployment.outputs.page_url }}"
+          echo "Vue v2 : ${{ steps.deployment.outputs.page_url }}v2/"

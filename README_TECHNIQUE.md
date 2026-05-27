@@ -1,8 +1,26 @@
 # README Technique - Simulateur Métallurgie
 
+> **Branche migration Vue 3 / TypeScript** : le code actif est sous `src/` (domain, features, stores, composables). L’oracle JS historique est dans `legacy-archive/`. Voir **`docs/PARITE_MATRIX.md`**, **`docs/MIGRATION_COMPLETE.md`**, **`docs/DEPLOIEMENT_PAGES.md`** (Vue publiée sous `/v2/`).
+
+## Application Vue 3 (résumé)
+
+| Domaine              | Emplacement                                                             |
+| -------------------- | ----------------------------------------------------------------------- |
+| Wizard UI            | `src/features/wizard/`, `SimulatorLayout.vue`                           |
+| Moteur               | `src/domain/` (rémunération, classification, arriérés, accords)         |
+| État                 | `src/stores/*.ts` + `useWizardRemunerationInput`                        |
+| PDF arriérés + Word  | `src/composables/usePdfGeneration.ts`, `src/domain/pdf/jsPdfHelpers.ts` |
+| Post-export syndicat | `src/features/pdf/PostPdfFlow.vue`, `CelebrationOverlay.vue`            |
+| Tests                | `tests/**`, `src/domain/**/__tests__`, `e2e/**`                         |
+
+**PDF annexe** : jspdf-autotable **v5** — appeler `autoTable(doc, options)` via `importPdfAutoTable()` / `drawPdfAutoTable()` ; un simple `import 'jspdf-autotable'` ne branche plus `doc.autoTable` en ESM.
+
+---
+
 ## Conformité Juridique
 
 **Sources Juridiques de Référence :**
+
 - **CCNM (IDCC 3248) :** base 2024 + grilles annuelles intégrées jusqu'en 2026 (SMH/Baremes par année pour arriérés)
 - **Code du Travail :** Art. L2254-2 (Principe de faveur)
 - **Accords d'entreprise :** Définis dans le dossier `accords/` (ex. KuhnAgreement.js), chargés à l'exécution

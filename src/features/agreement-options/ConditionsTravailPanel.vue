@@ -3,17 +3,34 @@ import { computed } from 'vue';
 import { useSituationStore } from '../../stores/situation';
 import { useWizardStore } from '../../stores/wizard';
 import { isCadre } from '../../domain/classification/engine';
-import { AppTooltip } from '../../components/ui';
+import { CONFIG } from '../../domain/config';
+import { AppTooltip, NumericInput } from '../../components/ui';
+import { buildWizardTooltipHtml, type WizardTooltipKey } from '../../domain/ui/wizardTooltips';
+import { wizardToastTauxActivitePlage } from '../../domain/ui/wizardToasts';
+import { dispatchAppToast } from '../../utils/appToast';
+import HourlyPrimesList from './HourlyPrimesList.vue';
+import AutresPrimesNationalesList from './AutresPrimesNationalesList.vue';
 
 const situation = useSituationStore();
 const wizard = useWizardStore();
 
 const isCadreStatus = computed(() => isCadre(wizard.classe));
 const showForfaitJours = computed(() => isCadreStatus.value && situation.forfait === 'jours');
+
+function tt(key: WizardTooltipKey) {
+  return buildWizardTooltipHtml(key);
+}
+
+function onTauxActiviteBlocked() {
+  dispatchAppToast(
+    wizardToastTauxActivitePlage(CONFIG.TAUX_ACTIVITE_MIN, CONFIG.TAUX_ACTIVITE_MAX),
+    'info',
+  );
+}
 </script>
 
 <template>
-  <details class="conditions-details">
+  <details id="conditions-travail" class="conditions-details">
     <summary>Conditions de travail</summary>
     <div class="conditions-content">
       <!-- Part-time -->
@@ -24,12 +41,14 @@ const showForfaitJours = computed(() => isCadreStatus.value && situation.forfait
         </label>
         <div v-if="situation.tempsPartiel" class="sub-field sub-field-inline">
           <div class="input-with-unit">
-            <input
-              v-model.number="situation.tauxActivite"
-              type="text"
-              class="book-input"
-              inputmode="decimal"
+            <NumericInput
+              v-model="situation.tauxActivite"
+              mode="decimal"
+              :min="CONFIG.TAUX_ACTIVITE_MIN"
+              :max="CONFIG.TAUX_ACTIVITE_MAX"
               aria-label="Taux d'activité"
+              @blocked-by-min="onTauxActiviteBlocked"
+              @blocked-by-max="onTauxActiviteBlocked"
             />
             <span class="input-unit">%</span>
           </div>
@@ -41,15 +60,14 @@ const showForfaitJours = computed(() => isCadreStatus.value && situation.forfait
         <label class="checkbox-label">
           <input v-model="situation.travailNuit" type="checkbox" class="book-checkbox" />
           <span>Travail de nuit</span>
-          <AppTooltip content="Majoration pour heures effectuées entre 21h et 6h (CCN Art. 145)." />
+          <AppTooltip :content="tt('travailNuit')" variant="result" position="top" />
         </label>
         <div v-if="situation.travailNuit" class="sub-field sub-field-inline">
           <div class="input-with-unit">
-            <input
-              v-model.number="situation.heuresNuit"
-              type="text"
-              class="book-input"
-              inputmode="decimal"
+            <NumericInput
+              v-model="situation.heuresNuit"
+              mode="decimal"
+              :min="0"
               aria-label="Heures de nuit par mois"
             />
             <span class="input-unit">heures/mois</span>
@@ -62,15 +80,14 @@ const showForfaitJours = computed(() => isCadreStatus.value && situation.forfait
         <label class="checkbox-label">
           <input v-model="situation.travailDimanche" type="checkbox" class="book-checkbox" />
           <span>Travail le dimanche</span>
-          <AppTooltip content="Majoration dimanche (CCN Art. 146)." />
+          <AppTooltip :content="tt('travailDimanche')" variant="result" position="top" />
         </label>
         <div v-if="situation.travailDimanche" class="sub-field sub-field-inline">
           <div class="input-with-unit">
-            <input
-              v-model.number="situation.heuresDimanche"
-              type="text"
-              class="book-input"
-              inputmode="decimal"
+            <NumericInput
+              v-model="situation.heuresDimanche"
+              mode="decimal"
+              :min="0"
               aria-label="Heures dimanche par mois"
             />
             <span class="input-unit">heures/mois</span>
@@ -83,17 +100,14 @@ const showForfaitJours = computed(() => isCadreStatus.value && situation.forfait
         <label class="checkbox-label">
           <input v-model="situation.travailHeuresSup" type="checkbox" class="book-checkbox" />
           <span>Heures supplémentaires</span>
-          <AppTooltip
-            content="CCN : +25% de la 36e à la 43e heure, +50% à partir de la 44e heure."
-          />
+          <AppTooltip :content="tt('heuresSup')" variant="result" position="top" />
         </label>
         <div v-if="situation.travailHeuresSup" class="sub-field sub-field-inline">
           <div class="input-with-unit">
-            <input
-              v-model.number="situation.heuresSup"
-              type="text"
-              class="book-input"
-              inputmode="decimal"
+            <NumericInput
+              v-model="situation.heuresSup"
+              mode="decimal"
+              :min="0"
               aria-label="Heures supplémentaires par mois"
             />
             <span class="input-unit">heures/mois</span>
@@ -106,23 +120,24 @@ const showForfaitJours = computed(() => isCadreStatus.value && situation.forfait
         <label class="checkbox-label">
           <input v-model="situation.travailJoursSupForfait" type="checkbox" class="book-checkbox" />
           <span>Jours supplémentaires (rachat)</span>
-          <AppTooltip
-            content="Code du travail (L3121-59) : majoration ≥ 10% pour rachat de jours de repos."
-          />
+          <AppTooltip :content="tt('joursSupForfait')" variant="result" position="top" />
         </label>
         <div v-if="situation.travailJoursSupForfait" class="sub-field sub-field-inline">
           <div class="input-with-unit">
-            <input
-              v-model.number="situation.joursSupForfait"
-              type="text"
-              class="book-input"
-              inputmode="decimal"
+            <NumericInput
+              v-model="situation.joursSupForfait"
+              mode="decimal"
+              :min="0"
               aria-label="Jours supplémentaires rachetés par an"
             />
             <span class="input-unit">jours/an</span>
           </div>
         </div>
       </div>
+
+      <HourlyPrimesList />
+
+      <AutresPrimesNationalesList />
     </div>
   </details>
 </template>

@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import WizardProgress from './WizardProgress.vue';
+import SimulatorHeader from './SimulatorHeader.vue';
+import SimulatorFooter from './SimulatorFooter.vue';
 </script>
 
 <template>
-  <header class="simulator-header">
-    <h1>Simulateur Métallurgie</h1>
-    <p class="subtitle">Classification et Rémunération</p>
-  </header>
+  <SimulatorHeader />
 
   <WizardProgress />
 
@@ -14,9 +13,5 @@ import WizardProgress from './WizardProgress.vue';
     <slot />
   </main>
 
-  <footer class="simulator-footer">
-    <div class="footer-line">
-      <span class="footer-item">Simulateur de classification et rémunération — Métallurgie</span>
-    </div>
-  </footer>
+  <SimulatorFooter />
 </template>

@@ -34,6 +34,33 @@ describe('resolveRef', () => {
     ).toBe(8);
   });
 
+  it('résout heuresSupTranche (tranche 25 plafonnée au seuil, 50 = reliquat)', () => {
+    const seuil = 10;
+    const ctx = makeCtx({ state: { heuresSup: 25 } });
+    expect(
+      resolveRef(
+        {
+          ref: 'heuresSupTranche',
+          stateKeyHeures: 'heuresSup',
+          seuilMensuel: seuil,
+          tranche: '25',
+        },
+        ctx,
+      ),
+    ).toBe(10);
+    expect(
+      resolveRef(
+        {
+          ref: 'heuresSupTranche',
+          stateKeyHeures: 'heuresSup',
+          seuilMensuel: seuil,
+          tranche: '50',
+        },
+        ctx,
+      ),
+    ).toBe(15);
+  });
+
   it('resolves bareme ref with exact key', () => {
     const table = { 1: 1.45, 2: 1.6, 3: 1.75 };
     expect(resolveRef({ ref: 'bareme', table, lookupKey: 'classe' }, makeCtx({ classe: 2 }))).toBe(
@@ -45,6 +72,52 @@ describe('resolveRef', () => {
     const table = { 2: 0.02, 5: 0.05, 10: 0.1 };
     const ctx = makeCtx({ state: { anciennete: 7 } });
     expect(resolveRef({ ref: 'bareme', table, lookupKey: 'anciennete' }, ctx)).toBe(0.05);
+  });
+
+  it('résout bareme ancienneteAccordPrime avec plafond accord (clé = min(ancienneté, plafond))', () => {
+    const table = { 2: 0.02, 10: 0.1, 25: 0.16 };
+    const ctx = makeCtx({
+      state: { anciennete: 30 },
+      agreement: { anciennete: { plafond: 25 } },
+    });
+    expect(resolveRef({ ref: 'bareme', table, lookupKey: 'ancienneteAccordPrime' }, ctx)).toBe(
+      0.16,
+    );
+  });
+
+  it('résout accordInputOrState (accordInputs prioritaire)', () => {
+    const ctx = makeCtx({
+      state: {
+        accordInputs: { heuresEquipe: 20 },
+        heuresEquipe: 99,
+      },
+    });
+    expect(resolveRef({ ref: 'accordInputOrState', key: 'heuresEquipe' }, ctx)).toBe(20);
+  });
+
+  it('postesXdureeXtaux avec prorataActivite applique activityRate', () => {
+    const def: ElementDef = {
+      id: 'pe',
+      semanticId: SEMANTIC_ID.PRIME_EQUIPE,
+      kind: 'prime',
+      source: 'convention',
+      valueKind: 'horaire',
+      label: 'PE',
+      stateKeyActif: 'travailEquipe',
+      activation: { type: 'always' },
+      computeMode: {
+        mode: 'postesXdureeXtaux',
+        postes: { ref: 'constant', value: 22 },
+        dureeMinutes: { ref: 'constant', value: 30 },
+        taux: { ref: 'constant', value: 10 },
+        period: 'annual',
+        prorataActivite: true,
+      },
+    };
+    const ctx = makeCtx({ activityRate: 0.5, state: {} });
+    const r = computeElement(def, ctx);
+    // 11 postes × 0,5 h × 10 €/h × 12 mois
+    expect(r.amount).toBe(660);
   });
 
   it('returns 0 for NaN values', () => {
@@ -107,6 +180,46 @@ describe('computeElement', () => {
     const result = computeElement(def, makeCtx());
     expect(result.amount).toBe(0);
     expect(Number.isFinite(result.amount)).toBe(true);
+  });
+
+  it('unitesXmontant forfaitAnnuel : roundToEuro(unites × montant) sans ×12', () => {
+    const def: ElementDef = {
+      id: 'inv',
+      semanticId: SEMANTIC_ID.PRIME_INVENTION_BREVETABLE,
+      kind: 'prime',
+      source: 'convention',
+      valueKind: 'montant',
+      label: 'Inv',
+      computeMode: {
+        mode: 'unitesXmontant',
+        unites: { ref: 'constant', value: 3 },
+        montant: { ref: 'constant', value: 100 },
+        period: 'annual',
+        forfaitAnnuel: true,
+      },
+      activation: { type: 'always' },
+    };
+    expect(computeElement(def, makeCtx()).amount).toBe(300);
+  });
+
+  it('periodesIndemniteSmh : periodes × arrondi(coeff × tauxHoraireBase), puis ×12', () => {
+    const def: ElementDef = {
+      id: 'ast',
+      semanticId: SEMANTIC_ID.PRIME_ASTREINTE_PERIODE_REPOS_QUOTIDIEN,
+      kind: 'prime',
+      source: 'convention',
+      valueKind: 'horaire',
+      label: 'Ast',
+      computeMode: {
+        mode: 'periodesIndemniteSmh',
+        periodes: { ref: 'constant', value: 2 },
+        coefficientSmhParPeriode: 1,
+        period: 'annual',
+      },
+      activation: { type: 'always' },
+    };
+    // tauxHoraireBase=14 → euro/période=14 → mensuel 28 → annuel 336
+    expect(computeElement(def, makeCtx()).amount).toBe(336);
   });
 });
 
@@ -194,6 +307,96 @@ describe('resolveBySubstitution', () => {
     expect(results).toHaveLength(2);
     const total = results.reduce((s, r) => s + r.result.amount, 0);
     expect(total).toBe(700);
+  });
+
+  it('résout ifSuperiorToConvention quand le montant accord dépasse la convention (favorPrinciple)', () => {
+    const convPrime: ElementDef = {
+      id: 'primeAnciennete',
+      semanticId: SEMANTIC_ID.PRIME_ANCIENNETE,
+      kind: 'prime',
+      source: 'convention',
+      valueKind: 'pourcentage',
+      label: 'Prime ancienneté CCN',
+      computeMode: {
+        mode: 'montantFixe',
+        montant: { ref: 'constant', value: 400 },
+        period: 'annual',
+      },
+      activation: { type: 'always' },
+      inclusDansSMH: false,
+    };
+    const accPrime: ElementDef = {
+      ...convPrime,
+      id: 'primeAncienneteAccord',
+      source: 'accord',
+      label: 'Prime ancienneté accord',
+      computeMode: {
+        mode: 'montantFixe',
+        montant: { ref: 'constant', value: 700 },
+        period: 'annual',
+      },
+      inclusDansSMH: 'ifSuperiorToConvention',
+      substitution: { semanticId: SEMANTIC_ID.PRIME_ANCIENNETE, strategy: 'favorPrinciple' },
+    };
+    const results = resolveBySubstitution([convPrime], [accPrime], makeCtx());
+    expect(results).toHaveLength(1);
+    expect(results[0]!.origin).toBe('accord');
+    expect(results[0]!.result.inclusDansSMH).toBe(true);
+  });
+
+  it('résout ifSuperiorToConvention à false si accord non strictement supérieur (conditionalFavor)', () => {
+    const convPrime: ElementDef = {
+      id: 'primeAnciennete',
+      semanticId: SEMANTIC_ID.PRIME_ANCIENNETE,
+      kind: 'prime',
+      source: 'convention',
+      valueKind: 'pourcentage',
+      label: 'Prime ancienneté CCN',
+      computeMode: {
+        mode: 'montantFixe',
+        montant: { ref: 'constant', value: 500 },
+        period: 'annual',
+      },
+      activation: { type: 'always' },
+      inclusDansSMH: false,
+    };
+    const accPrime: ElementDef = {
+      ...convPrime,
+      id: 'primeAncienneteAccord',
+      source: 'accord',
+      computeMode: {
+        mode: 'montantFixe',
+        montant: { ref: 'constant', value: 500 },
+        period: 'annual',
+      },
+      inclusDansSMH: 'ifSuperiorToConvention',
+      substitution: { semanticId: SEMANTIC_ID.PRIME_ANCIENNETE, strategy: 'conditionalFavor' },
+    };
+    const results = resolveBySubstitution([convPrime], [accPrime], makeCtx());
+    expect(results).toHaveLength(1);
+    expect(results[0]!.origin).toBe('accord');
+    expect(results[0]!.result.inclusDansSMH).toBe(false);
+  });
+
+  it('accord seul : ifSuperiorToConvention devient inclus si montant > 0 (référence conventionnelle 0)', () => {
+    const accPrime: ElementDef = {
+      id: 'primeAnciennete',
+      semanticId: SEMANTIC_ID.PRIME_ANCIENNETE,
+      kind: 'prime',
+      source: 'accord',
+      valueKind: 'pourcentage',
+      label: 'Prime ancienneté accord',
+      computeMode: {
+        mode: 'montantFixe',
+        montant: { ref: 'constant', value: 800 },
+        period: 'annual',
+      },
+      activation: { type: 'always' },
+      inclusDansSMH: 'ifSuperiorToConvention',
+    };
+    const results = resolveBySubstitution([], [accPrime], makeCtx());
+    expect(results).toHaveLength(1);
+    expect(results[0]!.result.inclusDansSMH).toBe(true);
   });
 });
 

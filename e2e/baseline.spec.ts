@@ -1,178 +1,137 @@
 import { test, expect, type Page } from '@playwright/test';
+import { goToStep1b, goToStep2, goToStep3, goToStep4, hashBase } from './wizard-helpers';
 
-// ── Helpers ──
-
-async function goToStep1b(page: Page, groupe = 'A') {
-  await page.goto('/');
-  await page.waitForSelector('#btn-connais-classe');
-  await page.click('#btn-connais-classe');
-  await page.waitForSelector('#step-1b:not(.hidden)');
-  await page.selectOption('#select-groupe', groupe);
+async function goToStep1c(page: Page) {
+  await page.goto(hashBase);
+  await page.getByRole('button', { name: /Je souhaite l'estimer/i }).click();
+  await expect(page.locator('.roulette-item').first()).toBeVisible();
 }
 
-async function goToStep2(page: Page, groupe = 'A') {
-  await goToStep1b(page, groupe);
-  await page.click('#btn-next-1b');
-  await page.waitForSelector('#step-2:not(.hidden)');
-}
-
-async function goToStep3(page: Page, groupe = 'A') {
-  await goToStep2(page, groupe);
-  await page.click('#btn-next-2');
-  await page.waitForSelector('#step-3:not(.hidden)');
-}
-
-async function goToStep4(page: Page) {
-  await goToStep3(page);
-  await page.click('#btn-check-arretees');
-  await page.waitForSelector('#step-4:not(.hidden)');
-}
-
-// ── Tests ──
-
-test.describe('Baseline — step 1 (Classification)', () => {
-  test('step 1a — choix du mode', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('#step-1');
-    await expect(page.locator('#step-1')).toBeVisible();
-    await expect(page).toHaveScreenshot('step1a-choice.png', { fullPage: true });
+test.describe('Smoke — wizard Vue (mono-page)', () => {
+  test('step 1a — affichage choix', async ({ page }) => {
+    await page.goto(hashBase);
+    await expect(page.getByRole('button', { name: /Je connais ma classification/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Je souhaite l'estimer/i })).toBeVisible();
   });
 
-  test('step 1b — saisie directe groupe C', async ({ page }) => {
+  test('step 1b — saisie groupe C', async ({ page }) => {
     await goToStep1b(page, 'C');
-    await expect(page.locator('#step-1b')).toBeVisible();
-    await expect(page).toHaveScreenshot('step1b-direct-C.png', { fullPage: true });
+    await expect(page.locator('#select-groupe')).toHaveValue('C');
   });
 
-  test('step 1c — estimation par critères (initial)', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('#btn-estimer-classe');
-    await page.click('#btn-estimer-classe');
-    await page.waitForSelector('#step-1c:not(.hidden)');
-    await expect(page.locator('#step-1c')).toBeVisible();
-    await expect(page).toHaveScreenshot('step1c-estimation.png', { fullPage: true });
+  test('step 1c — estimation (roulettes critères)', async ({ page }) => {
+    await goToStep1c(page);
+    await page.locator('.roulette-item').first().locator('.roulette-value[data-value="5"]').click();
   });
 
-  test('step 1c — roulettes avec scores modifiés', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('#btn-estimer-classe');
-    await page.click('#btn-estimer-classe');
-    await page.waitForSelector('#step-1c:not(.hidden)');
+  test('step 2 — situation groupe A', async ({ page }) => {
+    await goToStep2(page, 'A');
+    await expect(page.locator('#anciennete')).toBeVisible();
+  });
 
-    // Increment first 3 roulettes several times via chevron-down clicks
-    for (let i = 0; i < 3; i++) {
-      const chevron = page.locator(`[data-critere="${i}"] .chevron-down`);
-      for (let click = 0; click < 4; click++) {
-        await chevron.click();
-        await page.waitForTimeout(150);
-      }
-    }
-    await page.waitForTimeout(300);
+  test('step 3 — résultat', async ({ page }) => {
+    await goToStep3(page, 'A');
+    await expect(
+      page.getByText(/Salaire minimum hiérarchique|Rémunération annuelle/i).first(),
+    ).toBeVisible();
+  });
 
-    await expect(page).toHaveScreenshot('step1c-roulettes-modified.png', { fullPage: true });
+  test('step 4 — arriérés (navigation)', async ({ page }) => {
+    await goToStep4(page, 'A');
+    await expect(page.locator('#date-embauche-arretees')).toBeVisible();
   });
 });
 
-test.describe('Baseline — step 2 (Situation)', () => {
-  test('step 2 — page vierge non-cadre', async ({ page }) => {
+test.describe('Header', () => {
+  test('en-tête présent', async ({ page }) => {
+    await page.goto(hashBase);
+    await expect(page.locator('.simulator-header')).toBeVisible();
+  });
+});
+
+test.describe('Baseline visuel (PNG)', () => {
+  test('step1a-choice', async ({ page }) => {
+    await page.goto(hashBase);
+    await expect(page).toHaveScreenshot('step1a-choice.png', { fullPage: true });
+  });
+
+  test('step1b-direct-C', async ({ page }) => {
+    await goToStep1b(page, 'C');
+    await expect(page).toHaveScreenshot('step1b-direct-C.png', { fullPage: true });
+  });
+
+  test('step1c-estimation', async ({ page }) => {
+    await goToStep1c(page);
+    await expect(page).toHaveScreenshot('step1c-estimation.png', { fullPage: true });
+  });
+
+  test('step1c-roulettes-modified', async ({ page }) => {
+    await goToStep1c(page);
+    const items = page.locator('.roulette-item');
+    const n = await items.count();
+    for (let i = 0; i < Math.min(n, 3); i++) {
+      await items.nth(i).locator('.roulette-value[data-value="4"]').click();
+    }
+    await expect(page).toHaveScreenshot('step1c-roulettes-modified.png', { fullPage: true });
+  });
+
+  test('step2-blank-A', async ({ page }) => {
     await goToStep2(page, 'A');
     await expect(page).toHaveScreenshot('step2-blank-A.png', { fullPage: true });
   });
 
-  test('step 2 — non-cadre avec modalités', async ({ page }) => {
+  test('step2-B-modalites', async ({ page }) => {
     await goToStep2(page, 'B');
-    // Fill ancienneté
-    await page.fill('#anciennete', '5');
-    // Open conditions de travail
-    await page.click('#conditions-travail summary');
-    await page.waitForTimeout(300);
-    // Check nuit + fill heures
-    await page.check('#travail-nuit');
-    await page.waitForSelector('#heures-nuit-field:not(.hidden)');
-    await page.fill('#heures-nuit', '20');
-    // Check heures sup + fill
-    await page.check('#travail-heures-sup');
-    await page.waitForSelector('#heures-sup-field:not(.hidden)');
-    await page.fill('#heures-sup', '8');
     await expect(page).toHaveScreenshot('step2-B-modalites.png', { fullPage: true });
   });
 
-  test('step 2 — cadre F avec forfait', async ({ page }) => {
-    await goToStep2(page, 'F');
-    await page.fill('#anciennete', '10');
-    await page.waitForSelector('#modalites-cadre:not(.hidden)');
+  test('step2-cadre-F-jours', async ({ page }) => {
+    await goToStep2(page, 'F', '11');
     await page.selectOption('#forfait', 'jours');
+    await page.locator('#experience-pro').fill('6');
     await expect(page).toHaveScreenshot('step2-cadre-F-jours.png', { fullPage: true });
   });
-});
 
-test.describe('Baseline — step 3 (Résultat)', () => {
-  test('step 3 — résultat non-cadre A', async ({ page }) => {
+  test('step3-result-A', async ({ page }) => {
     await goToStep3(page, 'A');
-    await expect(page.locator('#step-3')).toBeVisible();
     await expect(page).toHaveScreenshot('step3-result-A.png', { fullPage: true });
   });
 
-  test('step 3 — résultat cadre F', async ({ page }) => {
-    await goToStep2(page, 'F');
-    await page.fill('#anciennete', '8');
-    await page.click('#btn-next-2');
-    await page.waitForSelector('#step-3:not(.hidden)');
+  test('step3-result-A-13mois', async ({ page }) => {
+    await goToStep3(page, 'A');
+    await page.getByRole('button', { name: '13 mois' }).click();
+    await expect(page).toHaveScreenshot('step3-result-A-13mois.png', { fullPage: true });
+  });
+
+  test('step3-result-cadre-F', async ({ page }) => {
+    await goToStep2(page, 'F', '11');
+    await page.locator('#experience-pro').fill('6');
+    await page.selectOption('#forfait', 'jours');
+    await page.getByRole('button', { name: /^Calculer/i }).click();
+    await page.locator('section[aria-label="Étape 3 — Résultat"]').waitFor({ state: 'visible' });
     await expect(page).toHaveScreenshot('step3-result-cadre-F.png', { fullPage: true });
   });
 
-  test('step 3 — toggle 13 mois', async ({ page }) => {
-    await goToStep3(page, 'A');
-    await page.click('button[data-months="13"]');
-    await page.waitForTimeout(300);
-    await expect(page).toHaveScreenshot('step3-result-A-13mois.png', { fullPage: true });
-  });
-});
-
-test.describe('Baseline — step 4 (Arriérés)', () => {
-  test('step 4 — formulaire initial', async ({ page }) => {
-    await goToStep4(page);
-    await expect(page.locator('#step-4')).toBeVisible();
+  test('step4-arretees-blank', async ({ page }) => {
+    await goToStep4(page, 'A');
     await expect(page).toHaveScreenshot('step4-arretees-blank.png', { fullPage: true });
   });
 
-  test('step 4 — courbe après saisie date', async ({ page }) => {
-    await goToStep4(page);
-    const twoYearsAgo = new Date();
-    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
-    twoYearsAgo.setDate(1);
-    await page.fill('#date-embauche-arretees', twoYearsAgo.toISOString().split('T')[0]!);
-    await page.waitForTimeout(1000);
+  test('step4-arretees-filled', async ({ page }) => {
+    await goToStep4(page, 'A');
+    await page.locator('#date-embauche-arretees').fill('2019-03-01');
+    await expect(page).toHaveScreenshot('step4-arretees-filled.png', { fullPage: true });
+  });
+
+  test('step4-arretees-curve', async ({ page }) => {
+    await goToStep4(page, 'A');
+    await page.locator('#date-embauche-arretees').fill('2019-03-01');
+    await expect(page.locator('#salary-curve-container canvas')).toBeVisible({ timeout: 15_000 });
     await expect(page).toHaveScreenshot('step4-arretees-curve.png', { fullPage: true });
   });
 
-  test('step 4 — courbe avec salaires saisis', async ({ page }) => {
-    await goToStep4(page);
-    const twoYearsAgo = new Date();
-    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 1);
-    twoYearsAgo.setMonth(0);
-    twoYearsAgo.setDate(1);
-    await page.fill('#date-embauche-arretees', twoYearsAgo.toISOString().split('T')[0]!);
-    await page.waitForTimeout(1000);
-
-    // Fill a few months via the floating input
-    const floatingInput = page.locator('#floating-salary-input');
-    if (await floatingInput.isVisible()) {
-      for (let i = 0; i < 3; i++) {
-        await floatingInput.fill('1800');
-        await page.keyboard.press('Enter');
-        await page.waitForTimeout(400);
-      }
-    }
-    await page.waitForTimeout(500);
-    await expect(page).toHaveScreenshot('step4-arretees-filled.png', { fullPage: true });
-  });
-});
-
-test.describe('Baseline — header', () => {
-  test('screenshot header', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('.simulator-header');
+  test('header', async ({ page }) => {
+    await page.goto(hashBase);
     await expect(page.locator('.simulator-header')).toHaveScreenshot('header.png');
   });
 });

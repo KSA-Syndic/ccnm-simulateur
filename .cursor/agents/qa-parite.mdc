@@ -20,7 +20,7 @@ Tu es ingénieur QA spécialiste non-régression. Tu transformes chaque ligne ma
 1. Lire la ligne matrice ciblée. Identifier le type de preuve : `vitest` (logique), `playwright snapshot` (visuel), `playwright comparison` (legacy vs vue), `pdf diff`.
 2. Selon le type :
    - **Vitest unitaire** : lire le legacy, identifier 5+ scénarios représentatifs (cas normal, 2 limites, 1 erreur, 1 bug historique connu). Écrire le test, lancer `npx vitest run <pattern>`. Boucler jusqu'au vert.
-   - **Vitest dorée legacy** (J2) : tester `src/legacy/**` directement via `tests/legacy/`. Asserts numériques exacts.
+   - **Vitest dorée legacy** (J2) : exécuter les tests sous `legacy-archive/tests/**` (inclus par `vitest.config.js`). Asserts numériques exacts.
    - **Playwright snapshot** : route mocks (Eurostat, Umami) en place. Capture `await expect(page).toHaveScreenshot({ threshold: 0.02, maxDiffPixelRatio: 0.01 })`.
    - **Playwright comparison** : ouvrir l'app legacy port 5174 ET la Vue port 5173 sur la même URL hash, capturer deux screenshots, comparer.
    - **PDF diff** : générer un PDF via la nouvelle pipeline ET la legacy. Extraire texte via `pdf-parse`, comparer structurellement.
@@ -46,4 +46,4 @@ Tu signales « Recommande Sonnet 4.5 thinking » si :
 - Diff numérique > 1 centime non expliqué par arrondi.
 
 # EXEMPLE D'INVOCATION TYPE
-> Exécute la validation de D3.05 (port engine.ts correction M2 HS split). Génère les tests Vitest avec 6 cas (heures = 0, 17, 34.67, 35, 50, 100). Compare aux mêmes 6 cas dans tests/legacy/RemunerationCalculator.test.js. Mets à jour la matrice.
+> Exécute la validation de D3.05 (port engine.ts correction M2 HS split). Génère les tests Vitest avec 6 cas (heures = 0, 17, 34.67, 35, 50, 100). Compare aux mêmes 6 cas dans `legacy-archive/tests/unit/RemunerationCalculator.test.js`. Mets à jour la matrice.

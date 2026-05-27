@@ -19,10 +19,12 @@ Cet outil vous permet de :
 ### Étape 1 : Classification 📊
 
 **Vous connaissez déjà votre classification ?**
+
 - Cliquez sur "Oui, je la connais"
 - Sélectionnez votre Groupe (A à I) et votre Classe (1 à 18)
 
 **Vous voulez l'estimer ?**
+
 - Cliquez sur "Non, je veux l'estimer"
 - Répondez aux 6 critères classants avec les carrousels
 - L'outil calcule automatiquement votre classification
@@ -30,6 +32,7 @@ Cet outil vous permet de :
 ### Étape 2 : Votre Situation 👤
 
 Renseignez vos informations :
+
 - **Ancienneté** dans l'entreprise (en années)
 - **Point Territorial** (valeur par défaut : 5,90 € pour le Bas-Rhin)
 - **Type de forfait** (si vous êtes cadre : 35h, heures ou jours)
@@ -38,6 +41,7 @@ Renseignez vos informations :
 ### Étape 3 : Résultat 💰
 
 Découvrez votre rémunération annuelle et mensuelle :
+
 - **Salaire Minimum Hiérarchique (SMH)** selon votre classification
 - **Détail du calcul** (primes, majorations, etc.)
 - **Comparaison avec/sans accord d'entreprise** (si disponible)
@@ -46,6 +50,7 @@ Découvrez votre rémunération annuelle et mensuelle :
 ### Étape 4 : Arriérés de Salaire 📅 (optionnel)
 
 Si votre salaire actuel est inférieur au SMH :
+
 - **Saisissez vos salaires** mois par mois sur la frise chronologique
 - **Calculez vos arriérés** automatiquement
 - **Générez un rapport PDF** professionnel pour vos démarches
@@ -60,6 +65,7 @@ L'outil supporte les **accords d'entreprise** qui peuvent améliorer votre rému
 - ✅ **Répartition sur 13 mois** au lieu de 12
 
 **Exemple : accord d'entreprise** (défini dans le dossier `accords/`, ex. Kuhn)
+
 - Ancienneté dès 2 ans (au lieu de 3 ans)
 - Plafond à 25 ans (au lieu de 15 ans)
 - Majoration nuit +20% (au lieu de +15%)
@@ -82,7 +88,11 @@ L'outil supporte les **accords d'entreprise** qui peuvent améliorer votre rému
 
 ### Pour les Développeurs et Syndicats
 
-- **[Documentation technique](README_TECHNIQUE.md)** : Architecture, modules, flux de données
+- **[Documentation technique](README_TECHNIQUE.md)** : Architecture legacy + point d’entrée Vue 3
+- **[Matrice de parité migration](docs/PARITE_MATRIX.md)** : Avancement JS → Vue, preuves tests
+- **[Déploiement GitHub Pages](docs/DEPLOIEMENT_PAGES.md)** : Legacy (`main`) + Vue (`/v2/` sur branche `experiment/vue-migration-3`)
+- **[Lancer l’oracle legacy](docs/LEGACY_RUN.md)** : `npm run legacy`, dual-run `npm run dual`
+- **[Guide des tests](tests/README.md)** : Vitest, Playwright, parité oracle
 - **[Guide technique pour ajouter un accord](docs/AJOUTER_ACCORD.md)** : Instructions détaillées pour développeurs
 - **[Intégrer un accord via texte complet + prompt IA](docs/INTEGRER_ACCORD_TEXTE_ET_IA.md)** : Fournir le texte de l'accord et un prompt pour générer le fichier JS avec un assistant IA
 - **[PRD (Product Requirements Document)](PRD.md)** : Spécifications complètes de l'application
@@ -90,24 +100,28 @@ L'outil supporte les **accords d'entreprise** qui peuvent améliorer votre rému
 ## 🔧 Installation (pour développeurs)
 
 ```bash
-# Cloner le repository
 git clone https://github.com/votre-repo/simulateur-metallurgie.git
-
-# Installer les dépendances
+cd simulateur-metallurgie
 npm install
 
-# Lancer les tests
-npm test
+# App Vue 3 (développement)
+npm run dev
 
-# Ouvrir dans un navigateur
-# Ouvrir index.html directement ou utiliser un serveur local
+# Oracle legacy (port 5174) + Vue (5173) pour parité
+npm run dual
+
+npm run test:run   # Vitest (domaine + oracle legacy)
+npm run e2e        # Playwright sur l’app Vue
 ```
+
+Démo publiée : voir **`docs/DEPLOIEMENT_PAGES.md`**.
 
 ## 📖 Fonctionnalités Détaillées
 
 ### Classification Automatique
 
 L'outil utilise les **6 critères classants** de la CCNM 2024 :
+
 1. **Complexité** : Difficulté et technicité du travail
 2. **Connaissances** : Savoirs requis (formation, expérience)
 3. **Autonomie** : Latitude d'action et niveau de contrôle
@@ -120,6 +134,7 @@ Chaque critère est noté de 1 à 10. Le total (6 à 60 points) détermine votre
 ### Calcul de Rémunération
 
 L'outil calcule automatiquement :
+
 - **SMH de base** selon votre classification
 - **Prime d'ancienneté** (CCN ou accord d'entreprise)
 - **Majorations** (nuit, dimanche, heures supplémentaires)
@@ -129,6 +144,7 @@ L'outil calcule automatiquement :
 ### Arriérés de Salaire
 
 Si vous êtes sous-payé, l'outil vous permet de :
+
 - **Saisir vos salaires** mois par mois sur une frise chronologique interactive
 - **Calculer précisément** les arriérés avec l'ancienneté progressive
 - **Respecter la prescription** (3 ans en arrière)
@@ -139,15 +155,17 @@ Si vous êtes sous-payé, l'outil vous permet de :
 L'outil peut être intégré dans n'importe quel site via **iframe** :
 
 ```html
-<iframe 
-    src="https://simulateur.cfdt-kuhn.fr?accord=kuhn&iframe=true&bgcolor=#ffffff" 
-    width="100%" 
-    height="800px"
-    frameborder="0">
+<iframe
+  src="https://simulateur.cfdt-kuhn.fr?accord=kuhn&iframe=true&bgcolor=#ffffff"
+  width="100%"
+  height="800px"
+  frameborder="0"
+>
 </iframe>
 ```
 
 **Paramètres URL disponibles :**
+
 - `?accord=<id>` : Sélectionner un accord d'entreprise (id défini dans le fichier d'accord, ex. kuhn)
 - `?bgcolor=#ffffff` : Couleur de fond autour du simulateur
 - `?iframe=true` : Mode iframe (détection automatique)
@@ -168,12 +186,14 @@ Vous avez un accord d'entreprise à ajouter ? C'est simple !
 
 **Option 1 : Via Email** 📧
 Envoyez un email à **ksa.syndic@gmail.com** avec :
+
 - Le nom de votre entreprise
 - Le nom de l'accord
 - Le fichier PDF ou lien vers le texte officiel
 - Les dates importantes (signature, entrée en vigueur)
 
 **Option 2 : Via GitHub** 💻
+
 1. Créez une Pull Request avec le fichier de l'accord
 2. Suivez le [guide technique](docs/AJOUTER_ACCORD.md)
 3. L'équipe validera et intégrera votre contribution
@@ -188,6 +208,7 @@ Voir le [guide simple](docs/AJOUTER_ACCORD_SIMPLE.md) pour plus de détails.
 ## 📝 Mise à Jour Annuelle
 
 L'outil est mis à jour chaque année avec :
+
 - ✅ Les nouveaux SMH de la CCNM
 - ✅ Les nouveaux accords d'entreprise
 - ✅ Les nouvelles valeurs du Point Territorial
@@ -203,6 +224,7 @@ L'outil est mis à jour chaque année avec :
 ## 📧 Contact
 
 Pour toute question ou contribution :
+
 - **Email** : ksa.syndic@gmail.com
 - **GitHub** : [Repository du projet](https://github.com/votre-repo)
 
@@ -210,4 +232,4 @@ Pour toute question ou contribution :
 
 **Réalisé par CFDT Kuhn** | [cfdt-kuhn.fr](https://cfdt-kuhn.fr)
 
-*Outil développé pour aider les salariés de la métallurgie à connaître leurs droits et à vérifier leur rémunération.*
+_Outil développé pour aider les salariés de la métallurgie à connaître leurs droits et à vérifier leur rémunération._

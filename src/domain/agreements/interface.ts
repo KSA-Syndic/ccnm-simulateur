@@ -1,5 +1,7 @@
-import { SEMANTIC_ID, type ElementDef } from '../types';
 import { z } from 'zod/v4';
+import { CONFIG } from '../config';
+import { SEMANTIC_ID, type ElementActivation, type ElementDef, type ComputeRef } from '../types';
+import { roundToCents } from '../utils/rounding';
 
 export const ConditionAncienneteSchema = z.object({
   type: z.enum(['aucune', 'annees_revolues', 'proratise']),
@@ -67,6 +69,11 @@ export const AgreementSchema = z.object({
         contingent: z.number().optional(),
       })
       .optional(),
+    forfaitJours: z
+      .object({
+        rachatJoursMajoration: z.number().optional(),
+      })
+      .optional(),
   }),
   primes: z.array(PrimeDefSchema),
   repartition13Mois: z.object({
@@ -117,6 +124,30 @@ export function getAccordInput(state: Record<string, unknown>, key: string): unk
   return inputs && key in inputs ? inputs[key] : state[key];
 }
 
+/** Aligné legacy `isAccordPrimeActive` + seuil `annees_revolues` pour `valueKind === 'montant'`. */
+function buildMontantAccordActivation(primeDef: PrimeDef): ElementActivation {
+  const cond = primeDef.conditionAnciennete;
+  const seuilAnc =
+    cond?.type === 'annees_revolues' && typeof cond.annees === 'number' ? cond.annees : null;
+
+  return {
+    type: 'custom',
+    check: (ctx) => {
+      if (primeDef.inclusDansSMH !== true) {
+        const key = primeDef.stateKeyActif;
+        const v = getAccordInput(ctx.state, key) ?? ctx.state[key];
+        if (!(v === true || v === 'true')) return false;
+      }
+      if (seuilAnc != null) {
+        const anc = Number(ctx.state['anciennete']);
+        const a = Number.isFinite(anc) ? anc : 0;
+        return a >= seuilAnc;
+      }
+      return true;
+    },
+  };
+}
+
 function normalizePrimeKey(value: unknown): string {
   return String(value ?? '')
     .normalize('NFD')
@@ -143,18 +174,142 @@ export function resolvePrimeSemanticId(primeDef: PrimeDef): string {
   return primeDef.id || '';
 }
 
+const MOIS_VERSEMENT_LABELS = [
+  'janvier',
+  'février',
+  'mars',
+  'avril',
+  'mai',
+  'juin',
+  'juillet',
+  'août',
+  'septembre',
+  'octobre',
+  'novembre',
+  'décembre',
+] as const;
+
+function accordPrimeDisplayLabel(primeDef: PrimeDef): string {
+  const m = primeDef.moisVersement;
+  if (m != null && m >= 1 && m <= 12) {
+    return `${primeDef.label} (${MOIS_VERSEMENT_LABELS[m - 1]})`;
+  }
+  return primeDef.label;
+}
+
 export function primeDefToElementDef(primeDef: PrimeDef, agreement: Agreement): ElementDef {
   const semanticId = resolvePrimeSemanticId(primeDef);
-  return {
+  const defaultHeuresLeg = Number(
+    primeDef.defaultHeures ?? CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67,
+  );
+
+  const base: Omit<ElementDef, 'computeMode'> = {
     id: primeDef.id,
     semanticId,
     kind: 'prime',
     source: 'accord',
     valueKind: primeDef.valueType,
-    label: primeDef.label,
-    computeMode: { mode: 'custom', compute: () => 0 },
+    label: accordPrimeDisplayLabel(primeDef),
+    stateKeyActif: primeDef.stateKeyActif,
+    ...(primeDef.stateKeyHeures !== undefined ? { stateKeyHeures: primeDef.stateKeyHeures } : {}),
+    ...(primeDef.inclusDansSMH !== undefined ? { inclusDansSMH: primeDef.inclusDansSMH } : {}),
+    ...(primeDef.tooltip !== undefined && primeDef.tooltip !== ''
+      ? { tooltip: primeDef.tooltip }
+      : {}),
+    ...(primeDef.sourceArticle !== undefined ? { sourceArticle: primeDef.sourceArticle } : {}),
+    ...(primeDef.conditionTexte !== undefined ? { conditionTexte: primeDef.conditionTexte } : {}),
     config: { ...primeDef, nomCourt: agreement.nomCourt },
   };
+
+  if (primeDef.valueType === 'horaire') {
+    const tarifAccord =
+      primeDef.sourceValeur === 'accord' && primeDef.valeurAccord != null
+        ? Number(primeDef.valeurAccord) || 0
+        : null;
+
+    if (tarifAccord !== null) {
+      const autoHeures = primeDef.autoHeures === true || semanticId === SEMANTIC_ID.PRIME_EQUIPE;
+      const unites: ComputeRef = autoHeures
+        ? { ref: 'constant', value: roundToCents(defaultHeuresLeg) }
+        : primeDef.stateKeyHeures
+          ? { ref: 'accordInputOrState', key: primeDef.stateKeyHeures }
+          : { ref: 'constant', value: 0 };
+
+      return {
+        ...base,
+        computeMode: {
+          mode: 'unitesXmontant',
+          unites,
+          montant: { ref: 'constant', value: tarifAccord },
+          period: 'annual',
+        },
+      };
+    }
+  }
+
+  if (primeDef.valueType === 'montant') {
+    if (primeDef.sourceValeur === 'accord' && primeDef.valeurAccord != null) {
+      const tarif = Number(primeDef.valeurAccord);
+      if (Number.isFinite(tarif)) {
+        return {
+          ...base,
+          activation: buildMontantAccordActivation(primeDef),
+          computeMode: {
+            mode: 'montantFixe',
+            montant: { ref: 'constant', value: tarif },
+            period: 'annual',
+          },
+        };
+      }
+    }
+  }
+
+  if (primeDef.valueType === 'majorationHoraire') {
+    if (
+      primeDef.sourceValeur === 'accord' &&
+      primeDef.valeurAccord != null &&
+      primeDef.stateKeyHeures
+    ) {
+      const tauxVal = Number(primeDef.valeurAccord);
+      if (Number.isFinite(tauxVal)) {
+        const defaultH = Number(
+          primeDef.defaultHeures ?? CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67,
+        );
+        return {
+          ...base,
+          computeMode: {
+            mode: 'heuresXtaux',
+            heures: {
+              ref: 'accordInputOrState',
+              key: primeDef.stateKeyHeures,
+              defaultIfMissing: defaultH,
+            },
+            taux: { ref: 'constant', value: tauxVal },
+            base: { ref: 'context', key: 'tauxHoraire' },
+            period: 'annual',
+            majorationSeule: true,
+          },
+        };
+      }
+    }
+  }
+
+  const def: ElementDef = {
+    ...base,
+    computeMode: {
+      mode: 'custom',
+      compute: () => {
+        if (import.meta.env?.DEV) {
+          console.warn(
+            '[primeDefToElementDef] Prime accord sans mapping TS (valueType / sourceValeur) — montant 0.',
+            primeDef.id,
+          );
+        }
+        return 0;
+      },
+    },
+  };
+  return def;
 }
 
 export function getAccordPrimeDefsAsElements(agreement: Agreement): ElementDef[] {

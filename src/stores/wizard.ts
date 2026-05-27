@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 
 export const useWizardStore = defineStore('wizard', {
   state: () => ({
-    /** Step shown (synced with router). */
+    /** Étape affichée (mono-page, `WizardShell`). */
     currentStep: 1,
     /**
      * Furthest step reached via forward navigation. Stepper clicks only allow target <= this
@@ -11,8 +11,8 @@ export const useWizardStore = defineStore('wizard', {
     maxStepReached: 1,
     mode: 'estimation' as 'estimation' | 'manual',
     scores: {} as Record<string, number>,
-    groupe: '' as string,
-    classe: 0 as number,
+    groupe: 'A',
+    classe: 1,
   }),
   persist: {
     storage: sessionStorage,

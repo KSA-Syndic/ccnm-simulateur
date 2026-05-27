@@ -1,27 +1,33 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { AppModal } from '../../components/ui';
+import { AppModal, NumericInput } from '../../components/ui';
 import { useArreteesStore } from '../../stores/arretees';
+import { formatMensuelDuComposantes } from '../../domain/arretees/formatDuDetail';
 import { formatMoney } from '../../domain/utils/format';
+import type { ArreteePeriode } from '../../stores/arretees';
+
+function dueComposantes(period: ArreteePeriode): string | null {
+  return formatMensuelDuComposantes(period);
+}
 
 const arreteesStore = useArreteesStore();
 const open = ref(false);
 
-const editableValues = ref<Record<number, string>>({});
+const editableValues = ref<Record<number, number>>({});
 
 function show() {
   editableValues.value = {};
   arreteesStore.periodes.forEach((p, i) => {
-    editableValues.value[i] = String(p.salaireVerse ?? '');
+    const v = p.salaireVerse;
+    editableValues.value[i] = typeof v === 'number' && Number.isFinite(v) ? v : 0;
   });
   open.value = true;
 }
 
 function save() {
   for (const [idx, val] of Object.entries(editableValues.value)) {
-    const num = parseFloat(val);
-    if (!isNaN(num) && num >= 0) {
-      arreteesStore.setSalaireVerse(Number(idx), num);
+    if (Number.isFinite(val) && val >= 0) {
+      arreteesStore.setSalaireVerse(Number(idx), val);
     }
   }
   open.value = false;
@@ -35,11 +41,21 @@ defineExpose({ show });
     <div class="salary-modal-body">
       <div v-for="(period, i) in arreteesStore.periodes" :key="i" class="salary-modal-row">
         <span class="salary-modal-label">{{ period.label }}</span>
-        <span class="salary-modal-due">Dû : {{ formatMoney(period.salaireDu) }}</span>
-        <div class="input-with-unit">
-          <input v-model="editableValues[i]" type="text" class="book-input" inputmode="decimal" />
+        <div class="salary-modal-field input-with-unit">
+          <NumericInput
+            :model-value="editableValues[i] ?? 0"
+            mode="decimal"
+            :min="0"
+            @update:model-value="(v) => (editableValues[i] = v)"
+          />
           <span class="input-unit">€</span>
         </div>
+        <p class="salary-modal-due">
+          Dû&nbsp;: {{ formatMoney(period.salaireDu) }}
+          <template v-if="dueComposantes(period)">
+            <span class="salary-modal-due-detail"> — {{ dueComposantes(period) }}</span>
+          </template>
+        </p>
       </div>
     </div>
     <template #footer>
@@ -53,22 +69,40 @@ defineExpose({ show });
 .salary-modal-body {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.25rem;
   max-height: 60vh;
   overflow-y: auto;
+  margin: -0.25rem 0;
 }
 .salary-modal-row {
   display: grid;
-  grid-template-columns: 1fr auto 160px;
+  grid-template-columns: minmax(4.75rem, auto) minmax(0, 1fr);
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.15rem 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--gray-200, #ebebeb);
+}
+.salary-modal-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 .salary-modal-label {
   font-weight: 500;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+.salary-modal-field {
+  justify-self: end;
+  min-width: 0;
 }
 .salary-modal-due {
+  grid-column: 1 / -1;
+  margin: 0;
   color: var(--text-secondary, #666);
-  font-size: 0.9em;
-  white-space: nowrap;
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+.salary-modal-due-detail {
+  font-weight: 400;
 }
 </style>

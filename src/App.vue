@@ -2,6 +2,7 @@
 import { onMounted, onBeforeUnmount } from 'vue';
 import { useUiStore } from './stores/ui';
 import ErrorBoundary from './components/ErrorBoundary.vue';
+import WizardShell from './components/WizardShell.vue';
 import AppToast from './components/ui/AppToast.vue';
 
 const uiStore = useUiStore();
@@ -24,7 +25,7 @@ onBeforeUnmount(() => {
 <template>
   <ErrorBoundary>
     <div class="simulator-container">
-      <router-view />
+      <WizardShell />
     </div>
   </ErrorBoundary>
   <AppToast />

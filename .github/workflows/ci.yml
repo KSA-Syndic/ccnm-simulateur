@@ -1,0 +1,91 @@
+# CI — lint, build, Vitest, Playwright (Vue sur 5173 via webServer intégré).
+# Parité dual serveurs : job optionnel (label PR `dual-parity` ou lancement manuel Actions).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  workflow_dispatch:
+    inputs:
+      run_dual_parity:
+        description: Exécuter les E2E dual serveur (legacy 5174 + Vue 5173)
+        type: boolean
+        default: false
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        env:
+          VITE_BASE: /Classification_simulateur_2/
+        run: npm run build
+
+      - name: Unit tests (Vitest)
+        run: npm run test:run
+
+      - name: Install Playwright (Chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E (Playwright)
+        env:
+          CI: 'true'
+        run: npm run e2e
+
+  dual-parity:
+    if: |
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'dual-parity')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_dual_parity == true)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Install Playwright (Chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Démarrer legacy (5174) et Vue (5173)
+        run: |
+          nohup npx --yes serve . -p 5174 --no-port-switching > /tmp/serve-legacy.log 2>&1 &
+          nohup npx vite --port 5173 --strictPort --host 127.0.0.1 > /tmp/serve-vue.log 2>&1 &
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:5173/ >/dev/null 2>&1 && curl -fsS http://127.0.0.1:5174/index-legacy.html >/dev/null 2>&1 && curl -fsS http://127.0.0.1:5174/legacy-archive/index.html >/dev/null 2>&1; then
+              echo "Les deux serveurs répondent."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "--- legacy log ---"; tail -n 80 /tmp/serve-legacy.log || true
+          echo "--- vue log ---"; tail -n 80 /tmp/serve-vue.log || true
+          exit 1
+
+      - name: E2E parité dual (index legacy + racine Vue)
+        env:
+          CI: 'true'
+          DUAL_PARITE_E2E: '1'
+        run: npm run e2e:parite-dual

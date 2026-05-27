@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Assemble le répertoire publié sur GitHub Pages (legacy racine + Vue dans v2/).
+# Usage : ./scripts/prepare-github-pages.sh legacy|vue
+set -euo pipefail
+
+MODE="${1:?usage: prepare-github-pages.sh legacy|vue}"
+SITE_DIR="${SITE_DIR:-_site}"
+
+mkdir -p "$SITE_DIR"
+touch "$SITE_DIR/.nojekyll"
+
+if [ -d "_gh_pages" ] && [ -n "$(ls -A _gh_pages 2>/dev/null)" ]; then
+  echo "Fusion du déploiement existant (branche gh-pages)…"
+  cp -a _gh_pages/. "$SITE_DIR/"
+fi
+
+case "$MODE" in
+  legacy)
+    echo "Publication legacy à la racine (préservation de v2/ si présent)…"
+    cp -f index-legacy.html "$SITE_DIR/index.html"
+    rm -rf "$SITE_DIR/legacy-archive"
+    cp -a legacy-archive "$SITE_DIR/legacy-archive"
+    if [ -f favicon.svg ]; then
+      cp -f favicon.svg "$SITE_DIR/favicon.svg"
+    fi
+  ;;
+  vue)
+    if [ ! -d dist ] || [ ! -f dist/index.html ]; then
+      echo "Erreur : dist/ absent — lancer npm run build avec VITE_BASE=…/v2/ avant ce script." >&2
+      exit 1
+    fi
+    echo "Publication Vue dans v2/ (préservation du legacy à la racine)…"
+    rm -rf "$SITE_DIR/v2"
+    mkdir -p "$SITE_DIR/v2"
+    cp -a dist/. "$SITE_DIR/v2/"
+  ;;
+  *)
+    echo "Mode inconnu : $MODE" >&2
+    exit 1
+  ;;
+esac
+
+echo "Artefact Pages prêt dans $SITE_DIR"
+ls -la "$SITE_DIR"

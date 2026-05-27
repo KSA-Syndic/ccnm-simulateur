@@ -1,25 +1,59 @@
 import { CONFIG } from '../config';
-import { SEMANTIC_ID, type ElementDef, type ComputeMode } from '../types';
+import {
+  SEMANTIC_ID,
+  type ElementDef,
+  type ElementActivation,
+  type ComputeContext,
+} from '../types';
+import { roundToEuro, annualFromMonthly } from '../utils/rounding';
+import { buildNationalModalityElementDefs } from './nationalModalityRegistry';
+import { buildConventionPrimeElement } from './primeElementFactory';
 
 type Source = 'convention';
 const SRC: Source = 'convention';
 
-interface ModaliteRaw {
+/** Règle d’affichage des modalités « Autres » (aligné legacy `UI_VISIBLE_MODALITE`). */
+export const UI_VISIBLE_MODALITE = {
+  TOUJOURS: 'toujours',
+  COMPTAGE_HORAIRE_CONVENTIONNEL: 'comptageHoraireConventionnel',
+} as const;
+
+export type UiVisibleQuand = (typeof UI_VISIBLE_MODALITE)[keyof typeof UI_VISIBLE_MODALITE];
+
+export function isModaliteVisiblePourProfil(
+  uiVisibleQuand: UiVisibleQuand | undefined,
+  profil: { isCadre: boolean; forfait: string },
+): boolean {
+  if (!uiVisibleQuand || uiVisibleQuand === UI_VISIBLE_MODALITE.TOUJOURS) return true;
+  if (uiVisibleQuand === UI_VISIBLE_MODALITE.COMPTAGE_HORAIRE_CONVENTIONNEL) {
+    if (!profil.isCadre) return true;
+    return profil.forfait !== 'jours';
+  }
+  return true;
+}
+
+export interface ModaliteRaw {
   stateKeyActif: string;
   stateKeyHeures?: string;
   inclusDansSMH: boolean;
   uiSection: 'main' | 'extra';
+  uiVisibleQuand?: UiVisibleQuand;
   sourceArticle: string;
   conditionTexte: string;
   tooltip: string;
 }
 
+/**
+ * Métadonnées juridiques et clés d’état des modalités « Autres ».
+ * Chaque clé doit avoir une entrée miroir dans `nationalModalityRegistry.ts` (`NATIONAL_MODALITY_ENTRIES`).
+ */
 export const CONVENTION_MODALITES_PRIMES: Record<string, ModaliteRaw> = {
   interventionAstreinte: {
     stateKeyActif: 'majorationInterventionAstreinte',
     stateKeyHeures: 'heuresInterventionAstreinte',
     inclusDansSMH: false,
     uiSection: 'extra',
+    uiVisibleQuand: UI_VISIBLE_MODALITE.COMPTAGE_HORAIRE_CONVENTIONNEL,
     sourceArticle: 'Code du travail L3121-9, L3121-10 ; CCNM (travail effectif)',
     conditionTexte: "Les heures d'intervention pendant une astreinte sont du travail effectif.",
     tooltip:
@@ -30,6 +64,7 @@ export const CONVENTION_MODALITES_PRIMES: Record<string, ModaliteRaw> = {
     stateKeyHeures: 'periodesAstreinteReposQuotidienMois',
     inclusDansSMH: false,
     uiSection: 'extra',
+    uiVisibleQuand: UI_VISIBLE_MODALITE.COMPTAGE_HORAIRE_CONVENTIONNEL,
     sourceArticle: 'CCNM (organisation du travail, astreinte hors temps de travail effectif)',
     conditionTexte:
       "Périodes d'astreinte sur les temps de repos quotidiens prévus par l'emploi du temps, hors travail effectif.",
@@ -41,6 +76,7 @@ export const CONVENTION_MODALITES_PRIMES: Record<string, ModaliteRaw> = {
     stateKeyHeures: 'periodesAstreinteJourReposMois',
     inclusDansSMH: false,
     uiSection: 'extra',
+    uiVisibleQuand: UI_VISIBLE_MODALITE.COMPTAGE_HORAIRE_CONVENTIONNEL,
     sourceArticle: 'CCNM (organisation du travail, astreinte hors temps de travail effectif)',
     conditionTexte: "Périodes d'astreinte un jour de repos, hors travail effectif.",
     tooltip:
@@ -91,55 +127,35 @@ export const CONVENTION_MODALITES_PRIMES: Record<string, ModaliteRaw> = {
   },
 };
 
-const panierNuitUnitaire = Number(
-  CONFIG.INDEMNITE_REPAS_NUIT_ACOSS_BY_YEAR[CONFIG.CURRENT_DATA_YEAR]?.surLieuTravail ?? 0,
-);
-const habillageHeures = Number(CONFIG.CCNM_CONTREPARTIES_ORGANISATION.habillageHeuresSMHParSemaine);
-const inventionMin = Number(CONFIG.CCNM_CONTREPARTIES_ORGANISATION.inventionBrevetableMinimumEuros);
-const astreinteCoeffRepos = Number(
-  CONFIG.CCNM_CONTREPARTIES_ORGANISATION.astreinteDisponibiliteSMHParPeriode
-    .surReposQuotidienDansAstreinte,
-);
-const astreinteCoeffJour = Number(
-  CONFIG.CCNM_CONTREPARTIES_ORGANISATION.astreinteDisponibiliteSMHParPeriode.surJourRepos,
-);
-
-function modaliteToPartial(m: ModaliteRaw): Partial<ElementDef> {
-  const result: Partial<ElementDef> = {
-    inclusDansSMH: m.inclusDansSMH,
-    sourceArticle: m.sourceArticle,
-    conditionTexte: m.conditionTexte,
-    tooltip: m.tooltip,
-    uiSection: m.uiSection,
-    stateKeyActif: m.stateKeyActif,
-  };
-  if (m.stateKeyHeures !== undefined) {
-    result.stateKeyHeures = m.stateKeyHeures;
-  }
-  return result;
-}
-
 export function getConventionPrimeDefs(): ElementDef[] {
-  const mods = CONVENTION_MODALITES_PRIMES;
   return [
-    buildPrime(
+    buildConventionPrimeElement(
       'primeAnciennete',
       SEMANTIC_ID.PRIME_ANCIENNETE,
       "Prime d'ancienneté conventionnelle",
       {
-        mode: 'pourcentageXbase',
-        taux: {
-          ref: 'bareme',
-          table: CONFIG.TAUX_ANCIENNETE as unknown as Record<number, number>,
-          lookupKey: 'classe',
+        mode: 'custom',
+        /** Aligné `computePrimeConvention` (legacy) : mensuel = point × taux(classe) × min(ancienneté, plafond) × prorata ; annuel = `annualFromMonthly`. */
+        compute: (ctx: ComputeContext) => {
+          if (ctx.classe >= CONFIG.SEUIL_CADRE) return 0;
+          const anciennete = Number(ctx.state['anciennete']) || 0;
+          if (anciennete < CONFIG.ANCIENNETE.seuil) return 0;
+          const anneesPrime = Math.min(anciennete, CONFIG.ANCIENNETE.plafond);
+          const table = CONFIG.TAUX_ANCIENNETE as Record<number, number>;
+          const tauxClasse = table[ctx.classe] ?? 0;
+          const prorata = ctx.activityRate > 0 ? ctx.activityRate : 1;
+          const montantMensuel = ctx.pointTerritorial * tauxClasse * anneesPrime * prorata;
+          return annualFromMonthly(montantMensuel);
         },
-        base: { ref: 'context', key: 'pointTerritorial' },
-        annees: { ref: 'context', key: 'anciennete' },
-        period: 'annual',
       },
       {
         inclusDansSMH: CONFIG.ANCIENNETE.inclusDansSMH,
-        activation: { type: 'anciennete', seuil: CONFIG.ANCIENNETE.seuil },
+        activation: {
+          type: 'custom',
+          check: (ctx) =>
+            ctx.classe < CONFIG.SEUIL_CADRE &&
+            Number(ctx.state['anciennete'] ?? 0) >= CONFIG.ANCIENNETE.seuil,
+        },
         sourceArticle: 'CCNM Art. 142-143',
         conditionTexte: `Prime d'ancienneté dès ${CONFIG.ANCIENNETE.seuil} ans, plafond ${CONFIG.ANCIENNETE.plafond} ans. Non-cadres uniquement (convention).`,
         tooltip: 'Point territorial × taux de la classe × ancienneté × 12.',
@@ -147,7 +163,7 @@ export function getConventionPrimeDefs(): ElementDef[] {
       },
     ),
 
-    buildPrime(
+    buildConventionPrimeElement(
       'primeEquipe',
       SEMANTIC_ID.PRIME_EQUIPE,
       "Prime d'équipe conventionnelle",
@@ -155,12 +171,23 @@ export function getConventionPrimeDefs(): ElementDef[] {
         mode: 'postesXdureeXtaux',
         postes: { ref: 'constant', value: CONFIG.PRIME_EQUIPE_POSTES_MENSUELS_DEFAUT },
         dureeMinutes: { ref: 'constant', value: CONFIG.PRIME_EQUIPE_MINUTES_PAR_POSTE },
-        taux: { ref: 'context', key: 'tauxHoraire' },
+        taux: { ref: 'context', key: 'tauxHoraireBase' },
         period: 'annual',
+        prorataActivite: true,
       },
       {
         stateKeyActif: 'travailEquipe',
         inclusDansSMH: false,
+        activation: {
+          type: 'custom',
+          check: (ctx) =>
+            ctx.classe < CONFIG.SEUIL_CADRE &&
+            (ctx.state['travailEquipe'] === true ||
+              ctx.state['travailEquipe'] === 'true' ||
+              (ctx.state['accordInputs'] as Record<string, unknown> | undefined)?.[
+                'travailEquipe'
+              ] === true),
+        },
         sourceArticle: 'CCNM Art. 145',
         conditionTexte: "Prime d'équipe calculée sur la base horaire de référence.",
         tooltip: '30 min du taux horaire de base par poste. 22 postes/mois.',
@@ -168,110 +195,11 @@ export function getConventionPrimeDefs(): ElementDef[] {
       },
     ),
 
-    buildPrime(
-      'majorationInterventionAstreinte',
-      SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE,
-      'Intervention sous astreinte (travail effectif)',
-      {
-        mode: 'heuresXtaux',
-        heures: { ref: 'input', stateKey: mods['interventionAstreinte']!.stateKeyHeures! },
-        taux: { ref: 'constant', value: 0 },
-        base: { ref: 'context', key: 'tauxHoraire' },
-        period: 'annual',
-      },
-      modaliteToPartial(mods['interventionAstreinte']!),
-    ),
-
-    buildPrime(
-      'primeAstreintePeriodeReposQuotidien',
-      SEMANTIC_ID.PRIME_ASTREINTE_PERIODE_REPOS_QUOTIDIEN,
-      'Astreinte (périodes sur repos quotidien, hors TTE)',
-      {
-        mode: 'unitesXmontant',
-        unites: { ref: 'input', stateKey: mods['astreintePeriodeReposQuotidien']!.stateKeyHeures! },
-        montant: { ref: 'constant', value: 0 },
-        period: 'annual',
-      },
-      {
-        ...modaliteToPartial(mods['astreintePeriodeReposQuotidien']!),
-        config: { astreinteCoeff: astreinteCoeffRepos },
-      },
-    ),
-
-    buildPrime(
-      'primeAstreintePeriodeJourRepos',
-      SEMANTIC_ID.PRIME_ASTREINTE_PERIODE_JOUR_REPOS,
-      'Astreinte (périodes jour de repos, hors TTE)',
-      {
-        mode: 'unitesXmontant',
-        unites: { ref: 'input', stateKey: mods['astreintePeriodeJourRepos']!.stateKeyHeures! },
-        montant: { ref: 'constant', value: 0 },
-        period: 'annual',
-      },
-      {
-        ...modaliteToPartial(mods['astreintePeriodeJourRepos']!),
-        config: { astreinteCoeff: astreinteCoeffJour },
-      },
-    ),
-
-    buildPrime(
-      'primePanierNuit',
-      SEMANTIC_ID.PRIME_PANIER_NUIT,
-      'Prime panier nuit',
-      {
-        mode: 'unitesXmontant',
-        unites: { ref: 'input', stateKey: mods['panierNuit']!.stateKeyHeures! },
-        montant: { ref: 'constant', value: panierNuitUnitaire },
-        period: 'annual',
-      },
-      modaliteToPartial(mods['panierNuit']!),
-    ),
-
-    buildPrime(
-      'primeHabillageDeshabillage',
-      SEMANTIC_ID.PRIME_HABILLAGE_DESHABILLAGE,
-      'Prime habillage / déshabillage',
-      {
-        mode: 'heuresXtaux',
-        heures: { ref: 'constant', value: habillageHeures },
-        taux: { ref: 'constant', value: 1 },
-        base: { ref: 'context', key: 'tauxHoraire' },
-        period: 'annual',
-      },
-      {
-        ...modaliteToPartial(mods['habillageDeshabillage']!),
-        config: { heuresSMHReferenceParSemaine: habillageHeures },
-      },
-    ),
-
-    buildPrime(
-      'primeDeplacementProfessionnel',
-      SEMANTIC_ID.PRIME_DEPLACEMENT_PRO,
-      'Prime déplacements professionnels',
-      {
-        mode: 'heuresXtaux',
-        heures: { ref: 'input', stateKey: mods['deplacementProfessionnel']!.stateKeyHeures! },
-        taux: { ref: 'constant', value: 1 },
-        base: { ref: 'context', key: 'tauxHoraire' },
-        period: 'annual',
-      },
-      modaliteToPartial(mods['deplacementProfessionnel']!),
-    ),
-
-    buildPrime(
-      'primeInventionBrevetable',
-      SEMANTIC_ID.PRIME_INVENTION_BREVETABLE,
-      'Invention de mission (brevetable)',
-      {
-        mode: 'unitesXmontant',
-        unites: { ref: 'input', stateKey: mods['inventionBrevetable']!.stateKeyHeures! },
-        montant: { ref: 'constant', value: inventionMin },
-        period: 'annual',
-      },
-      modaliteToPartial(mods['inventionBrevetable']!),
-    ),
+    ...buildNationalModalityElementDefs(),
   ];
 }
+
+const HS_SEUIL_CCN = CONFIG.HEURES_SUP_TRANCHE_1_MENSUELLES;
 
 export function getConventionMajorationDefs(): ElementDef[] {
   return [
@@ -282,14 +210,22 @@ export function getConventionMajorationDefs(): ElementDef[] {
       source: SRC,
       valueKind: 'pourcentage',
       label: 'Majoration de nuit conventionnelle',
+      activation: {
+        type: 'custom',
+        check: (ctx) =>
+          String(ctx.state['typeNuit'] ?? 'aucun') !== 'aucun' &&
+          Number(ctx.state['heuresNuit'] ?? 0) > 0,
+      },
       computeMode: {
-        mode: 'pourcentageXbase',
+        mode: 'heuresXtaux',
+        heures: { ref: 'state', key: 'heuresNuit' },
         taux: { ref: 'constant', value: CONFIG.MAJORATIONS_CCN.nuit },
         base: { ref: 'context', key: 'tauxHoraireBase' },
         period: 'monthly',
+        majorationSeule: true,
       },
       sourceArticle: 'CCNM',
-      conditionTexte: `+${Math.round(CONFIG.MAJORATIONS_CCN.nuit * 100)}% du taux horaire.`,
+      conditionTexte: `+${Math.round(CONFIG.MAJORATIONS_CCN.nuit * 100)}% du taux horaire (heures × base × taux).`,
     },
     {
       id: 'majorationDimanche',
@@ -298,14 +234,21 @@ export function getConventionMajorationDefs(): ElementDef[] {
       source: SRC,
       valueKind: 'pourcentage',
       label: 'Majoration du dimanche conventionnelle',
+      activation: {
+        type: 'custom',
+        check: (ctx) =>
+          ctx.state['travailDimanche'] === true && Number(ctx.state['heuresDimanche'] ?? 0) > 0,
+      },
       computeMode: {
-        mode: 'pourcentageXbase',
+        mode: 'heuresXtaux',
+        heures: { ref: 'state', key: 'heuresDimanche' },
         taux: { ref: 'constant', value: CONFIG.MAJORATIONS_CCN.dimanche },
-        base: { ref: 'context', key: 'tauxHoraireBase' },
+        base: { ref: 'context', key: 'tauxHoraire' },
         period: 'monthly',
+        majorationSeule: true,
       },
       sourceArticle: 'CCNM',
-      conditionTexte: `+${Math.round(CONFIG.MAJORATIONS_CCN.dimanche * 100)}% du taux horaire.`,
+      conditionTexte: `+${Math.round(CONFIG.MAJORATIONS_CCN.dimanche * 100)}% du taux horaire effectif (heures × base × taux).`,
     },
     {
       id: 'majorationHeuresSup25',
@@ -316,14 +259,20 @@ export function getConventionMajorationDefs(): ElementDef[] {
       label: 'Majoration heures supplémentaires (+25%)',
       computeMode: {
         mode: 'heuresXtaux',
-        heures: { ref: 'input', stateKey: 'heuresSup' },
+        heures: {
+          ref: 'heuresSupTranche',
+          stateKeyHeures: 'heuresSup',
+          seuilMensuel: HS_SEUIL_CCN,
+          tranche: '25',
+        },
         taux: { ref: 'constant', value: CONFIG.MAJORATIONS_CCN.heuresSup25 },
         base: { ref: 'context', key: 'tauxHoraireBase' },
         period: 'monthly',
+        majorationSeule: true,
       },
       stateKeyActif: 'travailHeuresSup',
       stateKeyHeures: 'heuresSup',
-      config: { seuilMensuel: CONFIG.HEURES_SUP_TRANCHE_1_MENSUELLES },
+      config: { seuilMensuel: HS_SEUIL_CCN },
     },
     {
       id: 'majorationHeuresSup50',
@@ -334,20 +283,35 @@ export function getConventionMajorationDefs(): ElementDef[] {
       label: 'Majoration heures supplémentaires (+50%)',
       computeMode: {
         mode: 'heuresXtaux',
-        heures: { ref: 'input', stateKey: 'heuresSup' },
+        heures: {
+          ref: 'heuresSupTranche',
+          stateKeyHeures: 'heuresSup',
+          seuilMensuel: HS_SEUIL_CCN,
+          tranche: '50',
+        },
         taux: { ref: 'constant', value: CONFIG.MAJORATIONS_CCN.heuresSup50 },
         base: { ref: 'context', key: 'tauxHoraireBase' },
         period: 'monthly',
+        majorationSeule: true,
       },
       stateKeyActif: 'travailHeuresSup',
       stateKeyHeures: 'heuresSup',
-      config: { seuilMensuel: CONFIG.HEURES_SUP_TRANCHE_1_MENSUELLES },
+      config: { seuilMensuel: HS_SEUIL_CCN },
     },
   ];
 }
 
 export function getConventionForfaitDefs(): ElementDef[] {
   const forfaits = CONFIG.FORFAITS as Record<string, number>;
+  const seuilCadre = CONFIG.SEUIL_CADRE;
+  const actifHeures: ElementActivation = {
+    type: 'custom',
+    check: (ctx) => ctx.classe >= seuilCadre && String(ctx.state['forfait'] ?? '35h') === 'heures',
+  };
+  const actifJours: ElementActivation = {
+    type: 'custom',
+    check: (ctx) => ctx.classe >= seuilCadre && String(ctx.state['forfait'] ?? '35h') === 'jours',
+  };
   return [
     {
       id: 'forfaitHeures',
@@ -356,12 +320,15 @@ export function getConventionForfaitDefs(): ElementDef[] {
       source: SRC,
       valueKind: 'pourcentage',
       label: `Forfait Heures (+${Math.round((forfaits['heures'] ?? 0.15) * 100)}%)`,
+      activation: actifHeures,
+      inclusDansSMH: true,
       computeMode: {
         mode: 'pourcentageXbase',
         taux: { ref: 'constant', value: forfaits['heures'] ?? 0.15 },
         base: { ref: 'context', key: 'baseSMH' },
         period: 'annual',
       },
+      config: { forfaitKey: 'heures', taux: forfaits['heures'] ?? 0.15 },
     },
     {
       id: 'forfaitJours',
@@ -370,14 +337,63 @@ export function getConventionForfaitDefs(): ElementDef[] {
       source: SRC,
       valueKind: 'pourcentage',
       label: `Forfait Jours (+${Math.round((forfaits['jours'] ?? 0.3) * 100)}%)`,
+      activation: actifJours,
+      inclusDansSMH: true,
       computeMode: {
         mode: 'pourcentageXbase',
         taux: { ref: 'constant', value: forfaits['jours'] ?? 0.3 },
         base: { ref: 'context', key: 'baseSMH' },
         period: 'annual',
       },
+      config: { forfaitKey: 'jours', taux: forfaits['jours'] ?? 0.3 },
     },
   ];
+}
+
+function computeRachatJoursReposForfait(ctx: ComputeContext): number {
+  const ref = CONFIG.FORFAIT_JOURS_REFERENCE;
+  if (!(ref > 0)) return 0;
+  const jours = Number(ctx.state['joursSupForfait']) || 0;
+  if (jours <= 0) return 0;
+  const agr = ctx.agreement as
+    | { majorations?: { forfaitJours?: { rachatJoursMajoration?: number } } }
+    | undefined;
+  const accordRateRaw = agr?.majorations?.forfaitJours?.rachatJoursMajoration;
+  const accordRate = Number(accordRateRaw);
+  const minimum = CONFIG.FORFAIT_JOURS_RACHAT_MAJORATION_MIN;
+  const majoration = Number.isFinite(accordRate) ? Math.max(minimum, accordRate) : minimum;
+  const baseJour = ctx.baseSMH / ref;
+  return roundToEuro(baseJour * jours * (1 + majoration));
+}
+
+/** Rachat de jours de repos (forfait jours, cadres) — aligné `computeForfaitJoursRachat` (legacy). */
+export function getConventionRachatJoursReposForfaitDef(): ElementDef {
+  const seuilCadre = CONFIG.SEUIL_CADRE;
+  return {
+    id: 'rachatJoursForfait',
+    semanticId: SEMANTIC_ID.RACHAT_JOURS_REPOS_FORFAIT,
+    kind: 'prime',
+    source: SRC,
+    valueKind: 'montant',
+    label: 'Rachat jours de repos forfait jours',
+    inclusDansSMH: false,
+    activation: {
+      type: 'custom',
+      check: (ctx) =>
+        ctx.classe >= seuilCadre &&
+        String(ctx.state['forfait'] ?? '35h') === 'jours' &&
+        ctx.state['travailJoursSupForfait'] === true &&
+        Number(ctx.state['joursSupForfait'] ?? 0) > 0,
+    },
+    computeMode: {
+      mode: 'custom',
+      compute: (ctx) => computeRachatJoursReposForfait(ctx),
+    },
+    sourceArticle: 'Code du travail L.3121-59',
+    conditionTexte:
+      'Indemnisation des jours travaillés au-delà du contingent conventionnel (forfait jours) ; majoration minimale paramétrée (accord le cas échéant).',
+    uiSection: 'extra',
+  };
 }
 
 export function getAllConventionDefs(): ElementDef[] {
@@ -385,26 +401,41 @@ export function getAllConventionDefs(): ElementDef[] {
     ...getConventionPrimeDefs(),
     ...getConventionMajorationDefs(),
     ...getConventionForfaitDefs(),
+    getConventionRachatJoursReposForfaitDef(),
   ];
 }
 
-// ── helpers ──
+/** Type de champ valeur (taux / montant) pour la ligne « Autres ». */
+export type NationalPrimeValueField = 'coefficient' | 'unitAmount' | 'optionalRate';
 
-function buildPrime(
-  id: string,
-  semanticId: string,
-  label: string,
-  computeMode: ComputeMode,
-  extra: Partial<ElementDef>,
-): ElementDef {
-  return {
-    id,
-    semanticId,
-    kind: 'prime',
-    source: SRC,
-    valueKind: 'horaire',
-    label,
-    computeMode,
-    ...extra,
-  };
+/** Lignes UI « Autres primes nationales » (activation + quantités + surcharge). */
+export interface NationalPrimeOverrideRow {
+  semanticId: string;
+  label: string;
+  unit: string;
+  aide: string;
+  /** Titre court pour l’infobulle (souvent identique au libellé de ligne). */
+  title: string;
+  sourceArticle: string;
+  stateKeyActif: string;
+  quantityKey?: string;
+  /** Libellé au-dessus du champ quantité (ligne dédiée). */
+  quantityLabel?: string;
+  quantityUnitLabel?: string;
+  quantityMode?: 'integer' | 'decimal';
+  /** Libellé au-dessus du champ taux / montant (ligne dédiée). */
+  valueLabel?: string;
+  defaultQuantity?: number;
+  valueField: NationalPrimeValueField;
+  /** Valeur barème / préremplissage à l’activation (si `seedOverrideOnActivate`). */
+  defaultValue: number;
+  /** Préremplit `nationalPrimeOverrides` à l’activation (ex. panier, intervention). */
+  seedOverrideOnActivate: boolean;
+  /** Incrément clavier (flèches) pour le champ valeur. */
+  valueStep?: number;
+  uiVisibleQuand?: UiVisibleQuand;
+  /** Masque le 2e champ (taux / montant) lorsque le barème est fixé par la convention. */
+  hideValueField?: boolean;
 }
+
+export { getNationalPrimeOverrideRows } from './nationalModalityRegistry';

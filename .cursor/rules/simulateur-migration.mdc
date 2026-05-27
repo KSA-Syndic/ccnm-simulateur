@@ -12,11 +12,11 @@ globs:
 
 ## 1. Architecture 4 couches (vérifiée par ESLint)
 
-- `src/domain/**` : TypeScript pur. ZÉRO import de `vue`, `pinia`, `vue-router`, `@/components/**`, `@/features/**`, `@/stores/**`, `@legacy/**`.
+- `src/domain/**` : TypeScript pur. ZÉRO import de `vue`, `pinia`, `vue-router`, `@/components/**`, `@/features/**`, `@/stores/**`.
 - `src/stores/**` : peut importer `@/domain/**`, jamais `@/components/**` ni `@/features/**`.
 - `src/composables/**` : peut importer `@/domain/**` + `@/stores/**`.
-- `src/components/**` et `src/features/**` : tout en bas, peuvent tout importer sauf `@legacy/**`.
-- `src/legacy/**` : lecture seule après J1.0. Personne n'importe depuis là (sauf `tests/legacy/`).
+- `src/components/**` et `src/features/**` : tout en bas, peuvent tout importer.
+- **`legacy-archive/`** (oracle JS hors bundle Vite) : lecture seule ; aucun import depuis `src/domain/**` (pont réservé à `src/infra/**`, tests, E2E).
 
 ## 2. Précision monétaire et temporelle
 
@@ -37,7 +37,7 @@ globs:
 
 ## 4. Traçabilité legacy
 
-- Tout fichier porté depuis le legacy commence par `// Source: src/legacy/<chemin>::<symbole>` (un commentaire par symbole importé).
+- Tout fichier porté depuis le legacy commence par `// Source: legacy-archive/<chemin>::<symbole>` (un commentaire par symbole importé).
 - Tout `ElementDef` du catalogue convention conserve `sourceArticle`, `conditionTexte`, `tooltip` (si présents dans le legacy).
 - Aucune métadonnée juridique du legacy supprimée pour « simplifier ».
 
@@ -65,7 +65,7 @@ globs:
 
 - TS strict (`noUncheckedIndexedAccess: true`, `exactOptionalPropertyTypes: true`).
 - Composition API `<script setup lang="ts">` exclusivement.
-- Imports absolus via alias `@/` et `@legacy/`.
+- Imports absolus via alias `@/`.
 - Pas de `any` sans commentaire `// any: <raison explicite>`.
 - Schémas Zod pour toute entrée externe (URL params, accord chargé, état persisté sessionStorage).
 
@@ -78,7 +78,7 @@ globs:
 
 ## 10. CSS sanctuarisé
 
-- `src/assets/styles/main.css` (copie verbatim de `src/legacy/styles.css`) ne se modifie pas en passe 1.
+- `src/assets/styles/main.css` (copie verbatim de `legacy-archive/styles.css`) ne se modifie pas en passe 1.
 - Si l'UI Vue casse visuellement, c'est le HTML/Vue qui est incorrect, jamais le CSS.
 - Passe 2 : améliorations CSS uniquement dans `src/assets/styles/extensions.css` (fichier séparé), strictement limitées aux items de `docs/LACUNES_UI_CIBLES.md`.
 

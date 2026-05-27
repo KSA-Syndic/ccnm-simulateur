@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite --open",
     "build": "vue-tsc --noEmit && vite build",
+    "build:pages:v2": "cross-env VITE_BASE=/Classification_simulateur_2/v2/ npm run build",
+    "build:pages:root": "cross-env VITE_BASE=/Classification_simulateur_2/ npm run build",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -14,7 +16,11 @@
     "lint": "eslint src/ --ext .ts,.vue",
     "format": "prettier --write \"src/**/*.{ts,vue,css,json}\"",
     "e2e": "playwright test",
-    "prepare": "husky"
+    "e2e:parite-dual": "playwright test e2e/parite-visuelle.spec.ts e2e/parite-visuelle-pixels.spec.ts",
+    "dual:parity": "cross-env DUAL_PARITE_E2E=1 npm run e2e:parite-dual",
+    "prepare": "husky",
+    "legacy": "npx --yes serve . -p 5174 --no-port-switching",
+    "dual": "npx --yes concurrently \"npm run dev\" \"npm run legacy\""
   },
   "lint-staged": {
     "*.{ts,vue}": [
@@ -31,11 +37,15 @@
     "@playwright/test": "^1.59.1",
     "@testing-library/dom": "^9.3.3",
     "@testing-library/jest-dom": "^6.1.5",
+    "@types/pixelmatch": "^5.2.6",
     "@typescript-eslint/eslint-plugin": "^8.58.0",
     "@typescript-eslint/parser": "^8.58.0",
     "@vitejs/plugin-vue": "^5.2.4",
     "@vitest/ui": "^1.0.4",
+    "@vue/test-utils": "^2.4.6",
     "chart.js": "^4.5.1",
+    "concurrently": "^9.2.0",
+    "cross-env": "^7.0.3",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-vue": "^10.8.0",
@@ -44,6 +54,8 @@
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "lint-staged": "^15.5.2",
+    "pixelmatch": "^7.2.0",
+    "pngjs": "^7.0.0",
     "prettier": "^3.8.1",
     "serve": "^14.2.6",
     "tippy.js": "^6.3.7",
@@ -53,11 +65,11 @@
     "vue-tsc": "^3.2.6"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.7.6",
     "decimal.js": "^10.6.0",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
     "vue": "^3.5.31",
-    "vue-router": "^5.0.4",
     "zod": "^4.3.6"
   }
 }

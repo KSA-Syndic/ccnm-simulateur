@@ -1,5 +1,7 @@
 export interface TooltipContent {
   summary: string;
+  /** Fragment HTML déjà échappé (ex. `buildLegalTooltipContent`) affiché sous le résumé. */
+  legalBlockHtml?: string;
   source?: string;
   sourceArticle?: string;
   calculationSteps?: { label: string; value: string }[];
@@ -61,6 +63,10 @@ function escapeHtml(text: string): string {
 export function formatTooltipHtml(content: TooltipContent, variant: TooltipVariant): string {
   let html = `<div class="tooltip-content tooltip-${variant}">`;
   html += `<p class="tooltip-summary">${escapeHtml(content.summary)}</p>`;
+
+  if (content.legalBlockHtml) {
+    html += `<div class="tooltip-legal-fragment">${content.legalBlockHtml}</div>`;
+  }
 
   if (content.sourceArticle && content.source) {
     const badgeClass = escapeBadgeClass(content.source);

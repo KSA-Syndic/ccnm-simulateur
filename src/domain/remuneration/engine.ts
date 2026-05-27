@@ -1,5 +1,7 @@
 import Decimal from 'decimal.js';
 import { CONFIG } from '../config';
+import { roundHourlyRate } from '../utils/rounding';
+import { getAccordInput } from '../agreements/interface';
 import {
   type ComputeRef,
   type ComputeMode,
@@ -24,6 +26,21 @@ export function resolveRef(ref: ComputeRef, ctx: ComputeContext): number {
       return safeNum(ctx.state[ref.key]);
     case 'input':
       return safeNum(ctx.state[ref.stateKey]);
+    case 'accordInputOrState': {
+      const raw = getAccordInput(ctx.state, ref.key) ?? ctx.state[ref.key];
+      if (raw == null || raw === '') {
+        return ref.defaultIfMissing !== undefined ? safeNum(ref.defaultIfMissing) : 0;
+      }
+      const n = Number(raw);
+      return Number.isFinite(n) ? n : 0;
+    }
+    case 'heuresSupTranche': {
+      const total = safeNum(ctx.state[ref.stateKeyHeures]);
+      const seuil = ref.seuilMensuel;
+      const h25 = Math.min(Math.max(total, 0), seuil);
+      const h50 = Math.max(total - seuil, 0);
+      return ref.tranche === '25' ? h25 : h50;
+    }
     case 'bareme':
       return resolveBareme(ref.table, ref.lookupKey, ctx);
     default:
@@ -31,12 +48,24 @@ export function resolveRef(ref: ComputeRef, ctx: ComputeContext): number {
   }
 }
 
-function resolveBareme(
-  table: Record<number, number>,
-  lookupKey: 'anciennete' | 'classe',
+function resolveBaremeLookupKey(
+  lookupKey: 'anciennete' | 'classe' | 'ancienneteAccordPrime',
   ctx: ComputeContext,
 ): number {
-  const key = lookupKey === 'anciennete' ? safeNum(ctx.state['anciennete']) : ctx.classe;
+  if (lookupKey === 'classe') return ctx.classe;
+  const rawAnc = safeNum(ctx.state['anciennete']);
+  if (lookupKey === 'anciennete') return rawAnc;
+  const agr = ctx.agreement as { anciennete?: { plafond?: number } } | undefined;
+  const plafond = agr?.anciennete?.plafond ?? 0;
+  return Math.min(rawAnc, plafond);
+}
+
+function resolveBareme(
+  table: Record<number, number>,
+  lookupKey: 'anciennete' | 'classe' | 'ancienneteAccordPrime',
+  ctx: ComputeContext,
+): number {
+  const key = resolveBaremeLookupKey(lookupKey, ctx);
   if (table[key] !== undefined) return safeNum(table[key]);
   const sortedKeys = Object.keys(table)
     .map(Number)
@@ -81,10 +110,8 @@ function executeComputeMode(mode: ComputeMode, ctx: ComputeContext): number {
       const heures = resolveRef(mode.heures, ctx);
       const taux = resolveRef(mode.taux, ctx);
       const base = resolveRef(mode.base, ctx);
-      const monthly = new Decimal(heures)
-        .times(base)
-        .times(1 + taux)
-        .toNumber();
+      const mult = mode.majorationSeule === true ? new Decimal(taux) : new Decimal(1).plus(taux);
+      const monthly = new Decimal(heures).times(base).times(mult).toNumber();
       return mode.period === 'annual'
         ? annualFromMonthly(roundToCents(monthly))
         : roundToCents(monthly);
@@ -94,23 +121,42 @@ function executeComputeMode(mode: ComputeMode, ctx: ComputeContext): number {
       const base = resolveRef(mode.base, ctx);
       const annees = mode.annees ? resolveRef(mode.annees, ctx) : 1;
       const raw = new Decimal(base).times(taux).times(annees).toNumber();
-      if (mode.period === 'annual') return annualFromMonthly(roundToCents(raw));
+      if (mode.period === 'annual') {
+        /** Base déjà annuelle (ex. SMH × %) — aligné legacy `ForfaitCalculator` / pas de `×12`. */
+        return roundToEuro(raw);
+      }
       return roundToCents(raw);
     }
     case 'unitesXmontant': {
       const unites = resolveRef(mode.unites, ctx);
       const montant = resolveRef(mode.montant, ctx);
-      const monthly = new Decimal(unites).times(montant).toNumber();
+      const raw = new Decimal(unites).times(montant).toNumber();
+      if (mode.forfaitAnnuel === true && mode.period === 'annual') {
+        return roundToEuro(raw);
+      }
+      const monthly = raw;
       return mode.period === 'annual'
         ? annualFromMonthly(roundToCents(monthly))
         : roundToCents(monthly);
+    }
+    case 'periodesIndemniteSmh': {
+      const periodes = resolveRef(mode.periodes, ctx);
+      const th = ctx.tauxHoraireBase;
+      const euroPerPeriode = roundToCents(mode.coefficientSmhParPeriode * th);
+      const monthly = roundToCents(periodes * euroPerPeriode);
+      return mode.period === 'annual' ? annualFromMonthly(monthly) : monthly;
     }
     case 'montantFixe': {
       const montant = resolveRef(mode.montant, ctx);
       return mode.period === 'annual' ? roundToEuro(montant) : roundToCents(montant);
     }
     case 'postesXdureeXtaux': {
-      const postes = resolveRef(mode.postes, ctx);
+      let postes = resolveRef(mode.postes, ctx);
+      if (mode.prorataActivite) {
+        const r = ctx.activityRate;
+        const prorata = Number.isFinite(r) && r > 0 ? r : 1;
+        postes = Math.max(0, postes * prorata);
+      }
       const dureeMinutes = resolveRef(mode.dureeMinutes, ctx);
       const taux = resolveRef(mode.taux, ctx);
       const heuresParPoste = dureeMinutes / 60;
@@ -133,6 +179,31 @@ export interface ResolvedElement {
   def: ElementDef;
   origin: 'convention' | 'accord';
   note?: string;
+}
+
+/**
+ * Résout `inclusDansSMH: 'ifSuperiorToConvention'` après comparaison au montant conventionnel
+ * (aligné legacy `resolveAnciennetePrime` : assiette SMH seulement si montant accord > référence branche).
+ */
+function normalizeIfSuperiorSmhResult(
+  result: ElementResult,
+  origin: 'convention' | 'accord',
+  ctx: ComputeContext,
+  conventionDef: ElementDef | undefined,
+  conventionAmount?: number,
+): ElementResult {
+  if (result.inclusDansSMH !== 'ifSuperiorToConvention') return result;
+  if (origin !== 'accord') {
+    return { ...result, inclusDansSMH: false };
+  }
+  const conv =
+    conventionAmount !== undefined
+      ? conventionAmount
+      : conventionDef
+        ? computeElement(conventionDef, ctx).amount
+        : 0;
+  const effectiveIncluded = result.amount > conv;
+  return { ...result, inclusDansSMH: effectiveIncluded };
 }
 
 export function resolveBySubstitution(
@@ -165,13 +236,23 @@ export function resolveBySubstitution(
 
     if (!accord && convention) {
       const r = computeElement(convention, ctx);
-      if (r.amount > 0) results.push({ result: r, def: convention, origin: 'convention' });
+      if (r.amount > 0)
+        results.push({
+          result: normalizeIfSuperiorSmhResult(r, 'convention', ctx, convention),
+          def: convention,
+          origin: 'convention',
+        });
       continue;
     }
 
     if (accord && !convention) {
       const r = computeElement(accord, ctx);
-      if (r.amount > 0) results.push({ result: r, def: accord, origin: 'accord' });
+      if (r.amount > 0)
+        results.push({
+          result: normalizeIfSuperiorSmhResult(r, 'accord', ctx, undefined),
+          def: accord,
+          origin: 'accord',
+        });
       continue;
     }
 
@@ -182,7 +263,7 @@ export function resolveBySubstitution(
         const r = computeElement(accord, ctx);
         if (r.amount > 0)
           results.push({
-            result: r,
+            result: normalizeIfSuperiorSmhResult(r, 'accord', ctx, convention),
             def: accord,
             origin: 'accord',
             note: 'Se substitue à la convention',
@@ -193,8 +274,17 @@ export function resolveBySubstitution(
         const rConv = computeElement(convention, ctx);
         const rAcc = computeElement(accord, ctx);
         if (rConv.amount > 0)
-          results.push({ result: rConv, def: convention, origin: 'convention' });
-        if (rAcc.amount > 0) results.push({ result: rAcc, def: accord, origin: 'accord' });
+          results.push({
+            result: normalizeIfSuperiorSmhResult(rConv, 'convention', ctx, convention),
+            def: convention,
+            origin: 'convention',
+          });
+        if (rAcc.amount > 0)
+          results.push({
+            result: normalizeIfSuperiorSmhResult(rAcc, 'accord', ctx, convention, rConv.amount),
+            def: accord,
+            origin: 'accord',
+          });
         break;
       }
       case 'conditionalFavor': {
@@ -202,14 +292,14 @@ export function resolveBySubstitution(
         const rAcc = computeElement(accord, ctx);
         if (rAcc.amount >= rConv.amount && rAcc.amount > 0) {
           results.push({
-            result: rAcc,
+            result: normalizeIfSuperiorSmhResult(rAcc, 'accord', ctx, convention, rConv.amount),
             def: accord,
             origin: 'accord',
             note: 'Plus favorable que la convention',
           });
         } else if (rConv.amount > 0) {
           results.push({
-            result: rConv,
+            result: normalizeIfSuperiorSmhResult(rConv, 'convention', ctx, convention),
             def: convention,
             origin: 'convention',
             note: 'Convention plus favorable',
@@ -223,13 +313,17 @@ export function resolveBySubstitution(
         const rAcc = computeElement(accord, ctx);
         if (rAcc.amount > rConv.amount) {
           results.push({
-            result: rAcc,
+            result: normalizeIfSuperiorSmhResult(rAcc, 'accord', ctx, convention, rConv.amount),
             def: accord,
             origin: 'accord',
             note: 'Plus favorable que la convention',
           });
         } else if (rConv.amount > 0) {
-          results.push({ result: rConv, def: convention, origin: 'convention' });
+          results.push({
+            result: normalizeIfSuperiorSmhResult(rConv, 'convention', ctx, convention),
+            def: convention,
+            origin: 'convention',
+          });
         }
         break;
       }
@@ -289,28 +383,38 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
 }
 
 function isActivated(def: ElementDef, ctx: ComputeContext): boolean {
-  if (!def.activation) {
-    if (def.stateKeyActif) {
-      const v = ctx.state[def.stateKeyActif];
-      return v === true || v === 'true';
+  if (def.activation) {
+    switch (def.activation.type) {
+      case 'always':
+        return true;
+      case 'stateFlag':
+        return ctx.state[def.activation.key] === true || ctx.state[def.activation.key] === 'true';
+      case 'anciennete':
+        return safeNum(ctx.state['anciennete']) >= def.activation.seuil;
+      case 'custom':
+        return def.activation.check(ctx);
+      default:
+        return true;
     }
-    return true;
   }
-  switch (def.activation.type) {
-    case 'always':
-      return true;
-    case 'stateFlag':
-      return ctx.state[def.activation.key] === true || ctx.state[def.activation.key] === 'true';
-    case 'anciennete':
-      return safeNum(ctx.state['anciennete']) >= def.activation.seuil;
-    case 'custom':
-      return def.activation.check(ctx);
-    default:
-      return true;
+
+  const cfg = def.config as { inclusDansSMH?: unknown; stateKeyActif?: string } | undefined;
+  if (def.source === 'accord' && cfg?.inclusDansSMH === true) return true;
+
+  const actifKey =
+    def.stateKeyActif ?? (typeof cfg?.stateKeyActif === 'string' ? cfg.stateKeyActif : undefined);
+  if (actifKey) {
+    const v = getAccordInput(ctx.state, actifKey) ?? ctx.state[actifKey];
+    return v === true || v === 'true';
   }
+
+  if (def.source === 'accord') return false;
+
+  return true;
 }
 
-function resolveSmhInclusion(def: ElementDef): boolean {
+function resolveSmhInclusion(def: ElementDef): boolean | 'ifSuperiorToConvention' {
+  if (def.inclusDansSMH === 'ifSuperiorToConvention') return 'ifSuperiorToConvention';
   return def.inclusDansSMH === true;
 }
 
@@ -328,7 +432,7 @@ function resolveActivityRate(state: Record<string, unknown>): number {
 function getHourlyBaseRate(smhAnnual: number): number {
   if (!(smhAnnual > 0)) return 0;
   const heuresMois = CONFIG.DUREE_LEGALE_HEURES_MOIS;
-  return smhAnnual / 12 / heuresMois;
+  return roundHourlyRate(smhAnnual / 12 / heuresMois);
 }
 
 function computeEffectiveHourlyRate(

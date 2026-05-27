@@ -4,7 +4,8 @@ import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [vue()],
-  base: './',
+  /** Définir `VITE_BASE=/Classification_simulateur_2/` en CI (GitHub Pages). Défaut `./` pour le dev local. */
+  base: process.env.VITE_BASE ?? './',
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
@@ -18,6 +19,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5174,
+    port: 5173,
+    strictPort: true,
   },
 });

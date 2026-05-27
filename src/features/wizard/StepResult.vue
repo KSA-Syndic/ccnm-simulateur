@@ -1,157 +1,136 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import SimulatorLayout from '../../components/SimulatorLayout.vue';
+import { computed, watch } from 'vue';
 import { useWizardStore } from '../../stores/wizard';
+import { useAgreementStore } from '../../stores/agreement';
 import { useSituationStore } from '../../stores/situation';
 import { useUiStore } from '../../stores/ui';
 import { useWizardNavigation } from '../../composables/useWizardNavigation';
-import { buildComputeContext } from '../../domain/remuneration/engine';
-import { getAllConventionDefs } from '../../domain/convention/catalog';
-import { resolveBySubstitution, computeElement } from '../../domain/remuneration/engine';
-import { CONFIG } from '../../domain/config';
-import { roundToEuro } from '../../domain/utils/rounding';
+import { useWizardRemunerationInput } from '../../composables/useWizardRemunerationInput';
+import { LEGAL_DISCLAIMER_RESULT, WIZARD_LEGACY_LABELS } from '../../domain/ui/labels';
+import { buildResultHintBlocks } from '../../domain/hints/engine';
+import { getAgreement } from '../../domain/agreements/registry';
+import { resolveWizardRemunerationElements } from '../../domain/remuneration/compute';
+import ResultDetails from '../results/ResultDetails.vue';
+import HintDisplay from '../results/HintDisplay.vue';
+import EvolutionChart from '../inflation/EvolutionChart.vue';
+import AccordOptionsPanel from '../agreement-options/AccordOptionsPanel.vue';
+
+const disclaimerResult = LEGAL_DISCLAIMER_RESULT;
 
 const wizard = useWizardStore();
+const agreement = useAgreementStore();
 const situation = useSituationStore();
 const ui = useUiStore();
 const { prevStep, goToStep } = useWizardNavigation();
+const wizardInput = useWizardRemunerationInput();
 
-const smhAnnuel = computed(() => {
-  const smh = CONFIG.SMH[wizard.classe];
-  if (!smh) return 0;
-  return smh;
+function onRecommencer() {
+  if (!window.confirm(WIZARD_LEGACY_LABELS.restartConfirmMessage)) {
+    return;
+  }
+  ui.resetAll();
+  goToStep(1);
+}
+
+/** 12 ou 13 mois imposés par `repartition13Mois.actif` sur l'accord chargé (aligné legacy `applyAgreementMonths`). */
+const nbMoisImpose = computed((): 12 | 13 | null => {
+  if (!agreement.accordActif || !agreement.activeAccordId) return null;
+  const doc = getAgreement(agreement.activeAccordId);
+  const r = doc?.repartition13Mois;
+  if (r && typeof r.actif === 'boolean') return r.actif ? 13 : 12;
+  return null;
 });
 
-const baseSMH = computed(() => {
-  const rate = situation.tempsPartiel ? situation.tauxActivite / 100 : 1;
-  return roundToEuro(smhAnnuel.value * rate);
-});
-
-const ctx = computed(() =>
-  buildComputeContext(
-    {
-      anciennete: situation.anciennete,
-      pointTerritorial: situation.pointTerritorial,
-      forfait: situation.forfait,
-      travailNuit: situation.travailNuit,
-      heuresNuit: situation.heuresNuit,
-      travailDimanche: situation.travailDimanche,
-      heuresDimanche: situation.heuresDimanche,
-      travailHeuresSup: situation.travailHeuresSup,
-      heuresSup: situation.heuresSup,
-      travailTempsPartiel: situation.tempsPartiel,
-      tauxActivite: situation.tempsPartiel ? situation.tauxActivite : 100,
-      experiencePro: situation.experiencePro,
-    },
-    baseSMH.value,
-    wizard.classe,
-  ),
+watch(
+  nbMoisImpose,
+  (v) => {
+    if (v != null) ui.nbMois = v;
+  },
+  { immediate: true },
 );
 
-const conventionDefs = computed(() => getAllConventionDefs());
+watch(
+  () => ui.nbMois,
+  (v) => {
+    const imp = nbMoisImpose.value;
+    if (imp != null && v !== imp) ui.nbMois = imp;
+  },
+);
 
-const resolvedElements = computed(() => resolveBySubstitution(conventionDefs.value, [], ctx.value));
+const resolvedForHints = computed(() => resolveWizardRemunerationElements(wizardInput.value));
 
-const total = computed(() => {
-  let sum = baseSMH.value;
-  for (const el of resolvedElements.value) {
-    if (!el.result.inclusDansSMH) sum += el.result.amount;
+const hintBlocks = computed(() => {
+  const r = resolvedForHints.value;
+  const base = buildResultHintBlocks({
+    scenario: r.scenario,
+    groupe: r.active.groupe,
+    classe: r.active.classe,
+    anciennete: situation.anciennete,
+    experiencePro: situation.experiencePro,
+    accordActif: agreement.accordActif,
+    agreement: r.accDoc,
+    details: r.details,
+  });
+  const blocks = [...base];
+  if (ui.nbMois === 13) {
+    blocks.unshift({
+      type: 'info',
+      html: '<p>Répartition sur <strong>13 mois</strong> : le total annuel affiché inclut la logique de lissage mensuel du simulateur.</p>',
+    });
   }
-  return roundToEuro(sum);
+  return blocks;
 });
-
-const mensuel = computed(() => roundToEuro(total.value / ui.nbMois));
-
-function formatMoney(v: number): string {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(v);
-}
 </script>
 
 <template>
-  <SimulatorLayout>
-    <section class="wizard-step" aria-label="Étape 3 — Résultat">
-      <div class="step-content">
-        <h2>Résultat de la simulation</h2>
-        <p class="step-subtitle">Classification {{ wizard.groupe }}{{ wizard.classe }}</p>
+  <section class="wizard-step" aria-label="Étape 3 — Résultat">
+    <div class="step-content">
+      <h2>{{ WIZARD_LEGACY_LABELS.resultPageTitle }}</h2>
+      <p class="step-subtitle">
+        {{ WIZARD_LEGACY_LABELS.resultPageSubtitle }}
+      </p>
 
-        <div class="result-card">
-          <div class="result-main">
-            <span class="result-value">{{ formatMoney(total) }}</span>
-            <span class="result-label">Rémunération annuelle brute</span>
-          </div>
-          <div class="result-monthly">
-            <span class="result-value-secondary">{{ formatMoney(mensuel) }}</span>
-            <span class="result-label">soit par mois ({{ ui.nbMois }} mois)</span>
-            <div class="months-toggle">
-              <button
-                type="button"
-                class="month-btn"
-                :class="{ active: ui.nbMois === 12 }"
-                @click="ui.nbMois = 12"
-              >
-                12 mois
-              </button>
-              <button
-                type="button"
-                class="month-btn"
-                :class="{ active: ui.nbMois === 13 }"
-                @click="ui.nbMois = 13"
-              >
-                13 mois
-              </button>
-            </div>
-          </div>
-        </div>
+      <AccordOptionsPanel />
 
-        <details class="result-details-toggle" open>
-          <summary>Détail du calcul</summary>
-          <div class="result-details">
-            <div class="detail-line detail-line--base">
-              <span>Salaire de base ({{ wizard.groupe }}{{ wizard.classe }})</span>
-              <span>{{ formatMoney(baseSMH) }}</span>
-            </div>
-            <div
-              v-for="el in resolvedElements"
-              :key="el.def.id"
-              class="detail-line"
-              :class="{ 'detail-line--smh': el.result.inclusDansSMH }"
-            >
-              <span>
-                {{ el.result.label }}
-                <small v-if="el.note">({{ el.note }})</small>
-              </span>
-              <span>{{ formatMoney(el.result.amount) }}</span>
-            </div>
-          </div>
-        </details>
+      <ResultDetails />
 
-        <div class="arretees-check-card">
-          <p><strong>Vérifiez vos arriérés de salaire</strong></p>
-          <p>Comparez votre salaire réel avec le minimum conventionnel sur une période passée.</p>
-          <button class="book-btn btn-primary" @click="goToStep(4, { allowForward: true })">
-            Calculer mes arriérés
-          </button>
-        </div>
-
-        <div class="step-actions">
-          <button class="book-btn btn-secondary" @click="prevStep">
-            <span class="btn-icon btn-icon-left">‹</span> Modifier
-          </button>
-          <button
-            class="book-btn btn-primary"
-            @click="
-              ui.resetAll();
-              goToStep(1);
-            "
-          >
-            <span class="btn-icon">↻</span> Recommencer
-          </button>
-        </div>
+      <div id="hints-container" class="hints-container">
+        <HintDisplay :blocks="hintBlocks" />
       </div>
-    </section>
-  </SimulatorLayout>
+
+      <p class="result-disclaimer" role="note">
+        {{ disclaimerResult }}
+      </p>
+
+      <EvolutionChart />
+
+      <div id="arretees-check-card" class="arretees-check-card">
+        <p class="arretees-check-text">
+          <strong id="result-arretees-prompt-title">{{
+            WIZARD_LEGACY_LABELS.resultArreteesPromptTitle
+          }}</strong>
+        </p>
+        <p id="result-arretees-prompt-body" class="arretees-check-text">
+          {{ WIZARD_LEGACY_LABELS.resultArreteesPromptBody }}
+        </p>
+        <button
+          id="btn-check-arretees"
+          type="button"
+          class="book-btn btn-primary"
+          @click="goToStep(4, { allowForward: true })"
+        >
+          {{ WIZARD_LEGACY_LABELS.calculerArretees }}
+        </button>
+      </div>
+
+      <div class="step-actions">
+        <button type="button" class="book-btn btn-secondary" @click="prevStep">
+          <span class="btn-icon btn-icon-left">‹</span> Modifier
+        </button>
+        <button type="button" class="book-btn btn-primary" @click="onRecommencer">
+          <span class="btn-icon">↻</span> Recommencer
+        </button>
+      </div>
+    </div>
+  </section>
 </template>

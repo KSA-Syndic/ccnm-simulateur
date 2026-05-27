@@ -20,7 +20,9 @@ function addToast(message: string, type: Toast['type'] = 'info', duration = 3500
 
 function handleEvent(e: Event) {
   const detail = (e as CustomEvent).detail;
-  if (detail?.message) addToast(detail.message, detail.type, detail.duration);
+  if (!detail?.message) return;
+  const duration = typeof detail.duration === 'number' ? detail.duration : 3500;
+  addToast(detail.message, detail.type ?? 'info', duration);
 }
 
 onMounted(() => window.addEventListener('app:toast', handleEvent));
@@ -31,13 +33,13 @@ defineExpose({ addToast });
 
 <template>
   <Teleport to="body">
-    <div class="toast-container" aria-live="polite">
-      <TransitionGroup name="toast">
+    <div class="app-toast-stack" aria-live="polite">
+      <TransitionGroup name="app-toast">
         <div
           v-for="toast in toasts"
           :key="toast.id"
-          class="toast"
-          :class="`toast--${toast.type}`"
+          class="app-toast"
+          :class="`app-toast--${toast.type}`"
           role="status"
         >
           {{ toast.message }}
@@ -48,45 +50,46 @@ defineExpose({ addToast });
 </template>
 
 <style scoped>
-.toast-container {
+/* Préfixe app- : évite le conflit avec les `.toast` legacy dans main.css (opacity: 0 par défaut). */
+.app-toast-stack {
   position: fixed;
   top: 1rem;
   right: 1rem;
-  z-index: 9999;
+  z-index: 11000;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   max-width: 380px;
 }
-.toast {
+.app-toast {
   padding: 0.75rem 1.25rem;
   border-radius: var(--radius-md, 8px);
   font-size: 0.9rem;
   color: #fff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
-.toast--success {
+.app-toast--success {
   background: var(--color-success, #4caf50);
 }
-.toast--warning {
+.app-toast--warning {
   background: var(--color-warning, #ff9800);
 }
-.toast--info {
+.app-toast--info {
   background: var(--color-info, #2196f3);
 }
-.toast--error {
+.app-toast--error {
   background: var(--color-error, #f44336);
 }
 
-.toast-enter-active,
-.toast-leave-active {
+.app-toast-enter-active,
+.app-toast-leave-active {
   transition: all 0.3s ease;
 }
-.toast-enter-from {
+.app-toast-enter-from {
   opacity: 0;
   transform: translateX(2rem);
 }
-.toast-leave-to {
+.app-toast-leave-to {
   opacity: 0;
   transform: translateY(-1rem);
 }

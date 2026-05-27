@@ -23,6 +23,15 @@ export function setAnalyticsConsentOff(): void {
   }
 }
 
+/** Réactive la mesure d’audience (comportement par défaut si la clé est absente). */
+export function setAnalyticsConsentOn(): void {
+  try {
+    localStorage.removeItem(UMAMI_STORAGE_KEY);
+  } catch {
+    /* storage not available */
+  }
+}
+
 interface UmamiTracker {
   track: (name: string, data?: Record<string, string | number>) => void;
 }

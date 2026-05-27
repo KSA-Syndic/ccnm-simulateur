@@ -1,0 +1,31 @@
+---
+description: Interdit tout texte à destination de l'utilisateur qui reflète un raisonnement IA ou justifie un choix de conception
+alwaysApply: true
+---
+
+# Pas de texte méta dans l'interface utilisateur
+
+Tout texte visible par l'utilisateur (labels, toasts, tooltips, messages d'aide, placeholder, aria-label…) doit s'adresser à l'utilisateur **en termes métier**, jamais en termes techniques ou de conception IA.
+
+## Interdit
+
+- Justifications de choix de code : `"(comportement voulu du simulateur, pas un dysfonctionnement)"`
+- Références au prompt ou à la conception : `"tel que demandé"`, `"comme convenu"`, `"par choix de conception"`
+- Excuses ou explications de logique interne : `"la valeur est bloquée car le moteur…"`, `"ceci est normal"`
+- Tout texte qui parle **du simulateur** à la troisième personne pour se justifier
+
+## Correct
+
+Formuler du point de vue de l'utilisateur, en décrivant la **contrainte métier** ou la **règle applicable** :
+
+```
+// ❌
+"La valeur est automatiquement ramenée à ce minimum (comportement voulu du simulateur, pas un dysfonctionnement)."
+
+// ✅
+"L'expérience professionnelle ne peut pas être inférieure à l'ancienneté dans l'entreprise. La valeur a été ajustée au minimum requis."
+```
+
+## Règle
+
+Avant d'écrire ou modifier un texte UI, se demander : **un utilisateur qui ne connaît pas le code comprend-il pourquoi cette règle s'applique à sa situation ?** Si la phrase répond plutôt à la question *"pourquoi le code fait-il ça ?"*, la reformuler.
