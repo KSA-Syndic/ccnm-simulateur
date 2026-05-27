@@ -28,8 +28,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # Chemins absolus (slash final) — requis pour /v2/ sur GitHub Pages project site
-  VITE_BASE_V2: /${{ github.event.repository.name }}/v2/
+  # Custom domain (simulateur.cfdt-kuhn.fr) serves Vue at /v2/ — no repo-name prefix
+  VITE_BASE_V2: /v2/
 
 jobs:
   deploy:

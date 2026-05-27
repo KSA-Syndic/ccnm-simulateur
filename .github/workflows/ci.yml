@@ -37,7 +37,7 @@ jobs:
 
       - name: Build
         env:
-          VITE_BASE: /Classification_simulateur_2/
+          VITE_BASE: /v2/
         run: npm run build
 
       - name: Unit tests (Vitest)

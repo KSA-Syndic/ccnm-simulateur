@@ -12,7 +12,7 @@ function resolveViteBase(): string {
 
 export default defineConfig({
   plugins: [vue()],
-  /** CI Pages Vue : `VITE_BASE=/NomDuRepo/v2/` (voir deploy.yml). Local : `./` par défaut. */
+  /** CI Pages Vue : `VITE_BASE=/v2/` (custom domain). Local : `./` par défaut. */
   base: resolveViteBase(),
   resolve: {
     alias: {
