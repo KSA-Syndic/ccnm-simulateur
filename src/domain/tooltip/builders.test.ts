@@ -145,4 +145,19 @@ describe('tooltip/builders', () => {
     expect(html).toContain('L');
     expect(html).toContain('1 200 €');
   });
+
+  it('buildResultTooltipContent — taux horaire avec décimales', () => {
+    const html = buildResultTooltipContent(
+      cfg,
+      'CCNM',
+      {
+        label: 'Prime',
+        value: 1200,
+        breakdown: [{ label: 'Taux horaire retenu', value: 17.77 }],
+      },
+      'CCNM',
+    );
+    expect(html).toContain('17,77 €/h');
+    expect(html).not.toContain('18 €/h');
+  });
 });

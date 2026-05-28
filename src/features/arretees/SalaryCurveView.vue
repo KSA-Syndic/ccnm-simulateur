@@ -83,6 +83,9 @@ async function renderChart() {
           emit('pointClick', elements[0].index);
         }
       },
+      layout: {
+        padding: { bottom: 20, left: 4, right: 4 },
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -102,6 +105,12 @@ async function renderChart() {
         x: {
           display: true,
           grid: { display: false },
+          ticks: {
+            maxRotation: 45,
+            minRotation: 0,
+            autoSkip: true,
+            maxTicksLimit: 8,
+          },
         },
         y: {
           display: true,

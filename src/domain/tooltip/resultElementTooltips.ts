@@ -38,7 +38,7 @@ function prorataDetailSuffix(ctx: ComputeContext): string {
 
 function smhIncludedSummary(result: ElementResult): string | undefined {
   if (result.inclusDansSMH !== true) return undefined;
-  return 'Montant intégré au minimum conventionnel (SMH) : cette ligne ne s’ajoute pas au total affiché.';
+  return 'Composante du salaire minimum conventionnel : déjà incluse dans la ligne « Salaire de base » (pas de ligne « + » en plus).';
 }
 
 function buildAncienneteConventionTooltip(

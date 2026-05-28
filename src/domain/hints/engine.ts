@@ -77,12 +77,16 @@ export function buildSmhAssietteHintBlocks(
   if (!inclus.length && !exclus.length) return [];
 
   const lines: string[] = [];
-  const inclusListe = inclus.length ? `Base + ${inclus.join(', ')}.` : 'Base.';
+  const inclusBullets = [
+    '• Base (grille du minimum hiérarchique)',
+    ...inclus.map((l) => `• ${l}`),
+  ].join('<br>');
 
-  lines.push(`<span><strong>Inclus :</strong><br>${inclusListe}</span>`);
+  lines.push(`<span><strong>Inclus :</strong><br>${inclusBullets}</span>`);
 
   if (exclus.length) {
-    lines.push(`<span><strong>Exclus :</strong><br>${exclus.join(', ')}.</span>`);
+    const exclusBullets = exclus.map((l) => `• ${l}`).join('<br>');
+    lines.push(`<span><strong>Exclus :</strong><br>${exclusBullets}</span>`);
   }
 
   return [

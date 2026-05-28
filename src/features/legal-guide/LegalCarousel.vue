@@ -50,7 +50,7 @@ function onKeydown(e: KeyboardEvent) {
           class="carousel-btn carousel-btn-prev"
           aria-label="Précédent"
           :disabled="isAtFirst"
-          @click="prev"
+          @click.stop.prevent="prev"
         >
           <svg
             width="20"
@@ -74,7 +74,7 @@ function onKeydown(e: KeyboardEvent) {
           class="carousel-btn carousel-btn-next"
           aria-label="Suivant"
           :disabled="isAtLast"
-          @click="next"
+          @click.stop.prevent="next"
         >
           <svg
             width="20"

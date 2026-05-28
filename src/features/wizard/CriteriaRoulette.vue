@@ -2,7 +2,7 @@
 import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { AppTooltip } from '@/components/ui';
 import { CONFIG } from '@/domain/config';
-import { buildLegalTooltipContent } from '@/domain/tooltip/builders';
+import { escapeHTML } from '@/domain/utils/format';
 
 const props = defineProps<{
   critere: (typeof CONFIG.CRITERES)[number];
@@ -19,9 +19,8 @@ const scrollRef = ref<HTMLElement | null>(null);
 
 function tooltipHtml() {
   const c = props.critere;
-  return buildLegalTooltipContent(CONFIG.TOOLTIP_TEXTS, c.nom, c.description, {
-    sourceArticle: c.sourceArticle,
-  });
+  const desc = escapeHTML(c.description).replace(/\n/g, '<br>');
+  return `<p>${desc}</p>`;
 }
 
 function updateRouletteDisplay() {
@@ -131,7 +130,12 @@ function labelFor(deg: number): string {
       @touchstart.passive="onTouchStart"
       @touchend.prevent="onTouchEnd"
     >
-      <div class="roulette-chevron chevron-up" @click.stop="change(-1)" />
+      <button
+        type="button"
+        class="roulette-chevron chevron-up"
+        aria-label="Degré précédent"
+        @click.stop="change(-1)"
+      />
       <div class="roulette-indicator" />
       <div :id="`scroll-${critereIndex}`" ref="scrollRef" class="roulette-scroll">
         <div
@@ -146,7 +150,12 @@ function labelFor(deg: number): string {
           <span class="degree-text">{{ labelFor(deg) }}</span>
         </div>
       </div>
-      <div class="roulette-chevron chevron-down" @click.stop="change(1)" />
+      <button
+        type="button"
+        class="roulette-chevron chevron-down"
+        aria-label="Degré suivant"
+        @click.stop="change(1)"
+      />
     </div>
     <div :id="`full-desc-${critereIndex}`" class="roulette-full-description">
       <p>{{ fullDesc }}</p>

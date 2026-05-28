@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { type AggregatedRemuneration } from '../../domain/remuneration/aggregate';
-import { formatMoney } from '../../domain/utils/format';
+import { formatMoney, formatNumberFr } from '../../domain/utils/format';
 import { AppTooltip } from '../../components/ui';
 import { useUiStore } from '../../stores/ui';
 import { useSituationStore } from '../../stores/situation';
@@ -80,12 +80,9 @@ const resultContextNotice = computed(() => {
   });
   const tauxJournalier = getSmhDailyBaseRate(smhBaseAnnuel, { activityRate });
   const tauxStr = isForfaitJours
-    ? `${(Math.round(tauxJournalier * 100) / 100).toFixed(2).replace('.', ',')} €/j`
-    : `${(Math.round(tauxHoraire * 100) / 100).toFixed(2).replace('.', ',')} €/h`;
-  const tauxLabel = isForfaitJours
-    ? 'Taux journalier du minimum'
-    : 'Taux horaire du minimum (base 35h)';
-  return `${baseInfo} · ${tauxLabel} ${tauxStr}`;
+    ? `${formatNumberFr(tauxJournalier, 2)} €/j`
+    : `${formatNumberFr(tauxHoraire, 2)} €/h`;
+  return `${baseInfo} · SMH ${tauxStr}`;
 });
 
 function simplifyLabel(raw: string): string {
