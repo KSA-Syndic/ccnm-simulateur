@@ -419,8 +419,8 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
 
         <div class="book-hint warning arretees-salaire-hint" role="note">
           <p>
-            Saisissez le <strong>total brut</strong> de vos bulletins. Le « dû » est le minimum
-            conventionnel de référence.
+            Saisissez le <strong>total brut</strong> de vos bulletins (toutes rubriques). Le « dû »
+            est le minimum conventionnel calculé par le simulateur (indicatif).
           </p>
           <p v-if="arreteesAssietteHtml" class="arretees-assiette-detail">
             <span v-html="arreteesAssietteHtml" />
@@ -433,9 +433,9 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
           </p>
           <p v-else class="arretees-assiette-detail">
             <strong>Inclus :</strong><br />
-            Salaire de base.<br />
+            Base (grille du minimum hiérarchique).<br />
             <strong>Exclus :</strong><br />
-            Primes et majorations selon vos modalités.
+            majorations et primes variables selon vos modalités.
             <AppTooltip
               :content="arreteesAssietteComparaisonTooltip"
               variant="result"

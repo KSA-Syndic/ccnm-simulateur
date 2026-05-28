@@ -77,7 +77,10 @@ export function buildSmhAssietteHintBlocks(
   if (!inclus.length && !exclus.length) return [];
 
   const lines: string[] = [];
-  const inclusBullets = ['• Salaire de base', ...inclus.map((l) => `• ${l}`)].join('<br>');
+  const inclusBullets = [
+    '• Base (grille du minimum hiérarchique)',
+    ...inclus.map((l) => `• ${l}`),
+  ].join('<br>');
 
   lines.push(`<span><strong>Inclus :</strong><br>${inclusBullets}</span>`);
 
@@ -184,7 +187,7 @@ export function buildResultHintBlocks(p: BuildResultHintsParams): ResultHintBloc
       hints.push({
         type: 'info',
         html: ancienneteAccordCadre
-          ? "La CCNM ne prévoit pas de prime d'ancienneté pour les cadres ; les montants affichés viennent de votre accord d'entreprise."
+          ? "La branche (CCNM) ne prévoit pas de prime d'ancienneté pour les cadres. Les montants d'ancienneté affichés relèvent de votre accord d'entreprise."
           : 'Ce montant est le minimum conventionnel.',
       });
     } else {

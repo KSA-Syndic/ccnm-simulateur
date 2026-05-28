@@ -203,7 +203,9 @@ export function buildAccordSummaryTooltip(
 
   const pv = doc.primes.find((p) => p.id === 'primeVacances');
   if (pv && pv.inclusDansSMH === true) {
-    lines.push(`• ${pv.label} : incluse dans le SMH selon l'accord.`);
+    lines.push(
+      `• ${pv.label} : incluse dans le SMH selon les paramètres de l'accord (réf. texte / simulateur).`,
+    );
   }
 
   const { seuil, plafond } = doc.anciennete;

@@ -101,7 +101,13 @@ watch(
   { flush: 'sync', immediate: true },
 );
 
-const experienceProTooltip = computed(() => buildWizardTooltipHtml('experiencePro'));
+const experienceProTooltip = computed(() => {
+  const t = WIZARD_TOOLTIPS.experiencePro;
+  const seuil = CONFIG.BAREME_DEBUTANTS_SEUIL_EXP_PRO;
+  const base = String(t.description || '').trim();
+  const desc = `${base} Si moins de ${String(seuil)} ans d'expérience professionnelle totale, le barème débutants F11/F12 peut s'appliquer.`;
+  return buildWizardTooltipHtml('experiencePro', { description: desc });
+});
 
 const ancienneteTooltip = computed(() => buildWizardTooltipHtml('anciennete'));
 

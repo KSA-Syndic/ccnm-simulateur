@@ -248,7 +248,7 @@ export const CFDT_KUHN_BRANDING = {
 /** Textes des hints contextuels (moteur `domain/hints/engine.ts`). */
 export const HINT_ENGINE = {
   cadreDebutant:
-    'Profil <strong>F11 / F12</strong> avec moins de 6 ans d’expérience : le barème débutants peut s’appliquer.',
+    'Profil <strong>F11 / F12</strong> avec moins de 6 ans d’expérience : le barème débutants peut s’appliquer sur le SMH (paramètres CCNM du simulateur).',
   accordApplique:
     'Un <strong>accord d’entreprise</strong> est pris en compte : vérifiez les options sur l’étape Résultat et les mentions dans le détail.',
   majorationsSansAccord:
@@ -336,7 +336,8 @@ export const WIZARD_LEGACY_LABELS = {
   legalGuideTitle: 'Guide juridique et prochaines étapes',
   arreteesWarningHtml:
     "<strong>⚠️ Important :</strong> Ce calcul est un outil d'aide. Pour toute action juridique, consultez un avocat spécialisé en droit du travail ou votre syndicat.",
-  floatingSalaryInputTooltip: 'Saisissez le total brut mensuel de votre fiche de paie.',
+  floatingSalaryInputTooltip:
+    "Indiquez le « Total brut » de votre fiche de paie. Le détail des éléments inclus et exclus dans la comparaison au minimum conventionnel figure dans l'encart ci-dessous.",
   floatingHintEnterLine: 'Entrée : valider et passer au mois suivant',
   floatingHintEscapeLine: 'Échap : fermer',
   curveProgressReopenHint: '— Entrée pour reprendre la saisie',
@@ -361,7 +362,7 @@ export const WIZARD_TOOLTIPS = {
   pointTerritorial: {
     title: 'Point territorial',
     description:
-      'Valeur du point pour votre secteur géographique ; vérifiez le montant officiel en vigueur.',
+      'Valeur du point territorial applicable dans votre secteur géographique ; montant indicatif issu des paramètres du simulateur — vérifiez la valeur officielle en vigueur.',
     sourceArticle: 'CCNM — grilles et annexes territoriales',
     externalLink: {
       href: 'https://code.travail.gouv.fr/contribution/3248-quand-le-salarie-a-t-il-droit-a-une-prime-danciennete-quel-est-son-montant',
@@ -380,12 +381,14 @@ export const WIZARD_TOOLTIPS = {
   },
   heuresSup: {
     title: 'Heures supplémentaires',
-    description: 'CCNM : +25 % de la 36e à la 43e heure, +50 % à partir de la 44e heure.',
+    description:
+      'CCNM : +25 % de la 36e à la 43e heure, +50 % à partir de la 44e heure (tranches et durée légale selon paramètres du simulateur).',
     sourceArticle: 'CCNM Art. 145',
   },
   joursSupForfait: {
     title: 'Jours supplémentaires (rachat)',
-    description: 'Majoration pour le rachat de jours de repos en forfait jours.',
+    description:
+      'Majoration minimale pour le rachat de jours de repos lorsque vous êtes en forfait jours (contingent et taux selon paramètres du simulateur).',
     sourceArticle: 'Code du travail L3121-59',
   },
   anciennete: {
@@ -414,13 +417,13 @@ export const WIZARD_TOOLTIPS = {
   arreteesSmhSeul: {
     title: 'Minimum conventionnel seul',
     description:
-      'Compare votre salaire au seul minimum conventionnel, sans les primes et majorations variables.',
+      "Compare uniquement votre salaire au Salaire minimum hiérarchique (SMH) de la convention, sans intégrer les primes et majorations variables. Option recommandée pour une réclamation d'arriérés.",
     sourceArticle: 'CCNM — grille SMH (Annexe I)',
   },
   arreteesAssietteComparaison: {
     title: 'Base de comparaison au minimum conventionnel',
     description:
-      'Rubriques comprises dans le minimum comparé, et celles traitées en supplément sur le bulletin.',
+      "Inclus : la base (grille SMH) et les primes d'assiette listées dans l'encart. Exclus : les autres rubriques actives de votre simulation, comptées en supplément sur le bulletin.",
     sourceArticle: 'CCNM — assiette de comparaison au SMH',
   },
   evolutionInflation: {
@@ -442,7 +445,7 @@ export const WIZARD_TOASTS = {
 export const RESULT_SALAIRE_BASE_TOOLTIP = {
   title: 'Salaire de base',
   description:
-    'Minimum conventionnel annuel de référence, avant les lignes affichées en supplément.',
+    'Montant du minimum conventionnel (Salaire minimum hiérarchique — SMH) ou du barème débutants F11/F12 retenu comme base, avant primes et majorations comptées en supplément.',
   sourceArticle: 'CCNM — grille SMH / barème débutants (Annexe I)',
 } as const;
 
