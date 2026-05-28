@@ -49,7 +49,7 @@ describe('tooltip/builders', () => {
     expect(html).toContain('Voir sur code.travail.gouv.fr');
   });
 
-  it('buildLegalTooltipContent — bloc Source avant le lien externe', () => {
+  it('buildLegalTooltipContent — lien externe avant le bloc Source', () => {
     const html = buildLegalTooltipContent(cfg, 'Titre', 'Desc', {
       sourceArticle: 'CCNM Art. 145',
       externalLink: { href: 'https://example.com', label: 'Lien' },
@@ -57,7 +57,8 @@ describe('tooltip/builders', () => {
     const iSource = html.indexOf('tooltip-source');
     const iLink = html.indexOf('tooltip-link');
     expect(iSource).toBeGreaterThan(-1);
-    expect(iLink).toBeGreaterThan(iSource);
+    expect(iLink).toBeGreaterThan(-1);
+    expect(iLink).toBeLessThan(iSource);
     expect(html).toContain('CCNM Art. 145');
   });
 

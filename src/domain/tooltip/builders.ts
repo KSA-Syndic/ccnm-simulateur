@@ -87,7 +87,7 @@ export function classifyOriginFromSourceArticle(
 export interface BuildLegalTooltipOptions {
   /** Référence / article (affichage compact sous la description, avant lien externe éventuel). */
   sourceArticle?: string;
-  /** Lien externe affiché après le bloc légal (URL et libellé sourcés, non injectés en brut). */
+  /** Lien externe sous le paragraphe principal, avant le bloc Source (URL et libellé sourcés). */
   externalLink?: { href: string; label: string };
 }
 
@@ -109,8 +109,10 @@ export function buildLegalTooltipContent(
   if (link?.href && link.label) {
     const safeHref = escapeHTML(String(link.href));
     const safeLabel = escapeHTML(String(link.label));
-    const mid = sourceBlock ? `${base}<br>${sourceBlock}` : base;
-    return `${mid}<br><a class="tooltip-link" href="${safeHref}" target="_blank" rel="noopener">${safeLabel}</a>`;
+    const linkHtml = `<a class="tooltip-link" href="${safeHref}" target="_blank" rel="noopener">${safeLabel}</a>`;
+    const withLink = `${base}<br>${linkHtml}`;
+    if (sourceBlock) return `${withLink}<br>${sourceBlock}`;
+    return withLink;
   }
   if (sourceBlock) return `${base}<br>${sourceBlock}`;
   return base;

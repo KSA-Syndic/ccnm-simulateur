@@ -1,4 +1,5 @@
 import { defineStore, getActivePinia } from 'pinia';
+import { resetAnalyticsSession } from '@/infra/analytics';
 import { useAgreementStore } from './agreement';
 import { useArreteesStore } from './arretees';
 import { useSituationStore } from './situation';
@@ -16,6 +17,7 @@ export const useUiStore = defineStore('ui', {
       this.isDirty = true;
     },
     resetAll() {
+      resetAnalyticsSession();
       sessionStorage.clear();
       const pinia = getActivePinia();
       if (pinia) {

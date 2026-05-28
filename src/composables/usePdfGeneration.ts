@@ -13,6 +13,7 @@ import {
   scoresArrayFromWizardScores,
 } from '../domain/remuneration/compute';
 import { useWizardRemunerationInput } from './useWizardRemunerationInput';
+import { buildPdfArrieresAnalyticsPayload, trackPdfArrieres } from '../infra/analytics';
 import { formatMoney } from '../domain/utils/format';
 import type { ExportDocumentsPayload } from '../domain/pdf/exportDocumentsPayload';
 import { CFDT_KUHN_LOGO_DATA_URL } from '../domain/pdf/cfdtKuhnLogoDataUrl';
@@ -586,6 +587,16 @@ export function usePdfGeneration() {
 
       const stamp = new Date().toISOString().split('T')[0];
       doc.save(`arretees-salaire-${stamp}.pdf`);
+
+      trackPdfArrieres(
+        buildPdfArrieresAnalyticsPayload(arreteesStore.periodes, {
+          totalArretees: arreteesStore.summary?.totalArretees ?? 0,
+          groupe: active.groupe,
+          classe: active.classe,
+          nbMois: uiStore.nbMois,
+          accordNomCourt: accDoc ? (accDoc.nomCourt ?? accDoc.nom ?? null) : null,
+        }),
+      );
     } finally {
       generating.value = false;
     }

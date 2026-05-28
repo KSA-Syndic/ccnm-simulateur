@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { onMounted, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useWizardStore } from '../stores/wizard';
 import { useUiStore } from '../stores/ui';
+import { setupUmamiAnalytics, trackResultatSalaireOnce } from '../infra/analytics';
 import SimulatorLayout from './SimulatorLayout.vue';
 import StepClassification from '../features/wizard/StepClassification.vue';
 import StepSituation from '../features/wizard/StepSituation.vue';
@@ -12,6 +14,18 @@ const wizard = useWizardStore();
 const ui = useUiStore();
 const { currentStep } = storeToRefs(wizard);
 const { wizardSessionKey } = storeToRefs(ui);
+
+onMounted(() => {
+  setupUmamiAnalytics();
+});
+
+watch(
+  currentStep,
+  (step) => {
+    if (step === 3) trackResultatSalaireOnce();
+  },
+  { immediate: true },
+);
 </script>
 
 <template>

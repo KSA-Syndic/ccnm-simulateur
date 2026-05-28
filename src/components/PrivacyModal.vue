@@ -5,6 +5,7 @@ import {
   getAnalyticsConsent,
   setAnalyticsConsentOff,
   setAnalyticsConsentOn,
+  setupUmamiAnalytics,
 } from '../infra/analytics';
 import { SIMULATOR_SHELL } from '../domain/ui/labels';
 
@@ -27,6 +28,7 @@ function deny() {
 function accept() {
   setAnalyticsConsentOn();
   consent.value = true;
+  setupUmamiAnalytics();
   feedback.value = null;
   open.value = false;
 }

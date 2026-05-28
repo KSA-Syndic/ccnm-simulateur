@@ -1,4 +1,9 @@
+import { CONFIG } from '@/domain/config';
+
 const UMAMI_STORAGE_KEY = 'analytics_consent';
+
+/** Envoi unique de « Resultat salaire » par session (aligné legacy `umamiResultatSalaireSent`). */
+let resultatSalaireSent = false;
 
 export function isLocalEnv(): boolean {
   return (
@@ -32,12 +37,16 @@ export function setAnalyticsConsentOn(): void {
   }
 }
 
+function umamiConfigured(): boolean {
+  return Boolean(CONFIG.UMAMI_WEBSITE_ID?.trim() && CONFIG.UMAMI_SCRIPT_URL?.trim());
+}
+
 interface UmamiTracker {
   track: (name: string, data?: Record<string, string | number>) => void;
 }
 
 export function trackEvent(eventName: string, data?: Record<string, string | number>): void {
-  if (isLocalEnv() || !getAnalyticsConsent()) return;
+  if (isLocalEnv() || !getAnalyticsConsent() || !umamiConfigured()) return;
 
   try {
     const umami = (window as unknown as Record<string, unknown>).umami as UmamiTracker | undefined;
@@ -47,17 +56,74 @@ export function trackEvent(eventName: string, data?: Record<string, string | num
   }
 }
 
-export function initAnalytics(websiteId: string, src: string): void {
-  if (isLocalEnv() || !getAnalyticsConsent()) return;
+/** Charge Umami Cloud si config et consentement (aligné legacy `initUmamiScript`). */
+export function setupUmamiAnalytics(): void {
+  if (isLocalEnv() || !getAnalyticsConsent() || !umamiConfigured()) return;
   if (typeof document === 'undefined') return;
 
-  const existing = document.querySelector('script[data-website-id]');
+  const websiteId = CONFIG.UMAMI_WEBSITE_ID.trim();
+  const src = CONFIG.UMAMI_SCRIPT_URL.trim();
+
+  const existing = document.querySelector(`script[data-website-id="${websiteId}"]`);
   if (existing) return;
 
   const script = document.createElement('script');
   script.async = true;
   script.defer = true;
-  script.dataset['websiteId'] = websiteId;
   script.src = src;
+  script.setAttribute('data-website-id', websiteId);
   document.head.appendChild(script);
+}
+
+/** Réinitialise les drapeaux « une fois par session » (ex. Recommencer). */
+export function resetAnalyticsSession(): void {
+  resultatSalaireSent = false;
+}
+
+/** Étape 3 — premier affichage du résultat de rémunération. */
+export function trackResultatSalaireOnce(): void {
+  if (resultatSalaireSent) return;
+  resultatSalaireSent = true;
+  trackEvent('Resultat salaire');
+}
+
+export interface PdfArrieresAnalyticsPayload {
+  totalArretees: number;
+  dateDebut: string;
+  dateFin: string;
+  groupe: string;
+  classe: string | number;
+  nbMois: number;
+  accord: string;
+}
+
+/** Export PDF arriérés réussi (métadonnées anonymes, pas de salaires). */
+export function trackPdfArrieres(data: PdfArrieresAnalyticsPayload): void {
+  trackEvent('PDF arrieres', { ...data });
+}
+
+export function buildPdfArrieresAnalyticsPayload(
+  periodes: ReadonlyArray<{ periodKey?: string; salaireVerse?: number | undefined }>,
+  opts: {
+    totalArretees: number;
+    groupe: string;
+    classe: number;
+    nbMois: number;
+    accordNomCourt: string | null;
+  },
+): PdfArrieresAnalyticsPayload {
+  const periodKeys = periodes
+    .filter((p) => p.salaireVerse !== undefined && p.periodKey)
+    .map((p) => p.periodKey as string)
+    .sort();
+  const iso = (key: string) => (/^\d{4}-\d{2}$/.test(key) ? `${key}-01` : key);
+  return {
+    totalArretees: opts.totalArretees,
+    dateDebut: periodKeys[0] ? iso(periodKeys[0]) : '',
+    dateFin: periodKeys.length ? iso(periodKeys[periodKeys.length - 1]!) : '',
+    groupe: opts.groupe,
+    classe: opts.classe,
+    nbMois: opts.nbMois,
+    accord: opts.accordNomCourt ? opts.accordNomCourt : 'non',
+  };
 }
