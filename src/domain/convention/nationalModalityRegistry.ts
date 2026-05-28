@@ -198,7 +198,7 @@ export const NATIONAL_MODALITY_ENTRIES: readonly NationalModalityRegistryEntry[]
     ui: {
       label: 'Prime habillage / déshabillage',
       unit: '€/h',
-      valueLabel: 'Taux horaire de référence (facultatif, SMH par défaut)',
+      valueLabel: 'Taux horaire (optionnel)',
       valueField: 'optionalRate',
       defaultValue: 0,
       seedOverrideOnActivate: false,
@@ -224,7 +224,7 @@ export const NATIONAL_MODALITY_ENTRIES: readonly NationalModalityRegistryEntry[]
       unit: '€/h',
       quantityLabel: 'Heures excédentaires de trajet à indemniser',
       quantityUnitLabel: 'heures indemnisées/mois',
-      valueLabel: 'Taux horaire indemnitaire (facultatif, SMH par défaut)',
+      valueLabel: 'Taux horaire indemnitaire (optionnel)',
       quantityMode: 'decimal',
       defaultQuantity: 0,
       valueField: 'optionalRate',
