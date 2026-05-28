@@ -20,27 +20,118 @@ const salaryAmount = ref(0);
 const visible = ref(false);
 const dismissedByUser = ref(false);
 const salaryInputRef = ref<InstanceType<typeof NumericInput> | null>(null);
-const anchorPos = ref<{ x: number; y: number } | null>(null);
-const anchorReady = ref(false);
-const anchorAnimating = ref(false);
+const panelRef = ref<HTMLElement | null>(null);
+/** Position réelle du point sur le graphique (date en abscisse). */
+const pointCoords = ref<{ x: number; y: number } | null>(null);
+/** Ancrage du panneau (peut être décalé en X aux bords du graphique). */
+const panelCoords = ref<{ x: number; y: number } | null>(null);
+const layerReady = ref(false);
+const layerAnimating = ref(false);
 const popIn = ref(false);
+const mobilePanelFixed = ref(false);
+/** Cordon vertical (repère wrapper), aligné en X sur le point du graphique. */
+const cordonLayout = ref<{ left: number; top: number; visible: boolean }>({
+  left: 0,
+  top: 0,
+  visible: false,
+});
 
 let resizeObserver: ResizeObserver | undefined;
+let mobileMq: MediaQueryList | undefined;
 
 const currentPeriod = computed(() => {
   if (arreteesStore.currentPeriodIndex < 0) return null;
   return arreteesStore.periodes[arreteesStore.currentPeriodIndex] ?? null;
 });
 
-const anchorStyle = computed(() => {
-  if (!anchorPos.value) {
-    return { left: '50%', top: '45%' };
-  }
+const markerStyle = computed(() => {
+  if (!pointCoords.value) return { visibility: 'hidden' as const };
   return {
-    left: `${anchorPos.value.x}px`,
-    top: `${anchorPos.value.y}px`,
+    left: `${pointCoords.value.x}px`,
+    top: `${pointCoords.value.y}px`,
   };
 });
+
+const panelStyle = computed(() => {
+  if (!panelCoords.value) return { visibility: 'hidden' as const };
+  if (mobilePanelFixed.value) {
+    return {
+      left: `${panelCoords.value.x}px`,
+      top: '8px',
+      transform: 'translateX(-50%)',
+    };
+  }
+  return {
+    left: `${panelCoords.value.x}px`,
+    top: `${panelCoords.value.y}px`,
+    transform: 'translate(-50%, calc(-100% - 36px))',
+  };
+});
+
+const cordonStyle = computed(() => {
+  if (!cordonLayout.value.visible) return { display: 'none' };
+  return {
+    left: `${cordonLayout.value.left}px`,
+    top: `${cordonLayout.value.top}px`,
+    display: 'block',
+  };
+});
+
+function isMobilePanel(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(max-width: 768px)').matches;
+}
+
+function getChartWrapper(): HTMLElement | null {
+  return document.querySelector('.curve-chart-wrapper');
+}
+
+/** Repère de position du calque flottant (même base que `getChartPointCoordsInWrapper`). */
+function getPositionHost(): HTMLElement | null {
+  return document.querySelector('.curve-host');
+}
+
+function clampPanelX(x: number, wrapper: HTMLElement): number {
+  const half = Math.min(158, Math.max(120, wrapper.clientWidth * 0.42));
+  return Math.max(half, Math.min(wrapper.clientWidth - half, x));
+}
+
+function computePanelCoords(
+  raw: { x: number; y: number },
+  wrapper: HTMLElement,
+): { x: number; y: number } {
+  if (mobilePanelFixed.value) {
+    return { x: wrapper.clientWidth / 2, y: raw.y };
+  }
+  return { x: clampPanelX(raw.x, wrapper), y: raw.y };
+}
+
+/** Cordon vertical sous le panneau, centré sur l’abscisse du point (même X que chart-point-dot). */
+function updateCordonLayout() {
+  const host = getPositionHost();
+  const panel = panelRef.value;
+  const point = pointCoords.value;
+  if (!host || !panel || !point || !layerReady.value) {
+    cordonLayout.value = { left: 0, top: 0, visible: false };
+    return;
+  }
+
+  let cordonTop: number;
+  if (mobilePanelFixed.value) {
+    // Mobile : offsets locaux (évite un top négatif si le panneau est hors chart-wrapper au 1er rendu).
+    cordonTop = panel.offsetTop + panel.offsetHeight;
+  } else {
+    const hostRect = host.getBoundingClientRect();
+    const pRect = panel.getBoundingClientRect();
+    cordonTop = pRect.bottom - hostRect.top;
+  }
+
+  cordonLayout.value = {
+    left: point.x,
+    top: cordonTop,
+    visible: true,
+  };
+}
 
 function findNextEmptyIndex(from: number): number {
   const ps = arreteesStore.periodes;
@@ -55,26 +146,39 @@ function findNextEmptyIndex(from: number): number {
 
 async function focusSalaryInput() {
   await nextTick();
-  salaryInputRef.value?.focus();
-  salaryInputRef.value?.select();
+  await nextTick();
+  const input = salaryInputRef.value;
+  if (!input) return;
+  input.focus();
+  input.select();
+  requestAnimationFrame(() => {
+    input.focus();
+    input.select();
+  });
 }
 
 async function updateAnchorPosition(options?: { animate?: boolean; pop?: boolean }) {
   const idx = arreteesStore.currentPeriodIndex;
-  const coords = props.resolvePointCoords?.(idx) ?? null;
+  const raw = props.resolvePointCoords?.(idx) ?? null;
+  const wrapper = getChartWrapper();
 
-  if (!coords) {
-    anchorReady.value = false;
-    anchorPos.value = null;
+  if (!raw || !wrapper) {
+    layerReady.value = false;
+    pointCoords.value = null;
+    panelCoords.value = null;
+    cordonLayout.value = { left: 0, top: 0, visible: false };
     return;
   }
 
-  if (options?.animate && anchorPos.value) {
-    anchorAnimating.value = true;
+  mobilePanelFixed.value = isMobilePanel();
+
+  if (options?.animate && pointCoords.value) {
+    layerAnimating.value = true;
   }
 
-  anchorPos.value = coords;
-  anchorReady.value = true;
+  pointCoords.value = raw;
+  panelCoords.value = computePanelCoords(raw, wrapper);
+  layerReady.value = true;
 
   if (options?.pop) {
     popIn.value = false;
@@ -82,9 +186,35 @@ async function updateAnchorPosition(options?: { animate?: boolean; pop?: boolean
     popIn.value = true;
   }
 
+  const deferCordonForPop = Boolean(options?.pop && mobilePanelFixed.value);
+  if (deferCordonForPop) {
+    cordonLayout.value = { left: pointCoords.value?.x ?? 0, top: 0, visible: false };
+  }
+
+  await nextTick();
+  if (!deferCordonForPop) {
+    updateCordonLayout();
+  }
+
   requestAnimationFrame(() => {
-    anchorAnimating.value = false;
+    layerAnimating.value = false;
+    if (deferCordonForPop) {
+      window.setTimeout(() => updateCordonLayout(), 420);
+    } else {
+      updateCordonLayout();
+    }
   });
+}
+
+async function advanceToPeriod(index: number, options?: { keepAmount?: boolean }) {
+  arreteesStore.currentPeriodIndex = index;
+  if (!options?.keepAmount) {
+    const p = arreteesStore.periodes[index];
+    const v = p?.salaireVerse;
+    salaryAmount.value = typeof v === 'number' && Number.isFinite(v) ? v : 0;
+  }
+  await updateAnchorPosition({ animate: true, pop: false });
+  await focusSalaryInput();
 }
 
 function clearChartPointHighlight() {
@@ -94,9 +224,12 @@ function clearChartPointHighlight() {
 function dismiss() {
   if (!visible.value) return;
   visible.value = false;
-  anchorReady.value = false;
+  layerReady.value = false;
   popIn.value = false;
   dismissedByUser.value = true;
+  pointCoords.value = null;
+  panelCoords.value = null;
+  cordonLayout.value = { left: 0, top: 0, visible: false };
   clearChartPointHighlight();
   emit('dismissed');
 }
@@ -124,13 +257,15 @@ async function submit() {
   arreteesStore.setSalaireVerse(arreteesStore.currentPeriodIndex, val);
   const next = findNextEmptyIndex(arreteesStore.currentPeriodIndex);
   if (next >= 0 && next !== arreteesStore.currentPeriodIndex) {
-    await show(next, { pop: false });
-    await updateAnchorPosition({ animate: true });
+    await advanceToPeriod(next, { keepAmount: true });
   } else {
     visible.value = false;
-    anchorReady.value = false;
+    layerReady.value = false;
     popIn.value = false;
     dismissedByUser.value = true;
+    pointCoords.value = null;
+    panelCoords.value = null;
+    cordonLayout.value = { left: 0, top: 0, visible: false };
     clearChartPointHighlight();
     emit('dismissed');
   }
@@ -153,22 +288,22 @@ function observeChartWrapper() {
   resizeObserver.observe(host);
 }
 
+function onMobileMqChange() {
+  if (visible.value) void updateAnchorPosition();
+}
+
 onMounted(() => {
   window.addEventListener('keydown', onGlobalKeydown, true);
   observeChartWrapper();
+  mobileMq = window.matchMedia('(max-width: 768px)');
+  mobileMq.addEventListener('change', onMobileMqChange);
 });
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onGlobalKeydown, true);
+  mobileMq?.removeEventListener('change', onMobileMqChange);
   resizeObserver?.disconnect();
 });
-
-watch(
-  () => arreteesStore.currentPeriodIndex,
-  () => {
-    if (visible.value) void updateAnchorPosition({ animate: true });
-  },
-);
 
 watch(visible, (v) => {
   if (v) void focusSalaryInput();
@@ -177,7 +312,14 @@ watch(visible, (v) => {
 defineExpose({
   show,
   dismiss,
-  reposition: () => updateAnchorPosition(),
+  reposition: async () => {
+    const inputHadFocus =
+      typeof document !== 'undefined' &&
+      document.activeElement instanceof HTMLElement &&
+      document.activeElement.closest('#floating-input-block') != null;
+    await updateAnchorPosition();
+    if (visible.value && inputHadFocus) await focusSalaryInput();
+  },
   isVisible: () => visible.value,
   isDismissedByUser: () => dismissedByUser.value,
 });
@@ -186,21 +328,27 @@ defineExpose({
 <template>
   <div
     v-if="currentPeriod && visible"
-    class="floating-anchor"
+    class="floating-saisie-layer"
     :class="{
-      'floating-anchor--ready': anchorReady,
-      'floating-anchor--animating': anchorAnimating,
+      'floating-saisie-layer--ready': layerReady,
+      'floating-saisie-layer--animating': layerAnimating,
+      'floating-saisie-layer--mobile': mobilePanelFixed,
     }"
-    :style="anchorStyle"
     aria-hidden="false"
   >
-    <span class="chart-point-ring" aria-hidden="true" />
-    <span class="chart-point-dot" aria-hidden="true" />
+    <div class="chart-point-marker" :style="markerStyle" aria-hidden="true">
+      <span class="chart-point-ring" />
+      <span class="chart-point-dot" />
+    </div>
+
+    <div class="floating-cordon-vertical" :style="cordonStyle" aria-hidden="true" />
 
     <div
       id="floating-input-block"
-      class="floating-input-block"
+      ref="panelRef"
+      class="floating-input-block floating-input-block--external-cordon"
       :class="{ 'floating-input-block--pop': popIn }"
+      :style="panelStyle"
       role="dialog"
       :aria-label="`Saisie du salaire pour ${currentPeriod.label}`"
     >
@@ -227,7 +375,6 @@ defineExpose({
         <NumericInput
           id="floating-salary-input"
           ref="salaryInputRef"
-          :key="arreteesStore.currentPeriodIndex"
           v-model="salaryAmount"
           mode="decimal"
           :min="0"

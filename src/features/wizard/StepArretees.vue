@@ -53,6 +53,7 @@ const curveReveal = ref(false);
 /** Index à ouvrir dès que le graphique est prêt (après saisie de la date d'embauche). */
 let pendingFloatingOpenIndex: number | null = null;
 const curveProgressRef = ref<HTMLElement | null>(null);
+const arreteesResultsAnchorRef = ref<HTMLElement | null>(null);
 const floatingSaisieOpen = ref(false);
 const salaryModalRef = ref<InstanceType<typeof SalaryModal> | null>(null);
 const pdfInfosRef = ref<InstanceType<typeof PdfInfosModal> | null>(null);
@@ -77,10 +78,9 @@ const arreteesAssietteBlocks = computed(() =>
     : [],
 );
 
-/** HTML des blocs assiette SMH — rendu directement (pas de book-hint imbriqué). */
-const arreteesAssietteHtml = computed(() =>
-  arreteesAssietteBlocks.value.map((b) => b.html).join('<br>'),
-);
+const arreteesAssietteInclusHtml = computed(() => arreteesAssietteBlocks.value[0]?.html ?? '');
+const arreteesAssietteExclusHtml = computed(() => arreteesAssietteBlocks.value[1]?.html ?? '');
+const hasArreteesAssietteDetail = computed(() => arreteesAssietteBlocks.value.length > 0);
 
 const dateEmbaucheFieldTooltip = computed(() => buildWizardTooltipHtml('dateEmbaucheArretees'));
 
@@ -296,12 +296,14 @@ function startPdfFlow() {
   pdfInfosRef.value?.show();
 }
 
-function calculerArretees() {
+async function calculerArretees() {
   if (!hasAnySalaireVerse.value) {
     dispatchAppToast(WIZARD_TOASTS.arreteesAucunSalaireSaisi, 'warning');
     return;
   }
   arretees.summary = buildArreteesSummaryFromPeriodes(arretees.periodes);
+  await nextTick();
+  arreteesResultsAnchorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function onPdfGenerate(data: ExportDocumentsPayload) {
@@ -422,30 +424,39 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
             Saisissez le <strong>total brut</strong> de vos bulletins (toutes rubriques). Le « dû »
             est le minimum conventionnel calculé par le simulateur (indicatif).
           </p>
-          <p v-if="arreteesAssietteHtml" class="arretees-assiette-detail">
-            <span v-html="arreteesAssietteHtml" />
+          <p v-if="hasArreteesAssietteDetail" class="arretees-assiette-detail">
+            <span v-html="arreteesAssietteInclusHtml" />
             <AppTooltip
               :content="arreteesAssietteComparaisonTooltip"
               variant="result"
               position="top"
               trigger-aria-label="Aide sur la base de comparaison au minimum conventionnel"
             />
+            <template v-if="arreteesAssietteExclusHtml">
+              <br />
+              <span v-html="arreteesAssietteExclusHtml" />
+            </template>
           </p>
           <p v-else class="arretees-assiette-detail">
-            <strong>Inclus :</strong><br />
-            Base (grille du minimum hiérarchique).<br />
-            <strong>Exclus :</strong><br />
-            majorations et primes variables selon vos modalités.
+            <span>
+              <strong>Inclus :</strong><br />
+              Base (grille du minimum hiérarchique).
+            </span>
             <AppTooltip
               :content="arreteesAssietteComparaisonTooltip"
               variant="result"
               position="top"
               trigger-aria-label="Aide sur la base de comparaison au minimum conventionnel"
             />
+            <br />
+            <span>
+              <strong>Exclus :</strong><br />
+              majorations et primes variables selon vos modalités.
+            </span>
           </p>
         </div>
 
-        <div class="curve-chart-wrapper curve-host">
+        <div class="curve-host">
           <SalaryCurveView
             ref="salaryCurveRef"
             @point-click="onPointClick"
@@ -457,17 +468,6 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
             @opened="onFloatingOpened"
             @dismissed="onFloatingDismissed"
           />
-        </div>
-
-        <div class="curve-legend">
-          <div class="legend-item">
-            <span class="legend-color" style="background: #4caf50" />
-            <span>Salaire réel saisi</span>
-          </div>
-          <div class="legend-item">
-            <span class="legend-color" style="background: #2196f3" />
-            <span>Salaire dû</span>
-          </div>
         </div>
 
         <div
@@ -511,12 +511,13 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
         </p>
       </div>
 
-      <ArreteesResultsSummary
-        v-if="arretees.summary"
-        :summary="arretees.summary"
-        :export-busy="generating"
-        @export-pdf="startPdfFlow"
-      />
+      <div v-if="arretees.summary" ref="arreteesResultsAnchorRef" class="arretees-results-anchor">
+        <ArreteesResultsSummary
+          :summary="arretees.summary"
+          :export-busy="generating"
+          @export-pdf="startPdfFlow"
+        />
+      </div>
 
       <LegalCarousel v-if="arretees.summary" />
 
@@ -543,12 +544,27 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
   font-size: 0.9em;
 }
 .bulk-action {
-  margin-top: 1rem;
   display: flex;
   justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.arretees-calc-sticky {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
 }
 .timeline-help {
   margin: 0.5rem 0 0;
   color: var(--gray-600, #666);
+}
+.arretees-results-anchor {
+  scroll-margin-top: 1.25rem;
+}
+
+.arretees-assiette-detail :deep(.app-tooltip-trigger) {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 0.35rem;
 }
 </style>

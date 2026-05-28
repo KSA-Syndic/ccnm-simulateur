@@ -170,24 +170,24 @@ const legalContent = computed(() => {
           v-if="legalContent.neg.length > 0"
           class="arretees-legal-list arretees-legal-list--warn"
         >
-          <li v-for="(t, i) in legalContent.neg" :key="'n' + i">
-            {{ t }}
-          </li>
+          <li v-for="(t, i) in legalContent.neg" :key="'n' + i">❌ {{ t }}</li>
         </ul>
         <ul v-if="legalContent.pos.length > 0" class="arretees-legal-list arretees-legal-list--ok">
           <li v-for="(t, i) in legalContent.pos" :key="'p' + i">✅ {{ t }}</li>
         </ul>
       </div>
 
-      <button
-        id="btn-generer-pdf-arretees"
-        type="button"
-        class="book-btn btn-primary"
-        :disabled="props.exportBusy"
-        @click="emit('exportPdf')"
-      >
-        {{ props.exportBusy ? 'Génération…' : WIZARD_LEGACY_LABELS.arreteesExportPdf }}
-      </button>
+      <div class="arretees-export-action">
+        <button
+          id="btn-generer-pdf-arretees"
+          type="button"
+          class="book-btn btn-primary"
+          :disabled="props.exportBusy"
+          @click="emit('exportPdf')"
+        >
+          {{ props.exportBusy ? 'Génération…' : WIZARD_LEGACY_LABELS.arreteesExportPdf }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -204,7 +204,7 @@ const legalContent = computed(() => {
   color: #2e7d32;
 }
 .arretees-legal-info h4 {
-  margin: 1rem 0 0.25rem;
+  margin: 0.25rem 0;
   font-size: 1rem;
 }
 .arretees-du-composantes {
@@ -213,5 +213,10 @@ const legalContent = computed(() => {
   font-weight: 400;
   color: var(--gray-600, #666);
   margin-top: 0.15rem;
+}
+.arretees-export-action {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.25rem;
 }
 </style>

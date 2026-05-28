@@ -82,9 +82,7 @@ const resultContextNotice = computed(() => {
   const tauxStr = isForfaitJours
     ? `${(Math.round(tauxJournalier * 100) / 100).toFixed(2).replace('.', ',')} €/j`
     : `${(Math.round(tauxHoraire * 100) / 100).toFixed(2).replace('.', ',')} €/h`;
-  const tauxLabel = isForfaitJours
-    ? 'Taux journalier du minimum'
-    : 'Taux horaire du minimum (base 35h)';
+  const tauxLabel = isForfaitJours ? 'Taux journalier' : 'Taux horaire';
   return `${baseInfo} · ${tauxLabel} ${tauxStr}`;
 });
 

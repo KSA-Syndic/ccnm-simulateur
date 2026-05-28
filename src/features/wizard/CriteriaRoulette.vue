@@ -2,7 +2,7 @@
 import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { AppTooltip } from '@/components/ui';
 import { CONFIG } from '@/domain/config';
-import { buildLegalTooltipContent } from '@/domain/tooltip/builders';
+import { escapeHTML } from '@/domain/utils/format';
 
 const props = defineProps<{
   critere: (typeof CONFIG.CRITERES)[number];
@@ -17,12 +17,11 @@ const emit = defineEmits<{
 const wrapperRef = ref<HTMLElement | null>(null);
 const scrollRef = ref<HTMLElement | null>(null);
 
-function tooltipHtml() {
-  const c = props.critere;
-  return buildLegalTooltipContent(CONFIG.TOOLTIP_TEXTS, c.nom, c.description, {
-    sourceArticle: c.sourceArticle,
-  });
-}
+const tooltipHtml = computed(() => {
+  const text = String(props.critere.description ?? '').trim();
+  if (!text) return '';
+  return `<p>${escapeHTML(text)}</p>`;
+});
 
 function updateRouletteDisplay() {
   const scroll = scrollRef.value;
@@ -116,7 +115,13 @@ function labelFor(deg: number): string {
     <div class="roulette-header">
       <div class="roulette-label">
         {{ critere.nom }}
-        <AppTooltip :content="tooltipHtml()" variant="result" position="top" />
+        <AppTooltip
+          v-if="tooltipHtml"
+          :content="tooltipHtml"
+          variant="compact"
+          position="top"
+          :trigger-aria-label="`Aide : ${critere.nom}`"
+        />
       </div>
       <div class="degree-badge">
         Degré <span :id="`degree-label-${critereIndex}`">{{ modelValue }}</span
@@ -131,22 +136,35 @@ function labelFor(deg: number): string {
       @touchstart.passive="onTouchStart"
       @touchend.prevent="onTouchEnd"
     >
-      <div class="roulette-chevron chevron-up" @click.stop="change(-1)" />
-      <div class="roulette-indicator" />
+      <button
+        type="button"
+        class="roulette-chevron chevron-up"
+        aria-label="Degré précédent"
+        @click.stop="change(-1)"
+      />
+      <div class="roulette-indicator" aria-hidden="true" />
       <div :id="`scroll-${critereIndex}`" ref="scrollRef" class="roulette-scroll">
-        <div
+        <button
           v-for="deg in 10"
           :key="deg"
+          type="button"
           class="roulette-value"
           :class="{ selected: deg === modelValue }"
           :data-value="deg"
+          :aria-pressed="deg === modelValue"
+          :aria-label="`${critere.nom} — degré ${deg} : ${labelFor(deg)}`"
           @click="setValue(deg)"
         >
           <span class="degree-number">{{ deg }}</span>
           <span class="degree-text">{{ labelFor(deg) }}</span>
-        </div>
+        </button>
       </div>
-      <div class="roulette-chevron chevron-down" @click.stop="change(1)" />
+      <button
+        type="button"
+        class="roulette-chevron chevron-down"
+        aria-label="Degré suivant"
+        @click.stop="change(1)"
+      />
     </div>
     <div :id="`full-desc-${critereIndex}`" class="roulette-full-description">
       <p>{{ fullDesc }}</p>

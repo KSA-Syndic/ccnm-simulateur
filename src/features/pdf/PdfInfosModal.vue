@@ -126,21 +126,39 @@ defineExpose({ show });
 .pdf-infos-body {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
 }
+
+.pdf-infos-body .form-group {
+  margin-bottom: 0;
+}
+
+.pdf-infos-body .form-group label {
+  margin-bottom: 0.625rem;
+}
+
 .pdf-infos-lead {
   margin: 0;
   font-size: 0.9rem;
+  line-height: 1.5;
   color: var(--text-secondary, #555);
 }
+
 .letter-toggle {
   align-self: flex-start;
+  margin-top: 0.15rem;
 }
+
 .letter-fields {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding-top: 0.25rem;
+  gap: 1.35rem;
+  margin-top: 0.15rem;
+  padding-top: 1rem;
   border-top: 1px solid var(--border-subtle, #e5e5e5);
+}
+
+.letter-fields .form-group {
+  margin-bottom: 0;
 }
 </style>

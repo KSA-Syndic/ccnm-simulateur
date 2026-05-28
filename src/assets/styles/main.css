@@ -943,7 +943,7 @@ body.iframe-mode .simulator-container.iframe-container {
   position: relative;
   height: 400px;
   margin: 20px 0;
-  padding: 15px;
+  padding: 10px;
   background: var(--gray-50);
   border-radius: var(--border-radius);
   overflow: visible; /* Permettre au bloc flottant de dépasser */
@@ -2054,7 +2054,6 @@ body.iframe-mode .simulator-container.iframe-container {
 @media (max-width: 768px) {
   .curve-chart-wrapper {
     height: 300px;
-    padding: 10px;
   }
 
   .curve-input-group {

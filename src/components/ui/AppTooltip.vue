@@ -103,11 +103,35 @@ function toggle() {
   visible.value = !visible.value;
 }
 
+function onTriggerClick(e: MouseEvent) {
+  e.preventDefault();
+  e.stopPropagation();
+  toggle();
+}
+
+function onTriggerKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    toggle();
+  }
+  if (e.key === 'Escape' && visible.value) {
+    e.preventDefault();
+    hide();
+  }
+}
+
+function isCoarsePointer(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(pointer: coarse)').matches;
+}
+
 function onTriggerMouseEnter() {
+  if (isCoarsePointer()) return;
   cancelHide();
   show();
 }
 function onTriggerMouseLeave() {
+  if (isCoarsePointer()) return;
   scheduleHide();
 }
 
@@ -165,9 +189,8 @@ onUnmounted(() => {
     aria-haspopup="true"
     @mouseenter="onTriggerMouseEnter"
     @mouseleave="onTriggerMouseLeave"
-    @focus="show"
-    @blur="hide"
-    @click.prevent="toggle"
+    @click="onTriggerClick"
+    @keydown="onTriggerKeydown"
   >
     <slot name="trigger">
       <svg

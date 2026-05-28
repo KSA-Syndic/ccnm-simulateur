@@ -38,7 +38,7 @@ function prorataDetailSuffix(ctx: ComputeContext): string {
 
 function smhIncludedSummary(result: ElementResult): string | undefined {
   if (result.inclusDansSMH !== true) return undefined;
-  return 'Montant intégré au minimum conventionnel (SMH) : cette ligne ne s’ajoute pas au total affiché.';
+  return 'Montant déjà intégré dans la base du minimum conventionnel (SMH) : affiché à titre informatif, il ne vient pas s’ajouter au total.';
 }
 
 function buildAncienneteConventionTooltip(

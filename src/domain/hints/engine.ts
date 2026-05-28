@@ -77,7 +77,7 @@ export function buildSmhAssietteHintBlocks(
   if (!inclus.length && !exclus.length) return [];
 
   const lines: string[] = [];
-  const inclusListe = inclus.length ? `Base + ${inclus.join(', ')}.` : 'Base.';
+  const inclusListe = inclus.length ? `Base, ${inclus.join(', ')}.` : 'Base.';
 
   lines.push(`<span><strong>Inclus :</strong><br>${inclusListe}</span>`);
 
@@ -85,12 +85,14 @@ export function buildSmhAssietteHintBlocks(
     lines.push(`<span><strong>Exclus :</strong><br>${exclus.join(', ')}.</span>`);
   }
 
-  return [
-    {
-      type: 'info',
-      html: lines.join('<br>'),
-    },
-  ];
+  const inclusHtml = lines[0];
+  if (!inclusHtml) return [];
+  const blocks: ResultHintBlock[] = [{ type: 'info', html: inclusHtml }];
+  const exclusHtml = lines[1];
+  if (exclusHtml) {
+    blocks.push({ type: 'info', html: exclusHtml });
+  }
+  return blocks;
 }
 
 export interface ResultHintBlock {

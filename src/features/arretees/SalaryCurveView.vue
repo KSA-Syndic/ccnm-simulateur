@@ -16,6 +16,11 @@ const emit = defineEmits<{
 
 const currentIdx = computed(() => arreteesStore.currentPeriodIndex);
 
+function isCompactChart(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(max-width: 768px)').matches;
+}
+
 async function renderChart() {
   if (!canvasRef.value || arreteesStore.periodes.length === 0) return;
 
@@ -41,6 +46,8 @@ async function renderChart() {
   const pointRadius = arreteesStore.periodes.map((_, i) => (highlight && i === ci ? 10 : 5));
   const pointHoverRadius = arreteesStore.periodes.map((_, i) => (highlight && i === ci ? 14 : 8));
   const pointBorderWidth = arreteesStore.periodes.map((_, i) => (highlight && i === ci ? 3 : 1));
+
+  const compact = isCompactChart();
 
   chartInstance = await createChart(canvasRef.value, {
     type: 'line',
@@ -84,7 +91,20 @@ async function renderChart() {
         }
       },
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'top',
+          align: 'center',
+          labels: {
+            color: '#4b5563',
+            usePointStyle: true,
+            pointStyle: 'line',
+            boxWidth: compact ? 10 : 14,
+            boxHeight: compact ? 8 : 10,
+            padding: compact ? 10 : 14,
+            font: { size: compact ? 11 : 12 },
+          },
+        },
         tooltip: {
           callbacks: {
             label: (ctx) => {
@@ -102,14 +122,27 @@ async function renderChart() {
         x: {
           display: true,
           grid: { display: false },
+          ticks: compact
+            ? { maxRotation: 0, minRotation: 0, autoSkip: true, maxTicksLimit: 5 }
+            : { maxRotation: 45, minRotation: 0, autoSkip: true },
         },
         y: {
           display: true,
           beginAtZero: true,
-          ticks: {
-            callback: (val) => formatMoney(Number(val)),
-          },
+          ticks: compact
+            ? {
+                maxTicksLimit: 5,
+                callback: (val) => formatMoney(Number(val)),
+              }
+            : {
+                callback: (val) => formatMoney(Number(val)),
+              },
         },
+      },
+      layout: {
+        padding: compact
+          ? { top: 0, right: 6, bottom: 2, left: 6 }
+          : { top: 0, right: 10, bottom: 4, left: 10 },
       },
     },
   });
@@ -127,8 +160,13 @@ defineExpose({
   refreshChart: renderChart,
 });
 
+function onChartResize() {
+  void renderChart();
+}
+
 onMounted(() => {
   void renderChart();
+  window.addEventListener('resize', onChartResize);
 });
 watch(
   () => arreteesStore.periodes,
@@ -141,6 +179,7 @@ watch(currentIdx, () => {
   void renderChart();
 });
 onBeforeUnmount(() => {
+  window.removeEventListener('resize', onChartResize);
   chartInstance?.destroy();
 });
 </script>

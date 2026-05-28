@@ -211,7 +211,7 @@ export const SIMULATOR_SHELL = {
   /** Pied de page — index UIMM. */
   footerConventionTextsLinkLabel: 'Textes conventionnels (UIMM)',
   footerMainLine:
-    'Simulateur de classification et rémunération — Convention collective métallurgie (IDCC 3248).',
+    'Simulateur de classification et rémunération — Convention collective métallurgie.',
   footerDisclaimer:
     'Outil indicatif — ne remplace pas un conseil juridique ou social personnalisé.',
   privacyLinkLabel: 'Données personnelles & mesure d’audience',
@@ -265,13 +265,21 @@ export const POST_PDF_SYNDICAT = {
   /** Suite du paragraphe après le nom du syndicat en gras (espace initial inclus). */
   syndicatLeadAfterName:
     " peut donner du poids à votre dossier — seul, c'est plus léger. Envoyez-lui le rapport (mail ou visite) et il se fera un plaisir de vous aider.",
-  syndicatNoticePj:
-    'Une fois le mail ouvert, ajoutez les documents en pièces jointes (lettre Word + annexe PDF). Les liens ci-dessous ne peuvent pas joindre les fichiers à votre place.',
+  /** Aperçu composition mail (champs et PJ). */
+  syndicatComposeAria: 'Aperçu du message à envoyer au syndicat',
+  syndicatFieldTo: 'À',
+  syndicatFieldSubject: 'Objet',
+  syndicatFieldAttachments: 'Pièces jointes',
+  syndicatPjWord: 'Lettre Word.docx',
+  syndicatPjPdf: 'Annexe technique.pdf',
+  syndicatPjHint: 'À joindre après ouverture de votre messagerie',
+  syndicatOpenWith: 'Ouvrir avec',
   syndicatDefaultName: 'le syndicat',
   buttonDecline: 'Je gère',
-  buttonMailto: 'Ouvrir ma messagerie',
   gmailLinkLabel: 'Gmail',
   outlookLinkLabel: 'Outlook',
+  gmailComposeAria: 'Ouvrir la composition dans Gmail',
+  outlookComposeAria: 'Ouvrir la composition dans Outlook',
   mailSubject: "Arriérés de salaire – demande d'accompagnement",
   mailBody: `Bonjour,
 
@@ -284,9 +292,10 @@ Vous trouverez en pièces jointes :
 Ces documents sont indicatifs. Pourriez-vous les vérifier et m'accompagner dans les démarches si nécessaire ?
 
 Cordialement`,
-  celebrationTitle: 'Document généré !',
-  celebrationBody: 'Votre document de rappel de salaire a été généré avec succès.',
-  celebrationNote: 'Conservez-le précieusement pour vos démarches.',
+  celebrationTitle: 'Bravo !',
+  celebrationBody: 'Vous avez mené la simulation à son terme.',
+  celebrationNote:
+    "Si l'envoi du courrier au syndicat a échoué, vous pouvez rouvrir la fenêtre pour réessayer.",
   celebrationFinish: 'Terminer',
   celebrationReopenSyndicat: 'Renvoyer un courrier au syndicat',
 } as const;
@@ -337,7 +346,7 @@ export const WIZARD_LEGACY_LABELS = {
   arreteesWarningHtml:
     "<strong>⚠️ Important :</strong> Ce calcul est un outil d'aide. Pour toute action juridique, consultez un avocat spécialisé en droit du travail ou votre syndicat.",
   floatingSalaryInputTooltip:
-    "Indiquez le « Total brut » de votre fiche de paie. Le détail des éléments inclus et exclus dans la comparaison au minimum conventionnel figure dans l'encart ci-dessous.",
+    "Indiquez le « Total brut » de votre fiche de paie. Le détail des éléments inclus et exclus dans la comparaison au minimum conventionnel figure dans l'encart ci-dessus.",
   floatingHintEnterLine: 'Entrée : valider et passer au mois suivant',
   floatingHintEscapeLine: 'Échap : fermer',
   curveProgressReopenHint: '— Entrée pour reprendre la saisie',
@@ -423,13 +432,13 @@ export const WIZARD_TOOLTIPS = {
   arreteesAssietteComparaison: {
     title: 'Base de comparaison au minimum conventionnel',
     description:
-      "Inclus : la base (grille SMH) et les primes d'assiette listées dans l'encart. Exclus : les autres rubriques actives de votre simulation, comptées en supplément sur le bulletin.",
+      "Inclus : la base (grille SMH) et les primes d'assiette listées dans l'encart.\nExclus : les autres rubriques actives de votre simulation, comptées en supplément sur le bulletin.",
     sourceArticle: 'CCNM — assiette de comparaison au SMH',
   },
   evolutionInflation: {
     title: "Évolution par rapport à l'inflation",
     description:
-      "La courbe « Votre salaire » projette votre rémunération sur la durée choisie, avec la hausse annuelle que vous indiquez. La courbe « inflation » montre ce que donnerait le même montant de départ s'il n'augmentait que du taux d'inflation retenu. La phrase sous le graphique indique en % si vous seriez en situation de gagner (de plus que l'inflation) ou d'en perdre (de moins que l'inflation) en pouvoir d'achat. Résultat indicatif selon vos hypothèses.",
+      'Deux courbes sur la période : la vôtre (hausse annuelle saisie) et l’inflation (même départ, taux moyen retenu). Au-dessus : le salaire progresse plus vite que les prix ; en dessous : perte de pouvoir d’achat. Le % sous le graphique résume l’écart en fin de période. Indicatif.',
   },
 } as const;
 

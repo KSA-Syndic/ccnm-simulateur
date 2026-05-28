@@ -5,6 +5,7 @@ import App from './App.vue';
 import './assets/styles/variables.css';
 import './assets/styles/tooltips.css';
 import './assets/styles/main.css';
+import './assets/styles/extensions.css';
 import './accords';
 import { useUrlBootstrap } from './composables/useUrlBootstrap';
 
