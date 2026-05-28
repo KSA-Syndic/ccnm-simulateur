@@ -2218,18 +2218,34 @@ body.iframe-mode .simulator-container.iframe-container {
   }
   #step-4 .legal-guide-section {
     margin-top: 16px;
+    padding: 14px 12px 16px;
   }
   #step-4 .legal-guide-header {
-    padding: 10px 12px;
+    margin-bottom: 14px;
+    padding: 0 4px 12px;
     flex-wrap: wrap;
     gap: 8px;
   }
   #step-4 .legal-guide-title {
     font-size: 1rem;
   }
-  /* Page 4 : retirer les marges des slides du carrousel (guide juridique) en vue mobile */
-  #step-4 .carousel-slide {
+  #step-4 .legal-guide-content {
+    min-height: 0;
     padding: 0;
+  }
+  #step-4 .legal-guide-content .carousel-slide {
+    padding: 14px 16px 16px;
+  }
+  #step-4 .legal-guide-content .legal-step h4 {
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+  #step-4 .legal-guide-content .legal-step-content {
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+  #step-4 .legal-guide-content .legal-step-content ul {
+    padding-left: 1.15rem;
   }
 
   /* Étape 3 : mêmes règles de marge des containers que la page 4 en vue mobile */
