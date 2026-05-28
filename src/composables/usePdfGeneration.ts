@@ -66,7 +66,7 @@ function formatFrDateSafe(value: string): string {
 
 function smhHeaderLines(): string[] {
   const y = CONFIG.SMH_UPDATE.referenceYear;
-  const lines = [`Convention collective nationale de la métallurgie (CCNM) ${y}`];
+  const lines = [`${CONFIG.TOOLTIP_TEXTS.origins.ccnm} ${y}`];
   const entry = CONFIG.SMH_UPDATE.years[y as keyof typeof CONFIG.SMH_UPDATE.years] as
     | { effectiveDate?: string; sourceLabel?: string }
     | undefined;

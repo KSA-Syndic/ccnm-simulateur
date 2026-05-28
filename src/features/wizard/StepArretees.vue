@@ -567,4 +567,15 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
   vertical-align: middle;
   margin-left: 0.35rem;
 }
+
+@media (max-width: 768px) {
+  .arretees-calc-sticky :deep(.book-btn) {
+    width: auto;
+    max-width: 100%;
+  }
+
+  .curve-host :deep(.curve-chart-wrapper) {
+    overflow: hidden;
+  }
+}
 </style>

@@ -1,4 +1,5 @@
 import { SEMANTIC_ID } from '../types';
+import { POINT_TERRITORIAL_CODE_TRAVAIL_CONTRIBUTION } from './tooltipReferences';
 
 /** Hiérarchie des normes (affichage / audit) — ordre : accord entreprise → branche → Code. */
 export type NormHierarchy = 'accord_entreprise' | 'branche' | 'code_travail' | 'usage' | 'mixte';
@@ -373,10 +374,7 @@ export const WIZARD_TOOLTIPS = {
     description:
       'Valeur du point territorial applicable dans votre secteur géographique ; montant indicatif issu des paramètres du simulateur — vérifiez la valeur officielle en vigueur.',
     sourceArticle: 'CCNM — grilles et annexes territoriales',
-    externalLink: {
-      href: 'https://code.travail.gouv.fr/contribution/3248-quand-le-salarie-a-t-il-droit-a-une-prime-danciennete-quel-est-son-montant',
-      label: 'Voir sur code.travail.gouv.fr',
-    },
+    externalLink: POINT_TERRITORIAL_CODE_TRAVAIL_CONTRIBUTION,
   },
   travailNuit: {
     title: 'Travail de nuit',

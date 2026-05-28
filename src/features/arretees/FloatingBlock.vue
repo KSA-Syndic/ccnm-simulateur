@@ -394,3 +394,104 @@ defineExpose({
     </div>
   </div>
 </template>
+
+<style scoped>
+.floating-saisie-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+}
+
+.floating-saisie-layer .floating-input-block {
+  pointer-events: auto;
+  z-index: 15;
+}
+
+.floating-saisie-layer .chart-point-marker {
+  position: absolute;
+  z-index: 14;
+  pointer-events: none;
+}
+
+.floating-saisie-layer--ready .chart-point-ring,
+.floating-saisie-layer--ready .chart-point-dot {
+  opacity: 1;
+}
+
+.floating-saisie-layer--animating .chart-point-marker,
+.floating-saisie-layer--animating .floating-input-block {
+  transition:
+    left 0.42s cubic-bezier(0.4, 0, 0.2, 1),
+    top 0.42s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.floating-input-block--external-cordon::after {
+  display: none !important;
+}
+
+.floating-cordon-vertical {
+  position: absolute;
+  width: 2px;
+  height: 34px;
+  transform: translateX(-50%);
+  background: linear-gradient(to bottom, var(--color-primary), var(--color-primary-light));
+  border-radius: 1px;
+  pointer-events: none;
+  z-index: 13;
+}
+
+.floating-saisie-layer--animating .floating-cordon-vertical {
+  transition:
+    left 0.42s cubic-bezier(0.4, 0, 0.2, 1),
+    top 0.42s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chart-point-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border: 2px solid var(--color-primary);
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0.6);
+  animation: chart-point-ring-pulse 1.6s ease-out infinite;
+}
+
+.chart-point-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  background: var(--color-primary);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--color-primary-border);
+  opacity: 0;
+}
+
+@keyframes chart-point-ring-pulse {
+  0%,
+  100% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .floating-saisie-layer--mobile .floating-input-block {
+    width: min(300px, calc(100% - 1.5rem));
+    max-width: min(300px, calc(100% - 1.5rem));
+  }
+}
+</style>

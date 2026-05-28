@@ -973,69 +973,6 @@ body.iframe-mode .simulator-container.iframe-container {
   }
 }
 
-/* Ancrage du bloc de saisie sur le point actif du graphique */
-.floating-anchor {
-  position: absolute;
-  z-index: 12;
-  pointer-events: none;
-  transition:
-    left 0.38s cubic-bezier(0.4, 0, 0.2, 1),
-    top 0.38s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.floating-anchor--animating {
-  transition-duration: 0.42s;
-}
-
-.chart-point-ring {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 22px;
-  height: 22px;
-  margin: -11px 0 0 -11px;
-  border: 2px solid var(--color-primary);
-  border-radius: 50%;
-  opacity: 0;
-  transform: scale(0.6);
-  animation: chart-point-ring-pulse 1.6s ease-out infinite;
-}
-
-.floating-anchor--ready .chart-point-ring {
-  opacity: 1;
-}
-
-.chart-point-dot {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 10px;
-  height: 10px;
-  margin: -5px 0 0 -5px;
-  background: var(--color-primary);
-  border: 2px solid #fff;
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px var(--color-primary-border);
-  opacity: 0;
-}
-
-.floating-anchor--ready .chart-point-dot {
-  opacity: 1;
-}
-
-@keyframes chart-point-ring-pulse {
-  0%,
-  100% {
-    transform: scale(0.85);
-    opacity: 0.55;
-  }
-
-  50% {
-    transform: scale(1.15);
-    opacity: 1;
-  }
-}
-
 /* Bloc flottant pour saisie */
 .floating-input-block {
   position: absolute;
@@ -1137,12 +1074,6 @@ body.iframe-mode .simulator-container.iframe-container {
 .floating-input-block.animating {
   pointer-events: none;
   transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.floating-input-block.floating-block-hidden,
-.floating-anchor.floating-block-hidden {
-  visibility: hidden;
-  pointer-events: none;
 }
 
 .floating-label {
@@ -1493,31 +1424,6 @@ body.iframe-mode .simulator-container.iframe-container {
 .modal .modal-actions-spaced {
   flex-wrap: wrap;
   gap: 12px;
-}
-
-.post-pdf-syndicat-modal .modal-title {
-  margin-top: 0;
-}
-
-.post-pdf-syndicat-modal .post-pdf-syndicat-notice {
-  font-size: 0.9rem;
-  color: var(--gray-600);
-  margin-top: 0.5rem;
-}
-
-.post-pdf-syndicat-modal .post-pdf-syndicat-webmail {
-  font-size: 0.85rem;
-  margin-top: 12px;
-  margin-bottom: 0;
-}
-
-.post-pdf-syndicat-modal .post-pdf-syndicat-webmail a {
-  color: var(--color-link);
-  text-decoration: none;
-}
-
-.post-pdf-syndicat-modal .post-pdf-syndicat-webmail a:hover {
-  text-decoration: underline;
 }
 
 /* Célébration post-PDF (discrète et élégante) */
@@ -2981,35 +2887,6 @@ body.iframe-mode .simulator-container.iframe-container {
   border-right: 2px solid var(--color-primary);
   pointer-events: none;
   z-index: 1;
-}
-
-/* Chevrons */
-.roulette-chevron {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 0;
-  height: 0;
-  border-top: 10px solid transparent;
-  border-bottom: 10px solid transparent;
-  z-index: 3;
-  cursor: pointer;
-  opacity: 0.7;
-  transition: var(--transition-fast);
-}
-
-.roulette-chevron:hover {
-  opacity: 1;
-}
-
-.roulette-chevron.chevron-up {
-  left: 10px;
-  border-right: 12px solid var(--color-link);
-}
-
-.roulette-chevron.chevron-down {
-  right: 10px;
-  border-left: 12px solid var(--color-link);
 }
 
 /* Liste des valeurs - horizontal */

@@ -55,8 +55,6 @@ const TooltipTextsSchema = z.object({
     accordCollectif: z.string(),
   }),
   templates: z.object({ legalBlock: z.string() }),
-  conditions: z.record(z.string(), z.string()),
-  primeEquipe: z.record(z.string(), z.string()),
   result: z.object({ breakdownLineTemplate: z.string() }),
 });
 
@@ -355,31 +353,6 @@ export const CONFIG: Config = ConfigSchema.parse({
       accordCollectif: 'Accord collectif / usage',
     },
     templates: { legalBlock: '<strong>{title}\u00A0:</strong><br>{description}' },
-    conditions: {
-      nuitRateTemplate: '+{pct}%.',
-      dimancheRateTemplate: '+{pct}%.',
-      heuresSupRateTemplate: '+{pct25}% (36e-43e), puis +{pct50}% (>=44e).',
-      heuresSupConventionDescription:
-        'Heures supplémentaires : {rates} Durée légale : 35h/semaine (151,67h/mois).',
-      heuresSupAccordDescription: '{rates}{contingent}{repos}',
-      tempsPartielDescription:
-        'Rémunération proportionnelle à un temps complet, à qualification égale.',
-      joursSupForfaitDescription:
-        'Renonciation possible à des jours de repos par avenant annuel, avec majoration minimale de 10%.',
-      forfaitDescription:
-        'Base 35h : sans majoration. Forfait Heures : +{pctHeures}%. Forfait Jours : +{pctJours}%.',
-      pointTerritorialSource: 'Accord territorial',
-      pointTerritorialDescription:
-        'Valeur définie par accord territorial. {territoire} {year} : {pointValue}€',
-      pointTerritorialLinkLabel: 'Voir sur code.travail.gouv.fr',
-    },
-    primeEquipe: {
-      sourceArticle: 'Convention collective de la métallurgie (CCNM, Art. 145)',
-      conditionTexte: "Prime d'équipe calculée sur la base horaire de référence.",
-      conventionDescriptionTemplate:
-        '30 min du taux horaire de base par poste. Référence actuelle : {value} €/poste.',
-      accordDescriptionTemplate: 'Valeur unitaire accord : {value} {unit}.',
-    },
     result: { breakdownLineTemplate: '• {label} : {value}' },
   },
   JOURS_OUVRES_CCN: 22,

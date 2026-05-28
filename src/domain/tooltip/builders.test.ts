@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import '@/accords';
+import { POINT_TERRITORIAL_CODE_TRAVAIL_CONTRIBUTION } from '@/domain/ui/tooltipReferences';
 import {
   applyTooltipTemplate,
   buildAccordSummaryTooltip,
@@ -38,14 +39,14 @@ describe('tooltip/builders', () => {
   it('buildLegalTooltipContent — lien externe typé', () => {
     const html = buildLegalTooltipContent(cfg, 'Titre', 'Description', {
       externalLink: {
-        href: 'https://code.travail.gouv.fr/foo',
-        label: 'Voir sur code.travail.gouv.fr',
+        href: POINT_TERRITORIAL_CODE_TRAVAIL_CONTRIBUTION.href,
+        label: POINT_TERRITORIAL_CODE_TRAVAIL_CONTRIBUTION.label,
       },
     });
     expect(html).toContain('target="_blank"');
     expect(html).toContain('rel="noopener"');
     expect(html).toContain('class="tooltip-link"');
-    expect(html).toContain('https://code.travail.gouv.fr/foo');
+    expect(html).toContain(POINT_TERRITORIAL_CODE_TRAVAIL_CONTRIBUTION.href);
     expect(html).toContain('Voir sur code.travail.gouv.fr');
   });
 

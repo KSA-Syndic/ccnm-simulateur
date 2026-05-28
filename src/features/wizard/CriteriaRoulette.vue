@@ -171,3 +171,68 @@ function labelFor(deg: number): string {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Chevrons : zone tactile 44px, triangle en ::before (remplace main.css + extensions.css). */
+.roulette-chevron {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: var(--transition-fast);
+}
+
+.roulette-chevron:hover {
+  opacity: 1;
+}
+
+.roulette-chevron.chevron-up {
+  left: 10px;
+}
+
+.roulette-chevron.chevron-down {
+  right: 10px;
+}
+
+.roulette-chevron::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform: translate(-50%, -50%);
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+}
+
+.roulette-chevron.chevron-up::before {
+  border-right: 12px solid var(--color-link);
+}
+
+.roulette-chevron.chevron-down::before {
+  border-left: 12px solid var(--color-link);
+}
+
+.roulette-value {
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+}
+
+.roulette-value:not(.selected):hover {
+  opacity: 0.85;
+}
+</style>

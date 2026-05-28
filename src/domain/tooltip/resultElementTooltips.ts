@@ -16,8 +16,6 @@ import { SEMANTIC_ID } from '../types';
 import { formatMoney } from '../utils/format';
 import { roundToCents } from '../utils/rounding';
 
-const CONVENTION_LABEL = 'Convention collective nationale de la métallurgie (CCNM)';
-
 function euroBreakdown(label: string, value: number): ResultBreakdownLine {
   return { label, value };
 }
@@ -404,7 +402,7 @@ function fallbackOrigin(origin: 'convention' | 'accord', agreement: Agreement | 
     const nom = getAccordNomCourt(agreement);
     return nom ? `Accord d'entreprise ${nom}` : "Accord d'entreprise";
   }
-  return CONVENTION_LABEL;
+  return CONFIG.TOOLTIP_TEXTS.origins.ccnm;
 }
 
 export function buildResultElementTooltipHtml(
@@ -424,7 +422,7 @@ export function buildResultElementTooltipHtml(
   }
   return buildResultTooltipContent(
     CONFIG.TOOLTIP_TEXTS,
-    CONVENTION_LABEL,
+    CONFIG.TOOLTIP_TEXTS.origins.ccnm,
     detail,
     fallbackOrigin(origin, agreement),
   );
