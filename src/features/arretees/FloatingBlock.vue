@@ -25,9 +25,6 @@ const anchorReady = ref(false);
 const anchorAnimating = ref(false);
 const popIn = ref(false);
 
-const BLOCK_WIDTH_ESTIMATE = 300;
-const BLOCK_EDGE_PADDING = 12;
-
 let resizeObserver: ResizeObserver | undefined;
 
 const currentPeriod = computed(() => {
@@ -76,14 +73,7 @@ async function updateAnchorPosition(options?: { animate?: boolean; pop?: boolean
     anchorAnimating.value = true;
   }
 
-  let x = coords.x;
-  const host = document.querySelector('#step-4 .curve-chart-wrapper, .curve-chart-wrapper');
-  if (host instanceof HTMLElement) {
-    const width = host.clientWidth;
-    const half = BLOCK_WIDTH_ESTIMATE / 2;
-    x = Math.max(BLOCK_EDGE_PADDING + half, Math.min(width - BLOCK_EDGE_PADDING - half, x));
-  }
-  anchorPos.value = { x, y: coords.y };
+  anchorPos.value = coords;
   anchorReady.value = true;
 
   if (options?.pop) {

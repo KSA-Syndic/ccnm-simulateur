@@ -308,17 +308,6 @@ export interface ResultTooltipDetailInput {
   breakdown?: ResultBreakdownLine[] | undefined;
 }
 
-function formatBreakdownTooltipValue(value: number, label: string): string {
-  const lab = String(label || '').toLowerCase();
-  if (lab.includes('horaire') || lab.includes('taux')) {
-    return `${formatNumberFrLegacy(value, 2)} €/h`;
-  }
-  if (lab.includes('unitaire')) {
-    return `${formatNumberFrLegacy(value, 2)} €`;
-  }
-  return formatMoney(value);
-}
-
 export function buildResultTooltipContent(
   cfg: TooltipTextsConfig | undefined,
   conventionLabel: string,
@@ -344,7 +333,7 @@ export function buildResultTooltipContent(
       descriptionLines.push(
         applyTooltipTemplate(lineTemplate, {
           label: b?.label || '',
-          value: formatBreakdownTooltipValue(b?.value || 0, b?.label || ''),
+          value: formatMoney(b?.value || 0),
         }),
       );
     }

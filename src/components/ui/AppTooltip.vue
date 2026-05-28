@@ -31,7 +31,6 @@ const attrs = useAttrs();
 const visible = ref(false);
 const triggerRef = ref<HTMLElement | null>(null);
 const floatingRef = ref<HTMLElement | null>(null);
-const hoverCapable = ref(true);
 
 let stopAutoUpdate: (() => void) | undefined;
 let hideTimer: ReturnType<typeof setTimeout> | null = null;
@@ -52,14 +51,6 @@ const renderedHtml = computed(() => {
   return formatTooltipHtml(props.content, resolvedVariant.value);
 });
 
-function refreshHoverCapability() {
-  if (typeof window.matchMedia !== 'function') {
-    hoverCapable.value = true;
-    return;
-  }
-  hoverCapable.value = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-}
-
 function cancelHide() {
   if (hideTimer != null) {
     clearTimeout(hideTimer);
@@ -68,7 +59,6 @@ function cancelHide() {
 }
 
 function scheduleHide() {
-  if (!hoverCapable.value) return;
   cancelHide();
   hideTimer = setTimeout(() => {
     hideTimer = null;
@@ -114,34 +104,11 @@ function toggle() {
 }
 
 function onTriggerMouseEnter() {
-  if (!hoverCapable.value) return;
   cancelHide();
   show();
 }
 function onTriggerMouseLeave() {
   scheduleHide();
-}
-
-function onTriggerClick(e: MouseEvent) {
-  if (hoverCapable.value) {
-    e.preventDefault();
-    return;
-  }
-  e.preventDefault();
-  e.stopPropagation();
-  toggle();
-}
-
-function onTriggerKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape' && visible.value) {
-    e.preventDefault();
-    hide();
-    return;
-  }
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault();
-    toggle();
-  }
 }
 
 function onPopperMouseEnter() {
@@ -177,22 +144,8 @@ watch(
   },
 );
 
-onMounted(() => {
-  refreshHoverCapability();
-  if (typeof window.matchMedia === 'function') {
-    window
-      .matchMedia('(hover: hover) and (pointer: fine)')
-      .addEventListener('change', refreshHoverCapability);
-  }
-  document.addEventListener('click', onClickOutside, true);
-});
-
+onMounted(() => document.addEventListener('click', onClickOutside, true));
 onUnmounted(() => {
-  if (typeof window.matchMedia === 'function') {
-    window
-      .matchMedia('(hover: hover) and (pointer: fine)')
-      .removeEventListener('change', refreshHoverCapability);
-  }
   document.removeEventListener('click', onClickOutside, true);
   cancelHide();
   stopAutoUpdate?.();
@@ -212,10 +165,9 @@ onUnmounted(() => {
     aria-haspopup="true"
     @mouseenter="onTriggerMouseEnter"
     @mouseleave="onTriggerMouseLeave"
-    @focus="onTriggerMouseEnter"
-    @blur="scheduleHide"
-    @click="onTriggerClick"
-    @keydown="onTriggerKeydown"
+    @focus="show"
+    @blur="hide"
+    @click.prevent="toggle"
   >
     <slot name="trigger">
       <svg

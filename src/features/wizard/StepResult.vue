@@ -71,7 +71,14 @@ const hintBlocks = computed(() => {
     agreement: r.accDoc,
     details: r.details,
   });
-  return base;
+  const blocks = [...base];
+  if (ui.nbMois === 13) {
+    blocks.unshift({
+      type: 'info',
+      html: '<p>Répartition sur <strong>13 mois</strong> : le total annuel affiché inclut la logique de lissage mensuel du simulateur.</p>',
+    });
+  }
+  return blocks;
 });
 </script>
 
