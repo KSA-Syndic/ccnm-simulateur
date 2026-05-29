@@ -6,7 +6,7 @@ import {
   type WizardRemunerationInput,
 } from '@/domain/remuneration/compute';
 import type { ElementResult } from '@/domain/types';
-import { roundHourlyRate, roundToCents, roundToEuro } from '@/domain/utils/rounding';
+import { roundHourlyRate, roundToCents } from '@/domain/utils/rounding';
 import { annualFromMonthly } from '@/domain/utils/rounding';
 
 export const YEAR_REF = CONFIG.CURRENT_DATA_YEAR;
@@ -92,32 +92,32 @@ export function primeAncienneteConventionAnnuelle(params: {
   const annees = Math.min(anciennete, plafond);
   const tauxClasse = CONFIG.TAUX_ANCIENNETE[classe] ?? 0;
   const mensuel = point * tauxClasse * annees * prorata;
-  return annualFromMonthly(roundToCents(mensuel));
+  return annualFromMonthly(mensuel);
 }
 
 /** Prime équipe CCNM — 22 postes × 30 min × taux SMH (défaut CONFIG). */
-export function primeEquipeConventionAnnuelle(tauxHoraire: number, postes?: number): number {
+export function primeEquipeConventionAnnuelle(tauxSmhHoraire: number, postes?: number): number {
   const n = postes ?? CONFIG.PRIME_EQUIPE_POSTES_MENSUELS_DEFAUT;
   const heuresParPoste = CONFIG.PRIME_EQUIPE_MINUTES_PAR_POSTE / 60;
-  const mensuel = roundToCents(n * heuresParPoste * tauxHoraire);
+  const mensuel = n * heuresParPoste * tauxSmhHoraire;
   return annualFromMonthly(mensuel);
 }
 
 /** Habillage — 0,5 h SMH / semaine converties en mensuel (catalogue). */
-export function primeHabillageConventionAnnuelle(tauxHoraire: number): number {
+export function primeHabillageConventionAnnuelle(tauxSmhHoraire: number): number {
   const heuresParSemaine = CONFIG.CCNM_CONTREPARTIES_ORGANISATION.habillageHeuresSMHParSemaine;
   const unitesMensuelles = heuresParSemaine * (52 / 12);
-  const mensuel = roundToCents(unitesMensuelles * tauxHoraire);
+  const mensuel = unitesMensuelles * tauxSmhHoraire;
   return annualFromMonthly(mensuel);
 }
 
 /** Astreinte disponibilité — coefficient × taux horaire base × périodes / mois. */
 export function astreintePeriodesAnnuelle(
-  tauxHoraire: number,
+  tauxSmhHoraire: number,
   periodesParMois: number,
   coefficient: number,
 ): number {
-  const mensuel = roundToCents(periodesParMois * coefficient * tauxHoraire);
+  const mensuel = periodesParMois * coefficient * tauxSmhHoraire;
   return annualFromMonthly(mensuel);
 }
 
@@ -128,7 +128,7 @@ export function totalAnnuelBrut(details: ElementResult[], baseSmh: number): numb
   const inSmh = details
     .filter((d) => d.amount > 0 && d.inclusDansSMH === true)
     .reduce((s, d) => s + d.amount, 0);
-  return roundToEuro(baseSmh + inSmh + extras);
+  return roundToCents(baseSmh + inSmh + extras);
 }
 
 export const GROUPE_PAR_CLASSE: Record<number, string> = (() => {

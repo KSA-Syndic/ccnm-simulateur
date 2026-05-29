@@ -145,6 +145,6 @@ describe('tooltip/builders', () => {
   it('buildResultTooltipContent — ligne par défaut', () => {
     const html = buildResultTooltipContent(cfg, 'CCNM', { label: 'L', value: 1200 }, 'CCNM');
     expect(html).toContain('L');
-    expect(html).toContain('1 200 €');
+    expect(html).toContain('1 200,00 €');
   });
 });

@@ -1,4 +1,5 @@
 import { SEMANTIC_ID } from '../types';
+import { SMH_ASSIETTE_SOURCE_ARTICLE } from '../remuneration/smhAssiettePolicy';
 import { POINT_TERRITORIAL_CODE_TRAVAIL_CONTRIBUTION } from './tooltipReferences';
 
 /** Hiérarchie des normes (affichage / audit) — ordre : accord entreprise → branche → Code. */
@@ -427,8 +428,8 @@ export const WIZARD_TOOLTIPS = {
   arreteesAssietteComparaison: {
     title: 'Base de comparaison au minimum conventionnel',
     description:
-      "Inclus : la base (grille SMH) et les primes d'assiette listées dans l'encart.\nExclus : les autres rubriques actives de votre simulation, comptées en supplément sur le bulletin.",
-    sourceArticle: 'CCNM — assiette de comparaison au SMH',
+      "Inclus : la base (grille SMH) et les rubriques paramétrées comme « rémunération du travail » (résultats, garanties assimilées au bulletin, prime d'ancienneté d'entreprise le cas échéant, etc.).\nExclus : la prime d'ancienneté de branche (CCNM) et les sujétions (nuit, équipes successives, dimanche, astreintes, temps annexes, paniers…) ainsi que les majorations d'heures supplémentaires : elles s'ajoutent en sus du minimum.",
+    sourceArticle: SMH_ASSIETTE_SOURCE_ARTICLE,
   },
   evolutionInflation: {
     title: "Évolution par rapport à l'inflation",

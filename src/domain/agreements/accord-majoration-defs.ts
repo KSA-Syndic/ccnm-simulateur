@@ -6,6 +6,7 @@ const HS_SEUIL = CONFIG.HEURES_SUP_TRANCHE_1_MENSUELLES;
 
 /**
  * Majorations d’entreprise substituables aux lignes CCN homonymes (`favorPrinciple`).
+ * Assiette SMH : sujétions — hors assiette (voir `smhAssiettePolicy.ts`).
  */
 export function getAccordMajorationDefsForRemuneration(agreement: Agreement): ElementDef[] {
   const out: ElementDef[] = [];
@@ -33,9 +34,11 @@ export function getAccordMajorationDefsForRemuneration(agreement: Agreement): El
         heures: { ref: 'state', key: 'heuresNuit' },
         taux: { ref: 'constant', value: taux },
         base: { ref: 'context', key: 'tauxHoraireBase' },
-        period: 'monthly',
+        period: 'annual',
         majorationSeule: true,
       },
+      inclusDansSMH: false,
+      sourceArticle: 'CCNM art. 140 (sujétion — hors assiette SMH)',
     });
   }
 
@@ -57,10 +60,12 @@ export function getAccordMajorationDefsForRemuneration(agreement: Agreement): El
         mode: 'heuresXtaux',
         heures: { ref: 'state', key: 'heuresDimanche' },
         taux: { ref: 'constant', value: m.dimanche },
-        base: { ref: 'context', key: 'tauxHoraire' },
-        period: 'monthly',
+        base: { ref: 'context', key: 'tauxHoraireBase' },
+        period: 'annual',
         majorationSeule: true,
       },
+      inclusDansSMH: false,
+      sourceArticle: 'CCNM art. 140 (sujétion — hors assiette SMH)',
     });
   }
 
@@ -92,9 +97,11 @@ export function getAccordMajorationDefsForRemuneration(agreement: Agreement): El
         },
         taux: { ref: 'constant', value: t25 },
         base: { ref: 'context', key: 'tauxHoraireBase' },
-        period: 'monthly',
+        period: 'annual',
         majorationSeule: true,
       },
+      inclusDansSMH: false,
+      sourceArticle: 'CCNM art. 140 (majorations HS — hors assiette SMH)',
     });
     out.push({
       id: 'majorationHeuresSup50',
@@ -120,9 +127,11 @@ export function getAccordMajorationDefsForRemuneration(agreement: Agreement): El
         },
         taux: { ref: 'constant', value: t50 },
         base: { ref: 'context', key: 'tauxHoraireBase' },
-        period: 'monthly',
+        period: 'annual',
         majorationSeule: true,
       },
+      inclusDansSMH: false,
+      sourceArticle: 'CCNM art. 140 (majorations HS — hors assiette SMH)',
     });
   }
 

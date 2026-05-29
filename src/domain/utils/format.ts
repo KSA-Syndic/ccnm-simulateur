@@ -1,4 +1,4 @@
-import { roundToCents } from './rounding';
+import { roundToCents } from '../utils/rounding';
 
 const FR = 'fr-FR';
 const NBSP_REGEX = /\u202f/g;
@@ -23,14 +23,23 @@ export function formatHeuresDetail(heures: number): string {
     .replace(NBSP_REGEX, ' ');
 }
 
+/** Affichage en euros entiers : arrondi sur le montant ramené au centime (pas sur des sous-totaux intermédiaires déjà tronqués). */
 export function formatMoney(amount: number): string {
-  const n = Math.round(Number(amount));
+  const n = Math.round(roundToCents(amount));
   const s = new Intl.NumberFormat(FR, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
     useGrouping: true,
   }).format(n);
   return s.replace(NBSP_REGEX, ' ') + ' €';
+}
+
+/**
+ * Montants dans les infobulles de détail (taux, mensualités estimées, sous-totaux) :
+ * deux décimales pour refléter les montants réellement pris en compte, sans l’arrondi entier du résumé principal.
+ */
+export function formatMoneyTooltipDetail(amount: number): string {
+  return `${formatEurosDetail(amount)} €`;
 }
 
 const HTML_ESCAPE_MAP: Record<string, string> = {

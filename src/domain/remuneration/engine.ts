@@ -10,7 +10,7 @@ import {
   type ElementResult,
   type SubstitutionDecl,
 } from '../types';
-import { roundToCents, roundToEuro, annualFromMonthly } from '../utils/rounding';
+import { roundToCents, annualFromMonthly } from '../utils/rounding';
 
 // ── Ref resolution ──
 
@@ -111,10 +111,10 @@ function executeComputeMode(mode: ComputeMode, ctx: ComputeContext): number {
       const taux = resolveRef(mode.taux, ctx);
       const base = resolveRef(mode.base, ctx);
       const mult = mode.majorationSeule === true ? new Decimal(taux) : new Decimal(1).plus(taux);
-      const monthly = new Decimal(heures).times(base).times(mult).toNumber();
+      const monthly = new Decimal(heures).times(base).times(mult);
       return mode.period === 'annual'
-        ? annualFromMonthly(roundToCents(monthly))
-        : roundToCents(monthly);
+        ? annualFromMonthly(monthly.toNumber())
+        : roundToCents(monthly.toNumber());
     }
     case 'pourcentageXbase': {
       const taux = resolveRef(mode.taux, ctx);
@@ -123,32 +123,36 @@ function executeComputeMode(mode: ComputeMode, ctx: ComputeContext): number {
       const raw = new Decimal(base).times(taux).times(annees).toNumber();
       if (mode.period === 'annual') {
         /** Base déjà annuelle (ex. SMH × %) — pas de coefficient mensuel `×12`. */
-        return roundToEuro(raw);
+        return roundToCents(raw);
       }
       return roundToCents(raw);
     }
     case 'unitesXmontant': {
-      const unites = resolveRef(mode.unites, ctx);
+      let unites = resolveRef(mode.unites, ctx);
+      if (mode.prorataActivite) {
+        const r = ctx.activityRate;
+        const prorata = Number.isFinite(r) && r > 0 ? r : 1;
+        unites = Math.max(0, unites * prorata);
+      }
       const montant = resolveRef(mode.montant, ctx);
       const raw = new Decimal(unites).times(montant).toNumber();
       if (mode.forfaitAnnuel === true && mode.period === 'annual') {
-        return roundToEuro(raw);
+        return roundToCents(raw);
       }
       const monthly = raw;
-      return mode.period === 'annual'
-        ? annualFromMonthly(roundToCents(monthly))
-        : roundToCents(monthly);
+      return mode.period === 'annual' ? annualFromMonthly(monthly) : roundToCents(monthly);
     }
     case 'periodesIndemniteSmh': {
       const periodes = resolveRef(mode.periodes, ctx);
       const th = ctx.tauxHoraireBase;
-      const euroPerPeriode = roundToCents(mode.coefficientSmhParPeriode * th);
-      const monthly = roundToCents(periodes * euroPerPeriode);
-      return mode.period === 'annual' ? annualFromMonthly(monthly) : monthly;
+      const monthly = new Decimal(periodes).times(mode.coefficientSmhParPeriode).times(th);
+      return mode.period === 'annual'
+        ? annualFromMonthly(monthly.toNumber())
+        : roundToCents(monthly.toNumber());
     }
     case 'montantFixe': {
       const montant = resolveRef(mode.montant, ctx);
-      return mode.period === 'annual' ? roundToEuro(montant) : roundToCents(montant);
+      return roundToCents(montant);
     }
     case 'postesXdureeXtaux': {
       let postes = resolveRef(mode.postes, ctx);
@@ -160,10 +164,10 @@ function executeComputeMode(mode: ComputeMode, ctx: ComputeContext): number {
       const dureeMinutes = resolveRef(mode.dureeMinutes, ctx);
       const taux = resolveRef(mode.taux, ctx);
       const heuresParPoste = dureeMinutes / 60;
-      const monthly = new Decimal(postes).times(heuresParPoste).times(taux).toNumber();
+      const monthly = new Decimal(postes).times(heuresParPoste).times(taux);
       return mode.period === 'annual'
-        ? annualFromMonthly(roundToCents(monthly))
-        : roundToCents(monthly);
+        ? annualFromMonthly(monthly.toNumber())
+        : roundToCents(monthly.toNumber());
     }
     case 'custom':
       return mode.compute(ctx);
@@ -344,11 +348,9 @@ export function buildComputeContext(
   const baseSMHFull = safeNum(state['baseSMHFull'] ?? baseSMH);
   const activityRate = resolveActivityRate(state);
   const tauxHoraireBase = getHourlyBaseRate(baseSMHFull);
-  const tauxHoraire = computeEffectiveHourlyRate(tauxHoraireBase, state, classe);
 
   return {
     state,
-    tauxHoraire,
     tauxHoraireBase,
     baseSMH,
     salaireBase: baseSMH,
@@ -433,30 +435,4 @@ function getHourlyBaseRate(smhAnnual: number): number {
   if (!(smhAnnual > 0)) return 0;
   const heuresMois = CONFIG.DUREE_LEGALE_HEURES_MOIS;
   return roundHourlyRate(smhAnnual / 12 / heuresMois);
-}
-
-function computeEffectiveHourlyRate(
-  tauxHoraireBase: number,
-  state: Record<string, unknown>,
-  classe: number,
-): number {
-  const isForfaitJours = classe >= CONFIG.SEUIL_CADRE && state['forfait'] === 'jours';
-  if (isForfaitJours) return tauxHoraireBase;
-
-  const hsActif = state['travailHeuresSup'] === true;
-  const heuresSup = hsActif ? safeNum(state['heuresSup']) : 0;
-  if (heuresSup <= 0) return tauxHoraireBase;
-
-  const seuilMensuel = CONFIG.HEURES_SUP_TRANCHE_1_MENSUELLES;
-  const heures25 = Math.min(Math.max(heuresSup, 0), seuilMensuel);
-  const heures50 = Math.max(heuresSup - seuilMensuel, 0);
-  const taux25 = CONFIG.MAJORATIONS_CCN.heuresSup25;
-  const taux50 = CONFIG.MAJORATIONS_CCN.heuresSup50;
-  const heuresBase = CONFIG.DUREE_LEGALE_HEURES_MOIS;
-
-  const coeff =
-    (heuresBase + heures25 * (1 + taux25) + heures50 * (1 + taux50)) /
-    (heuresBase + heures25 + heures50);
-
-  return Math.round(tauxHoraireBase * coeff * 10000) / 10000;
 }

@@ -91,7 +91,7 @@ export const CONVENTION_MODALITES_PRIMES: Record<string, ModaliteRaw> = {
     conditionTexte:
       'Indemnité de repas de nuit lorsque les critères de la branche et la durée minimale de poste sont réunis.',
     tooltip:
-      "Une unité correspond en principe à un poste éligible. Le montant unitaire est celui du barème repas de nuit applicable pour l'année affichée.",
+      "Une unité correspond en principe à un poste éligible. Le montant unitaire suit le barème repas de nuit applicable pour l'année affichée (référence type ACOSS / Urssaf) ; un employeur peut prévoir un montant plus favorable.",
   },
   habillageDeshabillage: {
     stateKeyActif: 'primeHabillageDeshabillage',
@@ -156,7 +156,8 @@ export function getConventionPrimeDefs(): ElementDef[] {
             ctx.classe < CONFIG.SEUIL_CADRE &&
             Number(ctx.state['anciennete'] ?? 0) >= CONFIG.ANCIENNETE.seuil,
         },
-        sourceArticle: 'CCNM Art. 142-143',
+        sourceArticle:
+          'CCNM Art. 142-143 ; art. 140 (prime d’ancienneté de branche hors assiette SMH)',
         conditionTexte: `Prime d'ancienneté dès ${CONFIG.ANCIENNETE.seuil} ans, plafond ${CONFIG.ANCIENNETE.plafond} ans. Non-cadres uniquement (convention).`,
         tooltip: 'Point territorial × taux de la classe × ancienneté × 12.',
         uiSection: 'main',
@@ -188,7 +189,7 @@ export function getConventionPrimeDefs(): ElementDef[] {
                 'travailEquipe'
               ] === true),
         },
-        sourceArticle: 'CCNM Art. 145',
+        sourceArticle: 'CCNM Art. 145 ; art. 140 (équipes successives — hors assiette SMH)',
         conditionTexte: "Prime d'équipe calculée sur la base horaire de référence.",
         tooltip: '30 min du taux horaire de base par poste. 22 postes/mois.',
         uiSection: 'main',
@@ -201,6 +202,7 @@ export function getConventionPrimeDefs(): ElementDef[] {
 
 const HS_SEUIL_CCN = CONFIG.HEURES_SUP_TRANCHE_1_MENSUELLES;
 
+/** Majorations CCNM : sujétions / HS — `inclusDansSMH: false` (voir `smhAssiettePolicy.ts`). */
 export function getConventionMajorationDefs(): ElementDef[] {
   return [
     {
@@ -221,11 +223,12 @@ export function getConventionMajorationDefs(): ElementDef[] {
         heures: { ref: 'state', key: 'heuresNuit' },
         taux: { ref: 'constant', value: CONFIG.MAJORATIONS_CCN.nuit },
         base: { ref: 'context', key: 'tauxHoraireBase' },
-        period: 'monthly',
+        period: 'annual',
         majorationSeule: true,
       },
-      sourceArticle: 'CCNM',
-      conditionTexte: `+${Math.round(CONFIG.MAJORATIONS_CCN.nuit * 100)}% du taux horaire (heures × base × taux).`,
+      inclusDansSMH: false,
+      sourceArticle: 'CCNM art. 140 (sujétion — hors assiette SMH)',
+      conditionTexte: `+${Math.round(CONFIG.MAJORATIONS_CCN.nuit * 100)}% du taux horaire (heures mensuelles × base × taux, annualisées).`,
     },
     {
       id: 'majorationDimanche',
@@ -243,12 +246,12 @@ export function getConventionMajorationDefs(): ElementDef[] {
         mode: 'heuresXtaux',
         heures: { ref: 'state', key: 'heuresDimanche' },
         taux: { ref: 'constant', value: CONFIG.MAJORATIONS_CCN.dimanche },
-        base: { ref: 'context', key: 'tauxHoraire' },
-        period: 'monthly',
+        base: { ref: 'context', key: 'tauxHoraireBase' },
+        period: 'annual',
         majorationSeule: true,
       },
       sourceArticle: 'CCNM',
-      conditionTexte: `+${Math.round(CONFIG.MAJORATIONS_CCN.dimanche * 100)}% du taux horaire effectif (heures × base × taux).`,
+      conditionTexte: `+${Math.round(CONFIG.MAJORATIONS_CCN.dimanche * 100)}% du taux horaire de base du minimum (SMH), comme les autres sujétions : heures mensuelles × base × taux, annualisées.`,
     },
     {
       id: 'majorationHeuresSup25',
@@ -257,6 +260,7 @@ export function getConventionMajorationDefs(): ElementDef[] {
       source: SRC,
       valueKind: 'pourcentage',
       label: 'Majoration heures supplémentaires (+25%)',
+      conditionTexte: `Majoration sur la 1re tranche d'heures supplémentaires (jusqu'à ${HS_SEUIL_CCN} h/mois) : heures mensuelles × taux × +25 %, annualisées sur 12 mois.`,
       computeMode: {
         mode: 'heuresXtaux',
         heures: {
@@ -267,12 +271,14 @@ export function getConventionMajorationDefs(): ElementDef[] {
         },
         taux: { ref: 'constant', value: CONFIG.MAJORATIONS_CCN.heuresSup25 },
         base: { ref: 'context', key: 'tauxHoraireBase' },
-        period: 'monthly',
+        period: 'annual',
         majorationSeule: true,
       },
       stateKeyActif: 'travailHeuresSup',
       stateKeyHeures: 'heuresSup',
       config: { seuilMensuel: HS_SEUIL_CCN },
+      inclusDansSMH: false,
+      sourceArticle: 'CCNM art. 140 (majorations HS — hors assiette SMH)',
     },
     {
       id: 'majorationHeuresSup50',
@@ -281,6 +287,7 @@ export function getConventionMajorationDefs(): ElementDef[] {
       source: SRC,
       valueKind: 'pourcentage',
       label: 'Majoration heures supplémentaires (+50%)',
+      conditionTexte: `Majoration sur le reliquat d'heures supplémentaires (au-delà de ${HS_SEUIL_CCN} h/mois) : heures mensuelles × taux × +50 %, annualisées sur 12 mois.`,
       computeMode: {
         mode: 'heuresXtaux',
         heures: {
@@ -291,12 +298,14 @@ export function getConventionMajorationDefs(): ElementDef[] {
         },
         taux: { ref: 'constant', value: CONFIG.MAJORATIONS_CCN.heuresSup50 },
         base: { ref: 'context', key: 'tauxHoraireBase' },
-        period: 'monthly',
+        period: 'annual',
         majorationSeule: true,
       },
       stateKeyActif: 'travailHeuresSup',
       stateKeyHeures: 'heuresSup',
       config: { seuilMensuel: HS_SEUIL_CCN },
+      inclusDansSMH: false,
+      sourceArticle: 'CCNM art. 140 (majorations HS — hors assiette SMH)',
     },
   ];
 }

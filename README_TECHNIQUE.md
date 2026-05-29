@@ -4,29 +4,33 @@ Application **Vue 3**, **Pinia**, moteur métier sous **`src/domain/`**. Point d
 
 ## Cartographie rapide
 
-| Domaine                           | Emplacement                                                                        |
-| --------------------------------- | ---------------------------------------------------------------------------------- |
-| Wizard (4 étapes)                 | `src/features/wizard/`, `src/components/SimulatorLayout.vue`, `WizardShell.vue`    |
-| Classification                    | `src/domain/classification/engine.ts`                                              |
-| Convention / modalités nationales | `src/domain/convention/catalog.ts`, `nationalModalityRegistry.ts`                  |
-| Rémunération                      | `src/domain/remuneration/` (`engine.ts`, `compute.ts`, `aggregate.ts`, `smh.ts`)   |
-| Accords d'entreprise              | `src/accords/*.ts`, `src/domain/agreements/`                                       |
-| Arriérés                          | `src/domain/arretees/`, `src/composables/useTimeline.ts`, `src/stores/arretees.ts` |
-| Évolution / inflation             | `src/domain/evolution/inflationFetch.ts`, `projection.ts`                          |
-| Tooltips & libellés               | `src/domain/tooltip/`, `src/domain/ui/labels.ts`, `glossary.ts`                    |
-| PDF / Word / post-export          | `src/composables/usePdfGeneration.ts`, `src/domain/pdf/`, `src/features/pdf/`      |
-| État global                       | `src/stores/*.ts`, `useWizardRemunerationInput.ts`                                 |
-| Tests                             | `src/**/__tests__`, `tests/**`, `e2e/**`                                           |
+| Domaine                           | Emplacement                                                                                              |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Wizard (4 étapes)                 | `src/features/wizard/`, `src/components/SimulatorLayout.vue`, `WizardShell.vue`                          |
+| Classification                    | `src/domain/classification/engine.ts`                                                                    |
+| Convention / modalités nationales | `src/domain/convention/catalog.ts`, `nationalModalityRegistry.ts`                                        |
+| Rémunération                      | `src/domain/remuneration/` (`engine.ts`, `compute.ts`, `aggregate.ts`, `smh.ts`, `smhAssiettePolicy.ts`) |
+| Accords d'entreprise              | `src/accords/*.ts`, `src/domain/agreements/`                                                             |
+| Arriérés                          | `src/domain/arretees/`, `src/composables/useTimeline.ts`, `src/stores/arretees.ts`                       |
+| Évolution / inflation             | `src/domain/evolution/inflationFetch.ts`, `projection.ts`                                                |
+| Tooltips & libellés               | `src/domain/tooltip/`, `src/domain/ui/labels.ts`, `glossary.ts`                                          |
+| PDF / Word / post-export          | `src/composables/usePdfGeneration.ts`, `src/domain/pdf/`, `src/features/pdf/`                            |
+| État global                       | `src/stores/*.ts`, `useWizardRemunerationInput.ts`                                                       |
+| Tests                             | `src/**/__tests__`, `tests/**`, `e2e/**`                                                                 |
 
 **PDF annexe arriérés** : jspdf-autotable **v5** — `importPdfAutoTable()` / `drawPdfAutoTable()` dans `src/domain/pdf/jsPdfHelpers.ts` (un simple `import 'jspdf-autotable'` ne branche plus `doc.autoTable` en ESM).
 
 ## Conformité juridique
 
 - **CCNM (IDCC 3248)** : grilles et paramètres dans `src/domain/config/`
-- **Code du travail** : principe de faveur (Art. L2254-2) dans le moteur de comparaison CCN / accord
+- **Assiette SMH** : distinction indicative « rémunération du travail » / « sujétion » (CCNM art. 140, jurisprudence déc. 2025 à contextualiser) centralisée dans `src/domain/remuneration/smhAssiettePolicy.ts` ; le moteur la matérialise via `inclusDansSMH` sur chaque `ElementDef` (agrégats, PDF, encarts « Inclus / Exclus »).
 - **Accords d'entreprise** : `src/accords/` (ex. `kuhn.ts`)
 
 Les montants par défaut sont des **paramètres de simulation** ; les métadonnées juridiques (`sourceArticle`, `conditionTexte`, tooltips) doivent être conservées ou complétées lors des évolutions catalogue / accord.
+
+## Moteur — assiette horaire (SMH)
+
+Les formules catalogue et nationales en **`heuresXtaux`** (nuit, dimanche, intervention astreinte, déplacement, HS, etc.) s’appuient uniquement sur **`tauxHoraireBase`** dans `ComputeContext` : même fondement que le **taux horaire affiché** sous le total (SMH annuel grille ÷ 12 ÷ durée légale mensuelle).
 
 ## Architecture (structure cible)
 

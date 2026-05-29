@@ -14,7 +14,6 @@ function makeCtx(overrides: Partial<ComputeContext> = {}): ComputeContext {
   return {
     baseSMH: 25000,
     classe: 5,
-    tauxHoraire: 10.0,
     tauxHoraireBase: 10.0,
     salaireBase: 25000,
     pointTerritorial: 5.9,
@@ -72,13 +71,13 @@ describe('Property-based tests — engine', () => {
     expect(once).toBe(twice);
   });
 
-  // P4: annualFromMonthly = monthly * 12 (within half-up euro rounding)
+  // P4: annualFromMonthly = roundToCents(12 × mensuel)
   fcTest.prop([fc.double({ min: 0, max: 100000, noNaN: true })])(
-    'annualFromMonthly approximates 12x monthly',
+    'annualFromMonthly equals cent rounding of 12x monthly',
     (monthly) => {
       const annual = annualFromMonthly(monthly);
       expect(Number.isFinite(annual)).toBe(true);
-      expect(Math.abs(annual - monthly * 12)).toBeLessThan(1);
+      expect(Math.abs(annual - monthly * 12)).toBeLessThanOrEqual(0.005);
     },
   );
 
@@ -86,7 +85,7 @@ describe('Property-based tests — engine', () => {
   fcTest.prop([arbClasse, arbSMH])('buildComputeContext produces valid context', (classe, smh) => {
     const ctx = buildComputeContext({}, smh, classe);
     expect(Number.isFinite(ctx.baseSMH)).toBe(true);
-    expect(Number.isFinite(ctx.tauxHoraire)).toBe(true);
+    expect(Number.isFinite(ctx.tauxHoraireBase)).toBe(true);
     expect(Number.isFinite(ctx.activityRate)).toBe(true);
     expect(ctx.activityRate).toBeGreaterThan(0);
     expect(ctx.activityRate).toBeLessThanOrEqual(1);

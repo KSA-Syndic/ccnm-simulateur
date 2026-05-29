@@ -19,9 +19,9 @@ describe('rounding.ts', () => {
     expect(roundToEuro('bad')).toBe(0);
   });
 
-  it('annualFromMonthly — annuel en euros entiers (mensuel×12 puis arrondi)', () => {
-    // 3000.4 * 12 = 36004.8 — arrondi demi au supérieur → 36005
-    expect(annualFromMonthly(3000.4)).toBe(36_005);
+  it('annualFromMonthly — ×12 puis un seul arrondi au centime', () => {
+    // 3000.4 * 12 = 36004.8 → 36 004,80 €
+    expect(annualFromMonthly(3000.4)).toBe(36_004.8);
     expect(annualFromMonthly(0)).toBe(0);
   });
 });

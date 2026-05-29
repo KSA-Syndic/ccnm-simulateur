@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { resolveRef, computeElement, resolveBySubstitution, buildComputeContext } from '../engine';
 import { type ComputeContext, type ElementDef, SEMANTIC_ID } from '../../types';
+import { annualFromMonthly } from '../../utils/rounding';
 
 function makeCtx(overrides: Partial<ComputeContext> = {}): ComputeContext {
   return {
     state: {},
-    tauxHoraire: 15,
     tauxHoraireBase: 14,
     baseSMH: 22000,
     salaireBase: 22000,
@@ -23,9 +23,9 @@ describe('resolveRef', () => {
   });
 
   it('resolves context ref', () => {
-    expect(resolveRef({ ref: 'context', key: 'tauxHoraire' }, makeCtx({ tauxHoraire: 12.5 }))).toBe(
-      12.5,
-    );
+    expect(
+      resolveRef({ ref: 'context', key: 'tauxHoraireBase' }, makeCtx({ tauxHoraireBase: 12.5 })),
+    ).toBe(12.5);
   });
 
   it('resolves state ref', () => {
@@ -200,6 +200,28 @@ describe('computeElement', () => {
       activation: { type: 'always' },
     };
     expect(computeElement(def, makeCtx()).amount).toBe(300);
+  });
+
+  it('unitesXmontant avec prorataActivite applique activityRate sur les unités', () => {
+    const def: ElementDef = {
+      id: 'eq',
+      semanticId: SEMANTIC_ID.PRIME_EQUIPE,
+      kind: 'prime',
+      source: 'accord',
+      valueKind: 'horaire',
+      label: 'Équipe',
+      computeMode: {
+        mode: 'unitesXmontant',
+        unites: { ref: 'constant', value: 151.67 },
+        montant: { ref: 'constant', value: 0.86 },
+        period: 'annual',
+        prorataActivite: true,
+      },
+      activation: { type: 'always' },
+    };
+    const ctx = makeCtx({ activityRate: 0.9, state: {} });
+    const attendu = annualFromMonthly(151.67 * 0.9 * 0.86);
+    expect(computeElement(def, ctx).amount).toBe(attendu);
   });
 
   it('periodesIndemniteSmh : periodes × arrondi(coeff × tauxHoraireBase), puis ×12', () => {
@@ -408,7 +430,6 @@ describe('buildComputeContext', () => {
     expect(ctx.classe).toBe(3);
     expect(ctx.pointTerritorial).toBe(5.9);
     expect(ctx.tauxHoraireBase).toBeGreaterThan(0);
-    expect(ctx.tauxHoraire).toBeGreaterThan(0);
     expect(ctx.activityRate).toBe(1);
   });
 

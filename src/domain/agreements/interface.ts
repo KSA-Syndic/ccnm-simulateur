@@ -244,6 +244,7 @@ export function primeDefToElementDef(primeDef: PrimeDef, agreement: Agreement): 
           unites,
           montant: { ref: 'constant', value: tarifAccord },
           period: 'annual',
+          ...(semanticId === SEMANTIC_ID.PRIME_EQUIPE ? { prorataActivite: true } : {}),
         },
       };
     }
@@ -287,7 +288,7 @@ export function primeDefToElementDef(primeDef: PrimeDef, agreement: Agreement): 
               defaultIfMissing: defaultH,
             },
             taux: { ref: 'constant', value: tauxVal },
-            base: { ref: 'context', key: 'tauxHoraire' },
+            base: { ref: 'context', key: 'tauxHoraireBase' },
             period: 'annual',
             majorationSeule: true,
           },

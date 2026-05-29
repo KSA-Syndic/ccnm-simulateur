@@ -73,7 +73,7 @@ const resultContextNotice = computed(() => {
   );
   const activityRate = tauxActivitePct / 100;
   const isForfaitJours = situation.forfait === 'jours';
-  const tauxHoraire = getSmhHourlyBaseRate(smhBaseAnnuel, {
+  const tauxSmhHoraire = getSmhHourlyBaseRate(smhBaseAnnuel, {
     nbMois: 12,
     activityRate,
     heuresMensuellesBase: CONFIG.DUREE_LEGALE_HEURES_MOIS,
@@ -81,8 +81,8 @@ const resultContextNotice = computed(() => {
   const tauxJournalier = getSmhDailyBaseRate(smhBaseAnnuel, { activityRate });
   const tauxStr = isForfaitJours
     ? `${(Math.round(tauxJournalier * 100) / 100).toFixed(2).replace('.', ',')} €/j`
-    : `${(Math.round(tauxHoraire * 100) / 100).toFixed(2).replace('.', ',')} €/h`;
-  const tauxLabel = isForfaitJours ? 'Taux journalier' : 'Taux horaire';
+    : `${(Math.round(tauxSmhHoraire * 100) / 100).toFixed(2).replace('.', ',')} €/h`;
+  const tauxLabel = isForfaitJours ? 'Taux journalier' : 'Taux horaire de référence (SMH)';
   return `${baseInfo} · ${tauxLabel} ${tauxStr}`;
 });
 

@@ -1,5 +1,10 @@
 /**
  * Arrondis monétaires (decimal.js) — demi au supérieur, stable pour la paie.
+ *
+ * Moteur : éviter les arrondis intermédiaires sur les montants dérivés (ex. mensuel avant ×12) ;
+ * `annualFromMonthly` multiplie d’abord par 12 puis arrondit une fois au centime. L’affichage
+ * des totaux (`formatMoney`, euros entiers) et le détail des infobulles (`formatMoneyTooltipDetail`, centimes)
+ * appliquent chacun l’arrondi réservé à la présentation.
  */
 import Decimal from 'decimal.js';
 
@@ -24,9 +29,10 @@ export function roundHourlyRate(value: unknown): number {
   return roundToCents(value);
 }
 
+/**
+ * Passe d’un montant **mensuel** à un total **annuel** : `× 12` en précision maximale,
+ * puis **un seul** arrondi à 2 décimales (centime). Ne pas arrondir le mensuel avant la multiplication.
+ */
 export function annualFromMonthly(monthlyAmount: unknown): number {
-  return new Decimal(toNumber(monthlyAmount))
-    .times(12)
-    .toDecimalPlaces(0, Decimal.ROUND_HALF_UP)
-    .toNumber();
+  return roundToCents(new Decimal(toNumber(monthlyAmount)).times(12));
 }

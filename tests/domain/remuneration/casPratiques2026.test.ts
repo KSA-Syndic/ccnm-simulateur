@@ -16,7 +16,7 @@ import {
   tauxHoraireSmhAnnuel,
   totalAnnuelBrut,
 } from './helpers/remunerationTestHelpers';
-import { roundToEuro } from '@/domain/utils/rounding';
+import { annualFromMonthly, roundToCents } from '@/domain/utils/rounding';
 
 function totalMensuelFromInput(input: ReturnType<typeof baseWizardInput>): number {
   const resolved = resolveWizardRemunerationElements(input);
@@ -63,7 +63,7 @@ describe('Cas pratiques 2026 (moteur wizard)', () => {
       const resolved = resolveWizardRemunerationElements(input);
       const details = resolved.details;
       const totalAnnuel = totalAnnuelBrut(details, resolved.baseSMH);
-      expect(totalMensuelFromInput(input)).toBe(roundToEuro(totalAnnuel / 12));
+      expect(totalMensuelFromInput(input)).toBe(roundToCents(totalAnnuel / 12));
       expect(totalMensuelFromInput(input)).toBeGreaterThan(smhMensuelDepuisAnnuel(smh));
     });
   });
@@ -104,7 +104,7 @@ describe('Cas pratiques 2026 (moteur wizard)', () => {
       const details = computeDetails(input);
       expect(amountBySemanticId(details, SEMANTIC_ID.MAJORATION_HEURES_SUP_25)).toBeGreaterThan(0);
       expect(amountBySemanticId(details, SEMANTIC_ID.PRIME_DEPLACEMENT_PRO)).toBe(
-        Math.round(heuresDeplacement * tauxHoraireSmhAnnuel(smh) * 12),
+        annualFromMonthly(heuresDeplacement * tauxHoraireSmhAnnuel(smh)),
       );
     });
   });
@@ -130,7 +130,7 @@ describe('Cas pratiques 2026 (moteur wizard)', () => {
       expect(smhDebutant).toBe(29_852);
       expect(resolved.baseSMH).toBe(smhDebutant);
       const forfait = amountBySemanticId(resolved.details, SEMANTIC_ID.FORFAIT_JOURS);
-      expect(forfait).toBe(roundToEuro(smhDebutant * 0.3));
+      expect(forfait).toBe(roundToCents(smhDebutant * 0.3));
       expect(amountBySemanticId(resolved.details, SEMANTIC_ID.PRIME_ANCIENNETE)).toBe(0);
     });
 

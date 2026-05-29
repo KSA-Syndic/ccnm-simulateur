@@ -1,6 +1,7 @@
 /**
  * Infobulles détaillées des lignes du résultat (base de calcul, paramètres saisis).
  */
+import Decimal from 'decimal.js';
 import { CONFIG } from '../config';
 import type { Agreement } from '../agreements/interface';
 import { getAccordNomCourt } from './builders';
@@ -11,13 +12,21 @@ import {
   type ResultTooltipDetailInput,
 } from './builders';
 import { resolveRef, type ResolvedElement } from '../remuneration/engine';
-import type { ComputeContext, ElementDef, ElementResult } from '../types';
+import type { ComputeContext, ComputeRef, ElementDef, ElementResult } from '../types';
 import { SEMANTIC_ID } from '../types';
-import { formatMoney } from '../utils/format';
+import { formatMoneyTooltipDetail } from '../utils/format';
 import { roundToCents } from '../utils/rounding';
 
 function euroBreakdown(label: string, value: number): ResultBreakdownLine {
   return { label, value };
+}
+
+/** Libellé de la première ligne du breakdown `heuresXtaux` (aligné sur `mode.base`). */
+function heuresXtauxTauxLineLabel(baseRef: ComputeRef): string {
+  if (baseRef.ref === 'context' && baseRef.key === 'tauxHoraireBase') {
+    return 'Taux horaire de base';
+  }
+  return 'Taux horaire retenu';
 }
 
 function pctLabel(rate: number): string {
@@ -101,6 +110,11 @@ function buildAncienneteAccordTooltip(
   let tooltipDetail = [
     `Ancienneté dans l'entreprise : ${anciennete} an${anciennete > 1 ? 's' : ''}${plafond > 0 ? ` (plafond accord ${plafond} ans)` : ''}.`,
     `Prime d'ancienneté selon l'accord ${getAccordNomCourt(agreement) || "d'entreprise"} : ${pctLabel(taux)} du salaire de base annuel (barème par palier, seuil ${seuil} an${seuil > 1 ? 's' : ''}).`,
+    ...(result.inclusDansSMH === true
+      ? [
+          "Cette prime d'entreprise entre dans l'assiette servant à comparer votre rémunération au minimum conventionnel, à la différence de la seule prime d'ancienneté prévue par la CCNM.",
+        ]
+      : []),
   ].join('\n');
   if (cadre) {
     tooltipDetail +=
@@ -123,6 +137,9 @@ function buildEquipeTooltip(
   ctx: ComputeContext,
 ): ResultTooltipDetailInput {
   const mode = def.computeMode;
+  if (mode.mode === 'unitesXmontant') {
+    return buildUnitesMontantTooltip(result, def, ctx);
+  }
   if (mode.mode !== 'postesXdureeXtaux') {
     return { label: result.label, value: result.amount, conditionTexte: def.conditionTexte };
   }
@@ -162,12 +179,14 @@ function buildHeuresXtauxTooltip(
   const heures = resolveRef(mode.heures, ctx);
   const majRate = resolveRef(mode.taux, ctx);
   const base = resolveRef(mode.base, ctx);
-  const mult = mode.majorationSeule === true ? majRate : 1 + majRate;
-  const mensuel = roundToCents(heures * base * mult);
-  const annual = mode.period === 'annual' ? result.amount : roundToCents(mensuel * 12);
+  const mult = mode.majorationSeule === true ? new Decimal(majRate) : new Decimal(1).plus(majRate);
+  const mensuelExact = new Decimal(heures).times(base).times(mult);
+  const mensuel = roundToCents(mensuelExact.toNumber());
+  const annual =
+    mode.period === 'annual' ? result.amount : roundToCents(mensuelExact.times(12).toNumber());
 
   const breakdown: ResultBreakdownLine[] = [
-    euroBreakdown('Taux horaire de base', base),
+    euroBreakdown(heuresXtauxTauxLineLabel(mode.base), base),
     euroBreakdown('Montant mensuel estimé', mensuel),
     euroBreakdown('Montant annuel affiché', annual),
   ];
@@ -255,21 +274,37 @@ function buildUnitesMontantTooltip(
   if (mode.mode !== 'unitesXmontant') {
     return { label: result.label, value: result.amount, conditionTexte: def.conditionTexte };
   }
-  const unites = resolveRef(mode.unites, ctx);
+  let unites = resolveRef(mode.unites, ctx);
+  if (mode.prorataActivite) {
+    const r = ctx.activityRate;
+    const prorata = Number.isFinite(r) && r > 0 ? r : 1;
+    unites = Math.max(0, unites * prorata);
+  }
   const montant = resolveRef(mode.montant, ctx);
   const breakdown: ResultBreakdownLine[] = [
     euroBreakdown('Montant unitaire', montant),
     euroBreakdown('Montant annuel affiché', result.amount),
   ];
+  const pr = mode.prorataActivite === true ? prorataDetailSuffix(ctx) : '';
+  const qtyHeuresMensuelles =
+    mode.prorataActivite === true || result.semanticId === SEMANTIC_ID.PRIME_EQUIPE;
   return {
     label: result.label,
     value: result.amount,
     sourceArticle: def.sourceArticle,
     conditionTexte: def.conditionTexte,
     tooltipDetail: [
-      `Quantité : ${formatFrDecimalFixed(unites, unites % 1 === 0 ? 0 : 2)}.`,
-      def.tooltip ?? 'Quantité × montant unitaire, annualisé si besoin.',
-    ].join('\n'),
+      qtyHeuresMensuelles
+        ? `Quantité : ${formatFrDecimalFixed(unites, unites % 1 === 0 ? 0 : 2)} h / mois (référence retenue pour le calcul).`
+        : `Quantité : ${formatFrDecimalFixed(unites, unites % 1 === 0 ? 0 : 2)}.`,
+      def.tooltip ??
+        (qtyHeuresMensuelles
+          ? 'Heures de référence × montant unitaire, puis annualisation sur 12 mois.'
+          : 'Quantité × montant unitaire, annualisé si besoin.'),
+      pr,
+    ]
+      .filter(Boolean)
+      .join('\n'),
     breakdown,
   };
 }
@@ -329,7 +364,8 @@ function buildFromComputeMode(
         sourceArticle: def.sourceArticle,
         conditionTexte: def.conditionTexte,
         tooltipDetail:
-          def.tooltip ?? `Montant forfaitaire : ${formatMoney(resolveRef(mode.montant, ctx))}.`,
+          def.tooltip ??
+          `Montant forfaitaire : ${formatMoneyTooltipDetail(resolveRef(mode.montant, ctx))}.`,
         breakdown: [euroBreakdown('Montant annuel affiché', result.amount)],
       };
     default:

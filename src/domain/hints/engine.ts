@@ -8,6 +8,7 @@ import {
   computePdfRemunerationBreakdown,
   type WizardRemunerationInput,
 } from '../remuneration/compute';
+import { SMH_ASSIETTE_REFERENCE_LINE } from '../remuneration/smhAssiettePolicy';
 
 export type HintId = keyof typeof HINT_ENGINE;
 
@@ -64,7 +65,7 @@ export function formatHintsHtml(ids: HintId[]): string {
 
 /**
  * Bloc hint assiette SMH pour la saisie des salaires (étape arriérés).
- * Source : moteur de calcul live (inclusDansSMH par élément résolu).
+ * Source : moteur de calcul live (`inclusDansSMH` par élément résolu, aligné `smhAssiettePolicy.ts`).
  * Titres « Inclus : » / « Exclus : » puis listes (base + primes / hors assiette SMH).
  */
 export function buildSmhAssietteHintBlocks(
@@ -92,6 +93,7 @@ export function buildSmhAssietteHintBlocks(
   if (exclusHtml) {
     blocks.push({ type: 'info', html: exclusHtml });
   }
+  blocks.push({ type: 'info', html: `<small>${SMH_ASSIETTE_REFERENCE_LINE}</small>` });
   return blocks;
 }
 
@@ -200,8 +202,8 @@ export function buildResultHintBlocks(p: BuildResultHintsParams): ResultHintBloc
       hints.push({
         type: 'info',
         html: hasAnciennete
-          ? `Ce montant est le minimum conventionnel. Prime d'ancienneté incluse.`
-          : `Ce montant est le minimum conventionnel. Prime d'ancienneté à partir de ${seuilAnc}.`,
+          ? `Ce montant est le minimum conventionnel. Une prime d'ancienneté d'entreprise (accord) entre dans la comparaison au SMH ; la prime d'ancienneté de branche seule en est exclue. Les majorations et primes hors assiette s'ajoutent en plus.`
+          : `Ce montant est le minimum conventionnel. Prime d'ancienneté de branche à partir de ${seuilAnc}. Avec un accord d'entreprise, une prime d'ancienneté d'entreprise peut aussi compter pour la comparaison au SMH une fois le seuil atteint.`,
       });
     }
   }

@@ -108,7 +108,8 @@ export const NATIONAL_MODALITY_ENTRIES: readonly NationalModalityRegistryEntry[]
       mode: 'heuresXtaux',
       heures: { ref: 'accordInputOrState', key: m.stateKeyHeures! },
       taux: { ref: 'constant', value: interventionAstreinteTauxMaj },
-      base: { ref: 'context', key: 'tauxHoraire' },
+      /** SMH horaire de base (comme nuit / bandeau résultat). */
+      base: { ref: 'context', key: 'tauxHoraireBase' },
       period: 'annual',
     }),
     elementConfig: { allowUserOverride: true },

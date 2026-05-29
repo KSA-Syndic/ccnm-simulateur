@@ -291,7 +291,7 @@ export const CONFIG: Config = ConfigSchema.parse({
     rolesSimulation: {
       horsAssietteComparaisonSMH: true,
       noteAssimilee:
-        "Les contreparties liées à l'organisation du travail sont calculées en sus du SMH et ne réduisent pas la base servant à vérifier le minimum hiérarchique (paramétrage du simulateur ; jurisprudence et texte applicable à confirmer sur chaque dossier).",
+        "Distinction indicative CCNM art. 140 : rémunération du travail (incluse dans l'assiette de comparaison au SMH telle que paramétrée) vs sujétion ou organisation (nuit, équipes, dimanche, astreintes hors TTE, temps annexes, frais…) et majorations d'heures supplémentaires, comptées en sus. Jurisprudence récente sur l'abus d'absorption (déc. 2025) : à relier au dossier ; paramétrage du simulateur, pas conseil juridique.",
     },
   },
   TAUX_ANCIENNETE: {

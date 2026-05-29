@@ -78,7 +78,12 @@ export type ComputeMode =
       montant: ComputeRef;
       period: 'monthly' | 'annual';
       /**
-       * Si vrai avec `period: 'annual'` : `roundToEuro(unites × montant)` sans mensualisation ×12
+       * Si vrai : `unites × context.activityRate` avant multiplication par le montant
+       * (ex. prime d'équipe accord sur durée mensuelle de référence, aligné `postesXdureeXtaux`).
+       */
+      prorataActivite?: boolean;
+      /**
+       * Si vrai avec `period: 'annual'` : `roundToCents(unites × montant)` sans mensualisation ×12
        * (ex. inventions brevetables, aligné `PrimeCalculator` convention).
        */
       forfaitAnnuel?: boolean;
@@ -152,7 +157,7 @@ export interface ElementDef {
 
 export interface ComputeContext {
   state: Record<string, unknown>;
-  tauxHoraire: number;
+  /** Taux horaire de base du minimum (SMH) — pivot unique des formules `heuresXtaux` et aligné sur l’en-tête résultat. */
   tauxHoraireBase: number;
   baseSMH: number;
   salaireBase: number;

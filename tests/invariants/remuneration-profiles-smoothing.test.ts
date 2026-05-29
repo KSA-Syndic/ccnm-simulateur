@@ -6,7 +6,7 @@ import {
   resolveWizardRemunerationElements,
   wizardStoresInputFromFixtureState,
 } from '../../src/domain/remuneration/compute';
-import { roundToEuro } from '../../src/domain/utils/rounding';
+import { roundToCents } from '../../src/domain/utils/rounding';
 
 type ProfilFixture = { id: string; state: Record<string, unknown> };
 
@@ -18,10 +18,10 @@ describe('Rémunération — lissage 12 / 13 mois (fixtures)', () => {
       const agg12 = aggregateRemunerationDetails(details, baseSMH, 12);
       const agg13 = aggregateRemunerationDetails(details, baseSMH, 13);
       expect(agg12.totalAnnual).toBe(agg13.totalAnnual);
-      expect(agg12.totalMonthly).toBe(roundToEuro(agg12.totalAnnual / 12));
-      expect(agg13.totalMonthly).toBe(roundToEuro(agg13.totalAnnual / 13));
-      expect(Math.abs(agg12.totalMonthly * 12 - agg12.totalAnnual)).toBeLessThanOrEqual(6);
-      expect(Math.abs(agg13.totalMonthly * 13 - agg13.totalAnnual)).toBeLessThanOrEqual(7);
+      expect(agg12.totalMonthly).toBe(roundToCents(agg12.totalAnnual / 12));
+      expect(agg13.totalMonthly).toBe(roundToCents(agg13.totalAnnual / 13));
+      expect(Math.abs(agg12.totalMonthly * 12 - agg12.totalAnnual)).toBeLessThanOrEqual(0.06);
+      expect(Math.abs(agg13.totalMonthly * 13 - agg13.totalAnnual)).toBeLessThanOrEqual(0.07);
     });
   }
 });

@@ -9,7 +9,7 @@ import {
   computeElement,
 } from '../../remuneration/engine';
 import { CONFIG } from '../../config';
-import { annualFromMonthly, roundToCents } from '../../utils/rounding';
+import { annualFromMonthly } from '../../utils/rounding';
 
 beforeAll(() => {
   expect(getAgreement('kuhn')).not.toBeNull();
@@ -28,10 +28,14 @@ describe('getAccordElementDefsForRemuneration', () => {
     expect(defs.some((d) => d.id === 'primeEquipe')).toBe(true);
     const equipe = defs.find((d) => d.id === 'primeEquipe');
     expect(equipe?.substitution?.strategy).toBe('replaces');
-    expect(equipe?.computeMode).toMatchObject({ mode: 'unitesXmontant', period: 'annual' });
+    expect(equipe?.computeMode).toMatchObject({
+      mode: 'unitesXmontant',
+      period: 'annual',
+      prorataActivite: true,
+    });
   });
 
-  it('prime équipe accord (Kuhn) : unitesXmontant (151,67 h × 0,86 €/h)', () => {
+  it('prime équipe accord (Kuhn) : unitesXmontant (151,67 h × 0,86 €/h), temps plein', () => {
     const ag = getAgreement('kuhn')!;
     const def = getAccordElementDefsForRemuneration(ag).find((d) => d.id === 'primeEquipe');
     expect(def).toBeDefined();
@@ -60,7 +64,40 @@ describe('getAccordElementDefsForRemuneration', () => {
       5,
       ag as unknown as Record<string, unknown>,
     );
-    const attendu = annualFromMonthly(roundToCents(151.67 * 0.86));
+    const attendu = annualFromMonthly(151.67 * 0.86);
+    expect(computeElement(def!, ctx).amount).toBe(attendu);
+  });
+
+  it('prime équipe accord (Kuhn) : prorata 90 % sur les heures de référence mensuelles', () => {
+    const ag = getAgreement('kuhn')!;
+    const def = getAccordElementDefsForRemuneration(ag).find((d) => d.id === 'primeEquipe');
+    expect(def).toBeDefined();
+    const rawSmh = CONFIG.SMH[5] ?? 35200;
+    const ctx = buildComputeContext(
+      {
+        baseSMHFull: rawSmh,
+        accordInputs: { travailEquipe: true, heuresEquipe: 151.67 },
+        typeNuit: 'aucun',
+        anciennete: 5,
+        pointTerritorial: 5.9,
+        forfait: '35h',
+        travailNuit: false,
+        heuresNuit: 0,
+        travailDimanche: false,
+        heuresDimanche: 0,
+        travailHeuresSup: false,
+        heuresSup: 0,
+        travailTempsPartiel: true,
+        tauxActivite: 90,
+        experiencePro: 0,
+        travailJoursSupForfait: false,
+        joursSupForfait: 0,
+      },
+      rawSmh,
+      5,
+      ag as unknown as Record<string, unknown>,
+    );
+    const attendu = annualFromMonthly(151.67 * 0.9 * 0.86);
     expect(computeElement(def!, ctx).amount).toBe(attendu);
   });
 
@@ -169,7 +206,7 @@ describe('getAccordElementDefsForRemuneration', () => {
       5,
       ag as unknown as Record<string, unknown>,
     );
-    const attendu = annualFromMonthly(roundToCents(8 * ctx.tauxHoraire * 0.15));
+    const attendu = annualFromMonthly(8 * ctx.tauxHoraireBase * 0.15);
     expect(computeElement(def!, ctx).amount).toBe(attendu);
   });
 
@@ -206,6 +243,7 @@ describe('getAccordElementDefsForRemuneration', () => {
     const primeAnc = resolved.filter((r) => r.result.semanticId === 'primeAnciennete');
     expect(primeAnc.length).toBe(1);
     expect(primeAnc[0]!.result.amount).toBeGreaterThan(0);
+    expect(primeAnc[0]!.result.inclusDansSMH).toBe(true);
     expect(primeAnc[0]!.origin).toBe('accord');
   });
 });

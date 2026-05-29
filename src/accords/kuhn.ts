@@ -15,7 +15,8 @@ const KuhnAgreement: Agreement = {
     plafond: 25,
     tousStatuts: true,
     baseCalcul: 'salaire',
-    inclusDansSMH: 'ifSuperiorToConvention',
+    /** Prime d’entreprise : incluse dans l’assiette de comparaison au SMH (distincte de la prime d’ancienneté de branche, art. 142). */
+    inclusDansSMH: true,
     barème: {
       2: 0.02,
       3: 0.03,

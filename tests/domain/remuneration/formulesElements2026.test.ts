@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import '@/accords/index';
 import { CONFIG } from '@/domain/config';
+import { annualFromMonthly } from '@/domain/utils/rounding';
 import { SEMANTIC_ID } from '@/domain/types';
 import {
   amountBySemanticId,
@@ -29,7 +30,6 @@ describe('Formules conventionnelles 2026 (moteur = barème CONFIG)', () => {
     );
     const moteur = amountBySemanticId(details, SEMANTIC_ID.PRIME_ANCIENNETE);
     expect(moteur).toBe(attendu);
-    expect(attendu).toBe(513);
   });
 
   it('prime d’équipe — 22 postes × 30 min × taux SMH (défaut CONFIG)', () => {
@@ -100,7 +100,7 @@ describe('Formules conventionnelles 2026 (moteur = barème CONFIG)', () => {
 
   it('déplacement — heures excédentaires × taux SMH de base', () => {
     const heures = 10;
-    const attendu = Math.round(heures * tauxA1 * 12);
+    const attendu = annualFromMonthly(heures * tauxA1);
     const details = computeDetails(
       baseWizardInput({
         classe: 1,
@@ -133,18 +133,21 @@ describe('Formules conventionnelles 2026 (moteur = barème CONFIG)', () => {
     expect(amountBySemanticId(details, SEMANTIC_ID.PRIME_INVENTION_BREVETABLE)).toBe(n * unit);
   });
 
-  it('majoration heures sup +25 % — tranche 36e–43e heure mensuelle', () => {
+  it('majoration heures sup +25 % — heures mensuelles 1re tranche annualisées (×12)', () => {
     const smhC5 = SMH_GRID_2026[5]!;
-    const heuresSup = 15.17;
+    const heuresSupMensuelles = 10;
+    const seuil = CONFIG.HEURES_SUP_TRANCHE_1_MENSUELLES;
+    const h25 = Math.min(heuresSupMensuelles, seuil);
+    const taux = tauxHoraireSmhAnnuel(smhC5);
+    const attendu = annualFromMonthly(h25 * taux * CONFIG.MAJORATIONS_CCN.heuresSup25);
     const details = computeDetails(
       baseWizardInput({
         classe: 5,
         groupe: 'C',
-        situation: { travailHeuresSup: true, heuresSup: heuresSup },
+        situation: { travailHeuresSup: true, heuresSup: heuresSupMensuelles },
       }),
     );
-    const maj25 = amountBySemanticId(details, SEMANTIC_ID.MAJORATION_HEURES_SUP_25);
-    expect(maj25).toBeGreaterThan(0);
+    expect(amountBySemanticId(details, SEMANTIC_ID.MAJORATION_HEURES_SUP_25)).toBe(attendu);
     expect(amountBySemanticId(details, SEMANTIC_ID.MAJORATION_HEURES_SUP_50)).toBe(0);
   });
 
@@ -157,6 +160,24 @@ describe('Formules conventionnelles 2026 (moteur = barème CONFIG)', () => {
       }),
     );
     expect(amountBySemanticId(details, SEMANTIC_ID.PRIME_ANCIENNETE)).toBe(0);
+  });
+
+  it('majoration heures sup +25 % / +50 % — dépassement du seuil mensuel, deux annualisations', () => {
+    const smhC5 = SMH_GRID_2026[5]!;
+    const seuil = CONFIG.HEURES_SUP_TRANCHE_1_MENSUELLES;
+    const heuresSupMensuelles = seuil + 5;
+    const taux = tauxHoraireSmhAnnuel(smhC5);
+    const attendu25 = annualFromMonthly(seuil * taux * CONFIG.MAJORATIONS_CCN.heuresSup25);
+    const attendu50 = annualFromMonthly(5 * taux * CONFIG.MAJORATIONS_CCN.heuresSup50);
+    const details = computeDetails(
+      baseWizardInput({
+        classe: 5,
+        groupe: 'C',
+        situation: { travailHeuresSup: true, heuresSup: heuresSupMensuelles },
+      }),
+    );
+    expect(amountBySemanticId(details, SEMANTIC_ID.MAJORATION_HEURES_SUP_25)).toBe(attendu25);
+    expect(amountBySemanticId(details, SEMANTIC_ID.MAJORATION_HEURES_SUP_50)).toBe(attendu50);
   });
 
   it('primes organisation (équipe, habillage…) hors assiette SMH', () => {

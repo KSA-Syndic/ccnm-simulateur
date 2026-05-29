@@ -11,7 +11,7 @@ import { aggregateRemunerationDetails, type AggregatedRemuneration } from './agg
 import { enrichResolvedElementsTooltips } from '../tooltip/resultElementTooltips';
 import { buildComputeContext, resolveBySubstitution } from './engine';
 import { getSmhForClasse } from './smh';
-import { roundHourlyRate, roundToEuro } from '../utils/rounding';
+import { roundHourlyRate, roundToCents } from '../utils/rounding';
 import type { ComputeContext, ElementResult } from '../types';
 
 /** Résultat agrégé du calcul annuel (mode complet) — champs exposés à l’UI et aux tests de parité. */
@@ -111,8 +111,8 @@ export function prepareWizardCompute(
   const refYear = overrides?.referenceYear;
   const rawSmh = getSmhForClasse(active.classe, refYear, input.situation.experiencePro);
   const rate = input.situation.tempsPartiel ? input.situation.tauxActivite / 100 : 1;
-  const baseSMHFull = roundToEuro(rawSmh);
-  const baseSMH = roundToEuro(rawSmh * rate);
+  const baseSMHFull = roundToCents(rawSmh);
+  const baseSMH = roundToCents(rawSmh * rate);
 
   const accDoc =
     input.agreement.accordActif && input.agreement.activeAccordId
@@ -204,10 +204,10 @@ function uniqueLabelsForFilter(
   return out;
 }
 
-/** Agrégat + libellés inclus/exclus SMH pour l’annexe PDF (moteur TS). */
+/** Agrégat + libellés inclus/exclus SMH pour l’annexe PDF (moteur TS). @see `smhAssiettePolicy.ts` */
 export interface PdfRemunerationBreakdown extends WizardRemunerationResolved {
   agg: AggregatedRemuneration;
-  /** Base conventionnelle + éléments dont `inclusDansSMH === true` (indicatif). */
+  /** Base conventionnelle + éléments dont `inclusDansSMH === true` (rémunération du travail / paramétrage). */
   totalAssietteSmhIndicatif: number;
   inclusSmhLabels: string[];
   exclusSmhLabels: string[];
@@ -225,7 +225,7 @@ export function computePdfRemunerationBreakdown(
   return {
     ...resolved,
     agg,
-    totalAssietteSmhIndicatif: roundToEuro(resolved.baseSMH + inSmhSum),
+    totalAssietteSmhIndicatif: roundToCents(resolved.baseSMH + inSmhSum),
     inclusSmhLabels: uniqueLabelsForFilter(
       resolved.details,
       (d) => d.amount > 0 && d.inclusDansSMH === true,

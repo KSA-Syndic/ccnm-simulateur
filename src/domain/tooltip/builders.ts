@@ -1,7 +1,7 @@
 /**
  * Construction HTML des tooltips « bloc légal » (gabarits, origines, primes).
  */
-import { escapeHTML, formatMoney } from '../utils/format';
+import { escapeHTML, formatMoneyTooltipDetail } from '../utils/format';
 import { resolvePrimeSemanticId, type Agreement, type PrimeDef } from '../agreements/interface';
 import { resolvePrimeDefaultHours, resolvePrimeOfficialValue } from '../agreements/primeUiDefaults';
 
@@ -325,14 +325,15 @@ export function buildResultTooltipContent(
   const lineTemplate = resultCfg.breakdownLineTemplate || '• {label} : {value}';
   const descriptionLines: string[] = [];
   const summaryLine = String(detail?.tooltipDetail || '').trim();
-  const defaultLine = `${detail?.label || ''} : ${formatMoney(detail?.value || 0)}`.trim();
+  const defaultLine =
+    `${detail?.label || ''} : ${formatMoneyTooltipDetail(detail?.value || 0)}`.trim();
   const hasBreakdown = Array.isArray(detail?.breakdown) && detail.breakdown.length > 0;
   if (hasBreakdown && detail.breakdown) {
     for (const b of detail.breakdown) {
       descriptionLines.push(
         applyTooltipTemplate(lineTemplate, {
           label: b?.label || '',
-          value: formatMoney(b?.value || 0),
+          value: formatMoneyTooltipDetail(b?.value || 0),
         }),
       );
     }

@@ -1,5 +1,5 @@
 import { type ElementResult } from '../types';
-import { roundToEuro } from '../utils/rounding';
+import { roundToCents } from '../utils/rounding';
 
 export interface AggregatedSection {
   label: string;
@@ -9,7 +9,7 @@ export interface AggregatedSection {
 
 export interface AggregatedRemuneration {
   baseSMH: number;
-  /** Primes / éléments `inclusDansSMH === true` affichés en sous-lignes « ↳ dont … » sous la base (hors section dédiée). */
+  /** Primes / éléments `inclusDansSMH === true` (rémunération du travail au sens paramétré) affichés en sous-lignes « ↳ dont … » sous la base (hors section dédiée). Voir `smhAssiettePolicy.ts`. */
   includedInSmhItems: ElementResult[];
   sections: AggregatedSection[];
   totalAnnual: number;
@@ -74,8 +74,8 @@ export function aggregateRemunerationDetails(
     .filter(contributesToTotalAboveBase)
     .reduce((s, d) => s + d.amount, 0);
   /** Forfaits cadre : inclus dans le total annuel « paquet ». */
-  const totalAnnual = roundToEuro(baseSMH + forfaitSum + extrasAboveBase);
-  const totalMonthly = roundToEuro(totalAnnual / nbMois);
+  const totalAnnual = roundToCents(baseSMH + forfaitSum + extrasAboveBase);
+  const totalMonthly = roundToCents(totalAnnual / nbMois);
 
   return {
     baseSMH,
