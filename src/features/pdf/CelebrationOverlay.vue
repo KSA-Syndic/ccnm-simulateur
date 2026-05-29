@@ -117,3 +117,138 @@ onUnmounted(() => {
     </div>
   </Teleport>
 </template>
+
+<style scoped>
+.celebration-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.35s ease,
+    visibility 0.35s ease;
+  backdrop-filter: blur(3px);
+}
+
+.celebration-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.celebration-confetti-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.celebration-confetti {
+  position: absolute;
+  top: -12px;
+  border-radius: 2px;
+  opacity: 0;
+}
+
+.celebration-overlay.celebration-animated .celebration-confetti {
+  animation: celebration-fall 2.2s ease-out forwards;
+}
+
+@keyframes celebration-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(0) rotate(0deg);
+  }
+  8% {
+    opacity: 0.85;
+  }
+  85% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(100vh) rotate(360deg);
+  }
+}
+
+.celebration-card {
+  position: relative;
+  background: white;
+  padding: 28px 32px;
+  max-width: 380px;
+  width: 90%;
+  border: var(--modal-border-width) solid var(--modal-border-color);
+  border-radius: var(--modal-radius);
+  box-shadow: var(--modal-shadow);
+  text-align: center;
+}
+
+.celebration-overlay.celebration-animated .celebration-card {
+  animation: celebration-card-in 0.45s ease-out;
+}
+
+@keyframes celebration-card-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.celebration-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 14px;
+  background: var(--color-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.celebration-title {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  color: var(--body-font-color);
+}
+
+.celebration-text {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  color: var(--gray-600);
+}
+
+.celebration-hint {
+  margin: 0 0 20px;
+  font-size: 0.85rem;
+  color: var(--gray-500);
+}
+
+.celebration-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .celebration-overlay.celebration-animated .celebration-confetti {
+    animation: none;
+    opacity: 0;
+  }
+
+  .celebration-overlay.celebration-animated .celebration-card {
+    animation: none;
+  }
+}
+</style>

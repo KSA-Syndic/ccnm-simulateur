@@ -3,152 +3,6 @@
    Styles CSS — Charte CFDT orange
    ============================================ */
 
-/* Variables CSS — Palette CFDT orange (#E15C12) — Design brut et épuré */
-:root {
-  --color-primary: #e15c12;
-  --color-primary-dark: #c04e0f;
-  --color-primary-light: #f4a261;
-  --color-primary-bg: rgba(225, 92, 18, 0.06);
-  --color-primary-border: rgba(225, 92, 18, 0.25);
-  --color-link: #e15c12;
-  --body-background: #ffffff;
-  --body-font-color: #1a1a1a;
-  --gray-100: #f5f5f5;
-  --gray-200: #e5e5e5;
-  --gray-300: #d4d4d4;
-  --gray-400: #a3a3a3;
-  --gray-500: #737373;
-  --gray-600: #525252;
-  --color-success: #16a34a;
-  --color-warning: #ca8a04;
-  --color-danger: #dc2626;
-  --color-info: #e15c12;
-  --border-radius: 0px;
-  /*
-   * Modales — style commun (dialog AppModal, .modal legacy, carte célébration).
-   * Rayons alignés sur le corps des tooltips (`.app-tooltip-popper` : `--radius-md`).
-   */
-  --modal-radius: var(--radius-md, 8px);
-  --modal-border-width: 1px;
-  --modal-border-color: var(--gray-300);
-  --modal-padding: 1.5rem;
-  --modal-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-  --modal-backdrop-bg: rgba(0, 0, 0, 0.45);
-  /* Tooltip : fond brun-ardoise (contraste orange header + texte blanc) */
-  --color-bg-tooltip: #2d2418;
-  --tooltip-bg: var(--color-bg-tooltip);
-  --tooltip-text: #ffffff;
-  --tooltip-border: rgba(255, 255, 255, 0.08);
-  --tooltip-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
-  --shadow-sm: none;
-  --shadow-md: none;
-  --shadow-lg: 0 1px 0 rgba(0, 0, 0, 0.05);
-  --transition-fast: 0.12s ease;
-  --transition-normal: 0.2s ease;
-}
-
-/* Tooltips AppTooltip (Teleport body) — thème orange, variables pour MAJ globale */
-.app-tooltip-popper {
-  position: fixed;
-  z-index: 10050;
-  margin: 0;
-  padding: 0.6rem 0.9rem;
-  background: var(--tooltip-bg);
-  color: var(--tooltip-text);
-  border: 1px solid var(--tooltip-border);
-  border-radius: var(--radius-md, 8px);
-  font-size: 0.82rem;
-  line-height: 1.45;
-  max-width: min(420px, calc(100vw - 16px));
-  width: max-content;
-  box-shadow: var(--tooltip-shadow);
-  pointer-events: auto;
-  text-align: left;
-}
-.app-tooltip-popper.app-tooltip--result {
-  max-width: min(480px, calc(100vw - 16px));
-}
-.app-tooltip-popper .app-tooltip__content a.tooltip-link {
-  color: var(--tooltip-text);
-  text-decoration: underline;
-  font-weight: 600;
-}
-.app-tooltip-popper .app-tooltip__content a.tooltip-link:hover {
-  opacity: 0.92;
-}
-.app-tooltip-popper .tooltip-source {
-  margin-top: 0.4rem;
-  padding-top: 0.3rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  font-size: 0.78rem;
-  line-height: 1.35;
-  opacity: 0.88;
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  column-gap: 0.35em;
-  align-items: start;
-  justify-items: start;
-  text-align: left;
-}
-.app-tooltip-popper .tooltip-source .tooltip-source-label {
-  grid-column: 1;
-  grid-row: 1;
-  white-space: nowrap;
-}
-.app-tooltip-popper .tooltip-source .tooltip-source-article {
-  grid-column: 2;
-  grid-row: 1;
-  min-width: 0;
-  word-break: break-word;
-}
-
-/* Déclencheur AppTooltip (pastille « i ») — ne pas réutiliser l’ancienne classe .tooltip-trigger du bundle historique. */
-.app-tooltip-trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  margin: 0;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--gray-600);
-  cursor: help;
-  vertical-align: middle;
-  transition: color var(--transition-fast);
-}
-
-.app-tooltip-trigger svg {
-  width: 14px;
-  height: 14px;
-  display: block;
-}
-
-.app-tooltip-trigger:hover,
-.app-tooltip-trigger:focus-visible {
-  background: transparent;
-  color: var(--color-primary);
-  outline: none;
-}
-
-.app-tooltip-trigger--on-dark {
-  background: transparent;
-  color: rgba(255, 255, 255, 0.92);
-}
-
-.app-tooltip-trigger--on-dark:hover,
-.app-tooltip-trigger--on-dark:focus-visible {
-  background: transparent;
-  color: #fff;
-}
-
-.checkbox-label .app-tooltip-trigger {
-  margin-left: 5px;
-}
-
 /* Reset & Base */
 *,
 *::before,
@@ -1069,7 +923,7 @@ body.iframe-mode .simulator-container.iframe-container {
     font-size: 1.25rem;
   }
 }
-@media (max-width: 768px) {
+@media (max-width: var(--bp-mobile)) {
   .floating-block-close {
     width: 44px;
     height: 44px;
@@ -1438,146 +1292,6 @@ body.iframe-mode .simulator-container.iframe-container {
   gap: 12px;
 }
 
-/* Célébration post-PDF (discrète et élégante) */
-.celebration-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10001;
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    opacity 0.35s ease,
-    visibility 0.35s ease;
-  backdrop-filter: blur(3px);
-}
-
-.celebration-overlay.visible {
-  opacity: 1;
-  visibility: visible;
-}
-
-.celebration-confetti-container {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.celebration-confetti {
-  position: absolute;
-  top: -12px;
-  border-radius: 2px;
-  opacity: 0;
-}
-
-.celebration-overlay.celebration-animated .celebration-confetti {
-  animation: celebration-fall 2.2s ease-out forwards;
-}
-
-@keyframes celebration-fall {
-  0% {
-    opacity: 0;
-    transform: translateY(0) rotate(0deg);
-  }
-  8% {
-    opacity: 0.85;
-  }
-  85% {
-    opacity: 0.6;
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(100vh) rotate(360deg);
-  }
-}
-
-.celebration-card {
-  position: relative;
-  background: white;
-  padding: 28px 32px;
-  max-width: 380px;
-  width: 90%;
-  border: var(--modal-border-width) solid var(--modal-border-color);
-  border-radius: var(--modal-radius);
-  box-shadow: var(--modal-shadow);
-  text-align: center;
-}
-
-.celebration-overlay.celebration-animated .celebration-card {
-  animation: celebration-card-in 0.45s ease-out;
-}
-
-@keyframes celebration-card-in {
-  0% {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.celebration-icon {
-  width: 48px;
-  height: 48px;
-  margin: 0 auto 14px;
-  background: var(--color-primary);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.celebration-title {
-  margin: 0 0 8px;
-  font-size: 1.25rem;
-  color: var(--body-font-color);
-}
-
-.celebration-text {
-  margin: 0 0 12px;
-  font-size: 0.95rem;
-  color: var(--gray-600);
-}
-
-.celebration-hint {
-  margin: 0 0 20px;
-  font-size: 0.85rem;
-  color: var(--gray-500);
-}
-
-.celebration-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: center;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .celebration-overlay.celebration-animated .celebration-confetti {
-    animation: none;
-    opacity: 0;
-  }
-
-  .celebration-overlay.celebration-animated .celebration-card {
-    animation: none;
-  }
-}
-
-.label-optional {
-  color: var(--gray-600);
-  font-weight: normal;
-  font-size: 0.9em;
-}
-
 /* Instructions juridiques interactives */
 .legal-instructions {
   margin: 30px 0;
@@ -1650,108 +1364,6 @@ body.iframe-mode .simulator-container.iframe-container {
 
 .legal-step-content li {
   margin: 5px 0;
-}
-
-/* Guide juridique - Section toujours visible, moderne et ludique */
-.legal-guide-section {
-  margin: 32px 0;
-  padding: 28px;
-  background: var(--gray-100);
-  border-radius: 0;
-  border: 1px solid var(--gray-200);
-  box-shadow: none;
-}
-
-.legal-guide-section.hidden {
-  display: none;
-}
-
-.legal-guide-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 24px;
-  padding-bottom: 20px;
-  border-bottom: 2px solid var(--color-link);
-}
-
-.legal-guide-title {
-  margin: 0;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--body-font-color);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.legal-guide-title::before {
-  content: '📚';
-  font-size: 1.3rem;
-}
-
-.legal-guide-nav {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.legal-guide-content {
-  padding: 8px 0;
-  min-height: 280px;
-  position: relative;
-}
-
-.legal-guide-content .carousel-slide {
-  border-radius: 0;
-  padding: 24px 28px;
-}
-
-.legal-guide-content .legal-step {
-  margin: 0;
-}
-
-.legal-guide-content .legal-step h4 {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0 0 16px 0;
-  font-size: 1.05rem;
-  color: var(--color-link);
-}
-
-.legal-guide-content .legal-step-number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: var(--color-primary);
-  color: white;
-  border-radius: 50%;
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.legal-guide-content .legal-step-content {
-  font-size: 0.95rem;
-  line-height: 1.6;
-  color: var(--gray-700);
-}
-
-.legal-guide-content .legal-step-content p {
-  margin: 0 0 12px 0;
-}
-
-.legal-guide-content .legal-step-content ul {
-  margin: 10px 0;
-  padding-left: 22px;
-}
-
-.legal-guide-content .legal-step-content li {
-  margin: 6px 0;
 }
 
 /* Rétrocompat carousel */
@@ -1971,7 +1583,7 @@ body.iframe-mode .simulator-container.iframe-container {
 }
 
 /* Responsive */
-@media (max-width: 768px) {
+@media (max-width: var(--bp-mobile)) {
   .curve-chart-wrapper {
     height: 300px;
   }
@@ -2121,37 +1733,6 @@ body.iframe-mode .simulator-container.iframe-container {
   }
   #step-4 .arretees-results-title {
     font-size: 1.05rem;
-  }
-  #step-4 .legal-guide-section {
-    margin-top: 16px;
-    padding: 14px 12px 16px;
-  }
-  #step-4 .legal-guide-header {
-    margin-bottom: 14px;
-    padding: 0 4px 12px;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  #step-4 .legal-guide-title {
-    font-size: 1rem;
-  }
-  #step-4 .legal-guide-content {
-    min-height: 0;
-    padding: 0;
-  }
-  #step-4 .legal-guide-content .carousel-slide {
-    padding: 14px 16px 16px;
-  }
-  #step-4 .legal-guide-content .legal-step h4 {
-    font-size: 1rem;
-    margin-bottom: 12px;
-  }
-  #step-4 .legal-guide-content .legal-step-content {
-    font-size: 0.9rem;
-    line-height: 1.55;
-  }
-  #step-4 .legal-guide-content .legal-step-content ul {
-    padding-left: 1.15rem;
   }
 
   /* Étape 3 : mêmes règles de marge des containers que la page 4 en vue mobile */
@@ -3469,7 +3050,7 @@ body.iframe-mode .simulator-container.iframe-container {
   text-decoration: underline;
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--bp-mobile)) {
   .simulator-footer {
     padding: 12px 16px;
     font-size: 0.75rem;
@@ -3529,7 +3110,7 @@ body.iframe-mode .simulator-container.iframe-container {
 /* ============================================
    RESPONSIVE
    ============================================ */
-@media (max-width: 768px) {
+@media (max-width: var(--bp-mobile)) {
   body {
     padding: 10px;
   }
@@ -3588,7 +3169,7 @@ body.iframe-mode .simulator-container.iframe-container {
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: var(--bp-mobile-sm)) {
   /* Réduire encore sur mobile */
   .roulette-value {
     width: 10em;
@@ -3977,7 +3558,7 @@ body.iframe-mode .simulator-container.iframe-container {
 }
 
 /* Responsive graphique */
-@media (max-width: 768px) {
+@media (max-width: var(--bp-mobile)) {
   .evolution-panel {
     padding: 12px;
   }
@@ -4025,7 +3606,7 @@ body.iframe-mode .simulator-container.iframe-container {
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: var(--bp-mobile-sm)) {
   .chart-container {
     height: 320px; /* Encore plus grand sur petit mobile */
   }

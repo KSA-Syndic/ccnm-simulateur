@@ -22,7 +22,7 @@ Application **Vue 3**, **Pinia**, moteur métier sous **`src/domain/`**. Point d
 
 ## Design tokens — modales
 
-Les fenêtres modales (composant **`AppModal`** / `<dialog>`, overlay **`.modal`**, carte **`.celebration-card`**) s’alignent sur des variables **`:root`** dans **`src/assets/styles/main.css`** :
+Les fenêtres modales (composant **`AppModal`** / `<dialog>`, overlay **`.modal`**, carte **`.celebration-card`** dans **`CelebrationOverlay.vue`**) s’alignent sur des variables **`:root`** dans **`src/assets/styles/variables.css`** :
 
 - **`--modal-radius`** — angles (aligné sur les tooltips : `var(--radius-md)`)
 - **`--modal-border-width`**, **`--modal-border-color`**

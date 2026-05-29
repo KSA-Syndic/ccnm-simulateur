@@ -22,7 +22,7 @@
 }
 
 /* Footer mobile : retours à la ligne, pas de débordement */
-@media (max-width: 768px) {
+@media (max-width: var(--bp-mobile)) {
   .simulator-footer .footer-line {
     flex-direction: column;
     align-items: center;

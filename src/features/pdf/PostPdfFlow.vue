@@ -301,35 +301,25 @@ defineExpose({ showSyndicatPrompt, showCelebration });
 }
 
 .syndicat-compose-mailto {
-  display: inline-block;
-  max-width: 100%;
   margin: 0;
-  padding: 0.2rem 0.45rem;
-  border-radius: 6px;
-  font-weight: 600;
+  padding: 0;
+  font-weight: inherit;
   font-size: inherit;
   font-family: inherit;
-  line-height: 1.35;
-  color: #0b57d0;
-  background: #e8f1fe;
-  text-decoration: none;
+  line-height: inherit;
+  color: var(--color-hyperlink);
+  text-decoration: underline;
   overflow-wrap: anywhere;
   word-break: break-word;
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease;
 }
 
 .syndicat-compose-mailto:hover {
-  color: #0842a0;
-  background: #d3e3fd;
+  color: var(--color-hyperlink-hover);
   text-decoration: underline;
 }
 
 .syndicat-compose-mailto:focus-visible {
-  outline: 2px solid #0b57d0;
+  outline: 2px solid var(--color-hyperlink);
   outline-offset: 2px;
 }
 
@@ -339,7 +329,7 @@ defineExpose({ showSyndicatPrompt, showCelebration });
   hyphens: auto;
 }
 
-@media (min-width: 480px) {
+@media (min-width: var(--bp-mobile-sm)) {
   .syndicat-compose-subject {
     white-space: nowrap;
     overflow: hidden;
@@ -489,13 +479,13 @@ defineExpose({ showSyndicatPrompt, showCelebration });
   display: block;
 }
 
-@media (max-width: 520px) {
+@media (max-width: var(--bp-webmail-stack)) {
   .syndicat-webmail-buttons {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 420px) {
+@media (max-width: var(--bp-tight)) {
   .syndicat-compose-row {
     grid-template-columns: 1fr;
     gap: 0.35rem 0;
@@ -506,7 +496,7 @@ defineExpose({ showSyndicatPrompt, showCelebration });
   }
 }
 
-@media (min-width: 421px) and (max-width: 480px) {
+@media (min-width: var(--bp-tight-from)) and (max-width: var(--bp-mobile-sm)) {
   .syndicat-compose-row {
     grid-template-columns: 3.5rem 1fr;
   }
