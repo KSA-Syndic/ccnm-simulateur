@@ -134,7 +134,7 @@ function labelFor(deg: number): string {
       class="roulette-wrapper"
       @wheel.prevent="onWheel"
       @touchstart.passive="onTouchStart"
-      @touchend.prevent="onTouchEnd"
+      @touchend="onTouchEnd"
     >
       <button
         type="button"
@@ -178,7 +178,8 @@ function labelFor(deg: number): string {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 10;
+  z-index: 20;
+  pointer-events: auto;
   width: 44px;
   height: 44px;
   min-width: 44px;

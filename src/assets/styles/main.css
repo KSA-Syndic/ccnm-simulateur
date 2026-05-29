@@ -2894,6 +2894,10 @@ body.iframe-mode .simulator-container.iframe-container {
   align-items: stretch;
   transition: transform var(--transition-normal);
   min-height: 100%;
+  /* Laisse passer les clics vers les chevrons (souvent au-dessus en empilement sur mobile) */
+  pointer-events: none;
+  position: relative;
+  z-index: 0;
 }
 
 .roulette-value {
@@ -2906,6 +2910,7 @@ body.iframe-mode .simulator-container.iframe-container {
   text-align: center;
   transition: var(--transition-fast);
   flex-shrink: 0;
+  pointer-events: auto;
 }
 
 .roulette-value .degree-number {
