@@ -3,15 +3,15 @@ import { goToStep1b, goToStep2, goToStep3, goToStep4, hashBase } from './wizard-
 
 async function goToStep1c(page: Page) {
   await page.goto(hashBase);
-  await page.getByRole('button', { name: /Je souhaite l'estimer/i }).click();
+  await page.getByRole('button', { name: /Non, je veux l'estimer/i }).click();
   await expect(page.locator('.roulette-item').first()).toBeVisible();
 }
 
 test.describe('Smoke — wizard Vue (mono-page)', () => {
   test('step 1a — affichage choix', async ({ page }) => {
     await page.goto(hashBase);
-    await expect(page.getByRole('button', { name: /Je connais ma classification/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Je souhaite l'estimer/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Oui, je la connais/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Non, je veux l'estimer/i })).toBeVisible();
   });
 
   test('step 1b — saisie groupe C', async ({ page }) => {

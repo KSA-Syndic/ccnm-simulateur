@@ -272,7 +272,7 @@ export const POST_PDF_SYNDICAT = {
   syndicatFieldTo: 'À',
   syndicatFieldSubject: 'Objet',
   syndicatFieldAttachments: 'Pièces jointes',
-  syndicatPjWord: 'Lettre Word.docx',
+  syndicatPjWord: 'Lettre (fichier HTML).htm',
   syndicatPjPdf: 'Annexe technique.pdf',
   syndicatPjHint: 'À joindre après ouverture de votre messagerie',
   syndicatOpenWith: 'Ouvrir avec',
@@ -282,13 +282,16 @@ export const POST_PDF_SYNDICAT = {
   outlookLinkLabel: 'Outlook',
   gmailComposeAria: 'Ouvrir la composition dans Gmail',
   outlookComposeAria: 'Ouvrir la composition dans Outlook',
+  /** Lien mailto sur l’adresse « À » : ouverture de la messagerie avec destinataire, sujet et corps type. */
+  syndicatAddressMailtoAria:
+    'Composer un courriel vers cette adresse avec le sujet et le texte type déjà renseignés',
   mailSubject: "Arriérés de salaire – demande d'accompagnement",
   mailBody: `Bonjour,
 
 J'ai constaté un écart entre mon salaire et le minimum conventionnel (SMH) de la CCN Métallurgie.
 
 Vous trouverez en pièces jointes :
-- Un projet de lettre de mise en demeure (Word éditable)
+- Un projet de lettre de mise en demeure (fichier HTML, ouvrable dans Word, votre navigateur ou Google Docs)
 - Une annexe technique avec le détail des calculs et références (PDF)
 
 Ces documents sont indicatifs. Pourriez-vous les vérifier et m'accompagner dans les démarches si nécessaire ?

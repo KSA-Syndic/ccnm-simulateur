@@ -5,7 +5,11 @@ import CelebrationOverlay from './CelebrationOverlay.vue';
 import { useAgreementStore } from '../../stores/agreement';
 import { getAgreement } from '../../domain/agreements/registry';
 import { POST_PDF_SYNDICAT } from '../../domain/ui/labels';
-import { buildGmailComposeUrl, buildOutlookComposeUrl } from '../../domain/pdf/syndicatMail';
+import {
+  buildGmailComposeUrl,
+  buildMailtoHref,
+  buildOutlookComposeUrl,
+} from '../../domain/pdf/syndicatMail';
 import gmailIconUrl from '../../assets/mail/Gmail_icon_(2026).svg?url';
 import outlookIconUrl from '../../assets/mail/Microsoft_Outlook_Icon_(2025–present).svg?url';
 
@@ -41,6 +45,10 @@ const outlookComposeUrl = computed(() =>
     POST_PDF_SYNDICAT.mailSubject,
     POST_PDF_SYNDICAT.mailBody,
   ),
+);
+
+const mailtoHref = computed(() =>
+  buildMailtoHref(syndicatEmail.value, POST_PDF_SYNDICAT.mailSubject, POST_PDF_SYNDICAT.mailBody),
 );
 
 function showSyndicatPrompt() {
@@ -98,7 +106,15 @@ defineExpose({ showSyndicatPrompt, showCelebration });
 
         <div class="syndicat-compose-row">
           <span class="syndicat-compose-label">{{ POST_PDF_SYNDICAT.syndicatFieldTo }}</span>
-          <span class="syndicat-compose-value">{{ syndicatEmail }}</span>
+          <a
+            class="syndicat-compose-mailto"
+            :href="mailtoHref"
+            rel="noopener noreferrer"
+            :aria-label="POST_PDF_SYNDICAT.syndicatAddressMailtoAria"
+            @click="scheduleGoCelebration"
+          >
+            {{ syndicatEmail }}
+          </a>
         </div>
 
         <div class="syndicat-compose-row">
@@ -118,10 +134,10 @@ defineExpose({ showSyndicatPrompt, showCelebration });
           <ul class="syndicat-compose-pj-list">
             <li class="syndicat-compose-pj">
               <span
-                class="syndicat-compose-pj-icon syndicat-compose-pj-icon--word"
+                class="syndicat-compose-pj-icon syndicat-compose-pj-icon--html"
                 aria-hidden="true"
               >
-                W
+                HTML
               </span>
               <span class="syndicat-compose-pj-name">{{ POST_PDF_SYNDICAT.syndicatPjWord }}</span>
             </li>
@@ -284,6 +300,39 @@ defineExpose({ showSyndicatPrompt, showCelebration });
   word-break: break-word;
 }
 
+.syndicat-compose-mailto {
+  display: inline-block;
+  max-width: 100%;
+  margin: 0;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: inherit;
+  font-family: inherit;
+  line-height: 1.35;
+  color: #0b57d0;
+  background: #e8f1fe;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.syndicat-compose-mailto:hover {
+  color: #0842a0;
+  background: #d3e3fd;
+  text-decoration: underline;
+}
+
+.syndicat-compose-mailto:focus-visible {
+  outline: 2px solid #0b57d0;
+  outline-offset: 2px;
+}
+
 .syndicat-compose-subject {
   overflow-wrap: break-word;
   word-break: break-word;
@@ -343,9 +392,10 @@ defineExpose({ showSyndicatPrompt, showCelebration });
   color: #fff;
 }
 
-.syndicat-compose-pj-icon--word {
-  background: #2b579a;
-  font-size: 0.75rem;
+.syndicat-compose-pj-icon--html {
+  background: #1d4ed8;
+  font-size: 0.55rem;
+  letter-spacing: -0.02em;
 }
 
 .syndicat-compose-pj-icon--pdf {
@@ -385,7 +435,7 @@ defineExpose({ showSyndicatPrompt, showCelebration });
 
 .syndicat-webmail-buttons {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.55rem;
 }
 
@@ -439,6 +489,12 @@ defineExpose({ showSyndicatPrompt, showCelebration });
   display: block;
 }
 
+@media (max-width: 520px) {
+  .syndicat-webmail-buttons {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 420px) {
   .syndicat-compose-row {
     grid-template-columns: 1fr;
@@ -447,10 +503,6 @@ defineExpose({ showSyndicatPrompt, showCelebration });
 
   .syndicat-compose-label {
     margin-bottom: 0.1rem;
-  }
-
-  .syndicat-webmail-buttons {
-    grid-template-columns: 1fr;
   }
 }
 

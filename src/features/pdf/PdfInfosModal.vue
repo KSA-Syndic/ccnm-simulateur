@@ -44,11 +44,12 @@ defineExpose({ show });
 </script>
 
 <template>
-  <AppModal :open="open" title="Export PDF et lettre Word" @close="open = false">
+  <AppModal :open="open" title="Export PDF et lettre (HTML)" @close="open = false">
     <div class="pdf-infos-body">
       <p class="pdf-infos-lead">
-        Ces informations enrichissent l’annexe PDF et la lettre de mise en demeure (.doc). Les
-        champs vides conservent des mentions modèle dans le Word.
+        Ces informations enrichissent l’annexe PDF et la lettre de mise en demeure (fichier
+        <abbr title="HyperText Markup Language">HTML</abbr> ouvrable dans Word, un navigateur ou
+        Google&nbsp;Docs). Les champs vides conservent des mentions modèle dans la lettre.
       </p>
       <div class="form-group">
         <label for="pdf-nom">Votre nom (optionnel)</label>
@@ -81,7 +82,7 @@ defineExpose({ show });
       <div
         v-show="showLetterFields"
         class="letter-fields"
-        aria-label="Champs optionnels lettre Word"
+        aria-label="Champs optionnels pour la lettre (HTML)"
       >
         <div class="form-group">
           <label for="pdf-adr-sal">Adresse salarié (optionnel)</label>
@@ -117,7 +118,7 @@ defineExpose({ show });
     </div>
     <template #footer>
       <button class="book-btn btn-secondary" @click="open = false">Annuler</button>
-      <button class="book-btn btn-primary" @click="submit">Générer Word + PDF</button>
+      <button class="book-btn btn-primary" @click="submit">Générer lettre HTML + PDF</button>
     </template>
   </AppModal>
 </template>

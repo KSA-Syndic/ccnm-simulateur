@@ -10,7 +10,7 @@ export async function goToStep2ViaEstimation(
   startUrl: string = hashBase,
 ) {
   await page.goto(startUrl);
-  await page.getByRole('button', { name: /Je souhaite l'estimer/i }).click();
+  await page.getByRole('button', { name: /Non, je veux l'estimer/i }).click();
   await page.waitForSelector('.roulette-item');
   for (let i = 0; i < CONFIG.CRITERES.length; i++) {
     const critere = CONFIG.CRITERES[i]!;
@@ -32,7 +32,7 @@ export async function goToStep1b(
   startUrl: string = hashBase,
 ) {
   await page.goto(startUrl);
-  await page.getByRole('button', { name: /Je connais ma classification/i }).click();
+  await page.getByRole('button', { name: /Oui, je la connais/i }).click();
   await page.waitForSelector('#select-groupe');
   await page.selectOption('#select-groupe', groupe);
   if (classe != null) {

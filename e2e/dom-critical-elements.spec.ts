@@ -14,7 +14,7 @@ test.describe('DOM critique — résultat & classification', () => {
     await page.goto(hashBase);
     await page.evaluate(() => sessionStorage.clear());
     await page.reload();
-    await page.getByRole('button', { name: /Je connais ma classification/i }).click();
+    await page.getByRole('button', { name: /Oui, je la connais/i }).click();
     await page.waitForSelector('#select-groupe');
     const opts = await page.locator('#select-groupe option').allTextContents();
     expect(opts.some((t) => /A/.test(t))).toBe(true);
