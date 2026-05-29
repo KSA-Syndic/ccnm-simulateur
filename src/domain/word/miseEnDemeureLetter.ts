@@ -48,9 +48,9 @@ function buildYearTableHtml(data: MiseEnDemeureLetterData): string {
 }
 
 /**
- * Document HTML structuré pour une lettre de mise en demeure.
- * Téléchargement en `.htm` (type `text/html`) : ouverture fiable sur mobile (Word, navigateur, Google Docs).
- * L’ancien export `.doc` + `application/msword` était souvent rejeté comme « fichier endommagé » hors Word bureau.
+ * Lettre de mise en demeure au format **Office HTML** (namespaces Word dans le HTML).
+ * Le fichier téléchargé porte l’extension **`.doc`** et le type MIME **`application/msword`** :
+ * Microsoft Word, LibreOffice Writer et la plupart des suites bureautiques ouvrent alors le document en mode texte.
  */
 export function buildMiseEnDemeureWordHtml(
   infos: MiseEnDemeureLetterInfos,
@@ -120,16 +120,15 @@ export function buildMiseEnDemeureWordHtml(
 
 export function downloadWordDocument(html: string, basename = 'mise_en_demeure'): void {
   const stamp = new Date().toISOString().split('T')[0];
-  const trimmed = html.trimStart();
-  const withDoctype = /^<!doctype html/i.test(trimmed) ? html : `<!DOCTYPE html>\n${html}`;
-  const blob = new Blob([withDoctype], { type: 'text/html;charset=utf-8' });
+  const trimmed = html.trim();
+  const payload = trimmed.startsWith('\ufeff') ? trimmed : `\ufeff${trimmed}`;
+  const blob = new Blob([payload], { type: 'application/msword;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${basename}_${stamp}.htm`;
+  a.download = `${basename}_${stamp}.doc`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  /* Laisser le navigateur mobile terminer l’enregistrement avant de révoquer l’URL blob. */
   window.setTimeout(() => URL.revokeObjectURL(url), 2500);
 }

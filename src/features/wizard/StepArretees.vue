@@ -310,7 +310,7 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
   try {
     generateWord(data);
     await generatePdf(data);
-    dispatchAppToast('Lettre HTML et annexe PDF ont été téléchargés.', 'success');
+    dispatchAppToast('Lettre Word et annexe PDF ont été téléchargés.', 'success');
     postPdfFlowRef.value?.showSyndicatPrompt();
   } catch (err) {
     console.error('[PDF/Word]', err);

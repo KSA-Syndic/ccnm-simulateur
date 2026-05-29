@@ -134,10 +134,10 @@ defineExpose({ showSyndicatPrompt, showCelebration });
           <ul class="syndicat-compose-pj-list">
             <li class="syndicat-compose-pj">
               <span
-                class="syndicat-compose-pj-icon syndicat-compose-pj-icon--html"
+                class="syndicat-compose-pj-icon syndicat-compose-pj-icon--word"
                 aria-hidden="true"
               >
-                HTML
+                W
               </span>
               <span class="syndicat-compose-pj-name">{{ POST_PDF_SYNDICAT.syndicatPjWord }}</span>
             </li>
@@ -382,9 +382,9 @@ defineExpose({ showSyndicatPrompt, showCelebration });
   color: #fff;
 }
 
-.syndicat-compose-pj-icon--html {
-  background: #1d4ed8;
-  font-size: 0.55rem;
+.syndicat-compose-pj-icon--word {
+  background: #2b579a;
+  font-size: 0.62rem;
   letter-spacing: -0.02em;
 }
 

@@ -1,4 +1,4 @@
-/** Données collectées avant export lettre HTML + PDF (étape arriérés). */
+/** Données collectées avant export lettre Word + PDF (étape arriérés). */
 export type ExportDocumentsPayload = {
   nom: string;
   employeur: string;

@@ -272,7 +272,7 @@ export const POST_PDF_SYNDICAT = {
   syndicatFieldTo: 'À',
   syndicatFieldSubject: 'Objet',
   syndicatFieldAttachments: 'Pièces jointes',
-  syndicatPjWord: 'Lettre (fichier HTML).htm',
+  syndicatPjWord: 'Lettre de mise en demeure.doc',
   syndicatPjPdf: 'Annexe technique.pdf',
   syndicatPjHint: 'À joindre après ouverture de votre messagerie',
   syndicatOpenWith: 'Ouvrir avec',
@@ -291,7 +291,7 @@ export const POST_PDF_SYNDICAT = {
 J'ai constaté un écart entre mon salaire et le minimum conventionnel (SMH) de la CCN Métallurgie.
 
 Vous trouverez en pièces jointes :
-- Un projet de lettre de mise en demeure (fichier HTML, ouvrable dans Word, votre navigateur ou Google Docs)
+- Un projet de lettre de mise en demeure au format Word (.doc)
 - Une annexe technique avec le détail des calculs et références (PDF)
 
 Ces documents sont indicatifs. Pourriez-vous les vérifier et m'accompagner dans les démarches si nécessaire ?

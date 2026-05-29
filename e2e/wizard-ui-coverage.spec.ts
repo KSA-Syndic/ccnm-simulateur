@@ -83,9 +83,7 @@ test.describe('P5.2 — UI wizard (situation, header, footer, hints, graphiques,
     );
 
     await page.getByRole('button', { name: /Générer mon rapport d'arriérés/i }).click();
-    await expect(
-      page.getByRole('dialog', { name: /Export PDF et lettre \(HTML\)/i }),
-    ).toBeVisible();
+    await expect(page.getByRole('dialog', { name: /Export PDF et lettre Word/i })).toBeVisible();
     await expect(page.locator('#pdf-nom')).toBeVisible();
   });
 });
