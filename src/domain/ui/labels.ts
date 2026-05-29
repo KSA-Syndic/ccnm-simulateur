@@ -400,8 +400,7 @@ export const WIZARD_TOOLTIPS = {
     title: "Ancienneté dans l'entreprise",
     description:
       "Durée d'emploi continu chez votre employeur actuel (depuis la date d'embauche). Elle conditionne notamment le droit à la prime d'ancienneté (seuil et barème selon CCNM ou accord applicable).",
-    sourceArticle:
-      "Accord d'entreprise (si existant) ; à défaut CCNM Art. 142-143 (prime d'ancienneté)",
+    sourceArticle: 'CCNM Art. 142-143 ; accord si applicable',
   },
   experiencePro: {
     title: 'Expérience professionnelle',
