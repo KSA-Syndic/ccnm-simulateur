@@ -92,7 +92,7 @@
   word-break: break-word;
 }
 
-/* Déclencheur unique AppTooltip (pastille « i ») — ne pas mélanger avec .tooltip-trigger legacy */
+/* Déclencheur AppTooltip (pastille « i ») — ne pas réutiliser l’ancienne classe .tooltip-trigger du bundle historique. */
 .app-tooltip-trigger {
   display: inline-flex;
   align-items: center;
@@ -351,7 +351,7 @@ body.iframe-mode .simulator-container.iframe-container {
   display: block;
 }
 
-/* Vue Router: one step per route inside .simulator-container (legacy used .active to toggle many steps in one page). */
+/* Une étape active à la fois dans .simulator-container (navigation par étapes du wizard). */
 .simulator-container main .wizard-step {
   display: block;
 }
@@ -2716,8 +2716,7 @@ body.iframe-mode .simulator-container.iframe-container {
   display: none;
 }
 
-/* Legacy - à conserver */
-/* Sections / Étapes (ancienne version) */
+/* Sections / étapes (styles utilitaires partagés) */
 .step-section {
   padding: 30px;
   border-bottom: 1px solid var(--gray-200);
@@ -2798,7 +2797,7 @@ body.iframe-mode .simulator-container.iframe-container {
   color: var(--body-font-color);
 }
 
-/* Legacy index-legacy / roulette « ? » — l’app Vue utilise .app-tooltip-trigger via AppTooltip */
+/* Roulette classification — styles partagés ; l’app Vue utilise .app-tooltip-trigger (AppTooltip). */
 .tooltip-trigger:not(.tooltip-trigger__light) {
   display: inline-flex;
   align-items: center;

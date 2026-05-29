@@ -1,6 +1,6 @@
 /**
  * Liens de composition webmail (pas de PJ possible par URL — voir notice UI).
- * Aligné sur `buildGmailComposeUrl` legacy (`legacy-archive/app.js`).
+ * Construction d’URL mailto / webmail pour le syndicat (sujet et corps encodés).
  */
 export function buildGmailComposeUrl(to: string, subject: string, body: string): string {
   const params = new URLSearchParams();

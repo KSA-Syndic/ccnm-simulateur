@@ -16,7 +16,6 @@ globs:
 - `src/stores/**` : peut importer `@/domain/**`, jamais `@/components/**` ni `@/features/**`.
 - `src/composables/**` : peut importer `@/domain/**` + `@/stores/**`.
 - `src/components/**` et `src/features/**` : tout en bas, peuvent tout importer.
-- **`legacy-archive/`** (oracle JS hors bundle Vite) : lecture seule ; aucun import depuis `src/domain/**` (pont réservé à `src/infra/**`, tests, E2E).
 
 ## 2. Précision monétaire et temporelle
 
@@ -30,16 +29,16 @@ globs:
 
 ## 3. Textes et internationalisation
 
-- **Passe 1** : textes legacy reportés verbatim, aucune modification.
+- **Passe 1** : textes d’origine reportés verbatim, aucune modification.
 - **Passe 2** : tout texte affiché à l'utilisateur (formulaire, tooltip, modal, toast, PDF, mention légale) **doit** provenir de `src/domain/ui/labels.ts` via `getLabel(id, surface)`.
 - Interdiction de chaînes de caractères françaises hardcodées dans `.vue` ou `.ts` UI après J9.
 - Audit grep : `rg "['\"][A-ZÀÉ][a-zàéèêïô ]{15,}['\"]" src/ --include="*.{vue,ts}" -l` doit retourner uniquement `src/domain/ui/labels.ts` après passe 2.
 
-## 4. Traçabilité legacy
+## 4. Traçabilité des sources historiques
 
-- Tout fichier porté depuis le legacy commence par `// Source: legacy-archive/<chemin>::<symbole>` (un commentaire par symbole importé).
-- Tout `ElementDef` du catalogue convention conserve `sourceArticle`, `conditionTexte`, `tooltip` (si présents dans le legacy).
-- Aucune métadonnée juridique du legacy supprimée pour « simplifier ».
+- Lorsqu’un module est issu d’un portage depuis l’ancien bundle, conserver si possible un commentaire `// Source: <chemin>::<symbole>` en tête de fichier.
+- Tout `ElementDef` du catalogue convention conserve `sourceArticle`, `conditionTexte`, `tooltip` (s’ils existaient dans le fichier d’origine).
+- Aucune métadonnée juridique d’origine supprimée pour « simplifier ».
 
 ## 5. Tests obligatoires
 
@@ -72,13 +71,13 @@ globs:
 ## 9. Workflow Git
 
 - Une tâche matrice = un commit.
-- Format : `feat(domain): port SMHCalculator [D1.05]` ou `fix(ui): align step3 result with legacy [D3.07]`.
+- Format : `feat(domain): port SMHCalculator [D1.05]` ou `fix(ui): aligner étape 3 résultat [D3.07]`.
 - Pré-commit `lint-staged` actif (eslint --fix + prettier sur fichiers modifiés uniquement).
 - Husky ne lance **jamais** la suite de tests complète en pré-commit.
 
 ## 10. CSS sanctuarisé
 
-- `src/assets/styles/main.css` (copie verbatim de `legacy-archive/styles.css`) ne se modifie pas en passe 1.
+- `src/assets/styles/main.css` (copie verbatim du fichier de styles d’origine) ne se modifie pas en passe 1.
 - Si l'UI Vue casse visuellement, c'est le HTML/Vue qui est incorrect, jamais le CSS.
 - Passe 2 : améliorations CSS uniquement dans `src/assets/styles/extensions.css` (fichier séparé), strictement limitées aux items de `docs/LACUNES_UI_CIBLES.md`.
 

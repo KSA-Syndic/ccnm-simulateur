@@ -21,7 +21,7 @@ export interface HintContext {
   travailHeuresSup: boolean;
 }
 
-/** Retourne les hints applicables, dans l’ordre de priorité d’affichage (liste plate legacy simplifiée). */
+/** Retourne les hints applicables, dans l’ordre de priorité d’affichage (liste plate). */
 export function eligibleHints(ctx: HintContext): HintId[] {
   const out: HintId[] = [];
 
@@ -124,7 +124,7 @@ function hasMajorationsCcnmStyle(details: ElementResult[]): boolean {
 }
 
 /**
- * Blocs `book-hint` contextualisés — aligné `updateHintDisplay` legacy (`app.js` L2780–2873).
+ * Blocs `book-hint` contextualisés pour l’assistant.
  */
 export function buildResultHintBlocks(p: BuildResultHintsParams): ResultHintBlock[] {
   const hints: ResultHintBlock[] = [];

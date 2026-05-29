@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import '../../src/accords';
 import { CONFIG } from '../../src/domain/config';
-import { calculateAnnualRemuneration } from '../../src/infra/remuneration/legacyCompute';
+import {
+  computeAnnualRemunerationFromWizardStores,
+  wizardStoresInputFromFixtureState,
+} from '../../src/domain/remuneration/compute';
 
 function stateMinimal(over: Record<string, unknown> = {}) {
   return {
@@ -28,17 +32,21 @@ function stateMinimal(over: Record<string, unknown> = {}) {
   };
 }
 
-describe('Invariants rémunération (oracle legacy)', () => {
+describe('Invariants rémunération (moteur domaine)', () => {
   it('total ≤ 1.5 × SMH max (classe 18)', () => {
     const smhMax = CONFIG.SMH[18] ?? 0;
-    const r = calculateAnnualRemuneration(stateMinimal(), null, { mode: 'full' });
+    const r = computeAnnualRemunerationFromWizardStores(
+      wizardStoresInputFromFixtureState(stateMinimal()),
+    );
     expect(r.total).toBeLessThanOrEqual(Math.ceil(smhMax * 1.5));
     expect(Number.isFinite(r.total)).toBe(true);
     expect(Number.isNaN(r.total)).toBe(false);
   });
 
   it('mensuel cohérent (12 mois)', () => {
-    const r = calculateAnnualRemuneration(stateMinimal(), null, { mode: 'full' });
+    const r = computeAnnualRemunerationFromWizardStores(
+      wizardStoresInputFromFixtureState(stateMinimal()),
+    );
     const mensuel = Math.round(r.total / 12);
     expect(Math.abs(r.total - mensuel * 12)).toBeLessThanOrEqual(6);
   });

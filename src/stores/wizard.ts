@@ -5,8 +5,7 @@ export const useWizardStore = defineStore('wizard', {
     /** Étape affichée (mono-page, `WizardShell`). */
     currentStep: 1,
     /**
-     * Furthest step reached via forward navigation. Stepper clicks only allow target <= this
-     * (same idea as legacy `state.currentStep` + `targetStep <= maxStep` on `.progress-step` click).
+     * Dernière étape atteinte en navigation avant ; les clics sur le stepper ne permettent pas d’aller au-delà.
      */
     maxStepReached: 1,
     mode: 'estimation' as 'estimation' | 'manual',

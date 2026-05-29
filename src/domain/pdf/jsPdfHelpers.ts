@@ -2,16 +2,16 @@ import type { CellInput, RowInput, UserOptions } from 'jspdf-autotable';
 import { formatMoney } from '../utils/format';
 import { roundToCents } from '../utils/rounding';
 
-/** Constantes de mise en page alignées sur `legacy-archive/arretees/PDFGenerator.js`. */
+/** Constantes de mise en page PDF arriérés (couleurs et marges). */
 export const PDF_MARGIN_MM = 20;
 
 /** Zone réservée au pied de page (disclaimer + numéro) — évite le chevauchement avec autoTable. */
 export const PDF_FOOTER_RESERVE_MM = 34;
 
-/** Arriérés (dû > versé) — aligné legacy PDF `textColor: [200, 50, 50]`. */
+/** Arriérés (dû > versé) — couleur d’accentuation PDF. */
 export const PDF_ECART_COLOR_ARRETEES: [number, number, number] = [200, 50, 50];
 
-/** Trop-perçu (dû < versé) — aligné legacy `textColor: [50, 150, 50]`. */
+/** Trop-perçu (dû < versé) — couleur d’accentuation PDF. */
 export const PDF_ECART_COLOR_SURPLUS: [number, number, number] = [50, 130, 70];
 
 export const PDF_ECART_COLOR_ZERO: [number, number, number] = [100, 100, 100];

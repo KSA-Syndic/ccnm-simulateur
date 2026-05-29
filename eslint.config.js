@@ -5,7 +5,7 @@ import vueParser from 'vue-eslint-parser';
 
 export default [
   {
-    ignores: ['dist/', 'node_modules/', 'tests/', '*.js', 'accords/*.js', 'src/**/*.js', 'legacy-archive/**'],
+    ignores: ['dist/', 'node_modules/', 'tests/', '*.js', 'accords/*.js', 'src/**/*.js'],
   },
   {
     files: ['src/domain/**/*.ts'],
@@ -32,7 +32,6 @@ export default [
           ],
           patterns: [
             { group: ['@/components/*', '@/features/*', '@/stores/*'], message: 'Le domaine ne doit pas importer la couche UI.' },
-            { group: ['@legacy/*', '**/legacy-archive/**'], message: 'Le domaine ne doit pas importer le code legacy (oracle).' },
           ],
         },
       ],

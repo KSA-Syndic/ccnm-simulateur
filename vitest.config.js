@@ -16,7 +16,6 @@ export default defineConfig({
         include: [
             'src/**/*.test.ts',
             'src/**/*.spec.ts',
-            'legacy-archive/tests/**/*.test.js',
             'tests/**/*.test.ts',
             'tests/**/*.spec.ts',
         ],

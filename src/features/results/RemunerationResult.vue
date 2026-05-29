@@ -10,7 +10,7 @@ import { useWizardStore } from '../../stores/wizard';
 import { CONFIG } from '../../domain/config';
 import { isCadre } from '../../domain/classification/engine';
 import { getSmhHourlyBaseRate, getSmhDailyBaseRate } from '../../domain/remuneration/rates';
-import { WIZARD_LEGACY_LABELS, RESULT_SALAIRE_BASE_TOOLTIP } from '../../domain/ui/labels';
+import { WIZARD_LABELS, RESULT_SALAIRE_BASE_TOOLTIP } from '../../domain/ui/labels';
 import { getAgreement } from '../../domain/agreements/registry';
 import AccordBadge from '../agreement-options/AccordBadge.vue';
 import { buildLegalTooltipContent, getAccordNomCourt } from '../../domain/tooltip/builders';
@@ -140,7 +140,7 @@ function selectNbMois(target: 12 | 13) {
 </script>
 
 <template>
-  <div class="remuneration-result-legacy" aria-live="polite">
+  <div class="remuneration-result" aria-live="polite">
     <div class="result-card">
       <div class="result-card-header-statut">
         <span id="result-statut-badge" class="statut-badge small" :class="statutBadgeClass">{{
@@ -150,7 +150,7 @@ function selectNbMois(target: 12 | 13) {
       <div class="result-main">
         <span id="result-smh" class="result-value">{{ formatMoney(data.totalAnnual) }}</span>
         <span id="result-label-annuel" class="result-label">{{
-          WIZARD_LEGACY_LABELS.resultatAnnuel
+          WIZARD_LABELS.resultatAnnuel
         }}</span>
       </div>
 
@@ -159,7 +159,7 @@ function selectNbMois(target: 12 | 13) {
           formatMoney(Math.round(data.totalAnnual / ui.nbMois))
         }}</span>
         <span id="result-label-mensuel" class="result-label">{{
-          WIZARD_LEGACY_LABELS.resultatMensuel
+          WIZARD_LABELS.resultatMensuel
         }}</span>
         <div
           class="months-toggle"
@@ -193,7 +193,7 @@ function selectNbMois(target: 12 | 13) {
 
     <details class="result-details-toggle" open>
       <summary id="result-details-summary">
-        {{ WIZARD_LEGACY_LABELS.detailCalcul }}
+        {{ WIZARD_LABELS.detailCalcul }}
       </summary>
       <div id="result-details" class="result-details">
         <div class="result-detail-item">

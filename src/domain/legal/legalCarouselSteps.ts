@@ -1,13 +1,13 @@
 import { CONSTANTS } from '../config/constants';
 
-/** Année d’effet CCNM (aligné legacy `CCNM_EFFECTIVE_YEAR`). */
+/** Année d’effet CCNM affichée dans le guide juridique. */
 export function getCcnmEffectiveYear(): number {
   return CONSTANTS.DATE_CCNM_EFFET.getFullYear();
 }
 
 export interface LegalCarouselSlide {
   title: string;
-  /** HTML statique legacy (affichage `v-html` côté composant). */
+  /** HTML statique (affichage `v-html` côté composant). */
   contentHtml: string;
 }
 

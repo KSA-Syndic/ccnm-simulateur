@@ -82,7 +82,7 @@ function attachConventionSubstitution(def: ElementDef): ElementDef {
   if (def.semanticId === SEMANTIC_ID.PRIME_EQUIPE) {
     return {
       ...def,
-      /** Aligné legacy `RemunerationCalculator` : si l’accord définit la prime équipe, on retient le calcul accord (pas le max CCN/accord). */
+      /** Si l’accord définit la prime équipe, on retient le calcul accord (pas le max CCN/accord). */
       substitution: { semanticId: SEMANTIC_ID.PRIME_EQUIPE, strategy: 'replaces' },
     };
   }

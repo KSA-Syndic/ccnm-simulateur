@@ -1,0 +1,46 @@
+---
+description: English for code and technical artifacts; French reserved for docs, comments, and business/legal wording.
+alwaysApply: true
+---
+
+# Language — code vs French surfaces
+
+## English (required)
+
+Use **English** for anything **technical** that is not user-facing copy:
+
+- **Identifiers**: types, variables, functions, classes, file names (keep existing `kebab-case` / `camelCase` conventions), enum members, route names, store ids where they are dev-facing.
+- **Tooling & infra**: CI/CD workflows (`.github/workflows/**`), comments inside them, step names, script names, shell scripts aimed at developers, `package.json` script descriptions if added, technical `README` sections that describe build flags only (prefer aligning with this rule).
+- **Engineering logs / assertions**: `console` in dev tooling, test failure messages aimed at maintainers, internal error codes.
+- **Third-party / standard terms**: keep library API names and HTTP headers in English.
+
+## French (allowed / required where applicable)
+
+- **`src/domain/ui/labels.ts`** and any **user-visible** UI string (wizard, PDF, toasts, tooltips, `aria-label` when it is end-user wording): **French**, métier et ton du simulateur (see `no-meta-ui-text.mdc`).
+- **Legal / convention wording** sourced from CCNM or labour law: keep **French** as in the official texts.
+- **`docs/**`**: project documentation for humans **may stay in French** unless the team chooses otherwise.
+- **Comments in source code** (`//`, `/* */`, `<!-- -->` in Vue): **may be French** to match the domain experts who maintain the repo.
+
+## When editing
+
+Before adding text, ask: **Is this seen by the end user or copied from legal/convention sources?** → French. **Is this for developers, CI, or the type system?** → English.
+
+## Examples
+
+```yaml
+# Good — workflow
+- name: Install and build
+```
+
+```ts
+// Good — identifier + French comment allowed
+/** Barème débutant : tranche selon l'ancienneté ressaisie. */
+export function getBaremeDebutantTranche(experiencePro: number): number {
+```
+
+```ts
+// Bad — technical name in French
+function calculerTotalAnnuel() {}
+// Prefer
+function computeAnnualTotal() {}
+```

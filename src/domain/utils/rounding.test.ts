@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { annualFromMonthly, roundHourlyRate, roundToCents, roundToEuro } from './rounding';
 
 /**
- * Cas d’alignement attendu avec `legacy-archive/utils/rounding.js` (Math + demi au supérieur).
+ * Cas d’arrondi attendus (Math + demi au supérieur).
  */
 describe('rounding.ts', () => {
   it('roundToCents — demi centime au supérieur', () => {
@@ -19,8 +19,8 @@ describe('rounding.ts', () => {
     expect(roundToEuro('bad')).toBe(0);
   });
 
-  it('annualFromMonthly — annuel en euros entiers (aligné legacy : mensuel×12 puis arrondi)', () => {
-    // 3000.4 * 12 = 36004.8 — arrondi demi au supérieur → 36005 (idem Math.round legacy sur IEEE754)
+  it('annualFromMonthly — annuel en euros entiers (mensuel×12 puis arrondi)', () => {
+    // 3000.4 * 12 = 36004.8 — arrondi demi au supérieur → 36005
     expect(annualFromMonthly(3000.4)).toBe(36_005);
     expect(annualFromMonthly(0)).toBe(0);
   });

@@ -90,8 +90,7 @@ L'outil supporte les **accords d'entreprise** qui peuvent améliorer votre rému
 
 - **[Documentation technique](README_TECHNIQUE.md)** : Architecture Vue 3 (`src/`), moteur, stores, tests
 - **[Matrice de parité](docs/PARITE_MATRIX.md)** : Jalons migration et preuves (tests `src/` + `tests/`)
-- **[Déploiement GitHub Pages](docs/DEPLOIEMENT_PAGES.md)** : Publication Vue (et bascule depuis l’ancien bundle si besoin)
-- **[Oracle JS optionnel](docs/LEGACY_RUN.md)** : `legacy-archive/` — parité dual, **supprimable** quand vous le décidez
+- **[Déploiement GitHub Pages](docs/DEPLOIEMENT_PAGES.md)** : Publication Vue sur Pages
 - **[Guide des tests](tests/README.md)** : Vitest, Playwright
 - **[Guide technique pour ajouter un accord](docs/AJOUTER_ACCORD.md)** : Instructions détaillées pour développeurs
 - **[Intégrer un accord via texte complet + prompt IA](docs/INTEGRER_ACCORD_TEXTE_ET_IA.md)** : Fournir le texte de l'accord et un prompt pour générer le fichier JS avec un assistant IA
@@ -107,14 +106,11 @@ npm install
 # App Vue 3 (développement)
 npm run dev
 
-# Parité dual optionnelle (Vue 5173 + archive JS 5174) — voir docs/LEGACY_RUN.md
-npm run dual
-
-npm run test:run   # Vitest (moteur TS + tests app ; oracle legacy si encore présent)
+npm run test:run   # Vitest (moteur TS + tests app)
 npm run e2e        # Playwright sur l’app Vue
 ```
 
-Démo publiée : voir **`docs/DEPLOIEMENT_PAGES.md`**.
+Déploiement : application servie à la **racine** du site — voir **`docs/DEPLOIEMENT_PAGES.md`**.
 
 ## 📖 Fonctionnalités Détaillées
 

@@ -31,7 +31,7 @@ describe('getAccordElementDefsForRemuneration', () => {
     expect(equipe?.computeMode).toMatchObject({ mode: 'unitesXmontant', period: 'annual' });
   });
 
-  it('prime équipe accord (Kuhn) : unitesXmontant aligné legacy (151,67 h × 0,86 €/h)', () => {
+  it('prime équipe accord (Kuhn) : unitesXmontant (151,67 h × 0,86 €/h)', () => {
     const ag = getAgreement('kuhn')!;
     const def = getAccordElementDefsForRemuneration(ag).find((d) => d.id === 'primeEquipe');
     expect(def).toBeDefined();
@@ -173,7 +173,7 @@ describe('getAccordElementDefsForRemuneration', () => {
     expect(computeElement(def!, ctx).amount).toBe(attendu);
   });
 
-  it('résout une prime ancienneté accord > CCN avec contexte type legacy', () => {
+  it('résout une prime ancienneté accord > CCN avec contexte de fixture', () => {
     const ag = getAgreement('kuhn')!;
     const accordDefs = getAccordElementDefsForRemuneration(ag);
     const convDefs = getAllConventionDefs();

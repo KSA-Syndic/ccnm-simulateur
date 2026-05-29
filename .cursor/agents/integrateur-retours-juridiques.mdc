@@ -19,7 +19,7 @@ Tu es un **intégrateur logiciel** pour le projet simulateur (paie / rémunérat
 1. **Coller le discours de l'expert** dans le code : pas de paraphrases longues en commentaires, pas de copier-coller d'emails en `tooltip` ou en commentaires de fichier.
 2. **Ajouter des commentaires** « pédagogiques » ou « rappel du mail » si le code ou la règle projet n'en demande pas : le commentaire minimal ne sert qu'à un **piège métier** non évident (edge case aligné sur une décision datée, avec référence courte si déjà adoptée dans le projet).
 3. **Tout intégrer** : ignorer les généralités, les redites avec la doc existante, les suggestions UI déconnectées du périmètre, ou les points déjà correctement implémentés après lecture du code.
-4. **Sur-interpréter** : une phrase vague (« il faudrait majorer à la source ») → tu identifies **où** dans l'app cela existe déjà (`forfait`, `RemunerationCalculator`, etc.) ou tu **limites** le changement au comportement déjà modélisé ; tu ne crées pas une mini-fabrique sans besoin réel.
+4. **Sur-interpréter** : une phrase vague (« il faudrait majorer à la source ») → tu identifies **où** dans l'app cela existe déjà (`forfait`, moteur `engine.ts` / `compute.ts`, etc.) ou tu **limites** le changement au comportement déjà modélisé ; tu ne crées pas une mini-fabrique sans besoin réel.
 5. **Inventer un repli juridique** (ex. taux fictif pour une classe non couverte par l'annexe) pour « faire tourner » le moteur : tu modélises **l'absence de droit** (0 €, branche non applicable) ou tu exposes un paramètre explicite documenté, conformément au retour expert.
 6. **Reprendre tel quel des chiffres d'exemple** : voir section ci-dessous.
 
@@ -54,7 +54,7 @@ Un même paragraphe mélange souvent **la règle** (formule, taux issu d'une ann
 ## Phase 2 — Cartographie code
 
 - Parcourir les points d'ancrage **Vue / TS** : `src/domain/convention/catalog.ts`, `src/domain/config/`, `src/domain/remuneration/` (`engine.ts`, `compute.ts`, `aggregate.ts`), `src/domain/agreements/` (`interface.ts`, `accord-element-defs.ts`), `src/accords/*.ts`, `src/domain/ui/labels.ts`, `src/features/`, `src/stores/`, tests `tests/domain/`, `src/**/__tests__`.
-- Oracle JS optionnel : `legacy-archive/` (lecture comparative uniquement — pas source de vérité pour les nouveaux changements).
+- Oracle JavaScript optionnel : dossier d’archive en lecture comparative uniquement — pas source de vérité pour les nouveaux changements.
 - Pour chaque règle extraite, associer **un ou plusieurs emplacements** (définition d'élément, calcul, agrégation SMH, hint arriérés, affichage résultat).
 - Vérifier la **cohérence** des sémantiques (`semanticId`).
 

@@ -107,7 +107,7 @@ export const ConfigSchema = z.object({
   CRITERES: z.array(CritereSchema),
   UMAMI_WEBSITE_ID: z.string(),
   UMAMI_SCRIPT_URL: z.string(),
-  /** Taux d’inflation annuels (%) — secours si APIs indisponibles (aligné legacy INSEE 2010–2025, mises à jour manuelles). */
+  /** Taux d’inflation annuels (%) — secours si APIs indisponibles (série indicative INSEE 2010–2025, mises à jour manuelles). */
   INFLATION_FALLBACK_SERIES: z.record(z.coerce.number(), z.number()),
   INFLATION_FALLBACK_PERIOD: z.string(),
   /** Nombre d’années pour la moyenne d’inflation (fenêtre glissante récente) et `lastTimePeriod` Eurostat. */
@@ -221,7 +221,7 @@ const CCNM_SOURCE_ANNEXE_CLASSIFICATION_6_CRITERES =
   'CCNM — annexe de classification (grille à 6 critères)';
 
 /**
- * IPC France — taux annuels (%) intégrés en secours (legacy `app.js` — source INSEE / projections indicatives).
+ * IPC France — taux annuels (%) intégrés en secours (source INSEE / projections indicatives).
  * Ne pas utiliser comme vérité juridique : paramètre de simulation uniquement.
  */
 const INFLATION_FALLBACK_SERIES: Record<number, number> = {

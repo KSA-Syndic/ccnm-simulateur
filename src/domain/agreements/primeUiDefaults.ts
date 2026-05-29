@@ -37,7 +37,7 @@ export type PrimeUiSeedTarget = {
 };
 
 /**
- * Préremplit heures accord et surcharge de taux/montant (comme legacy + panier nuit dans « Autres »).
+ * Préremplit heures accord et surcharge de taux/montant (dont panier nuit dans « Autres »).
  * Ne remplace pas une valeur déjà saisie par l’utilisateur.
  */
 export function seedAgreementPrimeUiDefaults(

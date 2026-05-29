@@ -21,7 +21,7 @@ export const useSituationStore = defineStore('situation', {
     nationalPrimeOverrides: {} as Record<string, number>,
     /**
      * Activation et quantités des modalités nationales « Autres »
-     * (legacy `state.accordInputs` pour stateKeyActif / stateKeyHeures).
+     * Entrées accord et heures associées (`stateKeyActif` / `stateKeyHeures`).
      */
     modalityState: {} as Record<string, boolean | number>,
   }),

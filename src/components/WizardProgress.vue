@@ -8,7 +8,7 @@ const { currentStep, steps, goToStep } = useWizardNavigation();
 const wizard = useWizardStore();
 const { maxStepReached } = storeToRefs(wizard);
 
-/** Optional step 4 stays visible once unlocked (legacy: stepper-step-4-visible). */
+/** L’étape 4 reste visible dans le stepper une fois débloquée. */
 const visibleSteps = computed(() =>
   steps.filter((s) => !('optional' in s && s.optional) || maxStepReached.value >= s.num),
 );

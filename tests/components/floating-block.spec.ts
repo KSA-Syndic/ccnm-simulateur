@@ -46,9 +46,10 @@ describe('FloatingBlock', () => {
     w.vm.show(0);
     await flushPromises();
 
-    await w.find('#floating-input-block').trigger('keydown', { key: 'Escape' });
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await flushPromises();
     expect(w.emitted('dismissed')).toBeTruthy();
-    expect(w.find('#floating-input-block').classes()).toContain('floating-block-hidden');
+    expect(w.find('#floating-input-block').exists()).toBe(false);
 
     w.unmount();
   });

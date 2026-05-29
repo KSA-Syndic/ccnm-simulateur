@@ -14,7 +14,7 @@ import { getSmhForClasse } from './smh';
 import { roundHourlyRate, roundToEuro } from '../utils/rounding';
 import type { ComputeContext, ElementResult } from '../types';
 
-/** Résultat aligné sur `calculateAnnualRemuneration` legacy (mode `full`) — champs utilisés par l’UI / parité. */
+/** Résultat agrégé du calcul annuel (mode complet) — champs exposés à l’UI et aux tests de parité. */
 export interface AnnualRemunerationSummary {
   scenario: string;
   baseSMH: number;
@@ -40,9 +40,9 @@ export type WizardSituationInput = {
   heuresSup: number;
   travailJoursSupForfait: boolean;
   joursSupForfait: number;
-  /** Surcharges barèmes nationaux (legacy `state.nationalPrimeOverrides`). */
+  /** Surcharges des barèmes nationaux (état formulaire). */
   nationalPrimeOverrides?: Record<string, unknown>;
-  /** Activation / quantités modalités nationales « Autres » (legacy `accordInputs`). */
+  /** Activation / quantités des modalités nationales « Autres ». */
   modalityState?: Record<string, boolean | number>;
 };
 
@@ -262,8 +262,8 @@ export function computeAnnualRemunerationFromWizardStores(
   };
 }
 
-/** État legacy minimal pour tests de parité / round-trip (cf. `legacy-archive/core/state.js`). */
-export function buildLegacyRemunerationState(input: {
+/** Construit un état de fixture (profils JSON) pour les tests de parité avec le calculateur de référence. */
+export function buildParityFixtureState(input: {
   modeManuel: boolean;
   groupeManuel: string;
   classeManuel: number;
@@ -322,7 +322,7 @@ export function scoresArrayFromWizardScores(scores: Record<string, number>): num
   return CONFIG.CRITERES.map((c) => scores[c.id] ?? 1);
 }
 
-export function wizardScoresFromLegacyArray(scoresSix: number[]): Record<string, number> {
+export function wizardScoresFromSixCriteria(scoresSix: number[]): Record<string, number> {
   const out: Record<string, number> = {};
   CONFIG.CRITERES.forEach((c, i) => {
     out[c.id] = scoresSix[i] ?? 1;
@@ -330,8 +330,8 @@ export function wizardScoresFromLegacyArray(scoresSix: number[]): Record<string,
   return out;
 }
 
-/** Reconstruit l'entrée wizard/situation depuis un état legacy (tests de parité round-trip). */
-export function wizardStoresInputFromLegacyState(
+/** Reconstruit l’entrée wizard / situation à partir d’un objet fixture (tests de parité). */
+export function wizardStoresInputFromFixtureState(
   state: Record<string, unknown>,
 ): WizardRemunerationInput {
   const scoresSix = (state.scores as number[]) ?? [1, 1, 1, 1, 1, 1];
@@ -347,7 +347,7 @@ export function wizardStoresInputFromLegacyState(
     mode: modeManuel ? 'manual' : 'estimation',
     groupe: active.groupe,
     classe: active.classe,
-    scores: wizardScoresFromLegacyArray(scoresSix),
+    scores: wizardScoresFromSixCriteria(scoresSix),
     situation: {
       anciennete: Number(state.anciennete ?? 0),
       pointTerritorial: Number(state.pointTerritorial ?? CONFIG.POINT_TERRITORIAL.valeurDefaut),

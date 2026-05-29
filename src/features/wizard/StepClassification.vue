@@ -8,7 +8,7 @@ import {
   getClassesForGroupe,
   isCadre,
 } from '../../domain/classification/engine';
-import { GROUPE_SELECT_LABELS, WIZARD_LEGACY_LABELS } from '../../domain/ui/labels';
+import { GROUPE_SELECT_LABELS, WIZARD_LABELS } from '../../domain/ui/labels';
 import { AppTooltip } from '../../components/ui';
 import { buildWizardTooltipHtml } from '../../domain/ui/wizardTooltips';
 import CriteriaRoulette from './CriteriaRoulette.vue';
@@ -86,29 +86,29 @@ function validateEstimation() {
   <section class="wizard-step" aria-label="Étape 1 — Classification">
     <!-- 1a: Mode choice -->
     <div v-if="subStep === '1a'" class="step-content">
-      <h2>{{ WIZARD_LEGACY_LABELS.step1aPageTitle }}</h2>
+      <h2>{{ WIZARD_LABELS.step1aPageTitle }}</h2>
       <p class="step-subtitle">
-        {{ WIZARD_LEGACY_LABELS.step1aPageSubtitle }}
+        {{ WIZARD_LABELS.step1aPageSubtitle }}
       </p>
       <div class="choice-cards">
         <button class="choice-card" @click="chooseManual">
           <span class="choice-icon">✓</span>
-          <span class="choice-title">{{ WIZARD_LEGACY_LABELS.connaisClasse }}</span>
-          <span class="choice-desc">{{ WIZARD_LEGACY_LABELS.connaisClasseDesc }}</span>
+          <span class="choice-title">{{ WIZARD_LABELS.connaisClasse }}</span>
+          <span class="choice-desc">{{ WIZARD_LABELS.connaisClasseDesc }}</span>
         </button>
         <button class="choice-card" @click="chooseEstimation">
           <span class="choice-icon">?</span>
-          <span class="choice-title">{{ WIZARD_LEGACY_LABELS.estimerClasse }}</span>
-          <span class="choice-desc">{{ WIZARD_LEGACY_LABELS.estimerClasseDesc }}</span>
+          <span class="choice-title">{{ WIZARD_LABELS.estimerClasse }}</span>
+          <span class="choice-desc">{{ WIZARD_LABELS.estimerClasseDesc }}</span>
         </button>
       </div>
     </div>
 
     <!-- 1b: Direct selection -->
     <div v-else-if="subStep === '1b'" class="step-content">
-      <h2>{{ WIZARD_LEGACY_LABELS.step1bPageTitle }}</h2>
+      <h2>{{ WIZARD_LABELS.step1bPageTitle }}</h2>
       <p class="step-subtitle">
-        {{ WIZARD_LEGACY_LABELS.step1bPageSubtitle }}
+        {{ WIZARD_LABELS.step1bPageSubtitle }}
       </p>
       <div class="classification-direct">
         <div class="select-group-large">
@@ -159,9 +159,9 @@ function validateEstimation() {
 
     <!-- 1c: Estimation wizard -->
     <div v-else-if="subStep === '1c'" class="step-content">
-      <h2>{{ WIZARD_LEGACY_LABELS.step1cPageTitle }}</h2>
+      <h2>{{ WIZARD_LABELS.step1cPageTitle }}</h2>
       <p class="step-subtitle">
-        {{ WIZARD_LEGACY_LABELS.step1cPageSubtitle }}
+        {{ WIZARD_LABELS.step1cPageSubtitle }}
       </p>
       <div class="roulettes-container">
         <CriteriaRoulette

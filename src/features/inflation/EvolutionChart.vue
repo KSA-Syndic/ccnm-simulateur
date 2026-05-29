@@ -12,7 +12,7 @@ import {
   INFLATION_FALLBACK_PCT,
 } from '../../domain/evolution/projection';
 import { fetchInflationSeries } from '../../domain/evolution/inflationFetch';
-import { WIZARD_LEGACY_LABELS } from '../../domain/ui/labels';
+import { WIZARD_LABELS } from '../../domain/ui/labels';
 import { buildWizardTooltipHtml } from '../../domain/ui/wizardTooltips';
 import { AppTooltip, NumericInput } from '../../components/ui';
 
@@ -185,9 +185,7 @@ onBeforeUnmount(() => {
 <template>
   <details class="evolution-details" @toggle="onDetailsToggle">
     <summary id="evolution-details-summary" class="evolution-details-summary">
-      <span class="evolution-details-summary-title">{{
-        WIZARD_LEGACY_LABELS.evolutionInflation
-      }}</span>
+      <span class="evolution-details-summary-title">{{ WIZARD_LABELS.evolutionInflation }}</span>
       <span class="evolution-details-summary-tooltip" @click.stop @mousedown.stop>
         <AppTooltip
           :content="evolutionInflationTooltip"
@@ -235,7 +233,7 @@ onBeforeUnmount(() => {
             role="status"
             aria-live="polite"
           >
-            {{ WIZARD_LEGACY_LABELS.evolutionAugmentationPrompt }}
+            {{ WIZARD_LABELS.evolutionAugmentationPrompt }}
           </span>
           Augmentation/an :
           <NumericInput

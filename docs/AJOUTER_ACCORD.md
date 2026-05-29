@@ -2,7 +2,7 @@
 
 Ce guide décrit l'application **Vue 3** (`src/`). Le schéma métier est défini dans **`src/domain/agreements/interface.ts`** (validation Zod via `validateAgreement`).
 
-> Le dossier **`legacy-archive/`** (ancien simulateur JS) peut être supprimé à tout moment : il n'est pas une dépendance du code actif. Les preuves de non-régression sont les tests **`src/**`** et **`tests/**`** (voir `tests/README.md`).
+> L’**archive JavaScript optionnelle** à la racine du dépôt (calculateur de référence pour les tests) n’est pas une dépendance du code actif. Les preuves de non-régression sont les tests **`src/**`** et **`tests/**`** (voir `tests/README.md`).
 
 ## Référentiel métier (obligatoire)
 

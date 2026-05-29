@@ -4,7 +4,7 @@ import type { ArreteesSummaryVue } from '@/domain/arretees/aggregateFromPeriodes
 import { formatMensuelDuComposantes } from '@/domain/arretees/formatDuDetail';
 import { formatMoney } from '@/domain/utils/format';
 import { useArreteesStore } from '@/stores/arretees';
-import { WIZARD_LEGACY_LABELS } from '@/domain/ui/labels';
+import { WIZARD_LABELS } from '@/domain/ui/labels';
 
 const props = withDefaults(
   defineProps<{
@@ -57,19 +57,19 @@ const legalContent = computed(() => {
   <div id="arretees-results" class="arretees-results">
     <div class="arretees-results-card">
       <h3 class="arretees-results-title">
-        {{ WIZARD_LEGACY_LABELS.arreteesResultsTitle }}
+        {{ WIZARD_LABELS.arreteesResultsTitle }}
       </h3>
 
       <div id="arretees-summary">
         <template v-if="summary.conformeAuSMH">
           <p class="arretees-en-ordre-msg">
-            {{ WIZARD_LEGACY_LABELS.arreteesConformeMsg }}
+            {{ WIZARD_LABELS.arreteesConformeMsg }}
           </p>
         </template>
         <template v-else>
           <details class="arretees-accordion-summary result-details-toggle" open>
             <summary class="arretees-accordion-summary-title">
-              {{ WIZARD_LEGACY_LABELS.arreteesResumeAnneeTitle }}
+              {{ WIZARD_LABELS.arreteesResumeAnneeTitle }}
             </summary>
             <div class="arretees-summary result-details">
               <div class="result-detail-item">
@@ -124,7 +124,7 @@ const legalContent = computed(() => {
             class="arretees-accordion-detail result-details-toggle"
           >
             <summary class="arretees-accordion-detail-title">
-              {{ WIZARD_LEGACY_LABELS.arreteesDetailMoisTitle }}
+              {{ WIZARD_LABELS.arreteesDetailMoisTitle }}
             </summary>
             <div class="arretees-details-table result-details">
               <div class="arretees-detail-header">
@@ -165,7 +165,7 @@ const legalContent = computed(() => {
       </div>
 
       <div v-if="legalContent.hasAny" id="arretees-legal-info" class="arretees-legal-info">
-        <h4>{{ WIZARD_LEGACY_LABELS.arreteesLegalPointsTitle }}</h4>
+        <h4>{{ WIZARD_LABELS.arreteesLegalPointsTitle }}</h4>
         <ul
           v-if="legalContent.neg.length > 0"
           class="arretees-legal-list arretees-legal-list--warn"
@@ -185,7 +185,7 @@ const legalContent = computed(() => {
           :disabled="props.exportBusy"
           @click="emit('exportPdf')"
         >
-          {{ props.exportBusy ? 'Génération…' : WIZARD_LEGACY_LABELS.arreteesExportPdf }}
+          {{ props.exportBusy ? 'Génération…' : WIZARD_LABELS.arreteesExportPdf }}
         </button>
       </div>
     </div>

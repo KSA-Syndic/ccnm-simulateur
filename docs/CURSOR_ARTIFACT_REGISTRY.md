@@ -18,15 +18,14 @@
 
 ## Documents projet
 
-| Document                     | Usage                                                                   |
-| ---------------------------- | ----------------------------------------------------------------------- |
-| `docs/PARITE_MATRIX.md`      | Avancement D1–D7 + liens preuves                                        |
-| `docs/LACUNES_UI_CIBLES.md`  | Liste fermée passe 2                                                    |
-| `docs/GATE_PASSE2.md`        | Critères avant uniformisation                                           |
-| `docs/LEGACY_RUN.md`         | Oracle JS **optionnel** (`legacy-archive/`)                             |
-| `docs/DEPLOIEMENT_PAGES.md`  | Pages — coexistence temporaire `/v2/` + legacy ; checklist retrait bêta |
-| `src/accords/README.md`      | Ajout d’accords d’entreprise (TS)                                       |
-| `docs/MIGRATION_COMPLETE.md` | Synthèse clôture passe 1 + preuves                                      |
+| Document                     | Usage                                         |
+| ---------------------------- | --------------------------------------------- |
+| `docs/PARITE_MATRIX.md`      | Avancement D1–D7 + liens preuves              |
+| `docs/LACUNES_UI_CIBLES.md`  | Liste fermée passe 2                          |
+| `docs/GATE_PASSE2.md`        | Critères avant uniformisation                 |
+| `docs/DEPLOIEMENT_PAGES.md`  | Publication GitHub Pages (Vue, `VITE_BASE=/`) |
+| `src/accords/README.md`      | Ajout d’accords d’entreprise (TS)             |
+| `docs/MIGRATION_COMPLETE.md` | Synthèse clôture passe 1 + preuves            |
 
 ## Fichiers applicatifs récents (référence rapide)
 
@@ -38,19 +37,9 @@
 | Arriérés moteur   | `src/domain/arretees/mensuelDue.ts`, `useTimeline.ts`, `stores/arretees.ts`                               |
 | Hint assiette SMH | `src/domain/hints/engine.ts` `buildSmhAssietteHintBlocks`                                                 |
 
-## `legacy-archive/` — statut
-
-**Non requis** pour le code Vue (`src/`). Dossier **supprimable** quand vous retirez :
-
-- `legacy-archive/tests/**` de `vitest.config.js` ;
-- `tests/parity/remuneration-oracle.test.ts` (ou remplacement par fixtures figées) ;
-- scripts / E2E dual si plus utiles.
-
-La gate passe 2 (`docs/GATE_PASSE2.md`) ne impose **pas** de conserver l’archive.
-
 ## Orchestration multi-agents (gates)
 
-Vagues typiques : **V0** (fixtures + parité oracle + E2E ciblés + snapshots), **V1** (moteur domaine sans régression oracle), **V2** (URL / accords / bootstrap), **V3** (UI étapes verbatim + E2E gate), **V4** (arriérés / timeline), **V5** (PDF + matrice finale).
+Vagues typiques : **V0** (fixtures + E2E ciblés + snapshots), **V1** (moteur domaine), **V2** (URL / accords / bootstrap), **V3** (UI étapes + E2E gate), **V4** (arriérés / timeline), **V5** (PDF + matrice finale).
 
 - Chaque vague a une **gate** explicite (tests verts listés dans la matrice ou dans `tests/README.md`).
 - Ne pas fusionner une vague **N+1** si la gate **N** n’est pas documentée comme passée.

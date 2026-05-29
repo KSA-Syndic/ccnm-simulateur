@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { WIZARD_LEGACY_LABELS } from '../../domain/ui/labels';
+import { WIZARD_LABELS } from '../../domain/ui/labels';
 import { buildLegalCarouselSteps } from '../../domain/legal/legalCarouselSteps';
 
 const slides = buildLegalCarouselSteps();
@@ -41,7 +41,7 @@ function onKeydown(e: KeyboardEvent) {
   >
     <div class="legal-guide-header">
       <h3 class="legal-guide-title">
-        {{ WIZARD_LEGACY_LABELS.legalGuideTitle }}
+        {{ WIZARD_LABELS.legalGuideTitle }}
       </h3>
       <div class="legal-guide-nav">
         <button

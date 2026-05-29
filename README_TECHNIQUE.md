@@ -2,8 +2,6 @@
 
 Application **Vue 3**, **Pinia**, moteur métier sous **`src/domain/`**. Point d'entrée : **`src/main.ts`** (import `./accords` pour enregistrer les accords d'entreprise).
 
-> **`legacy-archive/`** : copie optionnelle de l'ancien simulateur JS (parité historique, dual-run E2E). **Non requis** pour développer, tester ni déployer l'app Vue. Suppression possible dès que vous retirez les tests/oracles qui l'importent encore (`vitest.config.js`, `tests/parity/`, scripts `npm run legacy`).
-
 ## Cartographie rapide
 
 | Domaine                           | Emplacement                                                                        |
@@ -100,7 +98,7 @@ Voir **`docs/AJOUTER_ACCORD.md`** et **`src/accords/README.md`**.
 ## Tests
 
 ```bash
-npm run test:run      # Vitest : src/**, tests/** (+ legacy-archive si encore configuré)
+npm run test:run      # Vitest : src/**, tests/**
 npm run e2e           # Playwright sur Vue (port 5173)
 npm run lint
 npm run build
@@ -110,7 +108,7 @@ Détail : **`tests/README.md`**, matrice : **`docs/PARITE_MATRIX.md`**.
 
 ## Déploiement
 
-GitHub Pages : **`docs/DEPLOIEMENT_PAGES.md`**. L'app Vue est la cible principale ; la racine Pages peut encore servir l'ancien bundle le temps de la bascule.
+GitHub Pages : **`docs/DEPLOIEMENT_PAGES.md`** — app à la racine (`VITE_BASE=/`).
 
 ## Maintenance annuelle (SMH / barèmes)
 
@@ -134,5 +132,4 @@ GitHub Pages : **`docs/DEPLOIEMENT_PAGES.md`**. L'app Vue est la cible principal
 | `docs/PARITE_MATRIX.md`      | Historique migration + preuves tests    |
 | `docs/MIGRATION_COMPLETE.md` | Synthèse clôture passe 1                |
 | `docs/GATE_PASSE2.md`        | Avant uniformisation libellés (passe 2) |
-| `docs/LEGACY_RUN.md`         | Oracle JS optionnel (`legacy-archive/`) |
 | `PRD.md`                     | Exigences produit                       |

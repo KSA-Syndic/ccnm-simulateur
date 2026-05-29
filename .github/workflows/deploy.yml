@@ -1,22 +1,11 @@
-# TEMPORAIRE (bêta) : legacy racine (main) + Vue /v2/ (experiment/vue-migration-3).
-# Retrait prévu : docs/DEPLOIEMENT_PAGES.md § « Bascule finale ».
+# GitHub Pages — Vue app at site root.
 name: Deploy to GitHub Pages
 
 on:
   push:
     branches:
       - main
-      - experiment/vue-migration-3
   workflow_dispatch:
-    inputs:
-      target:
-        description: 'What to publish'
-        type: choice
-        options:
-          - both
-          - legacy
-          - vue-v2
-        default: both
 
 permissions:
   contents: read
@@ -28,9 +17,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  VITE_BASE_V2: /v2/
-  LEGACY_REF: main
-  VUE_REF: experiment/vue-migration-3
+  VITE_BASE: /
 
 jobs:
   deploy:
@@ -39,84 +26,24 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Resolve deploy mode
-        id: target
-        run: |
-          INPUT="${{ github.event.inputs.target || 'both' }}"
-          if [ "${{ github.event_name }}" = "push" ]; then
-            INPUT="both"
-          fi
-          echo "mode=${INPUT}" >> "$GITHUB_OUTPUT"
-          echo "Deploy mode: ${INPUT}"
-
-      # Premier checkout = commit déclencheur (contient scripts/prepare-github-pages.sh).
-      - name: Checkout workflow
-        uses: actions/checkout@v4
-
-      - name: Checkout legacy (${{ env.LEGACY_REF }})
-        if: steps.target.outputs.mode == 'legacy' || steps.target.outputs.mode == 'both'
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.LEGACY_REF }}
-          path: src-legacy
-
-      - name: Checkout Vue (${{ env.VUE_REF }})
-        if: steps.target.outputs.mode == 'vue-v2' || steps.target.outputs.mode == 'both'
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.VUE_REF }}
-          path: src-vue
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
-        if: steps.target.outputs.mode == 'vue-v2' || steps.target.outputs.mode == 'both'
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: src-vue/package-lock.json
 
-      - name: Install & build Vue (v2)
-        if: steps.target.outputs.mode == 'vue-v2' || steps.target.outputs.mode == 'both'
-        working-directory: src-vue
-        env:
-          VITE_BASE: ${{ env.VITE_BASE_V2 }}
+      - name: Install and build
         run: |
           npm ci
-          echo "VITE_BASE=${VITE_BASE}"
           npm run build
-          grep -E 'src=|href=' dist/index.html | head -5
 
-      - name: Fetch published site (partial deploy merge)
-        if: steps.target.outputs.mode == 'legacy' || steps.target.outputs.mode == 'vue-v2'
-        uses: actions/checkout@v4
-        continue-on-error: true
-        with:
-          ref: gh-pages
-          path: _gh_pages
-
-      - name: Assembler le site Pages
-        env:
-          DEPLOY_MODE: ${{ steps.target.outputs.mode }}
-          LEGACY_SRC: src-legacy
+      - name: Assemble _site
         run: |
-          chmod +x scripts/prepare-github-pages.sh
           rm -rf _site
           mkdir -p _site
-
-          case "$DEPLOY_MODE" in
-            legacy)
-              ./scripts/prepare-github-pages.sh legacy
-              ;;
-            vue-v2)
-              rm -rf dist
-              cp -a src-vue/dist ./dist
-              ./scripts/prepare-github-pages.sh vue
-              ;;
-            both)
-              rm -rf dist
-              cp -a src-vue/dist ./dist
-              ./scripts/prepare-github-pages.sh both
-              ;;
-          esac
+          touch _site/.nojekyll
+          cp -a dist/. _site/
 
       - uses: actions/configure-pages@v4
 
@@ -127,7 +54,5 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Published URLs
-        run: |
-          echo "Root (legacy): ${{ steps.deployment.outputs.page_url }}"
-          echo "Vue v2:        ${{ steps.deployment.outputs.page_url }}v2/"
+      - name: Published URL
+        run: echo "Published site ${{ steps.deployment.outputs.page_url }}"

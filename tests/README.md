@@ -2,8 +2,6 @@
 
 Tests **Vitest** (unitaires / intégration domaine), **@vue/test-utils** (composants), **Playwright** (E2E sur l’app Vue).
 
-> **`legacy-archive/tests/**`** : oracle JS **optionnel** (voir `vitest.config.js`). L’app Vue se valide avec **`src/**`** + **`tests/**`\*\* seuls.
-
 ## Structure (référence)
 
 ```
@@ -19,18 +17,15 @@ tests/
 ├── fixtures/
 │   └── profils-remuneration.json
 ├── invariants/
-├── parity/                  # optionnel : compare legacy vs TS si archive présente
 └── utils/
 
 e2e/                         # Playwright — app Vue (port 5173)
 ├── baseline.spec.ts
 ├── wizard-ui-coverage.spec.ts
 ├── accord-kuhn.spec.ts
-├── parite-visuelle*.spec.ts # opt-in : nécessite legacy-archive + dual
+├── remuneration-values.spec.ts
 └── helpers/
 ```
-
-Les fichiers `tests/integration/*.test.js` à la racine ne sont **pas** exécutés par Vitest (préférer `tests/domain/` et `legacy-archive/tests/integration/` si oracle conservé).
 
 ## Exécution
 
@@ -58,15 +53,11 @@ Principaux specs : `baseline`, `wizard-ui-coverage`, `a11y-wizard`, `remuneratio
 
 ### CI (`.github/workflows/ci.yml`)
 
-`npm ci` → `lint` → `build` → `test:run` → Playwright.
+`npm ci` → `lint` → `build` (`VITE_BASE=/`) → `test:run` → Playwright.
 
-Job **`dual-parity`** (label PR ou manuel) : **optionnel**, `DUAL_PARITE_E2E=1` + `legacy-archive/` servi en 5174 — voir `docs/LEGACY_RUN.md`.
+## Parité chiffrée (fixtures)
 
-## Parité chiffrée (optionnelle)
-
-**`tests/parity/remuneration-oracle.test.ts`** : compare le calculateur JS (`legacy-archive/`) au moteur `computeAnnualRemunerationFromWizardStores` pour les profils de **`tests/fixtures/profils-remuneration.json`**.
-
-Supprimable avec `legacy-archive/` : retirer ce fichier ou le remplacer par des snapshots de montants figés.
+**`tests/fixtures/profils-remuneration.json`** alimente les attentes du moteur **`computeAnnualRemunerationFromWizardStores`** dans **`e2e/remuneration-values.spec.ts`** et les invariants sous **`tests/invariants/`**.
 
 ## Ajouter un accord — tests utiles
 
@@ -80,4 +71,4 @@ npx playwright test e2e/accord-kuhn.spec.ts
 
 - Architecture : **`README_TECHNIQUE.md`**
 - Matrice migration : **`docs/PARITE_MATRIX.md`**
-- Oracle JS : **`docs/LEGACY_RUN.md`**
+- Déploiement : **`docs/DEPLOIEMENT_PAGES.md`**

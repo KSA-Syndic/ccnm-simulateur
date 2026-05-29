@@ -6,7 +6,7 @@ import { useSituationStore } from '../../stores/situation';
 import { useUiStore } from '../../stores/ui';
 import { useWizardNavigation } from '../../composables/useWizardNavigation';
 import { useWizardRemunerationInput } from '../../composables/useWizardRemunerationInput';
-import { LEGAL_DISCLAIMER_RESULT, WIZARD_LEGACY_LABELS } from '../../domain/ui/labels';
+import { LEGAL_DISCLAIMER_RESULT, WIZARD_LABELS } from '../../domain/ui/labels';
 import { buildResultHintBlocks } from '../../domain/hints/engine';
 import { getAgreement } from '../../domain/agreements/registry';
 import { resolveWizardRemunerationElements } from '../../domain/remuneration/compute';
@@ -25,14 +25,14 @@ const { prevStep, goToStep } = useWizardNavigation();
 const wizardInput = useWizardRemunerationInput();
 
 function onRecommencer() {
-  if (!window.confirm(WIZARD_LEGACY_LABELS.restartConfirmMessage)) {
+  if (!window.confirm(WIZARD_LABELS.restartConfirmMessage)) {
     return;
   }
   ui.resetAll();
   goToStep(1);
 }
 
-/** 12 ou 13 mois imposés par `repartition13Mois.actif` sur l'accord chargé (aligné legacy `applyAgreementMonths`). */
+/** 12 ou 13 mois imposés par `repartition13Mois.actif` sur l'accord chargé (selon définition accord). */
 const nbMoisImpose = computed((): 12 | 13 | null => {
   if (!agreement.accordActif || !agreement.activeAccordId) return null;
   const doc = getAgreement(agreement.activeAccordId);
@@ -78,9 +78,9 @@ const hintBlocks = computed(() => {
 <template>
   <section class="wizard-step" aria-label="Étape 3 — Résultat">
     <div class="step-content">
-      <h2>{{ WIZARD_LEGACY_LABELS.resultPageTitle }}</h2>
+      <h2>{{ WIZARD_LABELS.resultPageTitle }}</h2>
       <p class="step-subtitle">
-        {{ WIZARD_LEGACY_LABELS.resultPageSubtitle }}
+        {{ WIZARD_LABELS.resultPageSubtitle }}
       </p>
 
       <AccordOptionsPanel />
@@ -100,11 +100,11 @@ const hintBlocks = computed(() => {
       <div id="arretees-check-card" class="arretees-check-card">
         <p class="arretees-check-text">
           <strong id="result-arretees-prompt-title">{{
-            WIZARD_LEGACY_LABELS.resultArreteesPromptTitle
+            WIZARD_LABELS.resultArreteesPromptTitle
           }}</strong>
         </p>
         <p id="result-arretees-prompt-body" class="arretees-check-text">
-          {{ WIZARD_LEGACY_LABELS.resultArreteesPromptBody }}
+          {{ WIZARD_LABELS.resultArreteesPromptBody }}
         </p>
         <button
           id="btn-check-arretees"
@@ -112,7 +112,7 @@ const hintBlocks = computed(() => {
           class="book-btn btn-primary"
           @click="goToStep(4, { allowForward: true })"
         >
-          {{ WIZARD_LEGACY_LABELS.calculerArretees }}
+          {{ WIZARD_LABELS.calculerArretees }}
         </button>
       </div>
 

@@ -1,7 +1,6 @@
 /**
- * Arrondis monétaires — équivalent fonctionnel du module vanilla (decimal.js pour la stabilité).
+ * Arrondis monétaires (decimal.js) — demi au supérieur, stable pour la paie.
  */
-// Source: legacy-archive/utils/rounding.js
 import Decimal from 'decimal.js';
 
 Decimal.set({ precision: 20, rounding: Decimal.ROUND_HALF_UP });

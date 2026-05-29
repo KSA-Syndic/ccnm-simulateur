@@ -1,6 +1,6 @@
 /**
  * Sanitize robuste des champs numériques (virgule et point).
- * Aligné sur la logique legacy `sanitizeDecimalString` / `parseDecimalInput`.
+ * Normalisation des chaînes décimales saisies (virgule / point, espaces).
  */
 export function sanitizeDecimalString(value: string | number | null | undefined): string {
   const raw = String(value ?? '')

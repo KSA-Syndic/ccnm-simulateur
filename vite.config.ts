@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { resolve } from 'path';
 
-/** Base absolue avec slash final pour GitHub Pages (sous-dossier /v2/). Évite les 404 si l’URL n’a pas de slash final. */
+/** Base Vite : `VITE_BASE` (ex. `/` en production Pages) ou `./` en local si non défini. */
 function resolveViteBase(): string {
   const raw = process.env.VITE_BASE?.trim();
   if (!raw) return './';
@@ -12,7 +12,7 @@ function resolveViteBase(): string {
 
 export default defineConfig({
   plugins: [vue()],
-  /** CI Pages Vue : `VITE_BASE=/v2/` (custom domain). Local : `./` par défaut. */
+  /** Défini par `VITE_BASE` (CI / `npm run build:pages`). */
   base: resolveViteBase(),
   resolve: {
     alias: {

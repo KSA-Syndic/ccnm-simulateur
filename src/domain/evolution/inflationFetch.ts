@@ -28,7 +28,7 @@ function fallbackResult(): InflationSeriesResult {
 
 /**
  * Parse la réponse JSON Eurostat `prc_hicp_aind` avec `unit=RCH_A_AVG` (taux annuel %, pas l’indice).
- * @see legacy `parseEurostatHicpInflation`
+ * @see parseEurostatHicpInflation
  */
 export function parseEurostatHicpInflation(json: unknown): Record<string, number> | null {
   try {
@@ -83,7 +83,7 @@ function sortedYearSpan(values: Record<string, number>): string {
 }
 
 /**
- * Cascade Eurostat (taux RCH_A_AVG) → Banque mondiale (IPC) → série CONFIG (legacy INSEE).
+ * Cascade Eurostat (taux RCH_A_AVG) → Banque mondiale (IPC) → série de secours CONFIG.
  * Ne lève pas : renvoie toujours au minimum le jeu de secours CONFIG.
  */
 export async function fetchInflationSeries(): Promise<InflationSeriesResult> {

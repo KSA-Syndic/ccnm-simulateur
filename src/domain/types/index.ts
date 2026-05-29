@@ -33,7 +33,7 @@ export type ComputeRef =
   | { ref: 'context'; key: string }
   | { ref: 'state'; key: string }
   | { ref: 'input'; stateKey: string }
-  /** `getAccordInput(state, key) ?? state[key]` — aligné legacy `AgreementInterface`. */
+  /** `getAccordInput(state, key) ?? state[key]` — résolution entrée accord ou état global. */
   | {
       ref: 'accordInputOrState';
       key: string;
@@ -46,7 +46,7 @@ export type ComputeRef =
       lookupKey: 'anciennete' | 'classe' | 'ancienneteAccordPrime';
     }
   | {
-      /** Heures HS tranche 25 % ou 50 % à partir de `state[stateKeyHeures]` et du seuil (legacy `MajorationCalculator`). */
+      /** Heures HS tranche 25 % ou 50 % à partir de `state[stateKeyHeures]` et du seuil conventionnel. */
       ref: 'heuresSupTranche';
       stateKeyHeures: string;
       seuilMensuel: number;
@@ -84,7 +84,7 @@ export type ComputeMode =
       forfaitAnnuel?: boolean;
     }
   | {
-      /** Périodes/mois × arrondi(coeff × SMH horaire de base) — astreintes hors TTE (legacy). */
+      /** Périodes/mois × arrondi(coeff × SMH horaire de base) — astreintes hors TTE. */
       mode: 'periodesIndemniteSmh';
       periodes: ComputeRef;
       coefficientSmhParPeriode: number;

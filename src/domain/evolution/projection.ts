@@ -16,7 +16,7 @@ export function getYearsToRetirement(currentAge: number): number {
 }
 
 /**
- * Série « salaire » sur N années — aligné esprit legacy `calculateSalaryEvolution` :
+ * Série « salaire » projetée sur N années à partir du taux annuel saisi.
  * ancienneté et expérience +1/an, moteur annuel, augmentation % sur le total (sans détail primes fixes).
  */
 export function projectSalaryTotals(

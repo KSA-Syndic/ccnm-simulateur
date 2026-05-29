@@ -50,7 +50,7 @@ describe('projection', () => {
     expect(getYearsToRetirement(30)).toBe(34);
   });
 
-  it('buildEvolutionSummaryHtml — phrase courte type legacy', () => {
+  it('buildEvolutionSummaryHtml — phrase courte attendue', () => {
     const html = buildEvolutionSummaryHtml({
       years: 5,
       finalSalary: 40000,

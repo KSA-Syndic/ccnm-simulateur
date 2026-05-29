@@ -3,7 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { goToStep2, goToStep3, goToStep4 } from './wizard-helpers';
 
 /**
- * P5.5 — Audit axe sur les 4 étapes (hors contraste couleur : feuille `main.css` legacy).
+ * P5.5 — Audit axe sur les 4 étapes (hors contraste couleur : règle désactivée pour la feuille `main.css`).
  * Les violations `critical` / `serious` restantes bloquent le test.
  */
 async function assertNoCriticalOrSerious(page: Page, label: string) {

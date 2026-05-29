@@ -60,7 +60,7 @@ export function aggregateArreteesParAnneeFromPeriodeLabels(
   return { detailsParAnnee, totalArretees };
 }
 
-/** Ligne « détail mois par mois » pour l’UI étape 4 (aligné legacy). */
+/** Ligne « détail mois par mois » pour l’UI étape 4. */
 export interface ArreteesMoisVueRow {
   periode: string;
   periodKey?: string;

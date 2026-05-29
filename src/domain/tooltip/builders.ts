@@ -1,8 +1,5 @@
 /**
- * Construction HTML des tooltips « bloc légal » — port des helpers inline de `legacy-archive/app.js`
- * (applyTooltipTemplate, composeTooltipDescription, classifyOriginFromSourceArticle,
- * buildLegalTooltipContent, buildPrimeConditionTooltip, buildResultTooltipContent).
- * Textes et gabarits par défaut identiques au legacy pour les mêmes entrées.
+ * Construction HTML des tooltips « bloc légal » (gabarits, origines, primes).
  */
 import { escapeHTML, formatMoney } from '../utils/format';
 import { resolvePrimeSemanticId, type Agreement, type PrimeDef } from '../agreements/interface';
@@ -21,8 +18,8 @@ export interface TooltipTextsConfig {
   result?: { breakdownLineTemplate?: string };
 }
 
-/** Même logique que `formatNumberFr` local legacy (app.js L202–206), pour parité des tooltips. */
-export function formatNumberFrLegacy(value: unknown, digits = 2): string {
+/** Format décimal fixe `fr-FR` (virgule) pour les fragments de tooltips — stable avec l’affichage historique. */
+export function formatFrDecimalFixed(value: unknown, digits = 2): string {
   const n = Number(value);
   if (!Number.isFinite(n)) return '0';
   return n.toFixed(digits).replace('.', ',');
@@ -152,23 +149,23 @@ function formatAccordPrimeActiveDetail(
 ): string {
   if (p.valueType === 'horaire') {
     const taux = resolveAccordPrimeRateForTooltip(p, overrides);
-    let detail = ` — ${formatNumberFrLegacy(taux, 2)} ${String(p.unit || '€/h')}`;
+    let detail = ` — ${formatFrDecimalFixed(taux, 2)} ${String(p.unit || '€/h')}`;
     if (p.autoHeures === true) {
-      detail += ` (${formatNumberFrLegacy(resolvePrimeDefaultHours(p), 2)} h/mois)`;
+      detail += ` (${formatFrDecimalFixed(resolvePrimeDefaultHours(p), 2)} h/mois)`;
     } else if (p.stateKeyHeures) {
       const hRaw = inputs[p.stateKeyHeures];
       const h = typeof hRaw === 'number' && Number.isFinite(hRaw) ? hRaw : (p.defaultHeures ?? 0);
-      detail += ` (${formatNumberFrLegacy(h, 2)} h/mois)`;
+      detail += ` (${formatFrDecimalFixed(h, 2)} h/mois)`;
     }
     return detail;
   }
   if (p.valueType === 'majorationHoraire') {
     const taux = resolveAccordPrimeRateForTooltip(p, overrides);
-    let detail = ` — +${formatNumberFrLegacy(taux * 100, 0)} %`;
+    let detail = ` — +${formatFrDecimalFixed(taux * 100, 0)} %`;
     if (p.stateKeyHeures) {
       const hRaw = inputs[p.stateKeyHeures];
       const h = typeof hRaw === 'number' && Number.isFinite(hRaw) ? hRaw : (p.defaultHeures ?? 0);
-      detail += ` (${formatNumberFrLegacy(h, 2)} h/mois)`;
+      detail += ` (${formatFrDecimalFixed(h, 2)} h/mois)`;
     }
     return detail;
   }
@@ -264,7 +261,7 @@ export function buildPrimeConditionTooltip(
     const v = Number(prime.valeurAccord);
     if (Number.isFinite(v) && v > 0) {
       const unit = prime?.unit || '€/h';
-      ratePart = `+${formatNumberFrLegacy(v, 2)} ${unit}.`;
+      ratePart = `+${formatFrDecimalFixed(v, 2)} ${unit}.`;
     }
   }
   const description = composeTooltipDescription([ratePart, baseTooltip || prime?.conditionTexte]);

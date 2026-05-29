@@ -73,7 +73,7 @@ export function aggregateRemunerationDetails(
   const extrasAboveBase = details
     .filter(contributesToTotalAboveBase)
     .reduce((s, d) => s + d.amount, 0);
-  /** Forfaits cadre : comptés dans le total annuel « paquet » (aligné `RemunerationCalculator` legacy). */
+  /** Forfaits cadre : inclus dans le total annuel « paquet ». */
   const totalAnnual = roundToEuro(baseSMH + forfaitSum + extrasAboveBase);
   const totalMonthly = roundToEuro(totalAnnual / nbMois);
 

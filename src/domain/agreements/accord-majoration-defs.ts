@@ -5,8 +5,7 @@ import type { Agreement } from './interface';
 const HS_SEUIL = CONFIG.HEURES_SUP_TRANCHE_1_MENSUELLES;
 
 /**
- * Majorations entreprise substituables aux lignes CCN homonymes (`favorPrinciple`),
- * alignées sur `buildAccordMajorationDefs` + `computeMajorationAccord` (legacy).
+ * Majorations d’entreprise substituables aux lignes CCN homonymes (`favorPrinciple`).
  */
 export function getAccordMajorationDefsForRemuneration(agreement: Agreement): ElementDef[] {
   const out: ElementDef[] = [];

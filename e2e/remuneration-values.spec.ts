@@ -2,7 +2,11 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from '@playwright/test';
-import { calculateAnnualRemuneration } from '../legacy-archive/remuneration/RemunerationCalculator.js';
+import '../src/accords';
+import {
+  computeAnnualRemunerationFromWizardStores,
+  wizardStoresInputFromFixtureState,
+} from '../src/domain/remuneration/compute';
 import { goToStep2ViaEstimation, expectResultValueNear } from './wizard-helpers';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -10,10 +14,11 @@ const profils: { id: string; state: Record<string, unknown> }[] = JSON.parse(
   readFileSync(join(__dirname, '../tests/fixtures/profils-remuneration.json'), 'utf8'),
 );
 
-function oracleTotal(id: string): number {
+function expectedAnnualTotalFromFixture(id: string): number {
   const p = profils.find((x) => x.id === id);
   if (!p) throw new Error(`profil inconnu: ${id}`);
-  return calculateAnnualRemuneration(p.state, null, { mode: 'full' }).total;
+  return computeAnnualRemunerationFromWizardStores(wizardStoresInputFromFixtureState(p.state))
+    .total;
 }
 
 async function fillSituationFromFixture(page: import('@playwright/test').Page, id: string) {
@@ -30,7 +35,7 @@ async function fillSituationFromFixture(page: import('@playwright/test').Page, i
   await page.locator('#point-territorial').fill(String(st.pointTerritorial ?? 5.9));
 }
 
-test.describe('Rémunération — valeurs vs oracle (fixtures)', () => {
+test.describe('Rémunération — valeurs alignées sur les fixtures', () => {
   test('A1-smh', async ({ page }) => {
     const scores = (profils.find((p) => p.id === 'A1-smh')?.state.scores as number[]) ?? [
       2, 1, 1, 1, 1, 1,
@@ -39,7 +44,7 @@ test.describe('Rémunération — valeurs vs oracle (fixtures)', () => {
     await fillSituationFromFixture(page, 'A1-smh');
     await page.getByRole('button', { name: /^Calculer/i }).click();
     await page.locator('section[aria-label="Étape 3 — Résultat"]').waitFor({ state: 'visible' });
-    await expectResultValueNear(page, oracleTotal('A1-smh'));
+    await expectResultValueNear(page, expectedAnnualTotalFromFixture('A1-smh'));
   });
 
   test('C5-10ans-prime', async ({ page }) => {
@@ -50,7 +55,7 @@ test.describe('Rémunération — valeurs vs oracle (fixtures)', () => {
     await fillSituationFromFixture(page, 'C5-10ans-prime');
     await page.getByRole('button', { name: /^Calculer/i }).click();
     await page.locator('section[aria-label="Étape 3 — Résultat"]').waitFor({ state: 'visible' });
-    await expectResultValueNear(page, oracleTotal('C5-10ans-prime'));
+    await expectResultValueNear(page, expectedAnnualTotalFromFixture('C5-10ans-prime'));
   });
 
   test('F11-cadre-forfait-jours', async ({ page }) => {
@@ -60,7 +65,7 @@ test.describe('Rémunération — valeurs vs oracle (fixtures)', () => {
     await fillSituationFromFixture(page, 'F11-cadre-forfait-jours');
     await page.getByRole('button', { name: /^Calculer/i }).click();
     await page.locator('section[aria-label="Étape 3 — Résultat"]').waitFor({ state: 'visible' });
-    await expectResultValueNear(page, oracleTotal('F11-cadre-forfait-jours'));
+    await expectResultValueNear(page, expectedAnnualTotalFromFixture('F11-cadre-forfait-jours'));
   });
 
   test('I18-cadre', async ({ page }) => {
@@ -71,6 +76,6 @@ test.describe('Rémunération — valeurs vs oracle (fixtures)', () => {
     await fillSituationFromFixture(page, 'I18-cadre');
     await page.getByRole('button', { name: /^Calculer/i }).click();
     await page.locator('section[aria-label="Étape 3 — Résultat"]').waitFor({ state: 'visible' });
-    await expectResultValueNear(page, oracleTotal('I18-cadre'));
+    await expectResultValueNear(page, expectedAnnualTotalFromFixture('I18-cadre'));
   });
 });

@@ -48,7 +48,7 @@ function buildYearTableHtml(data: MiseEnDemeureLetterData): string {
 }
 
 /**
- * Document HTML MS Word (.doc) — même structure que `genererWordLettreMiseEnDemeure` (legacy).
+ * Document HTML MS Word (.doc) — structure alignée sur le modèle de lettre de mise en demeure.
  */
 export function buildMiseEnDemeureWordHtml(
   infos: MiseEnDemeureLetterInfos,

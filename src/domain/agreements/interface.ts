@@ -126,7 +126,7 @@ export function getAccordInput(state: Record<string, unknown>, key: string): unk
   return inputs && key in inputs ? inputs[key] : state[key];
 }
 
-/** Aligné legacy `isAccordPrimeActive` + seuil `annees_revolues` pour `valueKind === 'montant'`. */
+/** Prime accord — activation et seuil `annees_revolues` pour `valueKind === 'montant'`. */
 function buildMontantAccordActivation(primeDef: PrimeDef): ElementActivation {
   const cond = primeDef.conditionAnciennete;
   const seuilAnc =

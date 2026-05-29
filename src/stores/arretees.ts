@@ -3,7 +3,7 @@ import type { ArreteesSummaryVue } from '@/domain/arretees/aggregateFromPeriodes
 
 export interface ArreteePeriode {
   label: string;
-  /** Clé stable `YYYY-MM` (aligné legacy `salairesParMois`). */
+  /** Clé stable `YYYY-MM` pour l’indexation mensuelle. */
   periodKey?: string;
   salaireDu: number;
   salaireVerse: number | undefined;

@@ -4,7 +4,7 @@ import { useArreteesStore } from '../../stores/arretees';
 import { NumericInput } from '../../components/ui';
 import { AppTooltip } from '../../components/ui';
 import { formatMensuelDuAvecDetail } from '../../domain/arretees/formatDuDetail';
-import { WIZARD_LEGACY_LABELS } from '../../domain/ui/labels';
+import { WIZARD_LABELS } from '../../domain/ui/labels';
 
 const props = defineProps<{
   resolvePointCoords?: (index: number) => { x: number; y: number } | null;
@@ -78,7 +78,7 @@ const cordonStyle = computed(() => {
 });
 
 function isMobilePanel(): boolean {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
   return window.matchMedia('(max-width: 768px)').matches;
 }
 
@@ -295,8 +295,10 @@ function onMobileMqChange() {
 onMounted(() => {
   window.addEventListener('keydown', onGlobalKeydown, true);
   observeChartWrapper();
-  mobileMq = window.matchMedia('(max-width: 768px)');
-  mobileMq.addEventListener('change', onMobileMqChange);
+  if (typeof window.matchMedia === 'function') {
+    mobileMq = window.matchMedia('(max-width: 768px)');
+    mobileMq.addEventListener('change', onMobileMqChange);
+  }
 });
 
 onUnmounted(() => {
@@ -365,7 +367,7 @@ defineExpose({
         <span id="floating-period-label">{{ currentPeriod.label }}</span>
         <AppTooltip
           id="floating-info-icon"
-          :content="WIZARD_LEGACY_LABELS.floatingSalaryInputTooltip"
+          :content="WIZARD_LABELS.floatingSalaryInputTooltip"
           variant="compact"
           position="top"
           trigger-aria-label="Aide saisie salaire"
@@ -388,8 +390,8 @@ defineExpose({
         Dû : {{ formatMensuelDuAvecDetail(currentPeriod) }}
       </p>
       <p id="floating-hint-text" class="floating-hint floating-hint--compact">
-        <span class="floating-hint-line">{{ WIZARD_LEGACY_LABELS.floatingHintEnterLine }}</span>
-        <span class="floating-hint-line">{{ WIZARD_LEGACY_LABELS.floatingHintEscapeLine }}</span>
+        <span class="floating-hint-line">{{ WIZARD_LABELS.floatingHintEnterLine }}</span>
+        <span class="floating-hint-line">{{ WIZARD_LABELS.floatingHintEscapeLine }}</span>
       </p>
     </div>
   </div>

@@ -2,7 +2,7 @@ import { CONFIG } from '@/domain/config';
 
 const UMAMI_STORAGE_KEY = 'analytics_consent';
 
-/** Envoi unique de « Resultat salaire » par session (aligné legacy `umamiResultatSalaireSent`). */
+/** Envoi unique de l’événement « résultat salaire » par session (analytics). */
 let resultatSalaireSent = false;
 
 export function isLocalEnv(): boolean {
@@ -56,7 +56,7 @@ export function trackEvent(eventName: string, data?: Record<string, string | num
   }
 }
 
-/** Charge Umami Cloud si config et consentement (aligné legacy `initUmamiScript`). */
+/** Charge Umami Cloud si la configuration et le consentement le permettent. */
 export function setupUmamiAnalytics(): void {
   if (isLocalEnv() || !getAnalyticsConsent() || !umamiConfigured()) return;
   if (typeof document === 'undefined') return;

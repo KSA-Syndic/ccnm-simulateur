@@ -12,7 +12,7 @@ import { buildConventionPrimeElement } from './primeElementFactory';
 type Source = 'convention';
 const SRC: Source = 'convention';
 
-/** Règle d’affichage des modalités « Autres » (aligné legacy `UI_VISIBLE_MODALITE`). */
+/** Règle d’affichage des modalités « Autres » dans le formulaire. */
 export const UI_VISIBLE_MODALITE = {
   TOUJOURS: 'toujours',
   COMPTAGE_HORAIRE_CONVENTIONNEL: 'comptageHoraireConventionnel',
@@ -135,7 +135,7 @@ export function getConventionPrimeDefs(): ElementDef[] {
       "Prime d'ancienneté conventionnelle",
       {
         mode: 'custom',
-        /** Aligné `computePrimeConvention` (legacy) : mensuel = point × taux(classe) × min(ancienneté, plafond) × prorata ; annuel = `annualFromMonthly`. */
+        /** Mensuel = point × taux(classe) × min(ancienneté, plafond) × prorata ; annuel = `annualFromMonthly`. */
         compute: (ctx: ComputeContext) => {
           if (ctx.classe >= CONFIG.SEUIL_CADRE) return 0;
           const anciennete = Number(ctx.state['anciennete']) || 0;
@@ -366,7 +366,7 @@ function computeRachatJoursReposForfait(ctx: ComputeContext): number {
   return roundToEuro(baseJour * jours * (1 + majoration));
 }
 
-/** Rachat de jours de repos (forfait jours, cadres) — aligné `computeForfaitJoursRachat` (legacy). */
+/** Rachat de jours de repos (forfait jours, cadres). */
 export function getConventionRachatJoursReposForfaitDef(): ElementDef {
   const seuilCadre = CONFIG.SEUIL_CADRE;
   return {

@@ -4,7 +4,7 @@ import type { ResultHintBlock } from '../../domain/hints/engine';
 const props = defineProps<{
   /** Blocs contextualisés type `book-hint` (prioritaire si non vide). */
   blocks?: ResultHintBlock[];
-  /** HTML legacy (liste plate) — rétrocompatibilité. */
+  /** Fragment HTML (liste plate) pour affichage dans l’encart d’aide. */
   hint?: string;
 }>();
 

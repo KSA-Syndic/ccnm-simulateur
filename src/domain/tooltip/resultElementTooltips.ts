@@ -6,7 +6,7 @@ import type { Agreement } from '../agreements/interface';
 import { getAccordNomCourt } from './builders';
 import {
   buildResultTooltipContent,
-  formatNumberFrLegacy,
+  formatFrDecimalFixed,
   type ResultBreakdownLine,
   type ResultTooltipDetailInput,
 } from './builders';
@@ -21,17 +21,17 @@ function euroBreakdown(label: string, value: number): ResultBreakdownLine {
 }
 
 function pctLabel(rate: number): string {
-  return `${formatNumberFrLegacy(rate * 100, (rate * 100) % 1 === 0 ? 0 : 2)} %`;
+  return `${formatFrDecimalFixed(rate * 100, (rate * 100) % 1 === 0 ? 0 : 2)} %`;
 }
 
 function formatHeures(h: number): string {
-  return `${formatNumberFrLegacy(h, h % 1 === 0 ? 0 : 2)} h`;
+  return `${formatFrDecimalFixed(h, h % 1 === 0 ? 0 : 2)} h`;
 }
 
 function prorataDetailSuffix(ctx: ComputeContext): string {
   if (ctx.activityRate >= 0.999) return '';
   const pct = Math.round(ctx.activityRate * 10000) / 100;
-  return ` Prorata temps partiel : ${formatNumberFrLegacy(pct, 2)} %.`;
+  return ` Prorata temps partiel : ${formatFrDecimalFixed(pct, 2)} %.`;
 }
 
 function smhIncludedSummary(result: ElementResult): string | undefined {
@@ -68,7 +68,7 @@ function buildAncienneteConventionTooltip(
     conditionTexte: def.conditionTexte,
     tooltipDetail: [
       `Ancienneté dans l'entreprise : ${anciennete} an${anciennete > 1 ? 's' : ''} (${anneesRetenues} retenu${anneesRetenues > 1 ? 's' : ''} pour le calcul, plafond ${plafond} ans).`,
-      `Coefficient barème classe ${ctx.classe} : ${formatNumberFrLegacy(coef, 2)}.`,
+      `Coefficient barème classe ${ctx.classe} : ${formatFrDecimalFixed(coef, 2)}.`,
       `Calcul : point territorial × coefficient × années retenues${prSuffix}, puis × 12. Seuil conventionnel : ${seuil} ans.`,
     ].join('\n'),
     breakdown,
@@ -142,7 +142,7 @@ function buildEquipeTooltip(
     sourceArticle: def.sourceArticle,
     conditionTexte: def.conditionTexte,
     tooltipDetail: [
-      `${formatNumberFrLegacy(postes, 0)} postes / mois × ${formatNumberFrLegacy(heuresParPoste, 2)} h (30 min) × taux horaire du minimum.${prSuffix}`,
+      `${formatFrDecimalFixed(postes, 0)} postes / mois × ${formatFrDecimalFixed(heuresParPoste, 2)} h (30 min) × taux horaire du minimum.${prSuffix}`,
       '30 minutes du taux horaire du minimum conventionnel par poste en équipes successives, annualisées.',
     ].join('\n'),
     breakdown,
@@ -238,7 +238,7 @@ function buildPeriodesSmhTooltip(
     sourceArticle: def.sourceArticle,
     conditionTexte: def.conditionTexte,
     tooltipDetail: [
-      `${formatNumberFrLegacy(periodes, periodes % 1 === 0 ? 0 : 2)} période${periodes > 1 ? 's' : ''} / mois.`,
+      `${formatFrDecimalFixed(periodes, periodes % 1 === 0 ? 0 : 2)} période${periodes > 1 ? 's' : ''} / mois.`,
       def.tooltip ??
         'Indemnité forfaitaire par période d’astreinte, basée sur le taux horaire du minimum.',
     ].join('\n'),
@@ -267,7 +267,7 @@ function buildUnitesMontantTooltip(
     sourceArticle: def.sourceArticle,
     conditionTexte: def.conditionTexte,
     tooltipDetail: [
-      `Quantité : ${formatNumberFrLegacy(unites, unites % 1 === 0 ? 0 : 2)}.`,
+      `Quantité : ${formatFrDecimalFixed(unites, unites % 1 === 0 ? 0 : 2)}.`,
       def.tooltip ?? 'Quantité × montant unitaire, annualisé si besoin.',
     ].join('\n'),
     breakdown,
@@ -296,7 +296,7 @@ function buildPostesDureeTooltip(
     sourceArticle: def.sourceArticle,
     conditionTexte: def.conditionTexte,
     tooltipDetail: [
-      `${formatNumberFrLegacy(postes, postes % 1 === 0 ? 0 : 2)} unité${postes > 1 ? 's' : ''} / mois × ${formatNumberFrLegacy(minutes / 60, 2)} h.`,
+      `${formatFrDecimalFixed(postes, postes % 1 === 0 ? 0 : 2)} unité${postes > 1 ? 's' : ''} / mois × ${formatFrDecimalFixed(minutes / 60, 2)} h.`,
       def.tooltip,
     ]
       .filter(Boolean)

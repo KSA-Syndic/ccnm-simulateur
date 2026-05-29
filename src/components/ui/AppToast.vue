@@ -50,7 +50,7 @@ defineExpose({ addToast });
 </template>
 
 <style scoped>
-/* Préfixe app- : évite le conflit avec les `.toast` legacy dans main.css (opacity: 0 par défaut). */
+/* Préfixe app- : évite le conflit avec d’anciennes classes `.toast` partagées (opacity par défaut). */
 .app-toast-stack {
   position: fixed;
   top: 1rem;

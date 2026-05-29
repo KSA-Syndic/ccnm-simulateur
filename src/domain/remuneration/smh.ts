@@ -1,6 +1,6 @@
 import { CONFIG } from '../config';
 
-/** Année de référence grille SMH / barème débutants (aligné legacy `resolveReferenceYear` sans `Date`). */
+/** Année de référence grille SMH / barème débutants (sans lecture de l’horloge système ici). */
 export function resolveSmhDataYear(explicitYear?: number): number {
   return explicitYear ?? CONFIG.CURRENT_DATA_YEAR;
 }
@@ -14,7 +14,7 @@ export function getSmhGridAnnual(classe: number, year?: number): number {
 }
 
 /**
- * Tranche barème débutant (clés 0, 2, 4) selon `experiencePro` — aligné legacy.
+ * Tranche barème débutant (clés 0, 2, 4) selon `experiencePro`.
  * - &lt; 2 ans → 0
  * - 2 à 4 ans → 2
  * - 4 à 6 ans → 4
@@ -35,8 +35,8 @@ export function getBaremeDebutantAnnual(classe: 11 | 12, tranche: number, year?:
 }
 
 /**
- * SMH annuel plein temps avant prorata d’activité — aligné
- * `RemunerationCalculator.calculateAnnualRemuneration` (grille + barème F11/F12 si exp &lt; seuil catalogue).
+ * SMH annuel plein temps avant prorata d’activité — grille conventionnelle
+ * et barème débutants (classes 11 / 12) lorsque l’expérience pro est sous le seuil catalogue.
  */
 export function getAnnualSmhFullBeforeActivity(params: {
   classe: number;

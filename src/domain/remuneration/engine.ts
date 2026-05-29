@@ -122,7 +122,7 @@ function executeComputeMode(mode: ComputeMode, ctx: ComputeContext): number {
       const annees = mode.annees ? resolveRef(mode.annees, ctx) : 1;
       const raw = new Decimal(base).times(taux).times(annees).toNumber();
       if (mode.period === 'annual') {
-        /** Base déjà annuelle (ex. SMH × %) — aligné legacy `ForfaitCalculator` / pas de `×12`. */
+        /** Base déjà annuelle (ex. SMH × %) — pas de coefficient mensuel `×12`. */
         return roundToEuro(raw);
       }
       return roundToCents(raw);
@@ -183,7 +183,7 @@ export interface ResolvedElement {
 
 /**
  * Résout `inclusDansSMH: 'ifSuperiorToConvention'` après comparaison au montant conventionnel
- * (aligné legacy `resolveAnciennetePrime` : assiette SMH seulement si montant accord > référence branche).
+ * (assiette SMH seulement si le montant accord dépasse la référence branche).
  */
 function normalizeIfSuperiorSmhResult(
   result: ElementResult,

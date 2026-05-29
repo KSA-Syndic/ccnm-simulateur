@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SEMANTIC_ID } from '../types';
-import {
-  CFDT_KUHN_BRANDING,
-  getLabel,
-  GLOBAL_SEMANTIC_REGISTRY,
-  WIZARD_LEGACY_LABELS,
-} from './labels';
+import { CFDT_KUHN_BRANDING, getLabel, GLOBAL_SEMANTIC_REGISTRY, WIZARD_LABELS } from './labels';
 
 describe('GLOBAL_SEMANTIC_REGISTRY', () => {
   it('couvre toutes les constantes SEMANTIC_ID', () => {
@@ -33,6 +28,6 @@ describe('GLOBAL_SEMANTIC_REGISTRY', () => {
   });
 
   it('export arriérés — libellé unique rapport', () => {
-    expect(WIZARD_LEGACY_LABELS.arreteesExportPdf).toMatch(/rapport/);
+    expect(WIZARD_LABELS.arreteesExportPdf).toMatch(/rapport/);
   });
 });

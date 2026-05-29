@@ -260,7 +260,7 @@ export const HINT_ENGINE = {
     'Statut <strong>non-cadre</strong> : le point territorial et la prime d’ancienneté CCNM sont des paramètres clés du calcul.',
 } as const;
 
-/** Flux post-export arriérés (modal syndicat + mail) — aligné legacy `app.js` (sujet/corps mail). */
+/** Flux post-export arriérés (modal syndicat + mail) — sujet et corps du courrier type. */
 export const POST_PDF_SYNDICAT = {
   syndicatModalTitle: "L'union fait la force 💪",
   /** Suite du paragraphe après le nom du syndicat en gras (espace initial inclus). */
@@ -301,11 +301,8 @@ Cordialement`,
   celebrationReopenSyndicat: 'Renvoyer un courrier au syndicat',
 } as const;
 
-/**
- * Textes wizard / résultat / arriérés — copie fonctionnelle de `legacy-archive/ui/Labels.js`
- * (passe 1, parité libellés avec le bundle legacy).
- */
-export const WIZARD_LEGACY_LABELS = {
+/** Libellés et textes longs du parcours assistant (étapes, résultat, arriérés). */
+export const WIZARD_LABELS = {
   step1aPageTitle: 'Connaissez-vous votre classification ?',
   step1aPageSubtitle: 'Elle figure sur votre fiche de paie (ex: F11, D7, A1...)',
   step1bPageTitle: 'Votre classification',
@@ -460,7 +457,7 @@ export const RESULT_SALAIRE_BASE_TOOLTIP = {
 export const ACCORD_BADGE_TOOLTIP_TITLE =
   'Indique que la ligne ou l’option s’appuie sur l’accord d’entreprise sélectionné (paramètres et primes prévus par cet accord).';
 
-/** Libellés longs des groupes — identiques à `legacy-archive/index.html` (select groupe). */
+/** Libellés longs des groupes (liste déroulante groupe / classe). */
 export const GROUPE_SELECT_LABELS: Record<string, string> = {
   A: 'A - Employés/Ouvriers',
   B: 'B - Employés/Ouvriers',

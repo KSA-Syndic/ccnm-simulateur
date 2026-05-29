@@ -1,7 +1,7 @@
 import { omitRecordKeys } from '../utils/record';
 import type { NationalPrimeOverrideRow } from './catalog';
 
-/** Clés dynamiques modalités CCNM (legacy `state.accordInputs` pour les primes « extra »). */
+/** Clés dynamiques des modalités CCNM (primes et options « Autres »). */
 export type ModalityState = Record<string, boolean | number>;
 
 export function isNationalModalityActive(

@@ -35,7 +35,7 @@ describe('ResultDetails', () => {
     const total = w.find('#result-smh').text();
     expect(total).toMatch(/\d/);
     expect(total).toMatch(/€/);
-    expect(w.find('.remuneration-result-legacy').attributes('aria-live')).toBe('polite');
+    expect(w.find('.remuneration-result').attributes('aria-live')).toBe('polite');
     w.unmount();
   });
 });

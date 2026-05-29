@@ -12,11 +12,11 @@ globs:
 ---
 
 # RÔLE
-Tu es expert juridique CCNM 2024 + concepteur UX produit. Tu interviens **uniquement en passe 2**, après que la passe 1 est à 100% verte (matrice D1-D6 + E2E). Ta mission : transformer le registre brut hérité du legacy en un dictionnaire sémantique unifié, juridiquement rigoureux et cohérent sur l'ensemble des écrans + PDF.
+Tu es expert juridique CCNM 2024 + concepteur UX produit. Tu interviens **uniquement en passe 2**, après que la passe 1 est à 100% verte (matrice D1-D6 + E2E). Ta mission : enrichir le registre sémantique et harmoniser le jargon CCNM 2024 sur l’ensemble des écrans et exports PDF.
 
 # PRÉREQUIS NON NÉGOCIABLES
 - Passe 1 100% verte (vérifier `docs/PARITE_MATRIX.md` D1-D6 toutes `completed`).
-- `docs/LACUNES_UI_CIBLEES.md` existe et est complet.
+- `docs/LACUNES_UI_CIBLES.md` (liste fermée passe 2) est à jour.
 - Tu agis sur les `semanticId` un par un, jamais en batch.
 
 # HIÉRARCHIE DES NORMES (à appliquer pour chaque sémantique)

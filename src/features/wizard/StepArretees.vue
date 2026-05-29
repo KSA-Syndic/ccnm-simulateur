@@ -26,7 +26,7 @@ import { useUiStore } from '../../stores/ui';
 import { useAgreementStore } from '../../stores/agreement';
 import { getAgreement } from '../../domain/agreements/registry';
 import { AppTooltip } from '../../components/ui';
-import { WIZARD_LEGACY_LABELS, WIZARD_TOASTS } from '../../domain/ui/labels';
+import { WIZARD_LABELS, WIZARD_TOASTS } from '../../domain/ui/labels';
 import { buildWizardTooltipHtml } from '../../domain/ui/wizardTooltips';
 import { dispatchAppToast } from '../../utils/appToast';
 import { isCompleteIsoDateString } from '../../domain/utils/date';
@@ -146,7 +146,7 @@ const canReopenFloatingSaisie = computed(
 const curveProgressAriaLabel = computed(() => {
   const base = moisProgressLabel.value;
   if (canReopenFloatingSaisie.value) {
-    return `${base}. ${WIZARD_LEGACY_LABELS.curveProgressReopenAriaSuffix}`;
+    return `${base}. ${WIZARD_LABELS.curveProgressReopenAriaSuffix}`;
   }
   return base;
 });
@@ -222,7 +222,7 @@ async function commitDateEmbauche(v: string) {
   }
 }
 
-/** Un seul `change` (legacy) : pas de courbe ni de bloc flottant pendant la saisie mois/jour/année. */
+/** Un seul événement `change` sur la date : pas de courbe ni de bloc flottant pendant la saisie mois/jour/année. */
 function onDateEmbaucheChange(ev: Event) {
   const input = ev.target as HTMLInputElement;
   dateEmbaucheDraft.value = input.value;
@@ -322,18 +322,18 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
 <template>
   <section class="wizard-step" aria-label="Étape 4 — Arriérés">
     <div class="step-content">
-      <h2>{{ WIZARD_LEGACY_LABELS.step4PageTitle }}</h2>
+      <h2>{{ WIZARD_LABELS.step4PageTitle }}</h2>
       <p class="step-subtitle">
-        {{ WIZARD_LEGACY_LABELS.step4PageSubtitle }}
+        {{ WIZARD_LABELS.step4PageSubtitle }}
       </p>
 
       <div v-if="!dateEmbauche" id="arretees-warning" class="book-hint warning">
-        <p v-html="WIZARD_LEGACY_LABELS.arreteesWarningHtml" />
+        <p v-html="WIZARD_LABELS.arreteesWarningHtml" />
       </div>
 
       <div class="arretees-base-info">
         <h3 id="arretees-base-info-title">
-          {{ WIZARD_LEGACY_LABELS.arreteesBaseInfoTitle }}
+          {{ WIZARD_LABELS.arreteesBaseInfoTitle }}
         </h3>
         <div class="form-group">
           <label for="date-embauche-arretees">
@@ -355,7 +355,7 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
         class="arretees-options-accordion result-details-toggle"
       >
         <summary id="arretees-options-title" class="arretees-options-accordion-title">
-          {{ WIZARD_LEGACY_LABELS.arreteesOptionsTitle }}
+          {{ WIZARD_LABELS.arreteesOptionsTitle }}
         </summary>
         <div class="arretees-options-accordion-body">
           <div class="form-group">
@@ -374,7 +374,7 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
           <div class="form-group">
             <label class="checkbox-label">
               <input v-model="arretees.ruptureContrat" type="checkbox" class="book-checkbox" />
-              <span>{{ WIZARD_LEGACY_LABELS.ruptureContratLabel }}</span>
+              <span>{{ WIZARD_LABELS.ruptureContratLabel }}</span>
             </label>
           </div>
 
@@ -391,14 +391,14 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
           <div class="form-group">
             <label class="checkbox-label">
               <input v-model="arretees.accordEcrit" type="checkbox" class="book-checkbox" />
-              <span>{{ WIZARD_LEGACY_LABELS.accordEcritLabel }}</span>
+              <span>{{ WIZARD_LABELS.accordEcritLabel }}</span>
             </label>
           </div>
 
           <div class="form-group">
             <label class="checkbox-label">
               <input v-model="arretees.surSMHSeul" type="checkbox" class="book-checkbox" />
-              <span>{{ WIZARD_LEGACY_LABELS.arreteesSmhSeulLabel }}</span>
+              <span>{{ WIZARD_LABELS.arreteesSmhSeulLabel }}</span>
               <AppTooltip :content="arreteesSmhSeulTooltip" variant="result" position="top" />
             </label>
           </div>
@@ -413,10 +413,10 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
         :class="{ 'salary-curve-container--reveal': curveReveal }"
       >
         <h3 id="salary-curve-title">
-          {{ WIZARD_LEGACY_LABELS.salaryCurveTitle }}
+          {{ WIZARD_LABELS.salaryCurveTitle }}
         </h3>
         <p id="salary-curve-help" class="curve-help">
-          {{ WIZARD_LEGACY_LABELS.salaryCurveHelp }}
+          {{ WIZARD_LABELS.salaryCurveHelp }}
         </p>
 
         <div class="book-hint warning arretees-salaire-hint" role="note">
@@ -483,7 +483,7 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
         >
           <span id="curve-progress-text">{{ moisProgressLabel }}</span>
           <span id="curve-progress-reopen-hint" class="curve-progress-reopen-hint">
-            {{ WIZARD_LEGACY_LABELS.curveProgressReopenHint }}
+            {{ WIZARD_LABELS.curveProgressReopenHint }}
           </span>
         </div>
 
@@ -500,14 +500,14 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
             class="book-btn btn-primary btn-large"
             @click="calculerArretees"
           >
-            {{ WIZARD_LEGACY_LABELS.btnCalculerArreteesSticky }}
+            {{ WIZARD_LABELS.btnCalculerArreteesSticky }}
           </button>
         </div>
       </div>
 
       <div v-else id="timeline-no-date-message" class="timeline-no-date-message">
         <p id="timeline-help-text" class="timeline-help">
-          {{ WIZARD_LEGACY_LABELS.timelineHelpText }}
+          {{ WIZARD_LABELS.timelineHelpText }}
         </p>
       </div>
 
