@@ -114,7 +114,7 @@ describe('tooltip/builders', () => {
 
   it('formatAccordEntrepriseSourceArticle', () => {
     const doc = getAgreement('kuhn');
-    expect(formatAccordEntrepriseSourceArticle(cfg, doc!)).toBe("Accord d'entreprise Kuhn :");
+    expect(formatAccordEntrepriseSourceArticle(cfg, doc!)).toBe("Accord d'entreprise Kuhn");
   });
 
   it('buildPrimeConditionTooltip — prime accord : titre modalité + source accord (comme CCNM)', () => {
@@ -137,7 +137,7 @@ describe('tooltip/builders', () => {
     );
     expect(html).toContain('Prime d&#39;équipe');
     expect(html).toContain('tooltip-source');
-    expect(html).toContain('Accord d&#39;entreprise Kuhn :');
+    expect(html).toContain('Accord d&#39;entreprise Kuhn');
     expect(html).toContain('0,86');
     expect(html).not.toMatch(/<strong>Accord d&#39;entreprise Kuhn/);
   });
@@ -146,5 +146,21 @@ describe('tooltip/builders', () => {
     const html = buildResultTooltipContent(cfg, 'CCNM', { label: 'L', value: 1200 }, 'CCNM');
     expect(html).toContain('L');
     expect(html).toContain('1 200,00 €');
+  });
+
+  it('buildResultTooltipContent — tooltipOrigin prime sur la classification CCNM', () => {
+    const html = buildResultTooltipContent(
+      cfg,
+      'CCNM',
+      {
+        tooltipOrigin: "Accord d'entreprise Kuhn",
+        sourceArticle: 'CCNM art. 140 (sujétion — hors assiette SMH)',
+        tooltipDetail: 'Détail.',
+      },
+      'CCNM',
+    );
+    expect(html).toContain('Accord d&#39;entreprise Kuhn');
+    expect(html).toContain('CCNM art. 140');
+    expect(html).not.toContain('Convention collective nationale de la métallurgie (CCNM)');
   });
 });

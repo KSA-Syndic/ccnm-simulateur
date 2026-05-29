@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import '@/accords';
 import { getAgreement } from '@/domain/agreements/registry';
 import { getAccordElementDefsForRemuneration } from '@/domain/agreements/accord-element-defs';
+import { getAccordMajorationDefsForRemuneration } from '@/domain/agreements/accord-majoration-defs';
 import { getConventionPrimeDefs, getConventionMajorationDefs } from '@/domain/convention/catalog';
 import { buildComputeContext, computeElement } from '@/domain/remuneration/engine';
 import { enrichResolvedElementsTooltips } from '@/domain/tooltip/resultElementTooltips';
@@ -51,6 +52,38 @@ describe('resultElementTooltips', () => {
     );
     expect(enriched.tooltip).toContain('Heures de nuit');
     expect(enriched.tooltip).toContain('15 %');
+  });
+
+  it('majoration nuit accord Kuhn — titre entreprise, référence CCNM, taux accord', () => {
+    const agreement = getAgreement('kuhn');
+    expect(agreement).toBeTruthy();
+    const ctx = buildComputeContext(
+      {
+        typeNuit: 'poste-nuit',
+        heuresNuit: 15,
+        pointTerritorial: 5.9,
+        anciennete: 2,
+      },
+      21_980,
+      5,
+      agreement as never,
+    );
+    const def = getAccordMajorationDefsForRemuneration(agreement!).find(
+      (d) => d.semanticId === SEMANTIC_ID.MAJORATION_NUIT,
+    )!;
+    const result = computeElement(def, ctx);
+    expect(result.amount).toBeGreaterThan(0);
+    const [enriched] = enrichResolvedElementsTooltips(
+      [{ result, def, origin: 'accord' }],
+      ctx,
+      agreement!,
+    );
+    expect(enriched.tooltip).toContain('Accord d&#39;entreprise Kuhn');
+    expect(enriched.tooltip).toContain('CCNM art. 140');
+    expect(enriched.tooltip).toContain('20 %');
+    expect(enriched.tooltip).not.toContain(
+      'Convention collective nationale de la métallurgie (CCNM)',
+    );
   });
 
   it('majoration heures sup +25 % — infobulle présente', () => {

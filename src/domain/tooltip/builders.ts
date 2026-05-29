@@ -125,14 +125,14 @@ export function getAccordNomCourt(agreement: AccordLike | null | undefined): str
   return agreement.nomCourt || agreement.nom || 'Accord';
 }
 
-/** Ligne « Source » pour une modalité issue de l'accord d'entreprise (aligné infobulles CCNM). */
+/** Texte affiché après le libellé « Source : » */
 export function formatAccordEntrepriseSourceArticle(
   cfg: TooltipTextsConfig | undefined,
   agreement: AccordLike | null | undefined,
 ): string {
   const { accordEntreprise } = getTooltipOrigins(cfg);
   const nom = getAccordNomCourt(agreement);
-  return nom ? `${accordEntreprise} ${nom} :` : `${accordEntreprise} :`;
+  return nom ? `${accordEntreprise} ${nom}` : accordEntreprise;
 }
 
 function resolveAccordPrimeRateForTooltip(p: PrimeDef, overrides: Record<string, number>): number {
@@ -303,6 +303,10 @@ export interface ResultTooltipDetailInput {
   sourceArticle?: string | undefined;
   conditionTexte?: string | undefined;
   tooltipDetail?: string | undefined;
+  /**
+   * Titre de l’infobulle résultat : si renseigné, prime sur la classification à partir de
+   * `sourceArticle` (ex. ligne d’accord dont la référence cite la CCNM pour la qualification).
+   */
   tooltipOrigin?: string | undefined;
   breakdown?: ResultBreakdownLine[] | undefined;
 }
@@ -315,13 +319,11 @@ export function buildResultTooltipContent(
 ): string {
   const resultCfg = cfg?.result || {};
   const origins = getTooltipOrigins(cfg, conventionLabel);
-  const origin =
-    classifyOriginFromSourceArticle(
-      origins,
-      detail?.sourceArticle,
-      detail?.tooltipOrigin || fallbackOrigin,
-    ) || fallbackOrigin;
-  const title = origin;
+  const classified =
+    classifyOriginFromSourceArticle(origins, detail?.sourceArticle, fallbackOrigin) ||
+    fallbackOrigin;
+  const explicitTitle = String(detail?.tooltipOrigin ?? '').trim();
+  const title = explicitTitle || classified;
   const lineTemplate = resultCfg.breakdownLineTemplate || '• {label} : {value}';
   const descriptionLines: string[] = [];
   const summaryLine = String(detail?.tooltipDetail || '').trim();

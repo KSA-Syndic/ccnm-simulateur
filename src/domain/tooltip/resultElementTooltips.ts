@@ -33,6 +33,16 @@ function pctLabel(rate: number): string {
   return `${formatFrDecimalFixed(rate * 100, (rate * 100) % 1 === 0 ? 0 : 2)} %`;
 }
 
+function resolvedHeuresXtauxMajRate(def: ElementDef, ctx: ComputeContext): number | null {
+  const mode = def.computeMode;
+  if (mode.mode !== 'heuresXtaux') return null;
+  return resolveRef(mode.taux, ctx);
+}
+
+function majorationHeuresSupPctHint(majRate: number): string {
+  return `Majoration (+${formatFrDecimalFixed(majRate * 100, (majRate * 100) % 1 === 0 ? 0 : 2)} %)`;
+}
+
 function formatHeures(h: number): string {
   return `${formatFrDecimalFixed(h, h % 1 === 0 ? 0 : 2)} h`;
 }
@@ -397,27 +407,31 @@ function buildSemanticTooltip(
     return buildEquipeTooltip(result, def, ctx);
   }
   if (sid === SEMANTIC_ID.MAJORATION_NUIT) {
+    const r = resolvedHeuresXtauxMajRate(def, ctx);
     return buildHeuresXtauxTooltip(result, def, ctx, {
       labelHeures: 'Heures de nuit / mois',
-      pctHint: `Majoration nuit (${pctLabel(CONFIG.MAJORATIONS_CCN.nuit)})`,
+      ...(r != null ? { pctHint: `Majoration nuit (${pctLabel(r)})` } : {}),
     });
   }
   if (sid === SEMANTIC_ID.MAJORATION_DIMANCHE) {
+    const r = resolvedHeuresXtauxMajRate(def, ctx);
     return buildHeuresXtauxTooltip(result, def, ctx, {
       labelHeures: 'Heures le dimanche / mois',
-      pctHint: `Majoration dimanche (${pctLabel(CONFIG.MAJORATIONS_CCN.dimanche)})`,
+      ...(r != null ? { pctHint: `Majoration dimanche (${pctLabel(r)})` } : {}),
     });
   }
   if (sid === SEMANTIC_ID.MAJORATION_HEURES_SUP_25) {
+    const r = resolvedHeuresXtauxMajRate(def, ctx);
     return buildHeuresXtauxTooltip(result, def, ctx, {
       labelHeures: `Heures sup. à +25 % (jusqu'à ${CONFIG.HEURES_SUP_TRANCHE_1_MENSUELLES} h/mois)`,
-      pctHint: `Majoration (+${Math.round(CONFIG.MAJORATIONS_CCN.heuresSup25 * 100)} %)`,
+      ...(r != null ? { pctHint: majorationHeuresSupPctHint(r) } : {}),
     });
   }
   if (sid === SEMANTIC_ID.MAJORATION_HEURES_SUP_50) {
+    const r = resolvedHeuresXtauxMajRate(def, ctx);
     return buildHeuresXtauxTooltip(result, def, ctx, {
       labelHeures: `Heures sup. à +50 % (au-delà de ${CONFIG.HEURES_SUP_TRANCHE_1_MENSUELLES} h/mois)`,
-      pctHint: `Majoration (+${Math.round(CONFIG.MAJORATIONS_CCN.heuresSup50 * 100)} %)`,
+      ...(r != null ? { pctHint: majorationHeuresSupPctHint(r) } : {}),
     });
   }
   if (sid === SEMANTIC_ID.FORFAIT_HEURES || sid === SEMANTIC_ID.FORFAIT_JOURS) {
@@ -456,11 +470,15 @@ export function buildResultElementTooltipHtml(
   if (!detail.tooltipDetail && def.tooltip) {
     detail.tooltipDetail = def.tooltip;
   }
+  const fb = fallbackOrigin(origin, agreement);
+  if (origin === 'accord') {
+    detail.tooltipOrigin = fb;
+  }
   return buildResultTooltipContent(
     CONFIG.TOOLTIP_TEXTS,
     CONFIG.TOOLTIP_TEXTS.origins.ccnm,
     detail,
-    fallbackOrigin(origin, agreement),
+    fb,
   );
 }
 
