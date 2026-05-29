@@ -53,8 +53,8 @@ defineExpose({ addToast });
 /* Préfixe app- : évite le conflit avec d’anciennes classes `.toast` partagées (opacity par défaut). */
 .app-toast-stack {
   position: fixed;
-  top: 1rem;
   right: 1rem;
+  bottom: max(1rem, env(safe-area-inset-bottom, 0px));
   z-index: 11000;
   display: flex;
   flex-direction: column;
@@ -87,10 +87,10 @@ defineExpose({ addToast });
 }
 .app-toast-enter-from {
   opacity: 0;
-  transform: translateX(2rem);
+  transform: translateY(1rem);
 }
 .app-toast-leave-to {
   opacity: 0;
-  transform: translateY(-1rem);
+  transform: translateY(0.75rem);
 }
 </style>
