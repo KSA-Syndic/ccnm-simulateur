@@ -20,6 +20,17 @@ Application **Vue 3**, **Pinia**, moteur métier sous **`src/domain/`**. Point d
 
 **PDF annexe arriérés** : jspdf-autotable **v5** — `importPdfAutoTable()` / `drawPdfAutoTable()` dans `src/domain/pdf/jsPdfHelpers.ts` (un simple `import 'jspdf-autotable'` ne branche plus `doc.autoTable` en ESM).
 
+## Design tokens — modales
+
+Les fenêtres modales (composant **`AppModal`** / `<dialog>`, overlay **`.modal`**, carte **`.celebration-card`**) s’alignent sur des variables **`:root`** dans **`src/assets/styles/main.css`** :
+
+- **`--modal-radius`** — angles (aligné sur les tooltips : `var(--radius-md)`)
+- **`--modal-border-width`**, **`--modal-border-color`**
+- **`--modal-padding`** — marge intérieure du contenu (`AppModal` : `.app-modal__inner`)
+- **`--modal-shadow`**, **`--modal-backdrop-bg`**
+
+Pour faire évoluer tout le style modale d’un coup, modifier ces tokens plutôt que les composants individuels.
+
 ## Conformité juridique
 
 - **CCNM (IDCC 3248)** : grilles et paramètres dans `src/domain/config/`

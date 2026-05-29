@@ -59,18 +59,22 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown));
 
 <style scoped>
 .app-modal {
-  border: none;
-  border-radius: var(--radius-lg, 12px);
+  border: var(--modal-border-width) solid var(--modal-border-color);
+  border-radius: var(--modal-radius);
   padding: 0;
   max-width: min(90vw, 560px);
   width: 100%;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--modal-shadow);
+  outline: none;
 }
 .app-modal::backdrop {
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--modal-backdrop-bg);
 }
 .app-modal__inner {
-  padding: 1.5rem;
+  padding: var(--modal-padding);
+}
+.app-modal__body {
+  min-width: 0;
 }
 .app-modal__header {
   display: flex;

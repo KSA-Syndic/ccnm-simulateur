@@ -24,6 +24,16 @@
   --color-danger: #dc2626;
   --color-info: #e15c12;
   --border-radius: 0px;
+  /*
+   * Modales — style commun (dialog AppModal, .modal legacy, carte célébration).
+   * Rayons alignés sur le corps des tooltips (`.app-tooltip-popper` : `--radius-md`).
+   */
+  --modal-radius: var(--radius-md, 8px);
+  --modal-border-width: 1px;
+  --modal-border-color: var(--gray-300);
+  --modal-padding: 1.5rem;
+  --modal-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  --modal-backdrop-bg: rgba(0, 0, 0, 0.45);
   /* Tooltip : fond brun-ardoise (contraste orange header + texte blanc) */
   --color-bg-tooltip: #2d2418;
   --tooltip-bg: var(--color-bg-tooltip);
@@ -1305,7 +1315,7 @@ body.iframe-mode .simulator-container.iframe-container {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--modal-backdrop-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1325,12 +1335,14 @@ body.iframe-mode .simulator-container.iframe-container {
 
 .modal {
   background: white;
-  padding: 30px;
+  padding: var(--modal-padding, 1.5rem);
   max-width: 550px;
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
-  border: 1px solid var(--gray-300);
+  border: var(--modal-border-width) solid var(--modal-border-color);
+  border-radius: var(--modal-radius);
+  box-shadow: var(--modal-shadow);
   transform: translateY(10px);
   opacity: 0;
   transition:
@@ -1489,7 +1501,9 @@ body.iframe-mode .simulator-container.iframe-container {
   padding: 28px 32px;
   max-width: 380px;
   width: 90%;
-  border: 1px solid var(--gray-300);
+  border: var(--modal-border-width) solid var(--modal-border-color);
+  border-radius: var(--modal-radius);
+  box-shadow: var(--modal-shadow);
   text-align: center;
 }
 

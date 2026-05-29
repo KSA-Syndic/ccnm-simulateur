@@ -6,6 +6,8 @@ import { useAgreementStore } from '../../stores/agreement';
 import { getAgreement } from '../../domain/agreements/registry';
 import { POST_PDF_SYNDICAT } from '../../domain/ui/labels';
 import { buildGmailComposeUrl, buildOutlookComposeUrl } from '../../domain/pdf/syndicatMail';
+import gmailIconUrl from '../../assets/mail/Gmail_icon_(2026).svg?url';
+import outlookIconUrl from '../../assets/mail/Microsoft_Outlook_Icon_(2025–present).svg?url';
 
 const step = ref<'syndicat' | 'celebration' | null>(null);
 
@@ -24,6 +26,22 @@ const syndicatDisplayName = computed(
 );
 
 const hasSyndicatMail = computed(() => syndicatEmail.value.length > 0);
+
+const gmailComposeUrl = computed(() =>
+  buildGmailComposeUrl(
+    syndicatEmail.value,
+    POST_PDF_SYNDICAT.mailSubject,
+    POST_PDF_SYNDICAT.mailBody,
+  ),
+);
+
+const outlookComposeUrl = computed(() =>
+  buildOutlookComposeUrl(
+    syndicatEmail.value,
+    POST_PDF_SYNDICAT.mailSubject,
+    POST_PDF_SYNDICAT.mailBody,
+  ),
+);
 
 function showSyndicatPrompt() {
   if (hasSyndicatMail.value) {
@@ -45,24 +63,9 @@ function goCelebration() {
   step.value = 'celebration';
 }
 
-function openGmail() {
-  const url = buildGmailComposeUrl(
-    syndicatEmail.value,
-    POST_PDF_SYNDICAT.mailSubject,
-    POST_PDF_SYNDICAT.mailBody,
-  );
-  window.open(url, '_blank', 'noopener,noreferrer');
-  goCelebration();
-}
-
-function openOutlook() {
-  const url = buildOutlookComposeUrl(
-    syndicatEmail.value,
-    POST_PDF_SYNDICAT.mailSubject,
-    POST_PDF_SYNDICAT.mailBody,
-  );
-  window.open(url, '_blank', 'noopener,noreferrer');
-  goCelebration();
+/** Laisser le navigateur traiter l’ouverture du lien avant de fermer le dialog (important sur mobile). */
+function scheduleGoCelebration() {
+  window.setTimeout(() => goCelebration(), 0);
 }
 
 function reopenSyndicat() {
@@ -142,58 +145,42 @@ defineExpose({ showSyndicatPrompt, showCelebration });
             {{ POST_PDF_SYNDICAT.syndicatOpenWith }}
           </p>
           <div class="syndicat-webmail-buttons">
-            <button
-              type="button"
+            <a
               class="syndicat-webmail-btn syndicat-webmail-btn--gmail"
+              :href="gmailComposeUrl"
+              target="_blank"
+              rel="noopener noreferrer"
               :aria-label="POST_PDF_SYNDICAT.gmailComposeAria"
-              @click="openGmail"
+              @click="scheduleGoCelebration"
             >
-              <svg class="syndicat-webmail-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.92 5.92 0 0 1-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77a5.92 5.92 0 0 1-8.49-3.12H2.18v2.84A12 12 0 0 0 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09a5.92 5.92 0 0 1 0-4.18V7.07H2.18A12 12 0 0 0 0 12c0 1.94.46 3.77 1.28 5.4l3.56-2.31z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 4.75c1.62 0 3.06.56 4.21 1.64l3.15-3.15A12 12 0 0 0 0 5.4L3.56 8.31A7.1 7.1 0 0 1 12 4.75z"
-                />
-              </svg>
+              <img
+                class="syndicat-webmail-icon"
+                :src="gmailIconUrl"
+                alt=""
+                width="24"
+                height="24"
+                decoding="async"
+              />
               <span>{{ POST_PDF_SYNDICAT.gmailLinkLabel }}</span>
-            </button>
-            <button
-              type="button"
+            </a>
+            <a
               class="syndicat-webmail-btn syndicat-webmail-btn--outlook"
+              :href="outlookComposeUrl"
+              target="_blank"
+              rel="noopener noreferrer"
               :aria-label="POST_PDF_SYNDICAT.outlookComposeAria"
-              @click="openOutlook"
+              @click="scheduleGoCelebration"
             >
-              <svg class="syndicat-webmail-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  fill="#0078D4"
-                  d="M24 7.387v9.226c0 .676-.549 1.226-1.226 1.226h-8.691l-4.083 3.25V7.387h13v0z"
-                />
-                <path
-                  fill="#0364B8"
-                  d="M16.083 3H7.226A1.226 1.226 0 0 0 6 4.226v15.548L10.083 17V3h6z"
-                />
-                <path
-                  fill="#28A8EA"
-                  d="M6 4.226v15.548L10.083 17V3H7.226A1.226 1.226 0 0 0 6 4.226z"
-                />
-                <path
-                  fill="#fff"
-                  d="M12.5 8.5h5v1.75h-5V8.5zm0 2.75h5v1.75h-5v-1.75zm0 2.75h3.5v1.75H12.5v-1.75z"
-                />
-              </svg>
+              <img
+                class="syndicat-webmail-icon"
+                :src="outlookIconUrl"
+                alt=""
+                width="24"
+                height="24"
+                decoding="async"
+              />
               <span>{{ POST_PDF_SYNDICAT.outlookLinkLabel }}</span>
-            </button>
+            </a>
           </div>
         </div>
       </section>
@@ -233,10 +220,18 @@ defineExpose({ showSyndicatPrompt, showCelebration });
 </template>
 
 <style scoped>
+.post-pdf-syndicat-modal {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 .post-pdf-syndicat-lead {
   margin: 0 0 1.15rem;
   line-height: 1.55;
   font-size: 0.95rem;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .syndicat-compose {
@@ -285,12 +280,24 @@ defineExpose({ showSyndicatPrompt, showCelebration });
   color: var(--body-font-color, #333);
   font-weight: 500;
   min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .syndicat-compose-subject {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+@media (min-width: 480px) {
+  .syndicat-compose-subject {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: normal;
+    hyphens: none;
+  }
 }
 
 .syndicat-compose-attachments {
@@ -358,6 +365,8 @@ defineExpose({ showSyndicatPrompt, showCelebration });
   font-size: 0.78rem;
   color: var(--gray-500, #6b7280);
   line-height: 1.4;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .syndicat-compose-actions {
@@ -394,6 +403,10 @@ defineExpose({ showSyndicatPrompt, showCelebration });
   border: 1px solid var(--gray-300, #d1d5db);
   border-radius: 8px;
   cursor: pointer;
+  text-decoration: none;
+  box-sizing: border-box;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.08);
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease,
@@ -419,18 +432,31 @@ defineExpose({ showSyndicatPrompt, showCelebration });
 }
 
 .syndicat-webmail-icon {
-  width: 1.35rem;
-  height: 1.35rem;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
+  object-fit: contain;
+  display: block;
 }
 
 @media (max-width: 420px) {
   .syndicat-compose-row {
-    grid-template-columns: 3.5rem 1fr;
+    grid-template-columns: 1fr;
+    gap: 0.35rem 0;
+  }
+
+  .syndicat-compose-label {
+    margin-bottom: 0.1rem;
   }
 
   .syndicat-webmail-buttons {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 421px) and (max-width: 480px) {
+  .syndicat-compose-row {
+    grid-template-columns: 3.5rem 1fr;
   }
 }
 </style>
