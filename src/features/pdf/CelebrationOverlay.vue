@@ -14,10 +14,17 @@ export interface ConfettiPiece {
 
 const props = defineProps<{
   open: boolean;
+  title: string;
+  body: string;
+  hint: string;
+  finishLabel: string;
+  showReopenSyndicat?: boolean;
+  reopenSyndicatLabel?: string;
 }>();
 
 const emit = defineEmits<{
   close: [];
+  reopenSyndicat: [];
 }>();
 
 const celebrateAnimated = ref(false);
@@ -112,13 +119,40 @@ onUnmounted(() => {
         />
       </div>
       <div class="celebration-card" @click.stop>
-        <slot />
+        <div class="celebration-icon" aria-hidden="true">✓</div>
+        <h3 class="celebration-title">
+          {{ title }}
+        </h3>
+        <p class="celebration-text">
+          {{ body }}
+        </p>
+        <p class="celebration-hint">
+          {{ hint }}
+        </p>
+        <div class="celebration-actions">
+          <button
+            v-if="showReopenSyndicat"
+            type="button"
+            class="book-btn btn-secondary"
+            @click="emit('reopenSyndicat')"
+          >
+            {{ reopenSyndicatLabel }}
+          </button>
+          <button type="button" class="book-btn btn-primary" @click="emit('close')">
+            {{ finishLabel }}
+          </button>
+        </div>
       </div>
     </div>
   </Teleport>
 </template>
 
-<style scoped>
+<style>
+/**
+ * Pas de `scoped` : le contenu est téléporté dans `body` et certains builds
+ * n’appliquent pas les attributs de scope aux nœuds téléportés (icône / actions sans style).
+ * Tout est préfixé par `.celebration-overlay` pour éviter les collisions globales.
+ */
 .celebration-overlay {
   position: fixed;
   inset: 0;
@@ -140,14 +174,14 @@ onUnmounted(() => {
   visibility: visible;
 }
 
-.celebration-confetti-container {
+.celebration-overlay .celebration-confetti-container {
   position: absolute;
   inset: 0;
   pointer-events: none;
   overflow: hidden;
 }
 
-.celebration-confetti {
+.celebration-overlay .celebration-confetti {
   position: absolute;
   top: -12px;
   border-radius: 2px;
@@ -175,7 +209,7 @@ onUnmounted(() => {
   }
 }
 
-.celebration-card {
+.celebration-overlay .celebration-card {
   position: relative;
   background: white;
   padding: 28px 32px;
@@ -202,43 +236,46 @@ onUnmounted(() => {
   }
 }
 
-.celebration-icon {
+.celebration-overlay .celebration-card .celebration-icon {
   width: 48px;
   height: 48px;
   margin: 0 auto 14px;
-  background: var(--color-primary);
-  color: white;
+  background: var(--color-primary, #e15c12);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
   font-weight: 700;
   line-height: 1;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
-.celebration-title {
+.celebration-overlay .celebration-card .celebration-title {
   margin: 0 0 8px;
   font-size: 1.25rem;
   color: var(--body-font-color);
 }
 
-.celebration-text {
+.celebration-overlay .celebration-card .celebration-text {
   margin: 0 0 12px;
   font-size: 0.95rem;
   color: var(--gray-600);
 }
 
-.celebration-hint {
+.celebration-overlay .celebration-card .celebration-hint {
   margin: 0 0 20px;
   font-size: 0.85rem;
   color: var(--gray-500);
 }
 
-.celebration-actions {
+.celebration-overlay .celebration-card .celebration-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px 20px;
   justify-content: center;
+  align-items: center;
 }
 
 @media (prefers-reduced-motion: reduce) {

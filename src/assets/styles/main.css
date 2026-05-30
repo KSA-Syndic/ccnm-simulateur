@@ -771,6 +771,14 @@ body.iframe-mode .simulator-container.iframe-container {
   border-radius: var(--border-radius);
 }
 
+/* Encart SMH : picto infobulle aligné après la 1re phrase (styles globaux : le déclencheur est dans AppTooltip) */
+.arretees-salaire-hint > p:first-of-type .app-tooltip-trigger,
+.arretees-assiette-detail .app-tooltip-trigger {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 0.35rem;
+}
+
 /* Courbe interactive pour saisie des salaires */
 .salary-curve-container {
   margin: 30px 0;
@@ -1584,8 +1592,10 @@ body.iframe-mode .simulator-container.iframe-container {
 
 /* Responsive */
 @media (max-width: var(--bp-mobile)) {
+  /* Courbe arriérés : moins de cadre autour du canvas sur écran étroit */
   .curve-chart-wrapper {
     height: 300px;
+    padding: 6px 4px;
   }
 
   .curve-input-group {
@@ -1612,7 +1622,7 @@ body.iframe-mode .simulator-container.iframe-container {
   .timeline {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 8px;
-    padding: 15px;
+    padding: 10px 8px;
   }
 
   .timeline-period {
@@ -1653,30 +1663,32 @@ body.iframe-mode .simulator-container.iframe-container {
     display: none;
   }
 
-  /* Étape 4 Arriérés : marges au minimum comme les autres pages (.step-section = 20px) */
+  /* Étape 4 Arriérés : gouttières réduites pour laisser place au graphique */
   #step-4 .step-content {
-    padding: 20px;
+    padding: 12px 8px;
   }
   #step-4 .book-hint.warning {
     margin: 12px 0;
-    padding: 10px 12px;
+    padding: 8px 10px;
   }
   #step-4 .arretees-base-info {
     margin: 12px 0;
-    padding: 14px;
+    padding: 12px 10px;
   }
   #step-4 .arretees-options-accordion-body {
-    padding: 0 12px 12px;
+    padding: 0 8px 12px;
   }
   #step-4 .result-details-toggle .arretees-options-accordion-title {
     padding: 10px 12px;
     font-size: 0.95rem;
   }
   #step-4 .salary-curve-container {
-    margin: 16px 0;
-    padding: 14px;
-    border-left: none;
-    border-right: none;
+    margin: 12px -8px;
+    width: calc(100% + 16px);
+    padding: 8px 6px;
+    border: none;
+    border-top: 1px solid var(--gray-200);
+    border-bottom: 1px solid var(--gray-200);
     border-radius: 0;
   }
   #step-4 .salary-curve-container h3 {
@@ -1690,14 +1702,16 @@ body.iframe-mode .simulator-container.iframe-container {
   }
   #step-4 .curve-chart-wrapper {
     height: 280px;
-    margin: 12px 0;
-    padding: 8px;
+    margin: 8px -4px;
+    width: calc(100% + 8px);
+    padding: 4px 2px;
+    overflow: hidden;
   }
   #step-4 .floating-input-block {
     min-width: 0;
-    width: min(300px, calc(100vw - 3rem));
+    width: min(300px, calc(100vw - 1.25rem));
     max-width: 300px;
-    padding: 14px;
+    padding: 12px;
   }
   #step-4 .curve-legend {
     flex-wrap: wrap;
@@ -1729,22 +1743,22 @@ body.iframe-mode .simulator-container.iframe-container {
     padding-top: 16px;
   }
   #step-4 .arretees-results-card {
-    padding: 14px;
+    padding: 12px 10px;
   }
   #step-4 .arretees-results-title {
     font-size: 1.05rem;
   }
 
-  /* Étape 3 : mêmes règles de marge des containers que la page 4 en vue mobile */
+  /* Étape 3 : gouttières alignées avec l’étape 4 (graphique inflation en bas de page) */
   #step-3 .step-content {
-    padding: 20px;
+    padding: 12px 8px;
   }
   #step-3 .result-options {
     margin: 12px 0;
-    padding: 14px;
+    padding: 12px 10px;
   }
   #step-3 .result-card {
-    padding: 14px;
+    padding: 12px 10px;
     margin: 12px 0;
   }
   #step-3 .result-details-toggle {
@@ -1766,7 +1780,7 @@ body.iframe-mode .simulator-container.iframe-container {
   }
   #step-3 .arretees-check-card {
     margin: 20px 0;
-    padding: 14px;
+    padding: 12px 10px;
   }
   #step-3 .step-actions .book-btn {
     width: 100%;
@@ -3111,12 +3125,23 @@ body.iframe-mode .simulator-container.iframe-container {
    RESPONSIVE
    ============================================ */
 @media (max-width: var(--bp-mobile)) {
+  /* Pleine largeur : pas de marge page autour du simulateur (le contenu gère ses propres gouttières). */
   body {
-    padding: 10px;
+    padding: 0;
+  }
+
+  .simulator-container {
+    border-left: none;
+    border-right: none;
+    border-radius: 0;
+  }
+
+  .wizard-progress {
+    padding: 12px 8px;
   }
 
   .simulator-header {
-    padding: 20px;
+    padding: 16px 12px;
   }
 
   .simulator-header h1 {
@@ -3124,7 +3149,12 @@ body.iframe-mode .simulator-container.iframe-container {
   }
 
   .step-section {
-    padding: 20px;
+    padding: 14px 10px;
+  }
+
+  /* Étapes 1–2 : moins de gouttière pour les formulaires longs */
+  .step-content {
+    padding: 14px 10px;
   }
 
   .roulette-header {
@@ -3184,24 +3214,29 @@ body.iframe-mode .simulator-container.iframe-container {
     gap: 15px;
   }
 
-  /* Étape 4 : très petit écran – marges au minimum comme les autres pages */
+  /* Étape 4 : très petit écran — priorité au graphique */
   #step-4 .step-content {
-    padding: 16px;
+    padding: 10px 6px;
   }
   #step-4 .arretees-base-info,
   #step-4 .salary-curve-container {
-    padding: 12px;
+    margin: 10px -6px;
+    width: calc(100% + 12px);
+    padding: 8px 4px;
   }
   #step-4 .curve-chart-wrapper {
     height: 260px;
+    margin: 6px -2px;
+    width: calc(100% + 4px);
+    padding: 2px 0;
   }
   #step-4 .floating-input-block {
     padding: 12px;
   }
 
-  /* Étape 3 : mêmes règles que la page 4 en très petit écran */
+  /* Étape 3 : cohérent avec l’étape 4 sur très petit écran */
   #step-3 .step-content {
-    padding: 16px;
+    padding: 10px 6px;
   }
   #step-3 .result-options {
     padding: 12px 0;
@@ -3560,7 +3595,7 @@ body.iframe-mode .simulator-container.iframe-container {
 /* Responsive graphique */
 @media (max-width: var(--bp-mobile)) {
   .evolution-panel {
-    padding: 12px;
+    padding: 10px 8px;
   }
 
   .evolution-header {
@@ -3590,8 +3625,9 @@ body.iframe-mode .simulator-container.iframe-container {
 
   .chart-container {
     height: 280px; /* Plus grand sur mobile pour meilleure lisibilité */
-    margin: 15px -12px; /* Étendre aux bords */
-    width: calc(100% + 24px);
+    margin: 12px -8px;
+    width: calc(100% + 16px);
+    padding: 6px 4px;
     border-radius: 0;
   }
 

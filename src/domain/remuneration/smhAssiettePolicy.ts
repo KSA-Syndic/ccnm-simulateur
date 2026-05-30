@@ -24,7 +24,4 @@
 
 /** Référence courte pour infobulles, PDF et aide contextuelle. */
 export const SMH_ASSIETTE_SOURCE_ARTICLE =
-  'CCNM art. 140 — rémunération du travail / sujétion (indicatif, dossier à confirmer)';
-
-/** Phrase compacte pour encarts HTML (assistant, arriérés). */
-export const SMH_ASSIETTE_REFERENCE_LINE = `${SMH_ASSIETTE_SOURCE_ARTICLE}. Les listes « Inclus » / « Exclus » suivent le paramétrage courant du moteur.`;
+  'CCNM art. 140 — rémunération du travail / sujétion (indicatif)';

@@ -208,31 +208,17 @@ defineExpose({ showSyndicatPrompt, showCelebration });
     </template>
   </AppModal>
 
-  <CelebrationOverlay :open="step === 'celebration'" @close="close">
-    <div class="celebration-icon" aria-hidden="true">✓</div>
-    <h3 class="celebration-title">
-      {{ POST_PDF_SYNDICAT.celebrationTitle }}
-    </h3>
-    <p class="celebration-text">
-      {{ POST_PDF_SYNDICAT.celebrationBody }}
-    </p>
-    <p class="celebration-hint">
-      {{ POST_PDF_SYNDICAT.celebrationNote }}
-    </p>
-    <div class="celebration-actions">
-      <button
-        v-if="hasSyndicatMail"
-        type="button"
-        class="book-btn btn-secondary"
-        @click="reopenSyndicat"
-      >
-        {{ POST_PDF_SYNDICAT.celebrationReopenSyndicat }}
-      </button>
-      <button type="button" class="book-btn btn-primary" @click="close">
-        {{ POST_PDF_SYNDICAT.celebrationFinish }}
-      </button>
-    </div>
-  </CelebrationOverlay>
+  <CelebrationOverlay
+    :open="step === 'celebration'"
+    :title="POST_PDF_SYNDICAT.celebrationTitle"
+    :body="POST_PDF_SYNDICAT.celebrationBody"
+    :hint="POST_PDF_SYNDICAT.celebrationNote"
+    :finish-label="POST_PDF_SYNDICAT.celebrationFinish"
+    :show-reopen-syndicat="hasSyndicatMail"
+    :reopen-syndicat-label="POST_PDF_SYNDICAT.celebrationReopenSyndicat"
+    @close="close"
+    @reopen-syndicat="reopenSyndicat"
+  />
 </template>
 
 <style scoped>

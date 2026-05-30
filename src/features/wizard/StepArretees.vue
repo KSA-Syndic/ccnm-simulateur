@@ -423,15 +423,15 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
           <p>
             Saisissez le <strong>total brut</strong> de vos bulletins (toutes rubriques). Le « dû »
             est le minimum conventionnel calculé par le simulateur (indicatif).
-          </p>
-          <p v-if="hasArreteesAssietteDetail" class="arretees-assiette-detail">
-            <span v-html="arreteesAssietteInclusHtml" />
             <AppTooltip
               :content="arreteesAssietteComparaisonTooltip"
               variant="result"
               position="top"
               trigger-aria-label="Aide sur la base de comparaison au minimum conventionnel"
             />
+          </p>
+          <p v-if="hasArreteesAssietteDetail" class="arretees-assiette-detail">
+            <span v-html="arreteesAssietteInclusHtml" />
             <template v-if="arreteesAssietteExclusHtml">
               <br />
               <span v-html="arreteesAssietteExclusHtml" />
@@ -442,12 +442,6 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
               <strong>Inclus :</strong><br />
               Base (grille du minimum hiérarchique).
             </span>
-            <AppTooltip
-              :content="arreteesAssietteComparaisonTooltip"
-              variant="result"
-              position="top"
-              trigger-aria-label="Aide sur la base de comparaison au minimum conventionnel"
-            />
             <br />
             <span>
               <strong>Exclus :</strong><br />
@@ -560,22 +554,5 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
 }
 .arretees-results-anchor {
   scroll-margin-top: 1.25rem;
-}
-
-.arretees-assiette-detail :deep(.app-tooltip-trigger) {
-  display: inline-flex;
-  vertical-align: middle;
-  margin-left: 0.35rem;
-}
-
-@media (max-width: 768px) {
-  .arretees-calc-sticky :deep(.book-btn) {
-    width: auto;
-    max-width: 100%;
-  }
-
-  .curve-host :deep(.curve-chart-wrapper) {
-    overflow: hidden;
-  }
 }
 </style>

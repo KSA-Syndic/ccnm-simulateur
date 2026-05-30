@@ -47,7 +47,6 @@ describe('arriérés — répartition mensuelle accord Kuhn', () => {
       nbMois: 13,
       smhSeul: false,
       agreement,
-      classe: 1,
     });
     expect(july.primesVerseesCeMois).toBe(525);
     expect(july.salaireMensuelDu).toBeGreaterThan(july.mensuelDuBase);
@@ -62,7 +61,6 @@ describe('arriérés — répartition mensuelle accord Kuhn', () => {
       nbMois: 13,
       smhSeul: false,
       agreement,
-      classe: 1,
     });
     expect(aug.primesVerseesCeMois).toBe(0);
   });
@@ -75,7 +73,6 @@ describe('arriérés — répartition mensuelle accord Kuhn', () => {
       nbMois: 13,
       smhSeul: false,
       agreement,
-      classe: 1,
     });
     const oct = calculateSalaireMensuelDuPourPeriode(input, {
       periodKey: '2025-10',
@@ -83,7 +80,6 @@ describe('arriérés — répartition mensuelle accord Kuhn', () => {
       nbMois: 13,
       smhSeul: false,
       agreement,
-      classe: 1,
     });
     expect(nov.estMois13eMois).toBe(true);
     expect(nov.primesVerseesCeMois).toBe(0);

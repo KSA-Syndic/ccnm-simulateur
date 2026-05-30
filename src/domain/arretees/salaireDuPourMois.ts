@@ -93,7 +93,6 @@ export function calculateSalaireMensuelDuPourPeriode(
     nbMois: number;
     smhSeul: boolean;
     agreement: Agreement | null;
-    classe: number;
   },
 ): SalaireMensuelDuCalcule {
   const [yStr, mStr] = params.periodKey.split('-');

@@ -8,7 +8,6 @@ import {
   computePdfRemunerationBreakdown,
   type WizardRemunerationInput,
 } from '../remuneration/compute';
-import { SMH_ASSIETTE_REFERENCE_LINE } from '../remuneration/smhAssiettePolicy';
 
 export type HintId = keyof typeof HINT_ENGINE;
 
@@ -93,7 +92,6 @@ export function buildSmhAssietteHintBlocks(
   if (exclusHtml) {
     blocks.push({ type: 'info', html: exclusHtml });
   }
-  blocks.push({ type: 'info', html: `<small>${SMH_ASSIETTE_REFERENCE_LINE}</small>` });
   return blocks;
 }
 

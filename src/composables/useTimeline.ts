@@ -3,8 +3,6 @@ import { CONSTANTS } from '@/domain/config/constants';
 import { calculateSalaireMensuelDuPourPeriode } from '@/domain/arretees/salaireDuPourMois';
 import type { Agreement } from '@/domain/agreements/interface';
 import type { WizardRemunerationInput } from '@/domain/remuneration/compute';
-import { getSmhForClasse } from '@/domain/remuneration/smh';
-import { roundToEuro } from '@/domain/utils/rounding';
 
 /** Premier mois couvert par la CCNM (entrée en vigueur) — borne basse de la frise. */
 function debutFriseMensuelle(dateEmbauche: Date): Date {
@@ -70,7 +68,6 @@ export function enrichPeriodesSalaireDuMensuel(
   periodes: ArreteePeriode[],
   params: EnrichPeriodesSalaireDuParams,
 ): void {
-  const rate = params.tempsPartiel ? Math.max(0.01, Number(params.tauxActivite) / 100) : 1;
   const cc = params.dateChangementClassification?.trim().slice(0, 7);
   const classeApres = params.classe;
   const classeAvant =
@@ -78,41 +75,31 @@ export function enrichPeriodesSalaireDuMensuel(
       ? Number(params.classeAvantChangement)
       : classeApres;
 
-  const hasAccord = params.agreement != null && params.wizardInput.agreement.accordActif;
-
   for (let i = 0; i < periodes.length; i++) {
     const p = periodes[i];
     if (!p?.periodKey) continue;
 
-    if (hasAccord) {
-      const calc = calculateSalaireMensuelDuPourPeriode(params.wizardInput, {
-        periodKey: p.periodKey,
-        dateEmbauche: params.dateEmbauche,
-        nbMois: params.nbMois,
-        smhSeul: params.smhSeul,
-        agreement: params.agreement,
-        classe: classeApres,
-      });
-      periodes[i] = {
-        ...p,
-        salaireDu: calc.salaireMensuelDu,
-        mensuelDuBase: calc.mensuelDuBase,
-        primesVerseesCeMois: calc.primesVerseesCeMois,
-        primesVerseesLabels: calc.primesVerseesLabels,
-        estMois13eMois: calc.estMois13eMois,
-      };
-      continue;
-    }
+    const cl = cc && p.periodKey < cc ? classeAvant : classeApres;
+    const wizardInputForPeriod =
+      cl !== params.wizardInput.classe
+        ? { ...params.wizardInput, mode: 'manual' as const, classe: cl }
+        : params.wizardInput;
 
-    const y = Number(p.periodKey.slice(0, 4));
-    let cl = classeApres;
-    if (cc && p.periodKey < cc) cl = classeAvant;
-    const annual = getSmhForClasse(cl, y, params.experiencePro);
-    periodes[i] = {
-      label: p.label,
+    const calc = calculateSalaireMensuelDuPourPeriode(wizardInputForPeriod, {
       periodKey: p.periodKey,
-      salaireDu: roundToEuro((annual * rate) / 12),
-      salaireVerse: p.salaireVerse,
+      dateEmbauche: params.dateEmbauche,
+      nbMois: params.nbMois,
+      smhSeul: params.smhSeul,
+      agreement: params.agreement,
+    });
+
+    periodes[i] = {
+      ...p,
+      salaireDu: calc.salaireMensuelDu,
+      mensuelDuBase: calc.mensuelDuBase,
+      primesVerseesCeMois: calc.primesVerseesCeMois,
+      primesVerseesLabels: calc.primesVerseesLabels,
+      estMois13eMois: calc.estMois13eMois,
     };
   }
 }
