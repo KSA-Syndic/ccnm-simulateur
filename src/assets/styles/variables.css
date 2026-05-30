@@ -2,13 +2,6 @@
  * Design tokens du simulateur (charte CFDT orange).
  */
 :root {
-  --bp-mobile: 768px;
-  --bp-mobile-sm: 480px;
-  /* Grilles / compose (modale syndicat, etc.) */
-  --bp-tight: 420px;
-  --bp-tight-from: 421px;
-  --bp-webmail-stack: 520px;
-
   --color-primary: #e15c12;
   --color-primary-dark: #c04e0f;
   --color-primary-light: #f4a261;

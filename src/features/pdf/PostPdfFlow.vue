@@ -315,7 +315,7 @@ defineExpose({ showSyndicatPrompt, showCelebration });
   hyphens: auto;
 }
 
-@media (min-width: var(--bp-mobile-sm)) {
+@media (min-width: 480px) {
   .syndicat-compose-subject {
     white-space: nowrap;
     overflow: hidden;
@@ -465,13 +465,13 @@ defineExpose({ showSyndicatPrompt, showCelebration });
   display: block;
 }
 
-@media (max-width: var(--bp-webmail-stack)) {
+@media (max-width: 520px) {
   .syndicat-webmail-buttons {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: var(--bp-tight)) {
+@media (max-width: 420px) {
   .syndicat-compose-row {
     grid-template-columns: 1fr;
     gap: 0.35rem 0;
@@ -482,7 +482,7 @@ defineExpose({ showSyndicatPrompt, showCelebration });
   }
 }
 
-@media (min-width: var(--bp-tight-from)) and (max-width: var(--bp-mobile-sm)) {
+@media (min-width: 421px) and (max-width: 480px) {
   .syndicat-compose-row {
     grid-template-columns: 3.5rem 1fr;
   }
