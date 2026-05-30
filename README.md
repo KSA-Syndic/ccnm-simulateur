@@ -163,9 +163,7 @@ L'outil peut être intégré dans n'importe quel site via **iframe** :
 **Paramètres URL disponibles :**
 
 - `?accord=<id>` : Sélectionner un accord d'entreprise (id défini dans le fichier d'accord, ex. kuhn)
-- `?bgcolor=…` : couleur de fond autour du simulateur.
-  - **À utiliser** : un nom CSS (`white`, `black`…) ou un hex avec `#` écrit **`%23`** dans l’URL (ex. `?bgcolor=%23ffffff`, voir l’iframe ci-dessus). Un `#` littéral dans la partie « requête » coupe l’URL : le navigateur le traite comme début de **fragment**, et `bgcolor` ne reçoit plus la couleur.
-  - **Secours** : si le fragment d’URL est **uniquement** `#rgb` ou `#rrggbb`, cette couleur est appliquée quand aucun `bgcolor` valide n’est présent dans la requête.
+- `?bgcolor=…` : couleur de fond autour du simulateur (toute valeur CSS valide pour `background-color` : `white`, `#e8e8e8`, etc.). **Dans un lien ou un `src` d’iframe**, mettez le **`#`** des hex en **`%23`** (ex. `bgcolor=%23ffffff`) : c’est la forme **fiable**, comme dans l’exemple ci-dessus. Si l’URL est écrite avec `?bgcolor=#ffffff` sans encoder, le navigateur place souvent `#ffffff` dans le **fragment** ; le simulateur lit alors ce fragment **s’il vaut uniquement** un hex `#RGB` ou `#RRGGBB` (sans chemin ni autre texte après le `#`).
 - `?iframe=true` : Mode iframe (détection automatique si la page est déjà dans une iframe)
 
 ## ⚖️ Avertissement Légal
