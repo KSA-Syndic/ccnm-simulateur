@@ -20,22 +20,3 @@
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
-
-/* Footer mobile : retours à la ligne, pas de débordement */
-@media (max-width: var(--bp-mobile)) {
-  .simulator-footer .footer-line {
-    flex-direction: column;
-    align-items: center;
-    padding-inline: 4px;
-  }
-
-  .simulator-footer .footer-item {
-    white-space: normal;
-    text-align: center;
-    max-width: 100%;
-  }
-
-  .simulator-footer .footer-line--secondary .footer-item {
-    font-size: 0.85em;
-  }
-}

@@ -209,7 +209,7 @@ function onKeydown(e: KeyboardEvent) {
   margin: 6px 0;
 }
 
-@media (max-width: var(--bp-mobile)) {
+@media (max-width: 768px) {
   #step-4 .legal-guide-section {
     margin-top: 16px;
     padding: 14px 12px 16px;

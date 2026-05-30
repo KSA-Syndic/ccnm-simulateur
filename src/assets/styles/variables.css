@@ -1,9 +1,7 @@
 /**
  * Design tokens du simulateur (charte CFDT orange).
- * Breakpoints : valeurs partagées pour les @media (évoluer ensemble).
  */
 :root {
-  /* Breakpoints (mobile / petit écran) */
   --bp-mobile: 768px;
   --bp-mobile-sm: 480px;
   /* Grilles / compose (modale syndicat, etc.) */
