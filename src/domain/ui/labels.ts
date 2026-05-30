@@ -213,7 +213,7 @@ export const SIMULATOR_SHELL = {
   /** Pied de page — index UIMM. */
   footerConventionTextsLinkLabel: 'Textes conventionnels (UIMM)',
   footerMainLine:
-    'Simulateur de classification et rémunération — Convention collective métallurgie.',
+    'Simulateur de classification et rémunération — Convention collective de la métallurgie.',
   footerDisclaimer:
     'Outil indicatif — ne remplace pas un conseil juridique ou social personnalisé.',
   privacyLinkLabel: 'Données personnelles & mesure d’audience',
