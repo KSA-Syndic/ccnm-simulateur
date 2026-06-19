@@ -10,7 +10,10 @@
  * Le drapeau `inclusDansSMH` sur chaque `ElementDef` matérialise cette distinction pour
  * l’indicateur « assiette de comparaison », les sous-lignes « dont… » et les agrégats PDF :
  * `true` = pris en compte dans la vérification au SMH telle que paramétrée ici ; `false` = versé
- * en sus du minimum conventionnel affiché.
+ * en plus du minimum conventionnel affiché.
+ *
+ * Les primes de sujétion (équipe, habillage, majorations…) sont verrouillées hors assiette via
+ * `smhConformity.ts`, indépendamment d’une définition accord erronée.
  *
  * Les majorations d’heures supplémentaires (+25 % / +50 %) suivent la même logique de périodicité
  * que les autres lignes « heures mensuelles » du moteur : montant mensuel reconstitué puis ×12

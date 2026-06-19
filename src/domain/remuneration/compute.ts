@@ -12,6 +12,7 @@ import { enrichResolvedElementsTooltips } from '../tooltip/resultElementTooltips
 import { buildComputeContext, resolveBySubstitution } from './engine';
 import { getSmhForClasse } from './smh';
 import { roundHourlyRate, roundToCents } from '../utils/rounding';
+import { computeSmhAssietteVerif, detailContributesToSmhAssiette } from './smhConformity';
 import type { ComputeContext, ElementResult } from '../types';
 
 /** Résultat agrégé du calcul annuel (mode complet) — champs exposés à l’UI et aux tests de parité. */
@@ -219,20 +220,17 @@ export function computePdfRemunerationBreakdown(
 ): PdfRemunerationBreakdown {
   const resolved = resolveWizardRemunerationElements(input);
   const agg = aggregateRemunerationDetails(resolved.details, resolved.baseSMH, nbMois);
-  const inSmhSum = resolved.details
-    .filter((d) => d.amount > 0 && d.inclusDansSMH === true)
-    .reduce((s, d) => s + d.amount, 0);
+  const totalAssietteSmhIndicatif = roundToCents(
+    computeSmhAssietteVerif(resolved.baseSMH, resolved.details),
+  );
   return {
     ...resolved,
     agg,
-    totalAssietteSmhIndicatif: roundToCents(resolved.baseSMH + inSmhSum),
-    inclusSmhLabels: uniqueLabelsForFilter(
-      resolved.details,
-      (d) => d.amount > 0 && d.inclusDansSMH === true,
-    ),
+    totalAssietteSmhIndicatif,
+    inclusSmhLabels: uniqueLabelsForFilter(resolved.details, detailContributesToSmhAssiette),
     exclusSmhLabels: uniqueLabelsForFilter(
       resolved.details,
-      (d) => d.amount > 0 && d.inclusDansSMH !== true,
+      (d) => d.amount > 0 && !detailContributesToSmhAssiette(d),
     ),
   };
 }

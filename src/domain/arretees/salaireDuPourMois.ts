@@ -12,6 +12,7 @@ import type { ComputeContext, ElementDef } from '../types';
 import { computeMensuelDueProfile } from './mensuelDue';
 import { computeSalaireProrataEntree } from '../utils/date';
 import { roundToEuro } from '../utils/rounding';
+import { computeSmhAssietteVerif } from '../remuneration/smhConformity';
 
 /** Ancienneté en années complètes à la date du mois (depuis l'embauche). */
 export function ancienneteAnneesPourMois(dateMois: Date, dateEmbauche: Date): number {
@@ -53,10 +54,7 @@ function montantAnnuelAssietteSmh(
   overrides?: WizardComputeOverrides,
 ): number {
   const resolved = resolveWizardRemunerationElements(input, overrides);
-  const inSmhSum = resolved.details
-    .filter((d) => d.amount > 0 && d.inclusDansSMH === true)
-    .reduce((s, d) => s + d.amount, 0);
-  return roundToEuro(resolved.baseSMH + inSmhSum);
+  return computeSmhAssietteVerif(resolved.baseSMH, resolved.details);
 }
 
 /** Salaire annuel dû pour un mois (référence année civile + ancienneté à cette date). */

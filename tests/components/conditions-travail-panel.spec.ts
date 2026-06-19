@@ -45,6 +45,54 @@ describe('ConditionsTravailPanel', () => {
     w.unmount();
   });
 
+  it('sans accord : affiche la case Travail en équipe pour un non-cadre', async () => {
+    const pinia = createFreshPinia();
+    useWizardStore(pinia).$patch({ classe: 5 });
+    useSituationStore(pinia).$patch({ forfait: '35h' });
+    useAgreementStore(pinia).$patch({ accordActif: false, activeAccordId: null, inputs: {} });
+
+    const w = mount(ConditionsTravailPanel, {
+      global: {
+        plugins: [pinia],
+        stubs: {
+          HourlyPrimesList: { template: '<div />' },
+          AutresPrimesNationalesList: { template: '<div />' },
+        },
+      },
+      attachTo: document.body,
+    });
+
+    const details = w.get('details#conditions-travail');
+    (details.element as HTMLDetailsElement).open = true;
+    await w.vm.$nextTick();
+
+    expect(w.text()).toMatch(/Travail en équipe/);
+    w.unmount();
+  });
+
+  it('Kuhn actif : masque la case CCNM Travail en équipe (substitution accord)', async () => {
+    const pinia = createFreshPinia();
+    useWizardStore(pinia).$patch({ classe: 5 });
+    useSituationStore(pinia).$patch({ forfait: '35h' });
+    useAgreementStore(pinia).$patch({ activeAccordId: 'kuhn', accordActif: true, inputs: {} });
+
+    const w = mount(ConditionsTravailPanel, {
+      global: {
+        plugins: [pinia],
+        stubs: { HourlyPrimesList: { template: '<div class="hourly-stub" />' } },
+      },
+      attachTo: document.body,
+    });
+
+    const details = w.get('details#conditions-travail');
+    (details.element as HTMLDetailsElement).open = true;
+    await w.vm.$nextTick();
+
+    expect(w.text()).not.toMatch(/^Travail en équipe$/m);
+    expect(w.find('.hourly-stub').exists()).toBe(true);
+    w.unmount();
+  });
+
   it('Kuhn actif : majoration nuit poste matin + pastilles accord', async () => {
     const pinia = createFreshPinia();
     useWizardStore(pinia).$patch({ classe: 5 });

@@ -1,4 +1,5 @@
 import { computeSalaireProrataEntree } from '../utils/date';
+import { roundToCents, roundToEuro } from '../utils/rounding';
 
 export interface ArreteesMoisDetail {
   periode: string;
@@ -108,9 +109,9 @@ export function calculerArreteesMoisParMois(params: ArreteesParams): ArreteesRes
     const ecart = Math.max(0, entry.totalDu - entry.totalReel);
     detailsParAnnee.push({
       annee,
-      totalDu: Math.round(entry.totalDu * 100) / 100,
-      totalReel: Math.round(entry.totalReel * 100) / 100,
-      ecart: Math.round(ecart * 100) / 100,
+      totalDu: roundToCents(entry.totalDu),
+      totalReel: roundToCents(entry.totalReel),
+      ecart: roundToCents(ecart),
       nbMoisSaisis: entry.mois.length,
       mois: entry.mois,
     });
@@ -118,7 +119,7 @@ export function calculerArreteesMoisParMois(params: ArreteesParams): ArreteesRes
   }
 
   return {
-    totalArretees: Math.round(totalArretees),
+    totalArretees: roundToEuro(totalArretees),
     detailsArretees: detailsTousMois.filter((d) => d.difference > 0),
     detailsTousMois,
     detailsParAnnee,

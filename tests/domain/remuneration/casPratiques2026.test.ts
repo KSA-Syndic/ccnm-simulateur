@@ -134,7 +134,7 @@ describe('Cas pratiques 2026 (moteur wizard)', () => {
       expect(amountBySemanticId(resolved.details, SEMANTIC_ID.PRIME_ANCIENNETE)).toBe(0);
     });
 
-    it('astreinte jour de repos comptée en sus', () => {
+    it('astreinte jour de repos comptée en plus', () => {
       const details = computeDetails(input);
       expect(
         amountBySemanticId(details, SEMANTIC_ID.PRIME_ASTREINTE_PERIODE_JOUR_REPOS),

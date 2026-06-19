@@ -399,6 +399,12 @@ export const WIZARD_TOOLTIPS = {
       'Majoration minimale pour le rachat de jours de repos lorsque vous êtes en forfait jours (contingent et taux selon paramètres du simulateur).',
     sourceArticle: 'Code du travail L3121-59',
   },
+  travailEquipe: {
+    title: 'Travail en équipe (équipes successives)',
+    description:
+      'Prime conventionnelle pour travail en équipes successives : 30 minutes du taux horaire de base par poste, sur la base de 22 postes par mois (temps plein). Versée en plus du minimum conventionnel.',
+    sourceArticle: 'CCNM Art. 145 ; art. 140 (hors assiette SMH)',
+  },
   anciennete: {
     title: "Ancienneté dans l'entreprise",
     description:
@@ -430,7 +436,7 @@ export const WIZARD_TOOLTIPS = {
   arreteesAssietteComparaison: {
     title: 'Base de comparaison au minimum conventionnel',
     description:
-      "Inclus : la base (grille SMH) et les rubriques paramétrées comme « rémunération du travail » (résultats, garanties assimilées au bulletin, prime d'ancienneté d'entreprise le cas échéant, etc.).\nExclus : la prime d'ancienneté de branche (CCNM) et les sujétions (nuit, équipes successives, dimanche, astreintes, temps annexes, paniers…) ainsi que les majorations d'heures supplémentaires : elles s'ajoutent en sus du minimum.\nLes listes « Inclus » et « Exclus » sous l’encart correspondent aux rubriques retenues pour cette simulation.",
+      "Inclus : la base (grille SMH) et les rubriques paramétrées comme « rémunération du travail » (résultats, garanties assimilées au bulletin, prime d'ancienneté d'entreprise le cas échéant, etc.).\nExclus : la prime d'ancienneté de branche (CCNM) et les sujétions (nuit, équipes successives, dimanche, astreintes, temps annexes, paniers…) ainsi que les majorations d'heures supplémentaires : elles s'ajoutent en plus du minimum.\nLes listes « Inclus » et « Exclus » sous l’encart correspondent aux rubriques retenues pour cette simulation.",
     sourceArticle: SMH_ASSIETTE_SOURCE_ARTICLE,
   },
   resultatMensuel: {

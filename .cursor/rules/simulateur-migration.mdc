@@ -22,9 +22,9 @@ globs:
 - `decimal.js` obligatoire pour tout calcul de salaire, taux, heures, jours, ancienneté.
 - Configuration globale : `Decimal.set({ rounding: Decimal.ROUND_HALF_UP, precision: 20 })` dans `src/main.ts` et `tests/setup.ts`.
 - Niveaux d'arrondi (centralisés dans `src/domain/utils/rounding.ts`) :
-  - Bruts horaires/journaliers : 4 décimales internes.
-  - Mensuels intermédiaires : `roundToCents` (2 décimales).
-  - Annuels et affichage : `roundToEuro` (entier).
+  - Bruts horaires/journaliers : 4 décimales internes (plafond).
+  - Mensuels intermédiaires : `roundToCents` (2 décimales, plafond).
+  - Annuels et affichage : `roundToEuro` (entier plafond).
 - Interdiction d'utiliser `Math.round`, `Math.floor`, `Math.ceil` directement sur des montants. Toujours passer par `roundToCents`/`roundToEuro`.
 
 ## 3. Textes et internationalisation

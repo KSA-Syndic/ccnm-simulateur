@@ -291,7 +291,7 @@ export const CONFIG: Config = ConfigSchema.parse({
     rolesSimulation: {
       horsAssietteComparaisonSMH: true,
       noteAssimilee:
-        "Distinction indicative CCNM art. 140 : rémunération du travail (incluse dans l'assiette de comparaison au SMH telle que paramétrée) vs sujétion ou organisation (nuit, équipes, dimanche, astreintes hors TTE, temps annexes, frais…) et majorations d'heures supplémentaires, comptées en sus. Jurisprudence récente sur l'abus d'absorption (déc. 2025) : à relier au dossier ; paramétrage du simulateur, pas conseil juridique.",
+        "Distinction indicative CCNM art. 140 : rémunération du travail (incluse dans l'assiette de comparaison au SMH telle que paramétrée) vs sujétion ou organisation (nuit, équipes, dimanche, astreintes hors TTE, temps annexes, frais…) et majorations d'heures supplémentaires, comptées en plus. Jurisprudence récente sur l'abus d'absorption (déc. 2025) : à relier au dossier ; paramétrage du simulateur, pas conseil juridique.",
     },
   },
   TAUX_ANCIENNETE: {

@@ -1,6 +1,7 @@
 import Decimal from 'decimal.js';
 import { CONFIG } from '../config';
-import { roundHourlyRate } from '../utils/rounding';
+import { roundHourlyRate, roundToCents, annualFromMonthly } from '../utils/rounding';
+import { applySmhInclusionPolicy, applySmhInclusionPolicyToResult } from './smhConformity';
 import { getAccordInput } from '../agreements/interface';
 import {
   type ComputeRef,
@@ -10,7 +11,6 @@ import {
   type ElementResult,
   type SubstitutionDecl,
 } from '../types';
-import { roundToCents, annualFromMonthly } from '../utils/rounding';
 
 // ── Ref resolution ──
 
@@ -86,7 +86,7 @@ export function computeElement(def: ElementDef, ctx: ComputeContext): ElementRes
     kind: def.kind,
     source: def.source,
     semanticId: def.semanticId,
-    inclusDansSMH: resolveSmhInclusion(def),
+    inclusDansSMH: applySmhInclusionPolicy(def, resolveSmhInclusion(def)),
     isAgreementSpecific: def.source === 'accord',
   };
 
@@ -207,7 +207,7 @@ function normalizeIfSuperiorSmhResult(
         ? computeElement(conventionDef, ctx).amount
         : 0;
   const effectiveIncluded = result.amount > conv;
-  return { ...result, inclusDansSMH: effectiveIncluded };
+  return applySmhInclusionPolicyToResult({ ...result, inclusDansSMH: effectiveIncluded });
 }
 
 export function resolveBySubstitution(

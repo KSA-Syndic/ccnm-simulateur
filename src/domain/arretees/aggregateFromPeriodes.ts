@@ -4,6 +4,8 @@
  * Aligné sur l’esprit de `calculerArreteesMoisParMois` (Art. 140 CCNM) sans recalculer le dû mois par mois.
  */
 
+import { roundToCents, roundToEuro } from '../utils/rounding';
+
 export interface ArreteesAnneeStub {
   annee: number;
   nbMoisSaisis: number;
@@ -43,9 +45,9 @@ export function aggregateArreteesParAnneeFromPeriodeLabels(
   const detailsParAnnee: ArreteesAnneeStub[] = [...map.entries()]
     .sort(([a], [b]) => a - b)
     .map(([annee, e]) => {
-      const totalDu = Math.round(e.totalDu * 100) / 100;
-      const totalReel = Math.round(e.totalReel * 100) / 100;
-      const ecart = Math.round(Math.max(0, totalDu - totalReel) * 100) / 100;
+      const totalDu = roundToCents(e.totalDu);
+      const totalReel = roundToCents(e.totalReel);
+      const ecart = roundToCents(Math.max(0, totalDu - totalReel));
       return {
         annee,
         nbMoisSaisis: e.nbMoisSaisis,
@@ -55,7 +57,7 @@ export function aggregateArreteesParAnneeFromPeriodeLabels(
       };
     });
 
-  const totalArretees = Math.round(detailsParAnnee.reduce((s, r) => s + r.ecart, 0));
+  const totalArretees = roundToEuro(detailsParAnnee.reduce((s, r) => s + r.ecart, 0));
 
   return { detailsParAnnee, totalArretees };
 }

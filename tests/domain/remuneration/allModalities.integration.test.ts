@@ -58,6 +58,41 @@ function fullModalitiesInput(
   };
 }
 
+describe('prime équipe CCNM sans accord', () => {
+  it('produit une ligne équipe quand travailEquipe est activé dans modalityState', () => {
+    const { details } = resolveWizardRemunerationElements({
+      mode: 'manual',
+      groupe: 'B',
+      classe: 5,
+      scores: {},
+      situation: {
+        anciennete: 0,
+        pointTerritorial: 5.9,
+        tempsPartiel: false,
+        tauxActivite: 100,
+        forfait: '35h',
+        experiencePro: 0,
+        travailNuit: false,
+        heuresNuit: 0,
+        travailDimanche: false,
+        heuresDimanche: 0,
+        travailHeuresSup: false,
+        heuresSup: 0,
+        travailJoursSupForfait: false,
+        joursSupForfait: 0,
+        nationalPrimeOverrides: {},
+        modalityState: { travailEquipe: true },
+      },
+      agreement: { accordActif: false, activeAccordId: null, inputs: {} },
+    });
+
+    const equipe = details.find((d) => d.semanticId === 'primeEquipe');
+    expect(equipe).toBeDefined();
+    expect(equipe!.amount).toBeGreaterThan(0);
+    expect(equipe!.inclusDansSMH).toBe(false);
+  });
+});
+
 describe('toutes modalités cochées avec quantités > 0', () => {
   it('produit une ligne de détail pour chaque famille saisie', () => {
     const { details } = resolveWizardRemunerationElements(fullModalitiesInput());

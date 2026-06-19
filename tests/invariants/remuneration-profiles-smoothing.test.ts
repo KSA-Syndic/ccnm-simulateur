@@ -20,8 +20,8 @@ describe('Rémunération — lissage 12 / 13 mois (fixtures)', () => {
       expect(agg12.totalAnnual).toBe(agg13.totalAnnual);
       expect(agg12.totalMonthly).toBe(roundToCents(agg12.totalAnnual / 12));
       expect(agg13.totalMonthly).toBe(roundToCents(agg13.totalAnnual / 13));
-      expect(Math.abs(agg12.totalMonthly * 12 - agg12.totalAnnual)).toBeLessThanOrEqual(0.06);
-      expect(Math.abs(agg13.totalMonthly * 13 - agg13.totalAnnual)).toBeLessThanOrEqual(0.07);
+      expect(Math.abs(agg12.totalMonthly * 12 - agg12.totalAnnual)).toBeLessThanOrEqual(0.12);
+      expect(Math.abs(agg13.totalMonthly * 13 - agg13.totalAnnual)).toBeLessThanOrEqual(0.13);
     });
   }
 });

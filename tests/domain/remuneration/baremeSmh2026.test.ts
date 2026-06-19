@@ -21,15 +21,15 @@ describe('Barème SMH 2026 (CONFIG)', () => {
     expect(SMH_GRID_2026[18]).toBe(68_450);
   });
 
-  it('taux horaire = SMH annuel / 12 / 151,67 h (arrondi 2 décimales, formule simulateur)', () => {
+  it('taux horaire = SMH annuel / 12 / 151,67 h (4 déc. plafond, formule simulateur)', () => {
     for (let classe = 1; classe <= 18; classe += 1) {
       const annuel = SMH_GRID_2026[classe]!;
       const brut = annuel / 12 / HEURES_MOIS_REF;
       expect(tauxHoraireSmhAnnuel(annuel)).toBe(roundHourlyRate(brut));
     }
-    expect(tauxHoraireSmhAnnuel(21_980)).toBe(12.08);
-    expect(tauxHoraireSmhAnnuel(24_510)).toBe(13.47);
-    expect(tauxHoraireSmhAnnuel(35_200)).toBe(19.34);
+    expect(tauxHoraireSmhAnnuel(21_980)).toBe(12.0767);
+    expect(tauxHoraireSmhAnnuel(24_510)).toBe(13.4668);
+    expect(tauxHoraireSmhAnnuel(35_200)).toBe(19.3403);
   });
 
   it('barème débutants F11 — expérience pro < 6 ans', () => {

@@ -1,4 +1,4 @@
-import { roundToCents } from '../utils/rounding';
+import { roundToCents, roundToEuro } from '../utils/rounding';
 
 const FR = 'fr-FR';
 const NBSP_REGEX = /\u202f/g;
@@ -23,9 +23,9 @@ export function formatHeuresDetail(heures: number): string {
     .replace(NBSP_REGEX, ' ');
 }
 
-/** Affichage en euros entiers : arrondi sur le montant ramené au centime (pas sur des sous-totaux intermédiaires déjà tronqués). */
+/** Affichage en euros entiers : plafond sur le montant ramené au centime. */
 export function formatMoney(amount: number): string {
-  const n = Math.round(roundToCents(amount));
+  const n = roundToEuro(amount);
   const s = new Intl.NumberFormat(FR, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,

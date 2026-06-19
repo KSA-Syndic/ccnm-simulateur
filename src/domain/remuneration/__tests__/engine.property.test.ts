@@ -71,13 +71,14 @@ describe('Property-based tests — engine', () => {
     expect(once).toBe(twice);
   });
 
-  // P4: annualFromMonthly = roundToCents(12 × mensuel)
+  // P4: annualFromMonthly = plafond centimes de 12 × mensuel (écart ≤ 1 centime)
   fcTest.prop([fc.double({ min: 0, max: 100000, noNaN: true })])(
     'annualFromMonthly equals cent rounding of 12x monthly',
     (monthly) => {
       const annual = annualFromMonthly(monthly);
       expect(Number.isFinite(annual)).toBe(true);
-      expect(Math.abs(annual - monthly * 12)).toBeLessThanOrEqual(0.005);
+      expect(annual).toBeGreaterThanOrEqual(monthly * 12 - 1e-9);
+      expect(annual - monthly * 12).toBeLessThanOrEqual(0.01);
     },
   );
 
