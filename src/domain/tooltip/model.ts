@@ -68,20 +68,20 @@ export function formatTooltipHtml(content: TooltipContent, variant: TooltipVaria
     html += `<div class="tooltip-legal-fragment">${content.legalBlockHtml}</div>`;
   }
 
-  if (content.sourceArticle && content.source) {
-    const badgeClass = escapeBadgeClass(content.source);
-    html += `<div class="tooltip-source">`;
-    html += `<span class="tooltip-badge tooltip-badge-${badgeClass}">${escapeHtml(content.source)}</span>`;
-    html += `<span class="tooltip-ref">${escapeHtml(content.sourceArticle)}</span>`;
-    html += `</div>`;
-  }
-
   if (variant === 'result' && content.calculationSteps?.length) {
     html += '<div class="tooltip-calc">';
     for (const step of content.calculationSteps) {
       html += `<div class="tooltip-calc-line"><span>${escapeHtml(step.label)}</span><span>${escapeHtml(step.value)}</span></div>`;
     }
     html += '</div>';
+  }
+
+  if (content.sourceArticle && content.source) {
+    const badgeClass = escapeBadgeClass(content.source);
+    html += `<div class="tooltip-source">`;
+    html += `<span class="tooltip-badge tooltip-badge-${badgeClass}">${escapeHtml(content.source)}</span>`;
+    html += `<span class="tooltip-ref">${escapeHtml(content.sourceArticle)}</span>`;
+    html += `</div>`;
   }
 
   html += '</div>';

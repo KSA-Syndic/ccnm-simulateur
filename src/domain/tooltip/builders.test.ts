@@ -162,5 +162,27 @@ describe('tooltip/builders', () => {
     expect(html).toContain('Accord d&#39;entreprise Kuhn');
     expect(html).toContain('CCNM art. 140');
     expect(html).not.toContain('Convention collective nationale de la métallurgie (CCNM)');
+    expect(html).not.toContain('Référence :');
+    expect(html).toContain('tooltip-source');
+  });
+
+  it('buildResultTooltipContent — bloc Source après base de calcul', () => {
+    const html = buildResultTooltipContent(
+      cfg,
+      'CCNM',
+      {
+        label: 'Prime',
+        value: 100,
+        sourceArticle: 'CCNM Art. 145',
+        conditionTexte: 'Heures mensuelles × taux horaire.',
+        tooltipDetail: 'Détail du calcul.',
+      },
+      'CCNM',
+    );
+    const iBase = html.indexOf('Base de calcul');
+    const iSource = html.indexOf('tooltip-source');
+    expect(iBase).toBeGreaterThan(-1);
+    expect(iSource).toBeGreaterThan(iBase);
+    expect(html).not.toContain('Référence :');
   });
 });

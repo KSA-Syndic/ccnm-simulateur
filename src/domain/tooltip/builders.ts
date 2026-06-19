@@ -82,9 +82,9 @@ export function classifyOriginFromSourceArticle(
 }
 
 export interface BuildLegalTooltipOptions {
-  /** Référence / article (affichage compact sous la description, avant lien externe éventuel). */
+  /** Référence / article — bloc « Source » toujours en dernière position. */
   sourceArticle?: string;
-  /** Lien externe sous le paragraphe principal, avant le bloc Source (URL et libellé sourcés). */
+  /** Lien externe sous le paragraphe principal, avant le bloc Source. */
   externalLink?: { href: string; label: string };
 }
 
@@ -354,11 +354,11 @@ export function buildResultTooltipContent(
       descriptionLines.push(defaultLine);
     }
   }
-  if (detail?.sourceArticle) {
-    descriptionLines.push(`Référence : ${detail.sourceArticle}`);
-  }
   if (detail?.conditionTexte) {
     descriptionLines.push(`Base de calcul : ${detail.conditionTexte}`);
   }
-  return buildLegalTooltipContent(cfg, title, descriptionLines.filter(Boolean).join('\n'));
+  const sourceArticle = String(detail?.sourceArticle || '').trim() || undefined;
+  return buildLegalTooltipContent(cfg, title, descriptionLines.filter(Boolean).join('\n'), {
+    ...(sourceArticle ? { sourceArticle } : {}),
+  });
 }
