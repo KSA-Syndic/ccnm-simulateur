@@ -321,7 +321,7 @@ export const WIZARD_LABELS = {
   resultPageSubtitle:
     'Rémunération globale due par votre employeur (salaire minima, primes et majorations).',
   resultatAnnuel: 'bruts / an',
-  resultatMensuel: 'bruts / mois',
+  resultatMensuel: 'bruts / mois en moyenne',
   detailCalcul: 'Détail du calcul',
   evolutionInflation: "📈 Évolution par rapport à l'inflation",
   evolutionAugmentationPrompt:
@@ -402,8 +402,8 @@ export const WIZARD_TOOLTIPS = {
   anciennete: {
     title: "Ancienneté dans l'entreprise",
     description:
-      "Durée d'emploi continu chez votre employeur actuel (depuis la date d'embauche). Elle conditionne notamment le droit à la prime d'ancienneté (seuil et barème selon CCNM ou accord applicable).",
-    sourceArticle: 'CCNM Art. 142-143 ; accord si applicable',
+      "Durée d'emploi continu chez votre employeur actuel (depuis la date d'embauche), calculée selon les règles de l'article 3 de la CCNM (reprise d'ancienneté, périodes assimilées). Elle conditionne notamment le droit à la prime d'ancienneté (seuil et barème selon CCNM ou accord applicable).",
+    sourceArticle: 'CCNM Art. 3 ; Art. 142-143 ; accord si applicable',
   },
   experiencePro: {
     title: 'Expérience professionnelle',
@@ -432,6 +432,12 @@ export const WIZARD_TOOLTIPS = {
     description:
       "Inclus : la base (grille SMH) et les rubriques paramétrées comme « rémunération du travail » (résultats, garanties assimilées au bulletin, prime d'ancienneté d'entreprise le cas échéant, etc.).\nExclus : la prime d'ancienneté de branche (CCNM) et les sujétions (nuit, équipes successives, dimanche, astreintes, temps annexes, paniers…) ainsi que les majorations d'heures supplémentaires : elles s'ajoutent en sus du minimum.\nLes listes « Inclus » et « Exclus » sous l’encart correspondent aux rubriques retenues pour cette simulation.",
     sourceArticle: SMH_ASSIETTE_SOURCE_ARTICLE,
+  },
+  resultatMensuel: {
+    title: 'Montant mensuel indicatif',
+    description:
+      "Ce montant est une moyenne obtenue en divisant le minimum annuel garanti (SMH) par le nombre de mois. Le versement mensuel effectif peut différer selon le calendrier de paie de l'entreprise (13ᵉ mois, primes versées à date fixe, etc.). Seul le total annuel fait foi pour vérifier la conformité au minimum conventionnel.",
+    sourceArticle: 'CCNM — grille SMH (base annuelle)',
   },
   evolutionInflation: {
     title: "Évolution par rapport à l'inflation",

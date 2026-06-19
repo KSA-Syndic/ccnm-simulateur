@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { type AggregatedRemuneration } from '../../domain/remuneration/aggregate';
 import { formatMoney } from '../../domain/utils/format';
+import { roundHourlyRate, roundToEuro } from '../../domain/utils/rounding';
 import { AppTooltip } from '../../components/ui';
 import { useUiStore } from '../../stores/ui';
 import { useSituationStore } from '../../stores/situation';
@@ -10,7 +11,11 @@ import { useWizardStore } from '../../stores/wizard';
 import { CONFIG } from '../../domain/config';
 import { isCadre } from '../../domain/classification/engine';
 import { getSmhHourlyBaseRate, getSmhDailyBaseRate } from '../../domain/remuneration/rates';
-import { WIZARD_LABELS, RESULT_SALAIRE_BASE_TOOLTIP } from '../../domain/ui/labels';
+import {
+  WIZARD_LABELS,
+  WIZARD_TOOLTIPS,
+  RESULT_SALAIRE_BASE_TOOLTIP,
+} from '../../domain/ui/labels';
 import { getAgreement } from '../../domain/agreements/registry';
 import AccordBadge from '../agreement-options/AccordBadge.vue';
 import { buildLegalTooltipContent, getAccordNomCourt } from '../../domain/tooltip/builders';
@@ -80,8 +85,8 @@ const resultContextNotice = computed(() => {
   });
   const tauxJournalier = getSmhDailyBaseRate(smhBaseAnnuel, { activityRate });
   const tauxStr = isForfaitJours
-    ? `${(Math.round(tauxJournalier * 100) / 100).toFixed(2).replace('.', ',')} €/j`
-    : `${(Math.round(tauxSmhHoraire * 100) / 100).toFixed(2).replace('.', ',')} €/h`;
+    ? `${roundHourlyRate(tauxJournalier).toFixed(2).replace('.', ',')} €/j`
+    : `${roundHourlyRate(tauxSmhHoraire).toFixed(2).replace('.', ',')} €/h`;
   const tauxLabel = isForfaitJours ? 'Taux journalier' : 'Taux horaire de référence (SMH)';
   return `${baseInfo} · ${tauxLabel} ${tauxStr}`;
 });
@@ -97,6 +102,13 @@ function simplifyLabel(raw: string): string {
 
 const salaireBaseTooltipHtml = computed(() => {
   const t = RESULT_SALAIRE_BASE_TOOLTIP;
+  return buildLegalTooltipContent(CONFIG.TOOLTIP_TEXTS, t.title, t.description, {
+    sourceArticle: t.sourceArticle,
+  });
+});
+
+const resultatMensuelTooltipHtml = computed(() => {
+  const t = WIZARD_TOOLTIPS.resultatMensuel;
   return buildLegalTooltipContent(CONFIG.TOOLTIP_TEXTS, t.title, t.description, {
     sourceArticle: t.sourceArticle,
   });
@@ -156,11 +168,17 @@ function selectNbMois(target: 12 | 13) {
 
       <div class="result-monthly">
         <span id="result-mensuel" class="result-value-secondary">{{
-          formatMoney(Math.round(data.totalAnnual / ui.nbMois))
+          formatMoney(roundToEuro(data.totalAnnual / ui.nbMois))
         }}</span>
-        <span id="result-label-mensuel" class="result-label">{{
-          WIZARD_LABELS.resultatMensuel
-        }}</span>
+        <div id="result-label-mensuel" class="result-label">
+          <span>{{ WIZARD_LABELS.resultatMensuel }}</span>
+          <AppTooltip
+            :content="resultatMensuelTooltipHtml"
+            variant="result"
+            position="top"
+            trigger-aria-label="Montant mensuel indicatif (moyenne sur 12 ou 13 mois)"
+          />
+        </div>
         <div
           class="months-toggle"
           :class="{ 'months-toggle-locked': nbMoisImpose != null }"
