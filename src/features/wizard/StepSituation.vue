@@ -108,11 +108,6 @@ const territoireOptions: SearchSelectOption[] = [
   },
 ];
 const saisieLibrePoint = computed(() => situation.territoireId === TERRITOIRE_SAISIE_LIBRE);
-const territoireActuel = computed(() => territoires.find((t) => t.id === situation.territoireId));
-const territoireDepuisLabel = computed(() => {
-  const t = territoireActuel.value;
-  return t ? new Date(`${t.depuis}T00:00:00`).toLocaleDateString('fr-FR') : '';
-});
 
 watch(
   [() => situation.forfait, () => isCadre(wizard.classe)],
@@ -214,10 +209,6 @@ function validate() {
             :options="territoireOptions"
             placeholder="Rechercher un département ou un numéro…"
           />
-          <p v-if="territoireActuel" class="field-help">
-            Valeur en vigueur depuis le {{ territoireDepuisLabel }} ; l'historique est appliqué mois
-            par mois aux arriérés.
-          </p>
         </div>
         <div v-if="saisieLibrePoint" class="form-group">
           <label for="point-territorial">Valeur du point territorial (€)</label>
@@ -298,11 +289,6 @@ function validate() {
 }
 .modalites-non-cadre {
   margin: 0 0 1rem;
-}
-.field-help {
-  margin: 0.4rem 0 0;
-  font-size: 0.85rem;
-  color: var(--gray-600);
 }
 .cadre-debutant-smh {
   margin: 0.75rem 0 0;
