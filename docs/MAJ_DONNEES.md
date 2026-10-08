@@ -59,7 +59,7 @@ Pour chaque point, noter la **valeur**, la **date d'effet**, le **texte** (date,
 
    Pour un changement de grille, contrôler aussi un scénario d'arriérés et l'export PDF (`npm run e2e` ; régénérer les captures si l’affichage change).
 
-5. Commiter et pousser **sous l'identité anonyme du dépôt** (`Dev1 <dev1@users.noreply.github.com>`, déjà en config git locale ; vérifier avec `git config user.name`). Message conseillé : `chore(data): mise à jour des données au <date>`, avec une ligne par donnée modifiée et sa source.
+5. Commiter et pousser **sous l'identité anonyme du dépôt** (`Dev1`, sans e-mail : config locale `user.email=""` et `user.useConfigOnly=true` ; vérifier avec `git var GIT_AUTHOR_IDENT`, qui doit afficher `Dev1 <>`). Message conseillé : `chore(data): mise à jour des données au <date>`, avec une ligne par donnée modifiée et sa source.
 
 ## 5. Journal des mises à jour
 
