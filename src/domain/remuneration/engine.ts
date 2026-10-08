@@ -1,6 +1,12 @@
 import Decimal from 'decimal.js';
 import { CONFIG } from '../config';
-import { roundHourlyRate, roundToCents, annualFromMonthly } from '../utils/rounding';
+import {
+  roundHourlyRate,
+  roundToCents,
+  annualFromMonthly,
+  toFiniteNumber,
+} from '../utils/rounding';
+import { getSmhHourlyBaseRate, resolveActivityRate } from './rates';
 import { applySmhInclusionPolicy, applySmhInclusionPolicyToResult } from './smhConformity';
 import { getAccordInput } from '../agreements/interface';
 import {
@@ -130,9 +136,7 @@ function executeComputeMode(mode: ComputeMode, ctx: ComputeContext): number {
     case 'unitesXmontant': {
       let unites = resolveRef(mode.unites, ctx);
       if (mode.prorataActivite) {
-        const r = ctx.activityRate;
-        const prorata = Number.isFinite(r) && r > 0 ? r : 1;
-        unites = Math.max(0, unites * prorata);
+        unites = applyProrataActivite(unites, ctx);
       }
       const montant = resolveRef(mode.montant, ctx);
       const raw = new Decimal(unites).times(montant).toNumber();
@@ -157,9 +161,7 @@ function executeComputeMode(mode: ComputeMode, ctx: ComputeContext): number {
     case 'postesXdureeXtaux': {
       let postes = resolveRef(mode.postes, ctx);
       if (mode.prorataActivite) {
-        const r = ctx.activityRate;
-        const prorata = Number.isFinite(r) && r > 0 ? r : 1;
-        postes = Math.max(0, postes * prorata);
+        postes = applyProrataActivite(postes, ctx);
       }
       const dureeMinutes = resolveRef(mode.dureeMinutes, ctx);
       const taux = resolveRef(mode.taux, ctx);
@@ -346,8 +348,11 @@ export function buildComputeContext(
   agreement?: Record<string, unknown>,
 ): ComputeContext {
   const baseSMHFull = safeNum(state['baseSMHFull'] ?? baseSMH);
-  const activityRate = resolveActivityRate(state);
-  const tauxHoraireBase = getHourlyBaseRate(baseSMHFull);
+  const activityRate = resolveActivityRate(
+    state['travailTempsPartiel'] === true,
+    state['tauxActivite'],
+  );
+  const tauxHoraireBase = roundHourlyRate(getSmhHourlyBaseRate(baseSMHFull));
 
   return {
     state,
@@ -365,8 +370,7 @@ export function buildComputeContext(
 // ── Helpers ──
 
 function safeNum(v: unknown): number {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
+  return toFiniteNumber(v);
 }
 
 function guardFinite(v: number): number {
@@ -420,19 +424,9 @@ function resolveSmhInclusion(def: ElementDef): boolean | 'ifSuperiorToConvention
   return def.inclusDansSMH === true;
 }
 
-function resolveActivityRate(state: Record<string, unknown>): number {
-  const enabled = state['travailTempsPartiel'] === true;
-  if (!enabled) return 1;
-  const min = CONFIG.TAUX_ACTIVITE_MIN;
-  const max = CONFIG.TAUX_ACTIVITE_MAX;
-  const fallback = CONFIG.TAUX_ACTIVITE_DEFAUT;
-  const raw = Number(state['tauxActivite']);
-  const bounded = Number.isFinite(raw) ? Math.min(max, Math.max(min, raw)) : fallback;
-  return bounded / 100;
-}
-
-function getHourlyBaseRate(smhAnnual: number): number {
-  if (!(smhAnnual > 0)) return 0;
-  const heuresMois = CONFIG.DUREE_LEGALE_HEURES_MOIS;
-  return roundHourlyRate(smhAnnual / 12 / heuresMois);
+/** Quantité mensuelle proratisée au taux d'activité (temps partiel). */
+export function applyProrataActivite(qty: number, ctx: ComputeContext): number {
+  const r = ctx.activityRate;
+  const prorata = Number.isFinite(r) && r > 0 ? r : 1;
+  return Math.max(0, qty * prorata);
 }

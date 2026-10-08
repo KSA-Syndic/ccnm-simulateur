@@ -3,7 +3,6 @@ import { computed, ref } from 'vue';
 import { AppModal } from '../../components/ui';
 import CelebrationOverlay from './CelebrationOverlay.vue';
 import { useAgreementStore } from '../../stores/agreement';
-import { getAgreement } from '../../domain/agreements/registry';
 import { POST_PDF_SYNDICAT } from '../../domain/ui/labels';
 import {
   buildGmailComposeUrl,
@@ -17,11 +16,7 @@ const step = ref<'syndicat' | 'celebration' | null>(null);
 
 const agreementStore = useAgreementStore();
 
-const accDoc = computed(() =>
-  agreementStore.accordActif && agreementStore.activeAccordId
-    ? getAgreement(agreementStore.activeAccordId)
-    : null,
-);
+const accDoc = computed(() => agreementStore.activeAgreement);
 
 const syndicatEmail = computed(() => (accDoc.value?.syndicatEmail ?? '').trim());
 

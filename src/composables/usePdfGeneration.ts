@@ -1,20 +1,18 @@
 import { ref } from 'vue';
 import { useArreteesStore } from '../stores/arretees';
-import { useWizardStore } from '../stores/wizard';
 import { useSituationStore } from '../stores/situation';
 import { useAgreementStore } from '../stores/agreement';
 import { useUiStore } from '../stores/ui';
 import { CONFIG } from '../domain/config';
-import { getActiveClassification, isCadre } from '../domain/classification/engine';
-import { getAgreement } from '../domain/agreements/registry';
+import { isCadre } from '../domain/classification/engine';
 import { getPrimes, type PrimeDef } from '../domain/agreements/interface';
-import {
-  computePdfRemunerationBreakdown,
-  scoresArrayFromWizardScores,
-} from '../domain/remuneration/compute';
+import { computePdfRemunerationBreakdown } from '../domain/remuneration/compute';
 import { useWizardRemunerationInput } from './useWizardRemunerationInput';
 import { buildPdfArrieresAnalyticsPayload, trackPdfArrieres } from '../infra/analytics';
 import { formatMoney } from '../domain/utils/format';
+import { formatFrDecimalFixed } from '../domain/tooltip/builders';
+import { getBaremeDebutantTranche } from '../domain/remuneration/smh';
+import { fileDateStamp, MOIS_LONGS, todayFrLong } from '../domain/utils/date';
 import type { ExportDocumentsPayload } from '../domain/pdf/exportDocumentsPayload';
 import { CFDT_KUHN_LOGO_DATA_URL } from '../domain/pdf/cfdtKuhnLogoDataUrl';
 import {
@@ -34,29 +32,6 @@ import {
 
 const LEGAL_SNIPPET_INDICATIF =
   'Références indicatives (à contrôler sur les textes en vigueur et le dossier) : CCNM Art. 140 et 141 (SMH) ; Code du travail L. 3245-1 (reclassement des salaires, prescription), L. 2254-2 (nullité des clauses inférieures au minimum).';
-
-const MOIS_LONGS = [
-  'janvier',
-  'février',
-  'mars',
-  'avril',
-  'mai',
-  'juin',
-  'juillet',
-  'août',
-  'septembre',
-  'octobre',
-  'novembre',
-  'décembre',
-];
-
-function todayFrLong(): string {
-  return new Date().toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-}
 
 function formatFrDateSafe(value: string): string {
   const d = new Date(value);
@@ -97,10 +72,9 @@ function inclusSmhPdfLabel(v: boolean | 'ifSuperiorToConvention' | undefined): s
 
 function smhGrilleRowLabel(scenario: string, experiencePro: number): string {
   if (scenario !== 'cadre-debutant') return 'SMH annuel grille (base conventionnelle)';
-  const xp = Number(experiencePro) || 0;
-  if (xp >= 4) return 'SMH barème débutants (4 à 6 ans)';
-  if (xp >= 2) return 'SMH barème débutants (2 à 4 ans)';
-  return 'SMH barème débutants (< 2 ans)';
+  const tranche = getBaremeDebutantTranche(experiencePro);
+  if (tranche === 0) return 'SMH barème débutants (< 2 ans)';
+  return `SMH barème débutants (${tranche} à ${tranche + 2} ans)`;
 }
 
 function forfaitPdfLabel(forfa: '35h' | 'heures' | 'jours'): string {
@@ -140,31 +114,16 @@ export function usePdfGeneration() {
   async function generatePdf(infos: ExportDocumentsPayload) {
     generating.value = true;
     try {
-      const { jsPDF } = await import('jspdf');
-      const autoTable = await importPdfAutoTable();
+      const [{ jsPDF }, autoTable] = await Promise.all([import('jspdf'), importPdfAutoTable()]);
 
       const arreteesStore = useArreteesStore();
-      const wizardStore = useWizardStore();
       const situationStore = useSituationStore();
       const agreementStore = useAgreementStore();
       const uiStore = useUiStore();
 
       const br = computePdfRemunerationBreakdown(wizardInput.value, uiStore.nbMois);
 
-      const active =
-        wizardStore.mode === 'manual'
-          ? { groupe: wizardStore.groupe, classe: wizardStore.classe }
-          : getActiveClassification({
-              modeManuel: false,
-              groupeManuel: wizardStore.groupe,
-              classeManuel: wizardStore.classe,
-              scores: scoresArrayFromWizardScores(wizardStore.scores),
-            });
-
-      const accDoc =
-        agreementStore.accordActif && agreementStore.activeAccordId
-          ? getAgreement(agreementStore.activeAccordId)
-          : null;
+      const { active, accDoc } = br;
 
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pw = doc.internal.pageSize.getWidth();
@@ -277,8 +236,9 @@ export function usePdfGeneration() {
       const isCadreCl = isCadre(active.classe);
       const isTp = situationStore.tempsPartiel === true;
       const tauxPct = Math.round(situationStore.tauxActivite * 100) / 100;
-      let baseCalc = 'Temps plein 35h/sem. (151,67h/mois)';
-      if (situationStore.forfait === 'jours') baseCalc = '218 jours/an';
+      let baseCalc = `Temps plein 35h/sem. (${formatFrDecimalFixed(CONFIG.DUREE_LEGALE_HEURES_MOIS)}h/mois)`;
+      if (situationStore.forfait === 'jours')
+        baseCalc = `${CONFIG.FORFAIT_JOURS_REFERENCE} jours/an`;
       if (isTp) {
         baseCalc = `${baseCalc} au prorata ${String(tauxPct).replace('.', ',')} %`;
       }
@@ -585,7 +545,7 @@ export function usePdfGeneration() {
 
       addPdfFooter(doc as unknown as Parameters<typeof addPdfFooter>[0]);
 
-      const stamp = new Date().toISOString().split('T')[0];
+      const stamp = fileDateStamp();
       doc.save(`arretees-salaire-${stamp}.pdf`);
 
       trackPdfArrieres(

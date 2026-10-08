@@ -24,7 +24,6 @@ import PostPdfFlow from '../pdf/PostPdfFlow.vue';
 import LegalCarousel from '../legal-guide/LegalCarousel.vue';
 import { useUiStore } from '../../stores/ui';
 import { useAgreementStore } from '../../stores/agreement';
-import { getAgreement } from '../../domain/agreements/registry';
 import { AppTooltip } from '../../components/ui';
 import { WIZARD_LABELS, WIZARD_TOASTS } from '../../domain/ui/labels';
 import { buildWizardTooltipHtml } from '../../domain/ui/wizardTooltips';
@@ -62,11 +61,7 @@ const postPdfFlowRef = ref<InstanceType<typeof PostPdfFlow> | null>(null);
 const ui = useUiStore();
 const agreementStore = useAgreementStore();
 
-const activeAgreementDoc = computed(() =>
-  agreementStore.accordActif && agreementStore.activeAccordId
-    ? getAgreement(agreementStore.activeAccordId)
-    : null,
-);
+const activeAgreementDoc = computed(() => agreementStore.activeAgreement);
 
 const remunerationAnnuelle = computed(() =>
   computeAnnualRemunerationFromWizardStores(wizardInput.value),

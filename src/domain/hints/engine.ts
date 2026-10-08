@@ -2,7 +2,7 @@ import { HINT_ENGINE } from '../ui/labels';
 import { CONFIG } from '../config';
 import type { Agreement } from '../agreements/interface';
 import type { ElementResult } from '../types';
-import { getSmhGridAnnual } from '../remuneration/smh';
+import { getSmhGridAnnual, isBaremeDebutantApplicable } from '../remuneration/smh';
 import { formatMoney } from '../utils/format';
 import {
   computePdfRemunerationBreakdown,
@@ -25,12 +25,7 @@ export interface HintContext {
 export function eligibleHints(ctx: HintContext): HintId[] {
   const out: HintId[] = [];
 
-  if (
-    ctx.isCadre &&
-    ctx.classe >= 11 &&
-    ctx.classe <= 12 &&
-    ctx.experiencePro < CONFIG.BAREME_DEBUTANTS_SEUIL_EXP_PRO
-  ) {
+  if (ctx.isCadre && isBaremeDebutantApplicable(ctx.classe, ctx.experiencePro)) {
     out.push('cadreDebutant');
   }
 

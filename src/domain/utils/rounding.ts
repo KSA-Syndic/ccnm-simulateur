@@ -10,25 +10,26 @@ import Decimal from 'decimal.js';
 
 Decimal.set({ precision: 20, rounding: Decimal.ROUND_CEIL });
 
-function toNumber(value: unknown, fallback = 0): number {
+/** Nombre fini, sinon `fallback`. */
+export function toFiniteNumber(value: unknown, fallback = 0): number {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
 }
 
 /** Centimes (2 déc.) — plafond. */
 export function roundToCents(value: unknown): number {
-  const n = toNumber(value);
+  const n = toFiniteNumber(value);
   return new Decimal(n).toDecimalPlaces(2, Decimal.ROUND_CEIL).toNumber();
 }
 
 /** Euro entier — plafond. */
 export function roundToEuro(value: unknown): number {
-  return new Decimal(toNumber(value)).toDecimalPlaces(0, Decimal.ROUND_CEIL).toNumber();
+  return new Decimal(toFiniteNumber(value)).toDecimalPlaces(0, Decimal.ROUND_CEIL).toNumber();
 }
 
 /** Taux horaire interne (€/h) — 4 décimales plafond. */
 export function roundHourlyRate(value: unknown): number {
-  return new Decimal(toNumber(value)).toDecimalPlaces(4, Decimal.ROUND_CEIL).toNumber();
+  return new Decimal(toFiniteNumber(value)).toDecimalPlaces(4, Decimal.ROUND_CEIL).toNumber();
 }
 
 /**
@@ -36,5 +37,5 @@ export function roundHourlyRate(value: unknown): number {
  * puis **un seul** arrondi au centime plafond. Ne pas arrondir le mensuel avant la multiplication.
  */
 export function annualFromMonthly(monthlyAmount: unknown): number {
-  return roundToCents(new Decimal(toNumber(monthlyAmount)).times(12));
+  return roundToCents(new Decimal(toFiniteNumber(monthlyAmount)).times(12));
 }

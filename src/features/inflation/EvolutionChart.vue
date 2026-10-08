@@ -13,6 +13,7 @@ import {
 } from '../../domain/evolution/projection';
 import { fetchInflationSeries } from '../../domain/evolution/inflationFetch';
 import { WIZARD_LABELS } from '../../domain/ui/labels';
+import { formatMoney } from '../../domain/utils/format';
 import { buildWizardTooltipHtml } from '../../domain/ui/wizardTooltips';
 import { AppTooltip, NumericInput } from '../../components/ui';
 
@@ -128,11 +129,7 @@ async function renderChart() {
         y: {
           ticks: {
             callback(val) {
-              return new Intl.NumberFormat('fr-FR', {
-                style: 'currency',
-                currency: 'EUR',
-                maximumFractionDigits: 0,
-              }).format(Number(val));
+              return formatMoney(Number(val));
             },
           },
         },

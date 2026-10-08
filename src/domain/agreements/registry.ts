@@ -18,6 +18,14 @@ export function getAgreement(id: string): Agreement | null {
   return agreementsRegistry.get(id) ?? null;
 }
 
+/** Accord effectivement appliqué : chargé (URL / registre) et activé (« Appliquer l'accord »). */
+export function resolveActiveAgreement(sel: {
+  accordActif: boolean;
+  activeAccordId: string | null;
+}): Agreement | null {
+  return sel.accordActif && sel.activeAccordId ? getAgreement(sel.activeAccordId) : null;
+}
+
 export function getAllAgreements(): Agreement[] {
   return Array.from(agreementsRegistry.values());
 }

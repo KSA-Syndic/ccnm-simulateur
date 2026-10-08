@@ -1,5 +1,6 @@
 import { CONSTANTS } from '../config/constants';
 import { CONFIG } from '../config';
+import { formatMoney } from '../utils/format';
 import {
   computeAnnualRemunerationFromWizardStores,
   type WizardRemunerationInput,
@@ -95,17 +96,9 @@ export function buildEvolutionSummaryHtml(params: {
   const yearsLabel = years === 1 ? '1 an' : `${years} ans`;
   const n = Number.parseFloat(diffPercent);
   const pctDisplay = diffPercent.replace('.', ',');
-  const intro = `Dans ${yearsLabel} : <strong>${formatEuro(finalSalary)}</strong>`;
+  const intro = `Dans ${yearsLabel} : <strong>${formatMoney(finalSalary)}</strong>`;
   if (n >= 0) {
     return `${intro} soit <span style="color:#16a34a">+${pctDisplay} %</span> de plus que l'inflation.`;
   }
   return `${intro} soit <span style="color:#dc2626">${pctDisplay} %</span> de moins que l'inflation.`;
-}
-
-function formatEuro(n: number): string {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(n);
 }

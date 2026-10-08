@@ -2,7 +2,6 @@
 import { computed, watch } from 'vue';
 import { useAgreementStore } from '../../stores/agreement';
 import { useSituationStore } from '../../stores/situation';
-import { getAgreement } from '../../domain/agreements/registry';
 import type { PrimeDef } from '../../domain/agreements/interface';
 import { NumericInput, AppTooltip } from '../../components/ui';
 import AccordBadge from './AccordBadge.vue';
@@ -23,11 +22,7 @@ const situationStore = useSituationStore();
 
 const conventionLabel = computed(() => CONFIG.TOOLTIP_TEXTS.origins.ccnm);
 
-const doc = computed(() =>
-  agreementStore.accordActif && agreementStore.activeAccordId
-    ? getAgreement(agreementStore.activeAccordId)
-    : null,
-);
+const doc = computed(() => agreementStore.activeAgreement);
 
 const hourlyPrimes = computed(() => {
   const primes = doc.value?.primes;

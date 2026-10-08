@@ -39,8 +39,9 @@ describe('SimulatorHeader', () => {
     useAgreementStore(pinia).$patch({ accordActif: false, activeAccordId: 'kuhn' });
     await w.vm.$nextTick();
     expect(w.find('#header-subtitle-text').text()).toContain('Kuhn');
-    const tooltipContent = String(w.find('.tooltip-stub').attributes('data-content') ?? '');
-    expect(tooltipContent).toContain("prime d'ancienneté dès 2 ans");
+    const tooltipHtml = String(w.find('.tooltip-stub').attributes('data-content') ?? '');
+    const tooltipText = new DOMParser().parseFromString(tooltipHtml, 'text/html').body.textContent;
+    expect(tooltipText).toContain("prime d'ancienneté dès 2 ans");
     w.unmount();
   });
 });

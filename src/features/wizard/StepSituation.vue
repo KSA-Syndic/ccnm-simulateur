@@ -4,8 +4,13 @@ import { useSituationStore } from '../../stores/situation';
 import { useAgreementStore } from '../../stores/agreement';
 import { useWizardNavigation } from '../../composables/useWizardNavigation';
 import { CONFIG } from '../../domain/config';
+import { formatMoney } from '../../domain/utils/format';
 import { isCadre } from '../../domain/classification/engine';
-import { getBaremeDebutantTranche, getSmhForClasse } from '../../domain/remuneration/smh';
+import {
+  getBaremeDebutantTranche,
+  getSmhForClasse,
+  hasBaremeDebutant,
+} from '../../domain/remuneration/smh';
 import { computed, onMounted, ref, watch } from 'vue';
 import { AppTooltip, NumericInput } from '../../components/ui';
 import { buildWizardTooltipHtml } from '../../domain/ui/wizardTooltips';
@@ -47,9 +52,7 @@ function onExperienceProBlur() {
   if (situation.experiencePro < a) situation.experiencePro = a;
 }
 
-const showCadreDebutant = computed(
-  () => isCadreValue.value && wizard.classe >= 11 && wizard.classe <= 12,
-);
+const showCadreDebutant = computed(() => isCadreValue.value && hasBaremeDebutant(wizard.classe));
 
 /**
  * Barème débutants F11/F12 : CCNM Annexe I (grille débutants) — champ affiché uniquement pour cadres en F11/F12.
@@ -214,13 +217,7 @@ function validate() {
           <p v-if="showSmhDebutantIndicatif && smhDebutantPreview" class="cadre-debutant-smh">
             <strong>Salaire minimum indicatif</strong> (barème débutants, tranche
             {{ smhDebutantPreview.tranche }}) :
-            {{
-              new Intl.NumberFormat('fr-FR', {
-                style: 'currency',
-                currency: 'EUR',
-                maximumFractionDigits: 0,
-              }).format(smhDebutantPreview.montant)
-            }}
+            {{ formatMoney(smhDebutantPreview.montant) }}
             /an ({{ CONFIG.CURRENT_DATA_YEAR }})
           </p>
         </div>

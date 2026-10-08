@@ -13,16 +13,6 @@ export function formatEurosDetail(amount: number): string {
     .replace(NBSP_REGEX, ' ');
 }
 
-export function formatHeuresDetail(heures: number): string {
-  const n = Math.round((Number(heures) || 0) * 100) / 100;
-  return new Intl.NumberFormat(FR, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })
-    .format(n)
-    .replace(NBSP_REGEX, ' ');
-}
-
 /** Affichage en euros entiers : plafond sur le montant ramené au centime. */
 export function formatMoney(amount: number): string {
   const n = roundToEuro(amount);
@@ -53,21 +43,4 @@ const HTML_ESCAPE_MAP: Record<string, string> = {
 export function escapeHTML(str: unknown): string {
   const s = typeof str === 'string' ? str : String(str);
   return s.replace(/[&<>"']/g, (ch) => HTML_ESCAPE_MAP[ch] ?? ch);
-}
-
-export function formatEuro(amount: number): string {
-  return formatMoney(amount);
-}
-
-export function formatEuroMensuel(amount: number): string {
-  return formatMoney(amount);
-}
-
-export function formatNumberFr(value: number, decimals = 0): string {
-  return new Intl.NumberFormat(FR, {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  })
-    .format(value)
-    .replace(NBSP_REGEX, ' ');
 }

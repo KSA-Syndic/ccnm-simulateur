@@ -1,6 +1,6 @@
 import { CONFIG } from '../config';
 import { getActiveClassification, isCadre } from '../classification/engine';
-import { getAgreement } from '../agreements/registry';
+import { resolveActiveAgreement } from '../agreements/registry';
 import type { Agreement } from '../agreements/interface';
 import { getAccordElementDefsForRemuneration } from '../agreements/accord-element-defs';
 import { getAccordMajorationDefsForRemuneration } from '../agreements/accord-majoration-defs';
@@ -10,7 +10,8 @@ import { applyNationalPrimeOverridesToConventionDefs } from './nationalOverrides
 import { aggregateRemunerationDetails, type AggregatedRemuneration } from './aggregate';
 import { enrichResolvedElementsTooltips } from '../tooltip/resultElementTooltips';
 import { buildComputeContext, resolveBySubstitution } from './engine';
-import { getSmhForClasse } from './smh';
+import { getSmhForClasse, isBaremeDebutantApplicable } from './smh';
+import { resolveActivityRate } from './rates';
 import { roundHourlyRate, roundToCents } from '../utils/rounding';
 import { computeSmhAssietteVerif, detailContributesToSmhAssiette } from './smhConformity';
 import type { ComputeContext, ElementResult } from '../types';
@@ -70,11 +71,7 @@ export type WizardComputeOverrides = {
 
 export function resolveScenario(classe: number, experiencePro: number): string {
   if (!isCadre(classe)) return 'non-cadre';
-  if (
-    (classe === 11 || classe === 12) &&
-    (Number(experiencePro) || 0) < CONFIG.BAREME_DEBUTANTS_SEUIL_EXP_PRO
-  )
-    return 'cadre-debutant';
+  if (isBaremeDebutantApplicable(classe, experiencePro)) return 'cadre-debutant';
   return 'cadre';
 }
 
@@ -111,14 +108,11 @@ export function prepareWizardCompute(
 
   const refYear = overrides?.referenceYear;
   const rawSmh = getSmhForClasse(active.classe, refYear, input.situation.experiencePro);
-  const rate = input.situation.tempsPartiel ? input.situation.tauxActivite / 100 : 1;
+  const rate = resolveActivityRate(input.situation.tempsPartiel, input.situation.tauxActivite);
   const baseSMHFull = roundToCents(rawSmh);
   const baseSMH = roundToCents(rawSmh * rate);
 
-  const accDoc =
-    input.agreement.accordActif && input.agreement.activeAccordId
-      ? getAgreement(input.agreement.activeAccordId)
-      : null;
+  const accDoc = resolveActiveAgreement(input.agreement);
 
   const modalityState = input.situation.modalityState ?? {};
   const anciennete =

@@ -7,11 +7,12 @@ import type { Agreement } from '../agreements/interface';
 import { getAccordNomCourt } from './builders';
 import {
   buildResultTooltipContent,
+  formatFrDecimalAuto,
   formatFrDecimalFixed,
   type ResultBreakdownLine,
   type ResultTooltipDetailInput,
 } from './builders';
-import { resolveRef, type ResolvedElement } from '../remuneration/engine';
+import { applyProrataActivite, resolveRef, type ResolvedElement } from '../remuneration/engine';
 import type { ComputeContext, ComputeRef, ElementDef, ElementResult } from '../types';
 import { SEMANTIC_ID } from '../types';
 import { formatMoneyTooltipDetail } from '../utils/format';
@@ -30,7 +31,7 @@ function heuresXtauxTauxLineLabel(baseRef: ComputeRef): string {
 }
 
 function pctLabel(rate: number): string {
-  return `${formatFrDecimalFixed(rate * 100, (rate * 100) % 1 === 0 ? 0 : 2)} %`;
+  return `${formatFrDecimalAuto(rate * 100)} %`;
 }
 
 function resolvedHeuresXtauxMajRate(def: ElementDef, ctx: ComputeContext): number | null {
@@ -40,11 +41,11 @@ function resolvedHeuresXtauxMajRate(def: ElementDef, ctx: ComputeContext): numbe
 }
 
 function majorationHeuresSupPctHint(majRate: number): string {
-  return `Majoration (+${formatFrDecimalFixed(majRate * 100, (majRate * 100) % 1 === 0 ? 0 : 2)} %)`;
+  return `Majoration (+${formatFrDecimalAuto(majRate * 100)} %)`;
 }
 
 function formatHeures(h: number): string {
-  return `${formatFrDecimalFixed(h, h % 1 === 0 ? 0 : 2)} h`;
+  return `${formatFrDecimalAuto(h)} h`;
 }
 
 function prorataDetailSuffix(ctx: ComputeContext): string {
@@ -267,7 +268,7 @@ function buildPeriodesSmhTooltip(
     sourceArticle: def.sourceArticle,
     conditionTexte: def.conditionTexte,
     tooltipDetail: [
-      `${formatFrDecimalFixed(periodes, periodes % 1 === 0 ? 0 : 2)} période${periodes > 1 ? 's' : ''} / mois.`,
+      `${formatFrDecimalAuto(periodes)} période${periodes > 1 ? 's' : ''} / mois.`,
       def.tooltip ??
         'Indemnité forfaitaire par période d’astreinte, basée sur le taux horaire du minimum.',
     ].join('\n'),
@@ -285,11 +286,7 @@ function buildUnitesMontantTooltip(
     return { label: result.label, value: result.amount, conditionTexte: def.conditionTexte };
   }
   let unites = resolveRef(mode.unites, ctx);
-  if (mode.prorataActivite) {
-    const r = ctx.activityRate;
-    const prorata = Number.isFinite(r) && r > 0 ? r : 1;
-    unites = Math.max(0, unites * prorata);
-  }
+  if (mode.prorataActivite) unites = applyProrataActivite(unites, ctx);
   const montant = resolveRef(mode.montant, ctx);
   const breakdown: ResultBreakdownLine[] = [
     euroBreakdown('Montant unitaire', montant),
@@ -305,8 +302,8 @@ function buildUnitesMontantTooltip(
     conditionTexte: def.conditionTexte,
     tooltipDetail: [
       qtyHeuresMensuelles
-        ? `Quantité : ${formatFrDecimalFixed(unites, unites % 1 === 0 ? 0 : 2)} h / mois (référence retenue pour le calcul).`
-        : `Quantité : ${formatFrDecimalFixed(unites, unites % 1 === 0 ? 0 : 2)}.`,
+        ? `Quantité : ${formatFrDecimalAuto(unites)} h / mois (référence retenue pour le calcul).`
+        : `Quantité : ${formatFrDecimalAuto(unites)}.`,
       def.tooltip ??
         (qtyHeuresMensuelles
           ? 'Heures de référence × montant unitaire, puis annualisation sur 12 mois.'
@@ -341,7 +338,7 @@ function buildPostesDureeTooltip(
     sourceArticle: def.sourceArticle,
     conditionTexte: def.conditionTexte,
     tooltipDetail: [
-      `${formatFrDecimalFixed(postes, postes % 1 === 0 ? 0 : 2)} unité${postes > 1 ? 's' : ''} / mois × ${formatFrDecimalFixed(minutes / 60, 2)} h.`,
+      `${formatFrDecimalAuto(postes)} unité${postes > 1 ? 's' : ''} / mois × ${formatFrDecimalFixed(minutes / 60, 2)} h.`,
       def.tooltip,
     ]
       .filter(Boolean)

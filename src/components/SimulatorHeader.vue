@@ -4,24 +4,13 @@ import { storeToRefs } from 'pinia';
 import { CONFIG } from '../domain/config';
 import { CONVENTION_METALLURGIE_CONSOLIDEE_PDF_URL, SIMULATOR_SHELL } from '../domain/ui/labels';
 import { useAgreementStore } from '../stores/agreement';
-import { getAgreement } from '../domain/agreements/registry';
 import { AppTooltip } from './ui';
-
-function esc(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+import { escapeHTML as esc } from '../domain/utils/format';
 
 const agreementStore = useAgreementStore();
-const { activeAccordId } = storeToRefs(agreementStore);
 
 /** Accord chargé (URL / registre) — indépendant de la case « Appliquer » sur la page Résultat. */
-const loadedAgreementDoc = computed(() =>
-  activeAccordId.value ? getAgreement(activeAccordId.value) : null,
-);
+const { loadedAgreement: loadedAgreementDoc } = storeToRefs(agreementStore);
 
 const subtitleText = computed(() => {
   const nom = loadedAgreementDoc.value?.nomCourt ?? loadedAgreementDoc.value?.nom;

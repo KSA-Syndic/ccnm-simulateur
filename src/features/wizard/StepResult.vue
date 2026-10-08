@@ -8,7 +8,6 @@ import { useWizardNavigation } from '../../composables/useWizardNavigation';
 import { useWizardRemunerationInput } from '../../composables/useWizardRemunerationInput';
 import { LEGAL_DISCLAIMER_RESULT, WIZARD_LABELS } from '../../domain/ui/labels';
 import { buildResultHintBlocks } from '../../domain/hints/engine';
-import { getAgreement } from '../../domain/agreements/registry';
 import { resolveWizardRemunerationElements } from '../../domain/remuneration/compute';
 import ResultDetails from '../results/ResultDetails.vue';
 import HintDisplay from '../results/HintDisplay.vue';
@@ -32,14 +31,8 @@ function onRecommencer() {
   goToStep(1);
 }
 
-/** 12 ou 13 mois imposés par `repartition13Mois.actif` sur l'accord chargé (selon définition accord). */
-const nbMoisImpose = computed((): 12 | 13 | null => {
-  if (!agreement.accordActif || !agreement.activeAccordId) return null;
-  const doc = getAgreement(agreement.activeAccordId);
-  const r = doc?.repartition13Mois;
-  if (r && typeof r.actif === 'boolean') return r.actif ? 13 : 12;
-  return null;
-});
+/** 12 ou 13 mois imposés par `repartition13Mois.actif` sur l'accord appliqué. */
+const nbMoisImpose = computed(() => agreement.nbMoisImpose);
 
 watch(
   nbMoisImpose,

@@ -13,6 +13,19 @@ export function getSmhGridAnnual(classe: number, year?: number): number {
   return grid[classe] ?? CONFIG.SMH[classe] ?? 0;
 }
 
+/** Classes couvertes par le barème débutants (clés de `CONFIG.BAREME_DEBUTANTS` : F11, F12). */
+export function hasBaremeDebutant(classe: number): boolean {
+  return classe in CONFIG.BAREME_DEBUTANTS;
+}
+
+/** Barème débutants applicable : classe couverte et expérience pro sous `BAREME_DEBUTANTS_SEUIL_EXP_PRO`. */
+export function isBaremeDebutantApplicable(classe: number, experiencePro: unknown): boolean {
+  return (
+    hasBaremeDebutant(classe) &&
+    (Number(experiencePro) || 0) < CONFIG.BAREME_DEBUTANTS_SEUIL_EXP_PRO
+  );
+}
+
 /**
  * Tranche barème débutant (clés 0, 2, 4) selon `experiencePro`.
  * - &lt; 2 ans → 0
@@ -45,10 +58,7 @@ export function getAnnualSmhFullBeforeActivity(params: {
 }): number {
   const { classe, experiencePro, year } = params;
   const grid = getSmhGridAnnual(classe, year);
-  if (
-    (classe === 11 || classe === 12) &&
-    (Number(experiencePro) || 0) < CONFIG.BAREME_DEBUTANTS_SEUIL_EXP_PRO
-  ) {
+  if (isBaremeDebutantApplicable(classe, experiencePro)) {
     const tranche = getBaremeDebutantTranche(Number(experiencePro) || 0);
     return getBaremeDebutantAnnual(classe as 11 | 12, tranche, year);
   }

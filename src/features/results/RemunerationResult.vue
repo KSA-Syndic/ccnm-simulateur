@@ -10,13 +10,16 @@ import { useAgreementStore } from '../../stores/agreement';
 import { useWizardStore } from '../../stores/wizard';
 import { CONFIG } from '../../domain/config';
 import { isCadre } from '../../domain/classification/engine';
-import { getSmhHourlyBaseRate, getSmhDailyBaseRate } from '../../domain/remuneration/rates';
+import {
+  getSmhHourlyBaseRate,
+  getSmhDailyBaseRate,
+  resolveActivityRate,
+} from '../../domain/remuneration/rates';
 import {
   WIZARD_LABELS,
   WIZARD_TOOLTIPS,
   RESULT_SALAIRE_BASE_TOOLTIP,
 } from '../../domain/ui/labels';
-import { getAgreement } from '../../domain/agreements/registry';
 import AccordBadge from '../agreement-options/AccordBadge.vue';
 import { buildLegalTooltipContent, getAccordNomCourt } from '../../domain/tooltip/builders';
 import { wizardToastNbMoisImposeParAccord } from '../../domain/ui/wizardToasts';
@@ -41,23 +44,15 @@ const statutBadgeClass = computed(() => {
   return isCadre(wizard.classe) ? 'cadre' : 'non-cadre';
 });
 
-const nbMoisImpose = computed((): 12 | 13 | null => {
-  if (!agreement.accordActif || !agreement.activeAccordId) return null;
-  const doc = getAgreement(agreement.activeAccordId);
-  const r = doc?.repartition13Mois;
-  if (r && typeof r.actif === 'boolean') return r.actif ? 13 : 12;
-  return null;
-});
+const nbMoisImpose = computed(() => agreement.nbMoisImpose);
 
 /** Document accord pour pastille sur les lignes « source accord » (étape résultat). */
-const resultAccordDoc = computed(() =>
-  agreement.accordActif && agreement.activeAccordId ? getAgreement(agreement.activeAccordId) : null,
-);
+const resultAccordDoc = computed(() => agreement.activeAgreement);
 
 const resultContextNotice = computed(() => {
   let baseInfo = '';
   if (situation.forfait === 'jours') {
-    baseInfo = 'Forfait jours · 218 j/an';
+    baseInfo = `Forfait jours · ${CONFIG.FORFAIT_JOURS_REFERENCE} j/an`;
   } else if (situation.forfait === 'heures') {
     baseInfo = 'Forfait heures';
   } else {
@@ -69,14 +64,7 @@ const resultContextNotice = computed(() => {
     baseInfo += ` · Temps partiel ${String(taux).replace('.', ',')}%`;
   }
   const smhBaseAnnuel = Number(props.data.baseSMH) || 0;
-  const tauxActivitePctRaw = situation.tempsPartiel
-    ? Number(situation.tauxActivite) || CONFIG.TAUX_ACTIVITE_DEFAUT
-    : 100;
-  const tauxActivitePct = Math.max(
-    CONFIG.TAUX_ACTIVITE_MIN,
-    Math.min(CONFIG.TAUX_ACTIVITE_MAX, tauxActivitePctRaw),
-  );
-  const activityRate = tauxActivitePct / 100;
+  const activityRate = resolveActivityRate(situation.tempsPartiel, situation.tauxActivite);
   const isForfaitJours = situation.forfait === 'jours';
   const tauxSmhHoraire = getSmhHourlyBaseRate(smhBaseAnnuel, {
     nbMois: 12,
@@ -139,11 +127,7 @@ const monthsToggleAriaLabel = computed(() =>
 function selectNbMois(target: 12 | 13) {
   const imp = nbMoisImpose.value;
   if (imp != null && target !== imp) {
-    const doc =
-      agreement.accordActif && agreement.activeAccordId
-        ? getAgreement(agreement.activeAccordId)
-        : null;
-    const nom = getAccordNomCourt(doc) || "d'entreprise";
+    const nom = getAccordNomCourt(agreement.activeAgreement) || "d'entreprise";
     dispatchAppToast(wizardToastNbMoisImposeParAccord(imp, nom), 'info');
     return;
   }

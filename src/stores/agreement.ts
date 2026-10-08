@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { extractURLParams } from '../domain/utils/url-params';
-import { getAgreement } from '../domain/agreements/registry';
+import { getAgreement, resolveActiveAgreement } from '../domain/agreements/registry';
+import { getNbMoisImpose } from '../domain/agreements/interface';
 
 export const useAgreementStore = defineStore('agreement', {
   state: () => ({
@@ -8,6 +9,16 @@ export const useAgreementStore = defineStore('agreement', {
     accordActif: false,
     inputs: {} as Record<string, unknown>,
   }),
+  getters: {
+    /** Accord chargé (URL / registre), même si la case « Appliquer » est décochée. */
+    loadedAgreement: (state) => (state.activeAccordId ? getAgreement(state.activeAccordId) : null),
+    /** Accord effectivement appliqué au calcul. */
+    activeAgreement: (state) => resolveActiveAgreement(state),
+    /** 12 ou 13 mois imposés par l'accord appliqué ; `null` sans accord. */
+    nbMoisImpose(): 12 | 13 | null {
+      return getNbMoisImpose(this.activeAgreement);
+    },
+  },
   actions: {
     /** Lit `accord` dans l’URL (y compris query après le hash) et active l’accord si enregistré. */
     bootstrapFromUrl(): void {

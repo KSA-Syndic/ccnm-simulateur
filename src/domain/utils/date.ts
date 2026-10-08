@@ -59,3 +59,33 @@ export function computeSalaireProrataEntree(
   if (joursOuvres >= joursRef) return salaireMensuelComplet;
   return salaireMensuelComplet * (joursOuvres / joursRef);
 }
+
+/** Noms des mois en français (index 0 = janvier). */
+export const MOIS_LONGS = [
+  'janvier',
+  'février',
+  'mars',
+  'avril',
+  'mai',
+  'juin',
+  'juillet',
+  'août',
+  'septembre',
+  'octobre',
+  'novembre',
+  'décembre',
+] as const;
+
+/** Date du jour en toutes lettres (ex. « 8 octobre 2026 »). */
+export function todayFrLong(): string {
+  return new Date().toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+/** Horodatage AAAA-MM-JJ pour les noms de fichiers exportés. */
+export function fileDateStamp(): string {
+  return new Date().toISOString().split('T')[0] ?? '';
+}

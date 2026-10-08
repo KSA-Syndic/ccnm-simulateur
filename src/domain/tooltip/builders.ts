@@ -25,6 +25,12 @@ export function formatFrDecimalFixed(value: unknown, digits = 2): string {
   return n.toFixed(digits).replace('.', ',');
 }
 
+/** Comme `formatFrDecimalFixed`, sans décimales pour une valeur entière, 2 sinon. */
+export function formatFrDecimalAuto(value: unknown): string {
+  const n = Number(value);
+  return formatFrDecimalFixed(n, n % 1 === 0 ? 0 : 2);
+}
+
 export function applyTooltipTemplate(
   template: string,
   vars: Record<string, string | number> = {},
@@ -200,10 +206,10 @@ export function buildAccordSummaryTooltip(
     lines.push(`• ${p.label} : ${detail}`);
   }
 
-  const pv = doc.primes.find((p) => p.id === 'primeVacances');
-  if (pv && pv.inclusDansSMH === true) {
+  for (const p of doc.primes) {
+    if (p.inclusDansSMH !== true) continue;
     lines.push(
-      `• ${pv.label} : incluse dans le SMH selon les paramètres de l'accord (réf. texte / simulateur).`,
+      `• ${p.label} : incluse dans le SMH selon les paramètres de l'accord (réf. texte / simulateur).`,
     );
   }
 

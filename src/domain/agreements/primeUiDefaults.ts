@@ -1,11 +1,11 @@
 import { CONFIG } from '../config';
-import type { PrimeDef } from './interface';
-import { resolvePrimeSemanticId } from './interface';
+import type { Agreement, PrimeDef } from './interface';
+import { getPrimes, resolvePrimeSemanticId } from './interface';
 
 /** Heures par défaut affichées / injectées à l’activation d’une modalité horaire. */
 export function resolvePrimeDefaultHours(prime: PrimeDef): number {
   if (prime.autoHeures === true) {
-    return Number(CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67);
+    return CONFIG.DUREE_LEGALE_HEURES_MOIS;
   }
   const h = Number(prime.defaultHeures);
   return Number.isFinite(h) ? h : 0;
@@ -29,6 +29,21 @@ export function resolvePrimeOfficialValue(prime: PrimeDef): number | null {
 
 export function resolvePrimeSemanticIdForUi(prime: PrimeDef): string {
   return resolvePrimeSemanticId(prime);
+}
+
+/**
+ * Coche les primes déclarées `defaultActif` qui n'ont encore aucune valeur saisie.
+ * Retourne `null` si rien ne change.
+ */
+export function withDefaultActivePrimes(
+  agreement: Agreement,
+  inputs: Record<string, unknown>,
+): Record<string, unknown> | null {
+  const missing = getPrimes(agreement).filter(
+    (p) => p.defaultActif === true && inputs[p.stateKeyActif] === undefined,
+  );
+  if (missing.length === 0) return null;
+  return { ...inputs, ...Object.fromEntries(missing.map((p) => [p.stateKeyActif, true])) };
 }
 
 export type PrimeUiSeedTarget = {

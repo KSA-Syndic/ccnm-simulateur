@@ -2,6 +2,7 @@ import { z } from 'zod/v4';
 import { CONFIG } from '../config';
 import { SEMANTIC_ID, type ElementActivation, type ElementDef, type ComputeRef } from '../types';
 import { roundToCents } from '../utils/rounding';
+import { MOIS_LONGS } from '../utils/date';
 
 export const ConditionAncienneteSchema = z.object({
   type: z.enum(['aucune', 'annees_revolues', 'proratise']),
@@ -111,6 +112,19 @@ export function validateAgreement(agreement: unknown): agreement is Agreement {
   return true;
 }
 
+/** Mois de versement du 13e mois quand l'accord ne le précise pas (novembre). */
+const MOIS_VERSEMENT_13E_DEFAUT = 11;
+
+export function getMois13eVersement(agreement: Agreement | null | undefined): number {
+  return agreement?.repartition13Mois?.moisVersement ?? MOIS_VERSEMENT_13E_DEFAUT;
+}
+
+/** Répartition 12 / 13 mois imposée par l'accord appliqué ; `null` sans accord. */
+export function getNbMoisImpose(agreement: Agreement | null | undefined): 12 | 13 | null {
+  const r = agreement?.repartition13Mois;
+  return r ? (r.actif ? 13 : 12) : null;
+}
+
 export function getPrimes(agreement: Agreement | null | undefined): PrimeDef[] {
   if (!agreement || !Array.isArray(agreement.primes)) return [];
   return agreement.primes;
@@ -172,20 +186,7 @@ export function resolvePrimeSemanticId(primeDef: PrimeDef): string {
   return primeDef.id || '';
 }
 
-const MOIS_VERSEMENT_LABELS = [
-  'janvier',
-  'février',
-  'mars',
-  'avril',
-  'mai',
-  'juin',
-  'juillet',
-  'août',
-  'septembre',
-  'octobre',
-  'novembre',
-  'décembre',
-] as const;
+const MOIS_VERSEMENT_LABELS = MOIS_LONGS;
 
 function accordPrimeDisplayLabel(primeDef: PrimeDef): string {
   const m = primeDef.moisVersement;
@@ -197,9 +198,7 @@ function accordPrimeDisplayLabel(primeDef: PrimeDef): string {
 
 export function primeDefToElementDef(primeDef: PrimeDef, agreement: Agreement): ElementDef {
   const semanticId = resolvePrimeSemanticId(primeDef);
-  const defaultHeuresLeg = Number(
-    primeDef.defaultHeures ?? CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67,
-  );
+  const defaultHeuresLeg = Number(primeDef.defaultHeures ?? CONFIG.DUREE_LEGALE_HEURES_MOIS);
 
   const base: Omit<ElementDef, 'computeMode'> = {
     id: primeDef.id,
@@ -271,9 +270,7 @@ export function primeDefToElementDef(primeDef: PrimeDef, agreement: Agreement): 
     ) {
       const tauxVal = Number(primeDef.valeurAccord);
       if (Number.isFinite(tauxVal)) {
-        const defaultH = Number(
-          primeDef.defaultHeures ?? CONFIG.DUREE_LEGALE_HEURES_MOIS ?? 151.67,
-        );
+        const defaultH = Number(primeDef.defaultHeures ?? CONFIG.DUREE_LEGALE_HEURES_MOIS);
         return {
           ...base,
           computeMode: {

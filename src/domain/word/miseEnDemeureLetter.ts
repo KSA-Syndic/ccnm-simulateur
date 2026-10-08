@@ -1,4 +1,5 @@
 import { escapeHTML, formatMoney } from '../utils/format';
+import { fileDateStamp, todayFrLong } from '../utils/date';
 import type { ArreteesAnneeStub } from '../arretees/aggregateFromPeriodes';
 
 /** Champs attendus par le modèle Word (placeholders si vides). */
@@ -18,14 +19,6 @@ export interface MiseEnDemeureLetterInfos {
 export interface MiseEnDemeureLetterData {
   detailsParAnnee: ArreteesAnneeStub[];
   totalArretees: number;
-}
-
-function todayFrLong(): string {
-  return new Date().toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
 }
 
 function buildYearTableHtml(data: MiseEnDemeureLetterData): string {
@@ -119,7 +112,7 @@ export function buildMiseEnDemeureWordHtml(
 }
 
 export function downloadWordDocument(html: string, basename = 'mise_en_demeure'): void {
-  const stamp = new Date().toISOString().split('T')[0];
+  const stamp = fileDateStamp();
   const trimmed = html.trim();
   const payload = trimmed.startsWith('\ufeff') ? trimmed : `\ufeff${trimmed}`;
   const blob = new Blob([payload], { type: 'application/msword;charset=utf-8' });

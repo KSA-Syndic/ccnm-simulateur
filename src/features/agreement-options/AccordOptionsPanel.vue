@@ -2,18 +2,16 @@
 import { onMounted, watch, computed } from 'vue';
 import { useAgreementStore } from '../../stores/agreement';
 import { useSituationStore } from '../../stores/situation';
-import { getAgreement } from '../../domain/agreements/registry';
 import { CONFIG } from '../../domain/config';
 import { AppTooltip } from '../../components/ui';
 import { buildAccordSummaryTooltip } from '../../domain/tooltip/builders';
+import { withDefaultActivePrimes } from '../../domain/agreements/primeUiDefaults';
 import AccordBadge from './AccordBadge.vue';
 
 const agreement = useAgreementStore();
 const situation = useSituationStore();
 
-const activeDoc = computed(() =>
-  agreement.activeAccordId ? getAgreement(agreement.activeAccordId) : null,
-);
+const activeDoc = computed(() => agreement.loadedAgreement);
 
 const accordTooltipHtml = computed(() => {
   const doc = activeDoc.value;
@@ -23,25 +21,16 @@ const accordTooltipHtml = computed(() => {
   });
 });
 
-function isKuhnActive(): boolean {
-  return agreement.accordActif && agreement.activeAccordId === 'kuhn';
+function ensureDefaultActivePrimes() {
+  const doc = agreement.activeAgreement;
+  if (!doc) return;
+  const next = withDefaultActivePrimes(doc, agreement.inputs);
+  if (next) agreement.inputs = next;
 }
 
-function ensurePrimeVacancesDefault() {
-  if (!isKuhnActive()) return;
-  if (agreement.inputs.primeVacances === undefined) {
-    agreement.inputs = { ...agreement.inputs, primeVacances: true };
-  }
-}
+onMounted(ensureDefaultActivePrimes);
 
-onMounted(ensurePrimeVacancesDefault);
-
-watch(
-  () => [agreement.accordActif, agreement.activeAccordId],
-  () => {
-    ensurePrimeVacancesDefault();
-  },
-);
+watch(() => agreement.activeAgreement, ensureDefaultActivePrimes);
 
 function setAccordActif(on: boolean) {
   agreement.accordActif = on;

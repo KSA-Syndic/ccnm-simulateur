@@ -1,4 +1,4 @@
-import type { Agreement } from '../agreements/interface';
+import { getMois13eVersement, type Agreement } from '../agreements/interface';
 import { getAccordElementDefsForRemuneration } from '../agreements/accord-element-defs';
 import {
   computeAnnualRemunerationFromWizardStores,
@@ -104,7 +104,7 @@ export function calculateSalaireMensuelDuPourPeriode(
   const { ctx, accDoc } = prepareWizardCompute(input, computeOverrides);
   const agreement = params.agreement ?? accDoc;
   const accordDefs = agreement ? getAccordMontantPrimeDefs(agreement) : [];
-  const moisVersement13e = agreement?.repartition13Mois?.moisVersement ?? 11;
+  const moisVersement13e = getMois13eVersement(agreement);
   const estMois13eMois = month === moisVersement13e && !!agreement?.repartition13Mois?.actif;
 
   const salaireAnnuelDuMois = calculateSalaireAnnuelDuPourMois(input, dateMois, emb, {

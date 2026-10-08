@@ -1,4 +1,4 @@
-import type { Agreement } from '../agreements/interface';
+import { getMois13eVersement, type Agreement } from '../agreements/interface';
 import type { ElementDef } from '../types';
 import type { ComputeContext } from '../types';
 import {
@@ -27,7 +27,7 @@ export function computeMensuelDueProfile(params: {
   nbMois: number;
 }): MensuelDueProfile {
   const { salaireAnnuelDuMois, ctx, accordDefs, agreement, smhSeul, month, nbMois } = params;
-  const moisVersement13e = agreement?.repartition13Mois?.moisVersement ?? 11;
+  const moisVersement13e = getMois13eVersement(agreement);
   const estMois13eMois = month === moisVersement13e;
   const repartition13Active = !!(agreement?.repartition13Mois?.actif && nbMois === 13);
   const isSmhOnly = smhSeul === true;
