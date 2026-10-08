@@ -183,7 +183,7 @@
     }
   },
   {
-    "id": "parity-density-01",
+    "id": "density-01",
     "state": {
       "modeManuel": false,
       "groupeManuel": "A",
@@ -208,7 +208,7 @@
     }
   },
   {
-    "id": "parity-density-02",
+    "id": "density-02",
     "state": {
       "modeManuel": false,
       "groupeManuel": "A",
@@ -233,7 +233,7 @@
     }
   },
   {
-    "id": "parity-density-03",
+    "id": "density-03",
     "state": {
       "modeManuel": false,
       "groupeManuel": "A",
@@ -258,7 +258,7 @@
     }
   },
   {
-    "id": "parity-density-04",
+    "id": "density-04",
     "state": {
       "modeManuel": false,
       "groupeManuel": "A",
@@ -283,7 +283,7 @@
     }
   },
   {
-    "id": "parity-density-05",
+    "id": "density-05",
     "state": {
       "modeManuel": false,
       "groupeManuel": "A",
@@ -308,7 +308,7 @@
     }
   },
   {
-    "id": "parity-density-06",
+    "id": "density-06",
     "state": {
       "modeManuel": false,
       "groupeManuel": "A",
@@ -333,7 +333,7 @@
     }
   },
   {
-    "id": "parity-density-07",
+    "id": "density-07",
     "state": {
       "modeManuel": false,
       "groupeManuel": "A",

@@ -4,7 +4,7 @@
  * Pour ajouter une modalité :
  * 1. Compléter `CONVENTION_MODALITES_PRIMES` dans `catalog.ts` (clés d’état, textes juridiques).
  * 2. Ajouter une entrée dans `NATIONAL_MODALITY_ENTRIES` ci-dessous (UI + calcul + surcharge).
- * 3. Lancer `tests/domain/convention/nationalModalityRegistry.test.ts` (parité catalogue ↔ registre).
+ * 3. Lancer `tests/domain/convention/nationalModalityRegistry.test.ts` (cohérence catalogue ↔ registre).
  *
  * L’UI (`AutresPrimesNationalesList`), le moteur (`getAllConventionDefs` → PDF, résultat, arriérés)
  * et les surcharges (`applyNationalPrimeOverridesToConventionDefs`) en découlent automatiquement.

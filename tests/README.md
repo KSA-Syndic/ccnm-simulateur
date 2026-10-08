@@ -9,7 +9,7 @@ src/domain/**/__tests__/     # moteur (engine, smh, agreements, pdf, hints…)
 src/domain/**/*.test.ts      # colocalisés (ex. tooltip/builders.test.ts)
 
 tests/
-├── setup.js
+├── setup.ts
 ├── unit/stores/             # Pinia
 ├── components/              # Vue SFC
 ├── composables/

@@ -51,10 +51,6 @@ export function eligibleHints(ctx: HintContext): HintId[] {
   return out;
 }
 
-export function hintHtmlFor(id: HintId): string {
-  return HINT_ENGINE[id];
-}
-
 /** Concatène plusieurs hints en un bloc HTML (puces). */
 export function formatHintsHtml(ids: HintId[]): string {
   if (!ids.length) return '';

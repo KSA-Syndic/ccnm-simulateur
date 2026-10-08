@@ -1,7 +1,6 @@
 /**
  * Agrégation indicative par année civile à partir des périodes de la frise Vue
  * (libellés contenant une année type « janv. 2024 »).
- * Aligné sur l’esprit de `calculerArreteesMoisParMois` (Art. 140 CCNM) sans recalculer le dû mois par mois.
  */
 
 import { roundToCents, roundToEuro } from '../utils/rounding';

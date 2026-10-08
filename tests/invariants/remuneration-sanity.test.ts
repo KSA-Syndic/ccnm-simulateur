@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import '../../src/accords';
 import { CONFIG } from '../../src/domain/config';
-import {
-  computeAnnualRemunerationFromWizardStores,
-  wizardStoresInputFromFixtureState,
-} from '../../src/domain/remuneration/compute';
+import { computeAnnualRemunerationFromWizardStores } from '../../src/domain/remuneration/compute';
+import { wizardStoresInputFromFixtureState } from '../fixtures/fixtureState';
 
 function stateMinimal(over: Record<string, unknown> = {}) {
   return {

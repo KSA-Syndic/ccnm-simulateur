@@ -29,7 +29,7 @@
   --radius-md: 8px;
 
   /*
-   * Modales — style commun (dialog AppModal, .modal legacy, carte célébration).
+   * Modales — style commun (dialog AppModal, carte célébration).
    */
   --modal-radius: var(--radius-md);
   --modal-border-width: 1px;
@@ -44,10 +44,6 @@
   --tooltip-text: #ffffff;
   --tooltip-border: rgba(255, 255, 255, 0.08);
   --tooltip-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
-  --tooltip-badge-ccnm: #4a90d9;
-  --tooltip-badge-accord: #e67e22;
-  --tooltip-badge-code-travail: #27ae60;
-  --tooltip-badge-acoss: #8e44ad;
 
   --shadow-sm: none;
   --shadow-md: none;

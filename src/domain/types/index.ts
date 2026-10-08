@@ -1,5 +1,3 @@
-import { z } from 'zod/v4';
-
 // ── Semantic IDs ──
 
 export const SEMANTIC_ID = {
@@ -183,35 +181,4 @@ export interface ElementResult {
   inclusDansSMH: boolean | 'ifSuperiorToConvention';
   isAgreementSpecific: boolean;
   meta?: Record<string, unknown> | undefined;
-}
-
-// ── Zod Schemas for validation ──
-
-export const ElementDefSchema = z.object({
-  id: z.string(),
-  semanticId: z.string(),
-  kind: z.enum(['prime', 'majoration', 'forfait']),
-  source: z.enum(['convention', 'accord']),
-  valueKind: z.enum(['horaire', 'montant', 'pourcentage', 'majorationHoraire']),
-  label: z.string(),
-  inclusDansSMH: z.union([z.boolean(), z.literal('ifSuperiorToConvention')]).optional(),
-  stateKeyActif: z.string().optional(),
-  stateKeyHeures: z.string().optional(),
-  sourceArticle: z.string().optional(),
-  conditionTexte: z.string().optional(),
-  tooltip: z.string().optional(),
-  tooltipStrategy: z.enum(['legalBlock', 'rawHtml', 'computed']).optional(),
-  uiSection: z.enum(['main', 'extra']).optional(),
-  conditions: z.array(z.string()).optional(),
-});
-
-export function isElementDef(def: unknown): def is ElementDef {
-  return (
-    def != null &&
-    typeof def === 'object' &&
-    typeof (def as Record<string, unknown>)['id'] === 'string' &&
-    typeof (def as Record<string, unknown>)['semanticId'] === 'string' &&
-    ['prime', 'majoration', 'forfait'].includes(String((def as Record<string, unknown>)['kind'])) &&
-    ['convention', 'accord'].includes(String((def as Record<string, unknown>)['source']))
-  );
 }

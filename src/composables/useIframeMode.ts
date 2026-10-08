@@ -2,10 +2,8 @@ import { ref } from 'vue';
 import { extractURLParams, type URLParamsResult } from '../domain/utils/url-params';
 
 const isIframe = ref(false);
-const urlParams = ref<URLParamsResult>({ accord: null, bgcolor: null, iframe: false });
 
 function applyUrlParamsToDocument(params: URLParamsResult): void {
-  urlParams.value = params;
   isIframe.value = params.iframe;
 
   if (params.iframe) {
@@ -28,5 +26,5 @@ function applyUrlParamsToDocument(params: URLParamsResult): void {
 /** Read `iframe` / `bgcolor` from the URL and apply `body.iframe-mode` + background. Call once from `App.vue` setup (runs during mount, before paint). */
 export function useIframeMode() {
   applyUrlParamsToDocument(extractURLParams());
-  return { isIframe, urlParams };
+  return { isIframe };
 }

@@ -3,10 +3,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from '@playwright/test';
 import '../src/accords';
-import {
-  computeAnnualRemunerationFromWizardStores,
-  wizardStoresInputFromFixtureState,
-} from '../src/domain/remuneration/compute';
+import { computeAnnualRemunerationFromWizardStores } from '../src/domain/remuneration/compute';
+import { wizardStoresInputFromFixtureState } from '../tests/fixtures/fixtureState';
 import { goToStep2ViaEstimation, expectResultValueNear } from './wizard-helpers';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

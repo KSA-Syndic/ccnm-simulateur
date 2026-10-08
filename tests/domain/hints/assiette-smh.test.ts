@@ -1,15 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { CONFIG } from '@/domain/config';
 import { buildSmhAssietteHintBlocks } from '@/domain/hints/engine';
-import {
-  buildParityFixtureState,
-  wizardStoresInputFromFixtureState,
-} from '@/domain/remuneration/compute';
+import { buildFixtureState, wizardStoresInputFromFixtureState } from '../../fixtures/fixtureState';
 
 describe('buildSmhAssietteHintBlocks', () => {
   it('retourne une liste vide lorsque aucun libellé inclus/exclus SMH', () => {
     const input = wizardStoresInputFromFixtureState(
-      buildParityFixtureState({
+      buildFixtureState({
         modeManuel: true,
         groupeManuel: 'A',
         classeManuel: 1,

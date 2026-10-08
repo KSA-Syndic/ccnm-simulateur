@@ -38,25 +38,6 @@ describe('AppTooltip', () => {
     w.unmount();
   });
 
-  it('injecte legalBlockHtml pour TooltipContent structuré', async () => {
-    const w = mount(AppTooltip, {
-      props: {
-        content: {
-          summary: 'Résumé',
-          legalBlockHtml: '<strong>Bloc</strong> légal',
-        },
-      },
-      attachTo: document.body,
-    });
-    await w.find('.app-tooltip-trigger').trigger('mouseenter');
-    await w.vm.$nextTick();
-    const popper = getPopper();
-    expect(popper?.innerHTML).toContain('tooltip-summary');
-    expect(popper?.innerHTML).toContain('tooltip-legal-fragment');
-    expect(popper?.innerHTML).toContain('<strong>Bloc</strong> légal');
-    w.unmount();
-  });
-
   it('survol du popper : délai avant fermeture après mouseleave trigger', async () => {
     vi.useFakeTimers();
     try {

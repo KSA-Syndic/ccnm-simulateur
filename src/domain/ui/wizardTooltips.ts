@@ -35,8 +35,3 @@ export function buildWizardTooltipHtml(
     wizardTooltipOpts(t),
   );
 }
-
-/** Infobulle d’aide champ (titre + texte, sans référence juridique). */
-export function buildFieldHelpTooltipHtml(title: string, description: string): string {
-  return buildLegalTooltipContent(CONFIG.TOOLTIP_TEXTS, title, description);
-}

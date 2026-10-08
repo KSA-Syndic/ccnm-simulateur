@@ -116,10 +116,6 @@ export function getPrimes(agreement: Agreement | null | undefined): PrimeDef[] {
   return agreement.primes;
 }
 
-export function getPrimeById(agreement: Agreement, primeId: string): PrimeDef | null {
-  return getPrimes(agreement).find((p) => p.id === primeId) ?? null;
-}
-
 export function getAccordInput(state: Record<string, unknown>, key: string): unknown {
   if (!state) return undefined;
   const inputs = state['accordInputs'] as Record<string, unknown> | undefined;
@@ -313,8 +309,4 @@ export function primeDefToElementDef(primeDef: PrimeDef, agreement: Agreement): 
     },
   };
   return def;
-}
-
-export function getAccordPrimeDefsAsElements(agreement: Agreement): ElementDef[] {
-  return getPrimes(agreement).map((p) => primeDefToElementDef(p, agreement));
 }

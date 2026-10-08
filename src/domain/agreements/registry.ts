@@ -21,15 +21,3 @@ export function getAgreement(id: string): Agreement | null {
 export function getAllAgreements(): Agreement[] {
   return Array.from(agreementsRegistry.values());
 }
-
-export function hasAgreement(id: string): boolean {
-  return agreementsRegistry.has(id);
-}
-
-export function getAgreementIds(): string[] {
-  return Array.from(agreementsRegistry.keys());
-}
-
-export function clearRegistry(): void {
-  agreementsRegistry.clear();
-}

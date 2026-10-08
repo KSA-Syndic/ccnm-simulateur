@@ -2,12 +2,11 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, useAttrs } from 'vue';
 import { computePosition, flip, shift, offset, autoUpdate } from '@floating-ui/dom';
 import type { Placement } from '@floating-ui/dom';
-import type { TooltipContent, TooltipVariant } from '@/domain/tooltip/model';
-import { formatTooltipHtml } from '@/domain/tooltip/model';
+import type { TooltipVariant } from '@/domain/tooltip/model';
 import { A11Y_LABELS } from '@/domain/ui/labels';
 
 const props = defineProps<{
-  content: string | TooltipContent;
+  content: string;
   position?: 'top' | 'bottom' | 'left' | 'right';
   variant?: TooltipVariant;
   /**
@@ -42,13 +41,6 @@ const placement = computed<Placement>(() => {
   const p = props.position ?? 'top';
   if (p === 'bottom' || p === 'left' || p === 'right' || p === 'top') return p;
   return 'top';
-});
-
-const renderedHtml = computed(() => {
-  if (typeof props.content === 'string') {
-    return props.content;
-  }
-  return formatTooltipHtml(props.content, resolvedVariant.value);
 });
 
 function cancelHide() {
@@ -162,7 +154,7 @@ watch(visible, (v) => {
 });
 
 watch(
-  () => [props.position, renderedHtml.value] as const,
+  () => [props.position, props.content] as const,
   () => {
     if (visible.value) void reposition();
   },
@@ -222,7 +214,7 @@ onUnmounted(() => {
         @mouseenter="onPopperMouseEnter"
         @mouseleave="onPopperMouseLeave"
       >
-        <div class="app-tooltip__content" v-html="renderedHtml" />
+        <div class="app-tooltip__content" v-html="content" />
       </div>
     </Transition>
   </Teleport>

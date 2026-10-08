@@ -41,12 +41,3 @@ export function extractURLParams(): URLParamsResult {
     iframe: params.get('iframe') === 'true' || window.self !== window.top,
   };
 }
-
-export function isIframeMode(): boolean {
-  const params = extractURLParams();
-  return params.iframe;
-}
-
-export function getBackgroundColor(): string | null {
-  return extractURLParams().bgcolor;
-}

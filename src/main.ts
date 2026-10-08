@@ -5,9 +5,8 @@ import App from './App.vue';
 import './assets/styles/variables.css';
 import './assets/styles/tooltips.css';
 import './assets/styles/main.css';
-import './assets/styles/extensions.css';
 import './accords';
-import { useUrlBootstrap } from './composables/useUrlBootstrap';
+import { useAgreementStore } from './stores/agreement';
 
 const app = createApp(App);
 
@@ -15,7 +14,7 @@ const pinia = createPinia();
 pinia.use(piniaPluginPersistedstate);
 
 app.use(pinia);
-useUrlBootstrap();
+useAgreementStore().bootstrapFromUrl();
 
 app.config.errorHandler = (err, instance, info) => {
   console.error('[Global Error]', err, info);

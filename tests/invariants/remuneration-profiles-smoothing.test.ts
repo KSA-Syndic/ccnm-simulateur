@@ -2,10 +2,8 @@ import { describe, expect, it } from 'vitest';
 import profils from '../fixtures/profils-remuneration.json';
 import '../../src/accords';
 import { aggregateRemunerationDetails } from '../../src/domain/remuneration/aggregate';
-import {
-  resolveWizardRemunerationElements,
-  wizardStoresInputFromFixtureState,
-} from '../../src/domain/remuneration/compute';
+import { resolveWizardRemunerationElements } from '../../src/domain/remuneration/compute';
+import { wizardStoresInputFromFixtureState } from '../fixtures/fixtureState';
 import { roundToCents } from '../../src/domain/utils/rounding';
 
 type ProfilFixture = { id: string; state: Record<string, unknown> };

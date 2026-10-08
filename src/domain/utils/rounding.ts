@@ -31,11 +31,6 @@ export function roundHourlyRate(value: unknown): number {
   return new Decimal(toNumber(value)).toDecimalPlaces(4, Decimal.ROUND_CEIL).toNumber();
 }
 
-/** Alias explicite pour taux horaire intermédiaire (4 déc., plafond). */
-export function roundHourlyRateInternal(value: unknown): number {
-  return roundHourlyRate(value);
-}
-
 /**
  * Passe d’un montant **mensuel** à un total **annuel** : `× 12` en précision maximale,
  * puis **un seul** arrondi au centime plafond. Ne pas arrondir le mensuel avant la multiplication.

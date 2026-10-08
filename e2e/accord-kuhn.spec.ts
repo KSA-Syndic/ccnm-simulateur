@@ -2,10 +2,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test, expect } from '@playwright/test';
-import {
-  computeAnnualRemunerationFromWizardStores,
-  wizardStoresInputFromFixtureState,
-} from '../src/domain/remuneration/compute';
+import { computeAnnualRemunerationFromWizardStores } from '../src/domain/remuneration/compute';
+import { wizardStoresInputFromFixtureState } from '../tests/fixtures/fixtureState';
 import { goToStep2ViaEstimation, parseEuroFr } from './wizard-helpers';
 import '../src/accords';
 

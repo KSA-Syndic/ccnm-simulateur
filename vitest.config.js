@@ -12,7 +12,7 @@ export default defineConfig({
     test: {
         globals: true,
         environment: 'jsdom',
-        setupFiles: ['./tests/setup.js'],
+        setupFiles: ['./tests/setup.ts'],
         include: [
             'src/**/*.test.ts',
             'src/**/*.spec.ts',
@@ -27,8 +27,7 @@ export default defineConfig({
                 'node_modules/',
                 'tests/',
                 'e2e/',
-                '*.config.js',
-                '**/*.test.js'
+                '*.config.js'
             ]
         }
     }
