@@ -192,17 +192,6 @@ body.iframe-mode .simulator-container.iframe-container {
   background: var(--color-success);
 }
 
-/* Étape 4 (Arriérés) masquée dans le stepper tant que l'utilisateur n'a pas cliqué sur "Calculer mes arriérés" */
-.stepper-step-4-optional {
-  display: none !important;
-}
-.progress-step.stepper-step-4-optional.stepper-step-4-visible {
-  display: flex !important;
-}
-.progress-line.stepper-step-4-optional.stepper-step-4-visible {
-  display: block !important;
-}
-
 /* ============================================
    WIZARD - Étapes
    ============================================ */
@@ -453,23 +442,6 @@ body.iframe-mode .simulator-container.iframe-container {
   font-size: 0.9rem;
 }
 
-/* Validation des champs */
-.field-error {
-  margin-top: 5px;
-  padding: 8px 12px;
-  background: #fee;
-  border: 1px solid #fcc;
-  border-radius: 0;
-  color: #c33;
-  font-size: 0.85rem;
-  line-height: 1.4;
-}
-
-.input-error {
-  border-color: #fcc !important;
-  background-color: #fff5f5;
-}
-
 /* Conditions de travail (collapsible) */
 .conditions-details {
   margin-top: 20px;
@@ -565,11 +537,6 @@ body.iframe-mode .simulator-container.iframe-container {
   flex: 1;
   max-width: 220px;
   justify-content: center;
-}
-
-/* Accord Kuhn toggle */
-.accord-toggle {
-  margin-bottom: 15px;
 }
 
 /* Checkbox mise en valeur (accord entreprise) */
@@ -766,12 +733,6 @@ body.iframe-mode .simulator-container.iframe-container {
   margin-top: 15px;
 }
 
-.label-optional {
-  font-weight: normal;
-  color: var(--gray-600);
-  font-size: 0.9em;
-}
-
 /* Rapport Arriérés - Étape 4 */
 .arretees-base-info {
   margin: 20px 0;
@@ -952,11 +913,6 @@ body.iframe-mode .simulator-container.iframe-container {
   }
 }
 
-.floating-input-block.animating {
-  pointer-events: none;
-  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
 .floating-label {
   display: flex;
   align-items: center;
@@ -1014,29 +970,6 @@ body.iframe-mode .simulator-container.iframe-container {
   font-size: 0.85em;
 }
 
-.curve-legend {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  flex-wrap: wrap;
-  margin-top: 15px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
-  color: var(--gray-700);
-}
-
-.legend-color {
-  width: 16px;
-  height: 16px;
-  border-radius: 0;
-  display: inline-block;
-}
-
 .curve-progress {
   text-align: center;
   color: var(--gray-600);
@@ -1064,13 +997,6 @@ body.iframe-mode .simulator-container.iframe-container {
 }
 
 /* Frise chronologique - Style calendrier */
-.timeline-container {
-  margin: 30px 0;
-}
-
-.timeline-container h3 {
-  margin-bottom: 10px;
-}
 
 .timeline-help {
   color: var(--gray-600);
@@ -1079,130 +1005,7 @@ body.iframe-mode .simulator-container.iframe-container {
   line-height: 1.5;
 }
 
-.timeline {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 12px;
-  margin: 20px 0;
-  padding: 20px;
-  background: var(--gray-100);
-  border-radius: var(--border-radius);
-  border: 1px solid var(--gray-200);
-  min-height: 200px;
-}
-
-.timeline-period {
-  padding: 12px 10px;
-  background: white;
-  border: 1.5px solid var(--gray-300);
-  border-radius: 0;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: center;
-  position: relative;
-  min-height: 90px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  box-shadow: none;
-}
-
-.timeline-period:hover {
-  border-color: var(--color-link);
-  transform: translateY(-2px);
-  box-shadow: none;
-  z-index: 1;
-}
-
-.timeline-period.filled {
-  background: #f1f8f4;
-  border-color: #4caf50;
-}
-
-.timeline-period.filled:hover {
-  border-color: #388e3c;
-}
-
-.timeline-period.missing {
-  background: #fff8f0;
-  border-color: #ffb74d;
-  border-style: dashed;
-}
-
-.timeline-period.missing:hover {
-  border-color: #ff9800;
-  border-style: solid;
-}
-
-.timeline-period.invalid {
-  background: #ffebee;
-  border-color: #e57373;
-}
-
-.timeline-period .period-label {
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: var(--body-font-color);
-  margin-bottom: 6px;
-  text-transform: capitalize;
-  line-height: 1.2;
-}
-
-.timeline-period .period-salary {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--color-success);
-  margin: 4px 0;
-  word-break: break-word;
-}
-
-.timeline-period .period-status {
-  font-size: 0.7rem;
-  color: var(--gray-600);
-  margin-top: 4px;
-  font-style: italic;
-}
-
-.timeline-period .period-badge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  background: var(--color-link);
-  color: white;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.65rem;
-  font-weight: 700;
-}
-
 /* Modal pour saisie salaire */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--modal-backdrop-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    opacity 0.3s ease,
-    visibility 0.3s ease;
-  backdrop-filter: blur(2px);
-}
-
-.modal-overlay.visible {
-  opacity: 1;
-  visibility: visible;
-}
 
 .modal {
   background: white;
@@ -1221,40 +1024,10 @@ body.iframe-mode .simulator-container.iframe-container {
     opacity 0.2s ease;
 }
 
-.modal-overlay.visible .modal {
-  transform: translateY(0);
-  opacity: 1;
-}
-
 .modal h3 {
   margin-top: 0;
   margin-bottom: 20px;
   color: var(--body-font-color);
-}
-
-.modal .modal-subtitle {
-  margin: -8px 0 18px 0;
-  font-size: 0.9rem;
-  color: var(--gray-600);
-}
-
-.modal .pdf-smh-only-notice {
-  margin: 0 0 16px 0;
-  padding: 10px 12px;
-  font-size: 0.88rem;
-  background: var(--gray-100);
-  border-left: 4px solid var(--primary);
-  border-radius: 0;
-  color: var(--body-font-color);
-}
-
-.modal .modal-section-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--primary);
-  margin: 18px 0 8px 0;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--gray-200);
 }
 
 .modal .form-group {
@@ -1265,48 +1038,6 @@ body.iframe-mode .simulator-container.iframe-container {
   display: block;
   margin-bottom: 8px;
   font-weight: 500;
-}
-
-.modal .period-display {
-  padding: 12px;
-  background: var(--gray-100);
-  border-radius: 0;
-  font-weight: 600;
-  color: var(--body-font-color);
-  text-align: center;
-  margin-bottom: 15px;
-}
-
-.modal .fiche-paie-illustration {
-  margin: 15px 0;
-  padding: 15px;
-  background: #f9f9f9;
-  border: 1px solid var(--gray-300);
-  border-radius: 0;
-  text-align: center;
-}
-
-.modal .fiche-paie-illustration svg {
-  max-width: 100%;
-  height: auto;
-}
-
-.modal .fiche-paie-illustration p {
-  margin-top: 10px;
-  font-size: 0.85rem;
-  color: var(--gray-600);
-}
-
-.modal .modal-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  margin-top: 25px;
-}
-
-.modal .modal-actions-spaced {
-  flex-wrap: wrap;
-  gap: 12px;
 }
 
 /* Instructions juridiques interactives */
@@ -1328,10 +1059,6 @@ body.iframe-mode .simulator-container.iframe-container {
 .legal-instructions[open] summary {
   border-radius: var(--border-radius) var(--border-radius) 0 0;
   border-bottom: 1px solid var(--gray-200);
-}
-
-.legal-instructions-content {
-  padding: 20px;
 }
 
 .legal-step {
@@ -1383,49 +1110,7 @@ body.iframe-mode .simulator-container.iframe-container {
   margin: 5px 0;
 }
 
-/* Rétrocompat carousel */
-.legal-instructions-accordion,
-.legal-instructions-carousel {
-  margin: 30px 0;
-  border: 1px solid var(--gray-200);
-  border-radius: var(--border-radius);
-  overflow: hidden;
-  background: white;
-}
-
-.legal-instructions-accordion.hidden,
-.legal-instructions-carousel.hidden {
-  display: none;
-}
-
-.carousel-nav-above-cards {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.carousel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 25px;
-  background: var(--gray-100);
-  border-bottom: 1px solid var(--gray-200);
-}
-
-.carousel-header h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  color: var(--body-font-color);
-}
-
-.carousel-nav {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
+/* Carrousel juridique — boutons */
 
 .carousel-btn {
   background: white;
@@ -1462,13 +1147,6 @@ body.iframe-mode .simulator-container.iframe-container {
   text-align: center;
 }
 
-.carousel-content {
-  padding: 30px;
-  min-height: 300px;
-  position: relative;
-  overflow: hidden;
-}
-
 .carousel-slide {
   display: none;
   animation: fadeIn 0.3s ease;
@@ -1493,102 +1171,8 @@ body.iframe-mode .simulator-container.iframe-container {
   margin: 0;
 }
 
-/* Guide juridique avec onglets (ancienne version - à supprimer progressivement) */
-.legal-instructions-tabs {
-  margin: 30px 0;
-  border: 1px solid var(--gray-200);
-  border-radius: var(--border-radius);
-  overflow: hidden;
-  background: white;
-}
-
-.tabs-header {
-  display: flex;
-  background: var(--gray-100);
-  border-bottom: 1px solid var(--gray-200);
-}
-
-.tab-btn {
-  flex: 1;
-  padding: 15px 20px;
-  background: transparent;
-  border: none;
-  border-bottom: 3px solid transparent;
-  cursor: pointer;
-  font-weight: 500;
-  color: var(--gray-600);
-  transition: all 0.2s ease;
-  font-size: 0.95rem;
-  font-family: inherit;
-}
-
-.tab-btn:hover {
-  background: var(--gray-50);
-  color: var(--body-font-color);
-}
-
-.tab-btn.active {
-  color: var(--color-link);
-  border-bottom-color: var(--color-link);
-  background: white;
-}
-
-.tabs-content {
-  background: white;
-}
-
-.tab-panel {
-  display: none;
-  padding: 25px;
-  max-height: 500px;
-  overflow-y: auto;
-}
-
-.tab-panel.active {
-  display: block;
-}
-
-/* Styles pour les étapes juridiques dans les onglets */
-.tab-panel .legal-step {
-  margin-bottom: 25px;
-  padding: 20px;
-  background: var(--gray-50);
-  border-radius: var(--border-radius);
-  border-left: 4px solid var(--color-link);
-}
-
-.tab-panel .legal-step:last-child {
-  margin-bottom: 0;
-}
-
-.tab-panel .legal-step h4 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: var(--body-font-color);
-  font-size: 1.1rem;
-}
-
-.tab-panel .legal-step-content {
-  color: var(--gray-700);
-  line-height: 1.7;
-}
-
-.tab-panel .legal-step-content p {
-  margin-bottom: 12px;
-}
-
-.tab-panel .legal-step-content ul {
-  margin: 12px 0;
-  padding-left: 25px;
-}
-
-.tab-panel .legal-step-content li {
-  margin-bottom: 8px;
-}
-
 /* Badge accord dans les détails (générique) */
-.accord-badge,
-.kuhn-badge {
+.accord-badge {
   display: inline-block;
   white-space: nowrap;
   margin-left: 6px;
@@ -1606,69 +1190,9 @@ body.iframe-mode .simulator-container.iframe-container {
     padding: 6px 4px;
   }
 
-  .curve-input-group {
-    flex-direction: column;
-  }
-
-  .curve-input-group label,
-  .curve-input-group .input-with-unit {
-    width: 100%;
-  }
-
-  .curve-input-group .btn-small {
-    width: 100%;
-  }
-
-  .tabs-header {
-    flex-direction: column;
-  }
-
-  .tab-panel {
-    max-height: 400px;
-  }
-
-  .timeline {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 8px;
-    padding: 10px 8px;
-  }
-
-  .timeline-period {
-    min-height: 80px;
-    padding: 10px 8px;
-  }
-
-  .timeline-period .period-label {
-    font-size: 0.8rem;
-  }
-
-  .timeline-period .period-salary {
-    font-size: 0.85rem;
-  }
-
   .modal {
     padding: 20px;
     width: 95%;
-  }
-
-  .arretees-detail-row {
-    grid-template-columns: 1fr;
-    gap: 8px;
-    padding: 10px;
-  }
-
-  .detail-difference {
-    text-align: left;
-  }
-
-  .detail-montants {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-
-  .detail-separator {
-    display: none;
   }
 
   #step-4 .step-content {
@@ -1715,11 +1239,6 @@ body.iframe-mode .simulator-container.iframe-container {
     width: min(300px, calc(100vw - 3rem));
     max-width: 300px;
     padding: 12px;
-  }
-  #step-4 .curve-legend {
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
   }
   #step-4 .curve-progress {
     margin-top: 8px;
@@ -1781,10 +1300,6 @@ body.iframe-mode .simulator-container.iframe-container {
   #step-3 .step-content {
     padding: 16px 14px;
   }
-  #step-3 .result-options {
-    margin: 12px 0;
-    padding: 12px 10px;
-  }
   #step-3 .result-card {
     padding: 12px 10px;
     margin: 12px 0;
@@ -1801,11 +1316,6 @@ body.iframe-mode .simulator-container.iframe-container {
   #step-3 .result-detail-value {
     font-size: 0.95rem;
   }
-  #step-3 .result-detail-info-icon {
-    width: 16px;
-    height: 16px;
-    font-size: 0.68rem;
-  }
   #step-3 .arretees-check-card {
     margin: 20px 0;
     padding: 12px 10px;
@@ -1817,32 +1327,8 @@ body.iframe-mode .simulator-container.iframe-container {
 }
 
 /* Rapport Arriérés - Ancien (à garder pour compatibilité) */
-.arretees-details {
-  margin: 15px 0;
-  border: 1px solid var(--gray-200);
-  border-radius: var(--border-radius);
-}
 
-.arretees-details summary {
-  padding: 12px 15px;
-  cursor: pointer;
-  font-weight: 500;
-  background: var(--gray-100);
-  border-radius: var(--border-radius);
-}
-
-.arretees-details[open] summary {
-  border-radius: var(--border-radius) var(--border-radius) 0 0;
-  border-bottom: 1px solid var(--gray-200);
-}
-
-.arretees-panel {
-  padding: 15px;
-}
-
-.arretees-form h3,
-.arretees-results h3,
-.arretees-instructions h3 {
+.arretees-results h3 {
   margin-top: 0;
   margin-bottom: 15px;
   font-size: 1.1rem;
@@ -1926,73 +1412,11 @@ body.iframe-mode .simulator-container.iframe-container {
   font-size: 1.3rem;
 }
 
-.arretees-summary-header {
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid var(--gray-300);
-}
-
-.arretees-summary-header h4 {
-  margin: 0;
-  color: var(--body-font-color);
-  font-size: 1.1rem;
-}
-
-.arretees-summary-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--gray-200);
-}
-
-.arretees-summary-item:last-child {
-  border-bottom: none;
-}
-
-.arretees-summary-item.arretees-total {
-  font-weight: 600;
-  font-size: 1.15rem;
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 2px solid var(--gray-300);
-}
-
-.arretees-total-amount {
-  color: var(--color-link);
-  font-size: 1.3rem;
-}
-
-.arretees-details-list {
-  margin-top: 25px;
-  padding-top: 20px;
-  border-top: 2px solid var(--gray-200);
-}
-
-.arretees-details-list h4 {
-  margin-bottom: 15px;
-  color: var(--body-font-color);
-  font-size: 1rem;
-}
-
 .arretees-details-table {
   background: white;
   border: 1px solid var(--gray-200);
   border-radius: var(--border-radius);
   overflow: hidden;
-}
-
-.arretees-detail-row {
-  padding: 12px 15px;
-  border-bottom: 1px solid var(--gray-200);
-  display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
-  gap: 15px;
-  align-items: center;
-}
-
-.arretees-detail-row:last-child {
-  border-bottom: none;
 }
 
 /* Accordéon résultats arriérés – aligné sur "Détail du calcul" étape 3 quand .result-details-toggle est présent */
@@ -2064,60 +1488,6 @@ body.iframe-mode .simulator-container.iframe-container {
 }
 .arretees-options-accordion-body {
   padding: 0 15px 15px;
-}
-
-.arretees-summary-compact {
-  padding: 8px 14px 12px;
-  background: white;
-  margin: 0;
-  border-radius: 0 0 var(--border-radius) var(--border-radius);
-}
-
-.arretees-summary-item-inline {
-  padding: 4px 0;
-  border-bottom: none;
-  font-size: 0.9rem;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.arretees-summary-item-inline.arretees-total {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--gray-200);
-  font-size: 1rem;
-}
-
-.arretees-details-compact {
-  padding: 0;
-  border: none;
-  border-radius: 0 0 var(--border-radius) var(--border-radius);
-}
-
-.arretees-detail-row-inline {
-  padding: 6px 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: nowrap;
-  grid-template-columns: unset;
-  font-size: 0.88rem;
-  border-bottom: 1px solid var(--gray-100);
-}
-
-.arretees-detail-row-inline .detail-periode {
-  min-width: 100px;
-}
-
-.arretees-detail-row-inline .detail-montants-inline {
-  flex: 1;
-  color: var(--gray-600);
-}
-
-.arretees-detail-row-inline .detail-diff-value {
-  font-weight: 600;
-  color: var(--color-link);
 }
 
 /* Détail par période : même fond et padding que "Détail du calcul" étape 3 */
@@ -2203,39 +1573,6 @@ body.iframe-mode .simulator-container.iframe-container {
   text-transform: capitalize;
 }
 
-.detail-montants {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  font-size: 0.9rem;
-}
-
-.detail-label {
-  color: var(--gray-600);
-}
-
-.detail-value {
-  font-weight: 500;
-  color: var(--body-font-color);
-}
-
-.detail-separator {
-  color: var(--gray-400);
-  margin: 0 4px;
-}
-
-.detail-difference {
-  text-align: right;
-}
-
-.detail-diff-label {
-  display: block;
-  font-size: 0.85rem;
-  color: var(--gray-600);
-  margin-bottom: 4px;
-}
-
 .detail-diff-value {
   font-weight: 700;
   color: var(--color-link);
@@ -2259,30 +1596,6 @@ body.iframe-mode .simulator-container.iframe-container {
 .arretees-legal-info ul {
   margin: 10px 0;
   padding-left: 20px;
-}
-
-.arretees-instructions {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 2px solid var(--gray-200);
-}
-
-.arretees-instructions-content {
-  background: var(--color-primary-bg);
-  border-left: 4px solid var(--color-link);
-  padding: 15px;
-  border-radius: var(--border-radius);
-  margin-top: 15px;
-}
-
-.arretees-instructions-content ol {
-  margin: 10px 0;
-  padding-left: 25px;
-}
-
-.arretees-instructions-content li {
-  margin: 8px 0;
-  line-height: 1.6;
 }
 
 .evolution-controls {
@@ -2369,52 +1682,6 @@ body.iframe-mode .simulator-container.iframe-container {
   display: none;
 }
 
-/* Sections / étapes (styles utilitaires partagés) */
-.step-section {
-  padding: 30px;
-  border-bottom: 1px solid var(--gray-200);
-}
-
-.step-section:last-of-type {
-  border-bottom: none;
-}
-
-.step-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 25px;
-}
-
-.step-number {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: var(--color-link);
-  color: white;
-  border-radius: 50%;
-  font-weight: 700;
-  font-size: 1.1rem;
-  flex-shrink: 0;
-}
-
-.step-header h2 {
-  margin: 0;
-  font-size: 1.4rem;
-  color: var(--body-font-color);
-  flex: 1;
-}
-
-.step-description {
-  width: 100%;
-  margin: 0;
-  color: var(--gray-500);
-  font-size: 0.95rem;
-}
-
 /* ============================================
    COMPOSANT ROULETTE (Tambour avec descriptions)
    ============================================ */
@@ -2448,33 +1715,6 @@ body.iframe-mode .simulator-container.iframe-container {
   font-weight: 700;
   font-size: 1rem;
   color: var(--body-font-color);
-}
-
-/* Roulette classification — styles partagés ; l’app Vue utilise .app-tooltip-trigger (AppTooltip). */
-.tooltip-trigger:not(.tooltip-trigger__light) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  background: var(--gray-300);
-  color: var(--gray-500);
-  border-radius: 50%;
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: help;
-  transition: var(--transition-fast);
-}
-
-.tooltip-trigger:not(.tooltip-trigger__light):hover {
-  background: var(--color-primary);
-  color: #fff;
-}
-
-.tooltip-trigger.info-trigger {
-  background: var(--color-info);
-  color: white;
-  font-style: italic;
 }
 
 /* Badge du degré sélectionné */
@@ -2615,16 +1855,6 @@ body.iframe-mode .simulator-container.iframe-container {
 }
 
 /* Score Total */
-.score-total {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 20px;
-  background: var(--gray-100);
-  border-radius: var(--border-radius);
-  margin-top: 20px;
-}
 
 .score-label {
   font-weight: 600;
@@ -2645,16 +1875,6 @@ body.iframe-mode .simulator-container.iframe-container {
 /* ============================================
    CLASSIFICATION
    ============================================ */
-.classification-result {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
-
-.classification-auto {
-  text-align: center;
-}
 
 .classification-badge {
   display: inline-flex;
@@ -2676,46 +1896,7 @@ body.iframe-mode .simulator-container.iframe-container {
   color: rgba(255, 255, 255, 0.8);
 }
 
-.classification-label {
-  margin: 10px 0 0 0;
-  color: var(--gray-500);
-  font-size: 0.9rem;
-}
-
-/* Contrôles */
-.classification-controls {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-/* Sélection manuelle */
-.classification-manual {
-  display: flex;
-  gap: 20px;
-  padding: 20px;
-  background: var(--gray-100);
-  border-radius: var(--border-radius);
-}
-
-.select-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.select-group label {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--gray-500);
-}
-
 /* Indicateur Statut */
-.statut-indicator {
-  text-align: center;
-  margin-top: 20px;
-}
 
 .statut-badge {
   display: inline-block;
@@ -2751,20 +1932,9 @@ body.iframe-mode .simulator-container.iframe-container {
   color: var(--body-font-color);
 }
 
-.form-hint {
-  display: block;
-  margin-top: 5px;
-  font-size: 0.8rem;
-  color: var(--gray-500);
-  font-style: italic;
-}
-
 /* ============================================
    RÉSULTAT
    ============================================ */
-.result-section {
-  background: var(--gray-100);
-}
 
 .result-card {
   background: white;
@@ -2860,26 +2030,6 @@ body.iframe-mode .simulator-container.iframe-container {
 .result-detail-label-text {
   min-width: 0;
   overflow-wrap: anywhere;
-}
-
-.result-detail-info-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--gray-300);
-  color: var(--gray-600);
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: help;
-  flex-shrink: 0;
-}
-
-.result-detail-info-icon:hover {
-  background: var(--color-primary);
-  color: white;
 }
 
 /* Alignement des lignes sans infobulle (même emprise que .app-tooltip-trigger 20px) */
@@ -3031,11 +2181,6 @@ body.iframe-mode .simulator-container.iframe-container {
   border-left: 4px solid var(--color-warning);
 }
 
-.book-hint.danger {
-  background: rgba(220, 38, 38, 0.06);
-  border-left: 4px solid var(--color-danger);
-}
-
 .book-hint.success {
   background: rgba(22, 163, 74, 0.06);
   border-left: 4px solid var(--color-success);
@@ -3102,20 +2247,6 @@ body.iframe-mode .simulator-container.iframe-container {
   text-decoration: underline;
 }
 
-.simulator-footer .footer-credit {
-  margin-top: 10px;
-  font-size: inherit;
-}
-
-.simulator-footer .footer-credit a {
-  color: var(--color-link);
-  text-decoration: none;
-}
-
-.simulator-footer .footer-credit a:hover {
-  text-decoration: underline;
-}
-
 @media (max-width: 768px) {
   .simulator-footer {
     padding: 14px 12px;
@@ -3146,52 +2277,6 @@ body.iframe-mode .simulator-container.iframe-container {
   .simulator-footer .footer-line--secondary .footer-item {
     font-size: 0.85em;
   }
-
-  .simulator-footer .footer-credit {
-    margin-top: 8px;
-  }
-}
-
-/* ============================================
-   TIPPY.JS CUSTOMIZATION
-   ============================================ */
-.tippy-box[data-theme~='metallurgie'] {
-  background-color: var(--body-font-color);
-  color: white;
-  font-size: 0.85rem;
-  line-height: 1.5;
-  max-width: 300px;
-  padding: 5px;
-}
-
-.tippy-box[data-theme~='metallurgie'][data-placement^='top'] > .tippy-arrow::before {
-  border-top-color: var(--body-font-color);
-}
-
-.tippy-box[data-theme~='metallurgie'][data-placement^='bottom'] > .tippy-arrow::before {
-  border-bottom-color: var(--body-font-color);
-}
-
-.tippy-box[data-theme~='metallurgie'][data-placement^='left'] > .tippy-arrow::before {
-  border-left-color: var(--body-font-color);
-}
-
-.tippy-box[data-theme~='metallurgie'][data-placement^='right'] > .tippy-arrow::before {
-  border-right-color: var(--body-font-color);
-}
-
-.tippy-box[data-theme~='metallurgie'] a {
-  color: var(--color-primary-light);
-  text-decoration: underline;
-}
-
-.tippy-box[data-theme~='metallurgie'] a.tooltip-link {
-  display: inline-block;
-  margin-top: 0.1rem;
-}
-
-.tippy-box[data-theme~='metallurgie'] a:hover {
-  color: white;
 }
 
 /* ============================================
@@ -3227,10 +2312,6 @@ body.iframe-mode .simulator-container.iframe-container {
 
   .simulator-header h1 {
     font-size: 1.4rem;
-  }
-
-  .step-section {
-    padding: 16px 14px;
   }
 
   .step-content {
@@ -3309,10 +2390,6 @@ body.iframe-mode .simulator-container.iframe-container {
     width: 10em;
   }
 
-  .classification-manual {
-    gap: 15px;
-  }
-
   #step-4 .step-content {
     padding: 16px;
   }
@@ -3333,9 +2410,6 @@ body.iframe-mode .simulator-container.iframe-container {
 
   #step-3 .step-content {
     padding: 14px 12px;
-  }
-  #step-3 .result-options {
-    padding: 12px 0;
   }
   #step-3 .result-card {
     padding: 12px;
@@ -3399,34 +2473,9 @@ body.iframe-mode .simulator-container.iframe-container {
   border-bottom: 1px solid var(--gray-200);
 }
 
-.conditions-autres-modalites .accord-primes-horaires {
-  margin-top: 8px;
-}
-
-.taux-applique {
-  display: block;
-  margin-top: 4px;
-  font-size: 0.85rem;
-  color: var(--color-link);
-  font-weight: 500;
-}
-
-.taux-applique.accord,
-.taux-applique.kuhn {
-  color: var(--color-success);
-}
-
 /* ============================================
    Accord d'Entreprise (checkbox générique)
    ============================================ */
-
-.accord-entreprise {
-  background: var(--gray-100);
-  border: 1px solid var(--gray-300);
-  border-radius: var(--border-radius);
-  padding: 15px 20px;
-  margin-bottom: 20px;
-}
 
 .checkbox-label {
   display: flex;
@@ -3444,55 +2493,6 @@ body.iframe-mode .simulator-container.iframe-container {
   cursor: pointer;
 }
 
-.accord-kuhn-anciennete,
-.accord-anciennete {
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 1px solid var(--gray-300);
-}
-
-.accord-kuhn-anciennete.hidden,
-.accord-anciennete.hidden {
-  display: none;
-}
-
-/* Mise en évidence quand accord actif */
-.accord-entreprise.active {
-  background: var(--color-primary-bg);
-  border-color: var(--color-success);
-}
-
-.accord-entreprise.active .checkbox-main {
-  color: var(--color-success);
-}
-
-/* Options de calcul du résultat */
-.result-options {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.option-group {
-  display: flex;
-  flex-direction: column;
-}
-
-.sub-options {
-  margin-top: 10px;
-  margin-left: 28px;
-  padding: 10px 15px;
-  background: var(--gray-100);
-  border-radius: var(--border-radius);
-  border-left: 3px solid var(--color-link);
-}
-
-.sub-options .checkbox-label {
-  font-weight: normal;
-  font-size: 0.9rem;
-}
-
 /* Container de hints multiples */
 .hints-container {
   display: flex;
@@ -3507,21 +2507,6 @@ body.iframe-mode .simulator-container.iframe-container {
 
 .hints-container .book-hint {
   margin: 0;
-}
-
-/* Message lorsque l'accord est désactivé : modalités qui ne sont plus prises en compte */
-.accord-desactive-message {
-  margin-top: 12px;
-  padding: 10px 12px;
-  font-size: 0.9rem;
-  color: var(--gray-700, #374151);
-  background: var(--gray-100, #f3f4f6);
-  border: 1px solid var(--gray-300, #d1d5db);
-  border-radius: var(--border-radius, 6px);
-}
-
-.accord-desactive-message.hidden {
-  display: none;
 }
 
 /* Sous-champs (heures, etc.) — encadré par défaut */
@@ -3549,30 +2534,6 @@ body.iframe-mode .simulator-container.iframe-container {
    Évolution Salaire vs Inflation
    ============================================ */
 
-.evolution-wrapper {
-  margin-top: 20px;
-}
-
-.btn-evolution {
-  display: block;
-  width: 100%;
-  background: var(--gray-100);
-  border: 1px dashed var(--gray-300);
-  color: var(--gray-500);
-  font-size: 0.9rem;
-  cursor: pointer;
-  padding: 12px 16px;
-  border-radius: var(--border-radius);
-  transition: all 0.2s ease;
-  text-align: center;
-}
-
-.btn-evolution:hover {
-  color: var(--color-link);
-  border-color: var(--color-link);
-  background: var(--color-primary-bg);
-}
-
 .evolution-panel {
   background: var(--gray-100);
   border: 1px solid var(--gray-300);
@@ -3591,18 +2552,6 @@ body.iframe-mode .simulator-container.iframe-container {
   }
 }
 
-.evolution-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.evolution-title {
-  font-size: 0.9rem;
-  color: var(--gray-500);
-}
-
 .book-select-inline {
   display: inline-block;
   width: auto;
@@ -3611,43 +2560,6 @@ body.iframe-mode .simulator-container.iframe-container {
   border: 1px solid var(--gray-300);
   border-radius: var(--border-radius);
   background: var(--body-background);
-}
-
-.btn-close-small {
-  background: transparent;
-  border: none;
-  font-size: 1rem;
-  cursor: pointer;
-  color: var(--gray-400);
-  padding: 2px 6px;
-  border-radius: var(--border-radius);
-  line-height: 1;
-}
-
-.btn-close-small:hover {
-  background: var(--gray-200);
-  color: var(--body-font-color);
-}
-
-.evolution-age-input {
-  margin-bottom: 12px;
-  font-size: 0.85rem;
-  color: var(--gray-500);
-}
-
-.evolution-params {
-  margin-bottom: 12px;
-  font-size: 0.85rem;
-  color: var(--gray-500);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.evolution-params label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }
 
 .book-input-small {
@@ -3698,31 +2610,6 @@ body.iframe-mode .simulator-container.iframe-container {
     padding: 10px 8px;
   }
 
-  .evolution-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-
-  .evolution-title {
-    font-size: 0.9rem;
-  }
-
-  .btn-close-small {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-  }
-
-  .evolution-params {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .evolution-params label {
-    flex-wrap: wrap;
-  }
-
   .chart-container {
     height: 280px;
     margin: 12px -8px;
@@ -3752,19 +2639,9 @@ body.iframe-mode .simulator-container.iframe-container {
     margin-top: 5px;
   }
 
-  .evolution-age-input,
-  .evolution-params {
-    font-size: 0.8rem;
-  }
-
   .book-input-small {
     width: 50px;
     padding: 3px 5px;
-  }
-
-  .btn-evolution {
-    font-size: 0.85rem;
-    padding: 10px;
   }
 
   .toast {
@@ -3795,27 +2672,4 @@ body.iframe-mode .simulator-container.iframe-container {
     transform 0.3s ease;
   max-width: 400px;
   border-left: 4px solid var(--gray-400);
-}
-
-.toast.toast-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.toast.toast-info {
-  border-left-color: var(--color-primary);
-  background: #fff3ea;
-  color: var(--color-primary-dark);
-}
-
-.toast.toast-warning {
-  border-left-color: var(--color-warning);
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.toast.toast-success {
-  border-left-color: var(--color-success);
-  background: #ecfdf3;
-  color: var(--color-success);
 }
