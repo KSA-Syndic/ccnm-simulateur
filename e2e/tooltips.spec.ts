@@ -7,6 +7,6 @@ test.describe('Tooltips', () => {
     const trigger = page.locator('.app-tooltip-trigger').first();
     await expect(trigger).toBeVisible();
     await trigger.hover();
-    await expect(page.locator('[role="tooltip"]')).toBeVisible();
+    await expect(page.locator('[role="tooltip"]:visible')).toHaveCount(1);
   });
 });

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { WIZARD_LABELS } from '../src/domain/ui/labels';
 import { goToStep1b, goToStep2, goToStep3, goToStep4, hashBase } from './wizard-helpers';
 
 async function goToStep1c(page: Page) {
@@ -31,9 +32,9 @@ test.describe('Smoke — wizard Vue (mono-page)', () => {
 
   test('step 3 — résultat', async ({ page }) => {
     await goToStep3(page, 'A');
-    await expect(
-      page.getByText(/Salaire minimum hiérarchique|Rémunération annuelle/i).first(),
-    ).toBeVisible();
+    const step3 = page.locator('section[aria-label="Étape 3 — Résultat"]');
+    await expect(step3.getByRole('heading', { name: WIZARD_LABELS.resultPageTitle })).toBeVisible();
+    await expect(step3.locator('#result-smh')).toContainText('€');
   });
 
   test('step 4 — arriérés (navigation)', async ({ page }) => {

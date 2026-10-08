@@ -19,7 +19,8 @@ export async function goToStep2ViaEstimation(
       .locator('.roulette-item')
       .nth(i)
       .locator(`.roulette-value[data-value="${v}"]`)
-      .click();
+      // Le degré visé peut être sous une flèche de la roulette : clic déclenché sur le bouton lui-même.
+      .dispatchEvent('click');
   }
   await page.getByRole('button', { name: /^Valider/i }).click();
   await page.locator('section[aria-label="Étape 2 — Situation"]').waitFor({ state: 'visible' });
@@ -100,4 +101,14 @@ export async function fillOneSalaireViaBulkModal(page: Page) {
   const dialog = page.getByRole('dialog', { name: /Saisir les salaires versés/i });
   await dialog.locator('.salary-modal-row').first().locator('input.book-input').fill('3000');
   await dialog.getByRole('button', { name: /^Enregistrer$/ }).click();
+}
+
+/** Étape 2 (non-cadre) : « Autre territoire » puis saisie libre de la valeur du point. */
+export async function setPointTerritorialLibre(page: Page, valeur: number) {
+  const zone = page.locator('#territoire-point');
+  if ((await zone.count()) === 0) return;
+  await zone.click();
+  await zone.fill('Autre territoire');
+  await zone.press('Enter');
+  await page.locator('#point-territorial').fill(String(valeur));
 }

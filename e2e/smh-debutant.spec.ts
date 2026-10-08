@@ -6,7 +6,7 @@ test.describe('SMH débutants F11', () => {
     await goToStep2(page, 'F', '11');
     await expect(page.locator('#cadre-debutant')).toBeVisible();
     await page.locator('#experience-pro').fill('1');
-    await expect(page.locator('.cadre-debutant-smh')).toContainText('SMH indicatif');
+    await expect(page.locator('.cadre-debutant-smh')).toContainText('Salaire minimum indicatif');
     await expect(page.locator('.cadre-debutant-smh')).toContainText('tranche 0');
   });
 });

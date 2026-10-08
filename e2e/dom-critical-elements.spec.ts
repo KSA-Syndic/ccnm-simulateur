@@ -5,11 +5,11 @@ test.describe('DOM critique — résultat & classification', () => {
   test('résultat : détail, toggle mois, libellés groupe', async ({ page }) => {
     await goToStep3(page, 'A', '1');
     await expect(page.locator('.remuneration-result .result-details')).toBeVisible();
-    await expect(page.locator('.remuneration-result .detail-line').first()).toBeVisible();
-    await expect(page.getByRole('button', { name: '12 mois' })).toBeVisible();
-    await expect(page.getByRole('button', { name: '13 mois' })).toBeVisible();
-    await page.getByRole('button', { name: '13 mois' }).click();
-    await expect(page.getByRole('button', { name: '13 mois' })).toHaveClass(/active/);
+    await expect(page.locator('.remuneration-result .result-detail-item').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: '12 mois', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '13 mois', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: '13 mois', exact: true }).click();
+    await expect(page.getByRole('button', { name: '13 mois', exact: true })).toHaveClass(/active/);
 
     await page.goto(hashBase);
     await page.evaluate(() => sessionStorage.clear());

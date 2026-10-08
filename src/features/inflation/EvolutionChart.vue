@@ -182,86 +182,91 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <details class="evolution-details" @toggle="onDetailsToggle">
-    <summary id="evolution-details-summary" class="evolution-details-summary">
-      <span class="evolution-details-summary-title">{{ WIZARD_LABELS.evolutionInflation }}</span>
-      <span class="evolution-details-summary-tooltip" @click.stop @mousedown.stop>
-        <AppTooltip
-          :content="evolutionInflationTooltip"
-          variant="compact"
-          position="top"
-          trigger-aria-label="Comprendre la projection par rapport à l'inflation"
-        />
-      </span>
-    </summary>
-    <div id="evolution-section" class="evolution-panel">
-      <div class="evolution-controls">
-        <label>
-          Projection :
-          <select id="projection-years" v-model="projectionYears" class="book-select-inline">
-            <option value="5">5 ans</option>
-            <option value="10">10 ans</option>
-            <option value="15">15 ans</option>
-            <option value="20">20 ans</option>
-            <option value="25">25 ans</option>
-            <option value="30">30 ans</option>
-            <option value="retraite">Retraite</option>
-          </select>
-        </label>
-        <label v-show="projectionYears === 'retraite'" id="age-input-wrapper">
-          Âge :
-          <NumericInput
-            id="age-actuel"
-            v-model="ageActuel"
-            mode="integer"
-            class="book-input-small"
-            :min="18"
-            :max="66"
-            :max-length="2"
-            aria-label="Âge actuel"
-          />
-        </label>
-        <label
-          class="evolution-augmentation-field"
-          :class="{ 'evolution-augmentation-field--prompt': showAugmentationPrompt }"
-        >
-          <span
-            v-if="showAugmentationPrompt"
-            id="evolution-augmentation-prompt"
-            class="evolution-augmentation-callout"
-            role="status"
-            aria-live="polite"
+  <!-- Aide hors du <summary> : un bouton ne peut pas être imbriqué dans un autre élément interactif. -->
+  <div class="evolution-details-wrap">
+    <details class="evolution-details" @toggle="onDetailsToggle">
+      <summary id="evolution-details-summary" class="evolution-details-summary">
+        <span class="evolution-details-summary-title">{{ WIZARD_LABELS.evolutionInflation }}</span>
+      </summary>
+      <div id="evolution-section" class="evolution-panel">
+        <div class="evolution-controls">
+          <label>
+            Projection :
+            <select id="projection-years" v-model="projectionYears" class="book-select-inline">
+              <option value="5">5 ans</option>
+              <option value="10">10 ans</option>
+              <option value="15">15 ans</option>
+              <option value="20">20 ans</option>
+              <option value="25">25 ans</option>
+              <option value="30">30 ans</option>
+              <option value="retraite">Retraite</option>
+            </select>
+          </label>
+          <label v-show="projectionYears === 'retraite'" id="age-input-wrapper">
+            Âge :
+            <NumericInput
+              id="age-actuel"
+              v-model="ageActuel"
+              mode="integer"
+              class="book-input-small"
+              :min="18"
+              :max="66"
+              :max-length="2"
+              aria-label="Âge actuel"
+            />
+          </label>
+          <label
+            class="evolution-augmentation-field"
+            :class="{ 'evolution-augmentation-field--prompt': showAugmentationPrompt }"
           >
-            {{ WIZARD_LABELS.evolutionAugmentationPrompt }}
-          </span>
-          Augmentation/an :
-          <NumericInput
-            id="augmentation-annuelle"
-            v-model="augmentationAnnuelle"
-            mode="decimal"
-            class="book-input-small"
-            :min="0"
-            :max="100"
-            :step="0.1"
-            :max-length="5"
-            aria-label="Augmentation annuelle moyenne en pourcentage"
-            :aria-describedby="showAugmentationPrompt ? 'evolution-augmentation-prompt' : undefined"
-            @focus="dismissAugmentationPrompt"
+            <span
+              v-if="showAugmentationPrompt"
+              id="evolution-augmentation-prompt"
+              class="evolution-augmentation-callout"
+              role="status"
+              aria-live="polite"
+            >
+              {{ WIZARD_LABELS.evolutionAugmentationPrompt }}
+            </span>
+            Augmentation/an :
+            <NumericInput
+              id="augmentation-annuelle"
+              v-model="augmentationAnnuelle"
+              mode="decimal"
+              class="book-input-small"
+              :min="0"
+              :max="100"
+              :step="0.1"
+              :max-length="5"
+              aria-label="Augmentation annuelle moyenne en pourcentage"
+              :aria-describedby="
+                showAugmentationPrompt ? 'evolution-augmentation-prompt' : undefined
+              "
+              @focus="dismissAugmentationPrompt"
+            />
+            %
+          </label>
+        </div>
+        <div class="chart-container">
+          <canvas
+            ref="canvasRef"
+            aria-label="Projection de la rémunération par rapport à l'inflation"
+            role="img"
           />
-          %
-        </label>
+        </div>
+        <div id="evolution-summary" class="evolution-summary">
+          <p class="evolution-summary-text" v-html="summaryHtml" />
+          <small class="data-source">{{ inflationMetaCaption }}</small>
+        </div>
       </div>
-      <div class="chart-container">
-        <canvas
-          ref="canvasRef"
-          aria-label="Projection de la rémunération par rapport à l'inflation"
-          role="img"
-        />
-      </div>
-      <div id="evolution-summary" class="evolution-summary">
-        <p class="evolution-summary-text" v-html="summaryHtml" />
-        <small class="data-source">{{ inflationMetaCaption }}</small>
-      </div>
-    </div>
-  </details>
+    </details>
+    <span class="evolution-details-summary-tooltip">
+      <AppTooltip
+        :content="evolutionInflationTooltip"
+        variant="compact"
+        position="top"
+        trigger-aria-label="Comprendre la projection par rapport à l'inflation"
+      />
+    </span>
+  </div>
 </template>

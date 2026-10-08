@@ -674,16 +674,21 @@ body.iframe-mode .simulator-container.iframe-container {
 
 /* Évolution (collapsible) */
 .evolution-details {
-  margin: 15px 0;
+  margin: 0;
   border: 1px solid var(--gray-200);
   border-radius: var(--border-radius);
+}
+
+.evolution-details-wrap {
+  position: relative;
+  margin: 15px 0;
 }
 
 .evolution-details summary.evolution-details-summary {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 12px 15px;
+  padding: 12px 44px 12px 15px;
   cursor: pointer;
   font-weight: 500;
 }
@@ -694,9 +699,10 @@ body.iframe-mode .simulator-container.iframe-container {
 }
 
 .evolution-details-summary-tooltip {
+  position: absolute;
+  top: 12px;
+  right: 15px;
   display: inline-flex;
-  flex-shrink: 0;
-  cursor: default;
 }
 
 .evolution-details .evolution-panel {

@@ -5,6 +5,7 @@ import {
   goToStep3,
   goToStep4,
   hashBase,
+  setPointTerritorialLibre,
 } from './wizard-helpers';
 
 const accordKuhnStart = '/?accord=kuhn';
@@ -23,8 +24,16 @@ test.describe('P5.2 — UI wizard (situation, header, footer, hints, graphiques,
     await expect(page.getByLabel(/Taux d'activité/i)).toHaveValue(/80/);
   });
 
-  test('étape 2 — point territorial (NumericInput décimal)', async ({ page }) => {
+  test('étape 2 — point territorial : recherche de zone et saisie libre', async ({ page }) => {
     await goToStep2(page, 'A', '1');
+    const zone = page.locator('#territoire-point');
+    await expect(zone).toHaveValue('Bas-Rhin');
+    await zone.click();
+    await zone.fill('69');
+    await expect(page.locator('#territoire-point-listbox [role="option"]')).toHaveCount(1);
+    await zone.press('Enter');
+    await expect(zone).toHaveValue('Rhône');
+    await setPointTerritorialLibre(page, 6);
     const pt = page.locator('#point-territorial');
     await pt.fill('6,12');
     await pt.blur();

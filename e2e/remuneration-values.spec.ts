@@ -5,7 +5,11 @@ import { test } from '@playwright/test';
 import '../src/accords';
 import { computeAnnualRemunerationFromWizardStores } from '../src/domain/remuneration/compute';
 import { wizardStoresInputFromFixtureState } from '../tests/fixtures/fixtureState';
-import { goToStep2ViaEstimation, expectResultValueNear } from './wizard-helpers';
+import {
+  goToStep2ViaEstimation,
+  expectResultValueNear,
+  setPointTerritorialLibre,
+} from './wizard-helpers';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const profils: { id: string; state: Record<string, unknown> }[] = JSON.parse(
@@ -30,7 +34,7 @@ async function fillSituationFromFixture(page: import('@playwright/test').Page, i
   if (st.forfait === 'jours' && (await page.locator('#forfait').count()) > 0) {
     await page.selectOption('#forfait', 'jours');
   }
-  await page.locator('#point-territorial').fill(String(st.pointTerritorial ?? 5.9));
+  await setPointTerritorialLibre(page, Number(st.pointTerritorial ?? 5.9));
 }
 
 test.describe('Rémunération — valeurs alignées sur les fixtures', () => {
