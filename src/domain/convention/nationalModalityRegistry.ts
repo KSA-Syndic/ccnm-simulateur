@@ -284,23 +284,25 @@ export function getNationalModalityCatalogKeys(): NationalModalityCatalogKey[] {
 }
 
 /** Sémantiques autorisées pour `nationalPrimeOverrides` (dérivé du registre). */
+const OVERRIDE_SEMANTICS: ReadonlySet<string> = new Set(
+  NATIONAL_MODALITY_ENTRIES.filter((e) => e.allowUserOverride).map((e) => e.semanticId),
+);
+
 export function getNationalModalityOverrideSemantics(): ReadonlySet<string> {
-  return new Set(
-    NATIONAL_MODALITY_ENTRIES.filter((e) => e.allowUserOverride).map((e) => e.semanticId),
-  );
+  return OVERRIDE_SEMANTICS;
 }
+
+const OVERRIDE_KIND_BY_SEMANTIC: ReadonlyMap<string, NationalModalityOverrideKind> = new Map(
+  NATIONAL_MODALITY_ENTRIES.flatMap((e) =>
+    e.allowUserOverride && e.overrideKind ? [[e.semanticId, e.overrideKind] as const] : [],
+  ),
+);
 
 export function getNationalModalityOverrideKindBySemanticId(): ReadonlyMap<
   string,
   NationalModalityOverrideKind
 > {
-  const map = new Map<string, NationalModalityOverrideKind>();
-  for (const e of NATIONAL_MODALITY_ENTRIES) {
-    if (e.allowUserOverride && e.overrideKind) {
-      map.set(e.semanticId, e.overrideKind);
-    }
-  }
-  return map;
+  return OVERRIDE_KIND_BY_SEMANTIC;
 }
 
 function registryEntryToUiRow(entry: NationalModalityRegistryEntry): NationalPrimeOverrideRow {

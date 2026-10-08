@@ -42,9 +42,9 @@ function patchComputeModeWithOverride(
  * (sémantiques et cibles dérivées du registre `nationalModalityRegistry`).
  */
 export function applyNationalPrimeOverridesToConventionDefs(
-  defs: ElementDef[],
+  defs: readonly ElementDef[],
   state: Record<string, unknown>,
-): ElementDef[] {
+): readonly ElementDef[] {
   const map = (state.nationalPrimeOverrides ?? {}) as Record<string, unknown>;
   if (!map || typeof map !== 'object' || Object.keys(map).length === 0) {
     return defs;

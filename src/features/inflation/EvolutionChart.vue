@@ -11,7 +11,7 @@ import {
   getYearsToRetirement,
   INFLATION_FALLBACK_PCT,
 } from '../../domain/evolution/projection';
-import { fetchInflationSeries } from '../../domain/evolution/inflationFetch';
+import { loadInflationSeries } from '../../domain/evolution/inflationFetch';
 import { WIZARD_LABELS } from '../../domain/ui/labels';
 import { formatMoney } from '../../domain/utils/format';
 import { buildWizardTooltipHtml } from '../../domain/ui/wizardTooltips';
@@ -155,12 +155,14 @@ async function onDetailsToggle(ev: Event) {
   detailsOpen.value = !!el.open;
   if (!el.open) return;
   augmentationPromptDismissed.value = false;
+  // Affiche tout de suite avec la série de secours, puis met à jour avec la série en ligne.
+  await renderChart();
   if (Object.keys(inflationSeries.value).length === 0) {
-    const r = await fetchInflationSeries();
+    const r = await loadInflationSeries();
     inflationSeries.value = r.values;
     inflationMeta.value = { source: r.source, period: r.period };
+    if (detailsOpen.value) await renderChart();
   }
-  await renderChart();
 }
 
 watch(projectionYears, () => {

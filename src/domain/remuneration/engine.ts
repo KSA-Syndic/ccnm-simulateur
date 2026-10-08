@@ -213,7 +213,7 @@ function normalizeIfSuperiorSmhResult(
 }
 
 export function resolveBySubstitution(
-  conventionDefs: ElementDef[],
+  conventionDefs: readonly ElementDef[],
   accordDefs: ElementDef[],
   ctx: ComputeContext,
 ): ResolvedElement[] {

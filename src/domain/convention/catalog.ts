@@ -405,13 +405,17 @@ export function getConventionRachatJoursReposForfaitDef(): ElementDef {
   };
 }
 
-export function getAllConventionDefs(): ElementDef[] {
-  return [
+let conventionDefsCache: readonly ElementDef[] | null = null;
+
+/** Définitions conventionnelles (dérivées de `CONFIG`, immuables) — construites une seule fois. */
+export function getAllConventionDefs(): readonly ElementDef[] {
+  conventionDefsCache ??= [
     ...getConventionPrimeDefs(),
     ...getConventionMajorationDefs(),
     ...getConventionForfaitDefs(),
     getConventionRachatJoursReposForfaitDef(),
   ];
+  return conventionDefsCache;
 }
 
 /** Type de champ valeur (taux / montant) pour la ligne « Autres ». */

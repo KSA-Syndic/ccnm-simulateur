@@ -82,7 +82,7 @@ src/
 ### 1. Bootstrap
 
 1. `src/main.ts` charge Pinia et **`import './accords'`** (registre rempli).
-2. `useUrlBootstrap()` lit `?accord=` et active l'accord via `loadAgreement` (`domain/agreements/loader.ts`).
+2. `useAgreementStore().bootstrapFromUrl()` (appelé dans `main.ts`) lit `?accord=` et active l'accord via le registre (`domain/agreements/registry.ts`).
 
 ### 2. Classification (étape 1)
 

@@ -82,6 +82,14 @@ function sortedYearSpan(values: Record<string, number>): string {
   return `${years[0]}-${years[years.length - 1]}`;
 }
 
+let inflationSeriesPromise: Promise<InflationSeriesResult> | null = null;
+
+/** `fetchInflationSeries` mis en cache pour la session (une seule requête, partagée entre montages). */
+export function loadInflationSeries(): Promise<InflationSeriesResult> {
+  inflationSeriesPromise ??= fetchInflationSeries();
+  return inflationSeriesPromise;
+}
+
 /**
  * Cascade Eurostat (taux RCH_A_AVG) → Banque mondiale (IPC) → série de secours CONFIG.
  * Ne lève pas : renvoie toujours au minimum le jeu de secours CONFIG.

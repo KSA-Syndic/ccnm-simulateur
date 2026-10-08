@@ -160,26 +160,25 @@ defineExpose({
   refreshChart: renderChart,
 });
 
-function onChartResize() {
-  void renderChart();
+/** Regroupe redimensionnements et mises à jour (données + mois courant) en un seul rendu par frame. */
+let renderFrame: number | null = null;
+function scheduleRender() {
+  if (renderFrame != null) return;
+  renderFrame = requestAnimationFrame(() => {
+    renderFrame = null;
+    void renderChart();
+  });
 }
 
 onMounted(() => {
   void renderChart();
-  window.addEventListener('resize', onChartResize);
+  window.addEventListener('resize', scheduleRender);
 });
-watch(
-  () => arreteesStore.periodes,
-  () => {
-    void renderChart();
-  },
-  { deep: true },
-);
-watch(currentIdx, () => {
-  void renderChart();
-});
+watch(() => arreteesStore.periodes, scheduleRender, { deep: true });
+watch(currentIdx, scheduleRender);
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', onChartResize);
+  window.removeEventListener('resize', scheduleRender);
+  if (renderFrame != null) cancelAnimationFrame(renderFrame);
   chartInstance?.destroy();
 });
 </script>

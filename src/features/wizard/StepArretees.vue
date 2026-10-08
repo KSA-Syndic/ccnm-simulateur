@@ -6,7 +6,6 @@ import { useWordGeneration } from '../../composables/useWordGeneration';
 import { useArreteesStore } from '../../stores/arretees';
 import { useWizardStore } from '../../stores/wizard';
 import { useSituationStore } from '../../stores/situation';
-import { computeAnnualRemunerationFromWizardStores } from '../../domain/remuneration/compute';
 import {
   buildMonthlyPeriodsStub,
   enrichPeriodesSalaireDuMensuel,
@@ -62,10 +61,6 @@ const ui = useUiStore();
 const agreementStore = useAgreementStore();
 
 const activeAgreementDoc = computed(() => agreementStore.activeAgreement);
-
-const remunerationAnnuelle = computed(() =>
-  computeAnnualRemunerationFromWizardStores(wizardInput.value),
-);
 
 const arreteesAssietteBlocks = computed(() =>
   isCompleteIsoDateString(dateEmbauche.value)
@@ -231,44 +226,19 @@ function onDateEmbaucheChange(ev: Event) {
   void commitDateEmbauche(v);
 }
 
+/** Une seule reconstruction de la frise par cycle, quel que soit le paramètre modifié. */
 watch(
-  () => remunerationAnnuelle.value.total,
-  () => {
-    if (dateEmbauche.value) rebuildPeriodesFromDate(dateEmbauche.value);
-  },
-);
-
-watch(
-  () => ui.nbMois,
-  () => {
-    if (dateEmbauche.value) rebuildPeriodesFromDate(dateEmbauche.value);
-  },
-);
-
-watch(
-  () => arretees.surSMHSeul,
-  () => {
-    if (dateEmbauche.value) rebuildPeriodesFromDate(dateEmbauche.value);
-  },
-);
-
-watch(
-  wizardInput,
+  () => [
+    wizardInput.value,
+    ui.nbMois,
+    arretees.surSMHSeul,
+    activeAgreementDoc.value,
+    arretees.dateChangementClassification,
+  ],
   () => {
     if (dateEmbauche.value) rebuildPeriodesFromDate(dateEmbauche.value);
   },
   { deep: true },
-);
-
-watch(activeAgreementDoc, () => {
-  if (dateEmbauche.value) rebuildPeriodesFromDate(dateEmbauche.value);
-});
-
-watch(
-  () => arretees.dateChangementClassification,
-  () => {
-    if (dateEmbauche.value) rebuildPeriodesFromDate(dateEmbauche.value);
-  },
 );
 
 onMounted(() => {
