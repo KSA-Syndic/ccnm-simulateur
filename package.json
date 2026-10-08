@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "vite --open",
     "build": "vue-tsc --noEmit && vite build",
-    "build:pages": "npx cross-env VITE_BASE=/ npm run build",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -36,7 +35,6 @@
     "@vitest/ui": "^1.0.4",
     "@vue/test-utils": "^2.4.6",
     "chart.js": "^4.5.1",
-    "cross-env": "^7.0.3",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-vue": "^10.8.0",

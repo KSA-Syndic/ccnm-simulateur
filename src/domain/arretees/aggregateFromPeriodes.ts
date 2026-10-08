@@ -22,14 +22,25 @@ export function extractYearFromPeriodeLabel(label: string): number | null {
   return Number(m[1]);
 }
 
+/** Année civile d'une période : clé stable « AAAA-MM » si présente, sinon libellé affiché. */
+export function yearOfPeriode(p: { label: string; periodKey?: string | undefined }): number | null {
+  const y = p.periodKey ? Number(p.periodKey.slice(0, 4)) : NaN;
+  return Number.isInteger(y) && y > 0 ? y : extractYearFromPeriodeLabel(p.label);
+}
+
 export function aggregateArreteesParAnneeFromPeriodeLabels(
-  periodes: ReadonlyArray<{ label: string; salaireDu: number; salaireVerse: number | undefined }>,
+  periodes: ReadonlyArray<{
+    label: string;
+    periodKey?: string | undefined;
+    salaireDu: number;
+    salaireVerse: number | undefined;
+  }>,
 ): { detailsParAnnee: ArreteesAnneeStub[]; totalArretees: number } {
   const map = new Map<number, { totalDu: number; totalReel: number; nbMoisSaisis: number }>();
 
   for (const p of periodes) {
     if (p.salaireVerse === undefined) continue;
-    const annee = extractYearFromPeriodeLabel(p.label);
+    const annee = yearOfPeriode(p);
     if (annee === null) continue;
     let e = map.get(annee);
     if (!e) {

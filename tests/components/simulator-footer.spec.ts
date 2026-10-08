@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { mount } from '@vue/test-utils';
 import SimulatorFooter from '@/components/SimulatorFooter.vue';
-import { CONVENTION_METALLURGIE_URL, SIMULATOR_SHELL } from '@/domain/ui/labels';
+import { CONVENTION_METALLURGIE_URL, EDITEUR, SIMULATOR_SHELL } from '@/domain/ui/labels';
 
 describe('SimulatorFooter', () => {
   it('affiche les textes shell et le lien UIMM', () => {
@@ -23,8 +23,8 @@ describe('SimulatorFooter', () => {
       global: { stubs: { PrivacyModal: { template: '<div />' } } },
     });
 
-    const cfdt = w.find(`a[href="${SIMULATOR_SHELL.cfdtKuhnUrl}"]`);
-    expect(cfdt.text()).toBe(SIMULATOR_SHELL.cfdtKuhnLinkLabel);
+    const cfdt = w.find(`a[href="${EDITEUR.url}"]`);
+    expect(cfdt.text()).toBe(EDITEUR.nom);
     expect(w.find('button.footer-privacy-btn').text()).toBe(SIMULATOR_SHELL.privacyLinkLabel);
     w.unmount();
   });

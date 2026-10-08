@@ -53,7 +53,7 @@ function montantAnnuelAssietteSmh(
   input: WizardRemunerationInput,
   overrides?: WizardComputeOverrides,
 ): number {
-  const resolved = resolveWizardRemunerationElements(input, overrides);
+  const resolved = resolveWizardRemunerationElements(input, overrides, { tooltips: false });
   return computeSmhAssietteVerif(resolved.baseSMH, resolved.details);
 }
 
@@ -66,7 +66,11 @@ export function calculateSalaireAnnuelDuPourMois(
 ): number {
   const year = dateMois.getFullYear();
   const anciennete = ancienneteAnneesPourMois(dateMois, dateEmbauche);
-  const computeOverrides: WizardComputeOverrides = { referenceYear: year, anciennete };
+  const computeOverrides: WizardComputeOverrides = {
+    referenceYear: year,
+    referenceDate: dateMois,
+    anciennete,
+  };
 
   if (options.smhSeul) {
     return montantAnnuelAssietteSmh(input, computeOverrides);
@@ -99,7 +103,11 @@ export function calculateSalaireMensuelDuPourPeriode(
   const dateMois = new Date(year, month - 1, 1);
   const emb = new Date(params.dateEmbauche);
   const anciennete = ancienneteAnneesPourMois(dateMois, emb);
-  const computeOverrides: WizardComputeOverrides = { referenceYear: year, anciennete };
+  const computeOverrides: WizardComputeOverrides = {
+    referenceYear: year,
+    referenceDate: dateMois,
+    anciennete,
+  };
 
   const { ctx, accDoc } = prepareWizardCompute(input, computeOverrides);
   const agreement = params.agreement ?? accDoc;

@@ -293,8 +293,7 @@ function buildUnitesMontantTooltip(
     euroBreakdown('Montant annuel affiché', result.amount),
   ];
   const pr = mode.prorataActivite === true ? prorataDetailSuffix(ctx) : '';
-  const qtyHeuresMensuelles =
-    mode.prorataActivite === true || result.semanticId === SEMANTIC_ID.PRIME_EQUIPE;
+  const qtyHeuresMensuelles = mode.prorataActivite === true || def.valueKind === 'horaire';
   return {
     label: result.label,
     value: result.amount,

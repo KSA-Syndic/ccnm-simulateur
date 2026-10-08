@@ -98,14 +98,16 @@ describe('StepSituation', () => {
       attachTo: document.body,
     });
     expect(wCadre.find('#modalites-non-cadre').exists()).toBe(false);
-    expect(wCadre.find('#point-territorial').exists()).toBe(false);
+    expect(wCadre.find('#territoire-point').exists()).toBe(false);
     wCadre.unmount();
 
     const piniaNc = createFreshPinia();
     useWizardStore(piniaNc).$patch({ groupe: 'B', classe: 3, currentStep: 2, maxStepReached: 2 });
     const wNc = mount(StepSituation, { global: { plugins: [piniaNc] }, attachTo: document.body });
     expect(wNc.find('#modalites-non-cadre').exists()).toBe(true);
-    expect(wNc.find('#point-territorial').exists()).toBe(true);
+    expect(wNc.find('#territoire-point').exists()).toBe(true);
+    // Saisie libre seulement pour « Autre territoire ».
+    expect(wNc.find('#point-territorial').exists()).toBe(false);
     wNc.unmount();
   });
 

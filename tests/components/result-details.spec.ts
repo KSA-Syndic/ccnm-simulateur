@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { resolveWizardRemunerationElements } from '@/domain/remuneration/compute';
 import ResultDetails from '@/features/results/ResultDetails.vue';
 import { useAgreementStore } from '@/stores/agreement';
 import { useSituationStore } from '@/stores/situation';
@@ -17,7 +18,8 @@ describe('ResultDetails', () => {
       currentStep: 3,
       scores: {},
     });
-    useSituationStore(pinia).$patch({
+    const situation = useSituationStore(pinia);
+    situation.$patch({
       anciennete: 0,
       tempsPartiel: false,
       travailNuit: false,
@@ -27,7 +29,16 @@ describe('ResultDetails', () => {
     useAgreementStore(pinia).$patch({ accordActif: false, activeAccordId: null, inputs: {} });
     useUiStore(pinia).$patch({ nbMois: 12 });
 
+    const resolved = resolveWizardRemunerationElements({
+      mode: 'manual',
+      groupe: 'A',
+      classe: 1,
+      scores: {},
+      situation: { ...situation.$state },
+      agreement: { accordActif: false, activeAccordId: null, inputs: {} },
+    });
     const w = mount(ResultDetails, {
+      props: { resolved },
       global: { plugins: [pinia] },
       attachTo: document.body,
     });

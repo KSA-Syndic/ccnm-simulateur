@@ -5,12 +5,14 @@ Ce guide est destiné aux non-développeurs (syndicats, salariés) qui souhaiten
 ## Qu'est-ce qu'un Accord d'Entreprise ?
 
 Un accord d'entreprise peut modifier certains aspects de la Convention Collective Nationale (CCN) :
+
 - Prime d'ancienneté (seuil, plafond, taux)
 - Majorations (nuit, dimanche)
 - Primes spécifiques (équipe, vacances)
 - Répartition mensuelle (13e mois)
 
 Règle importante :
+
 - **Ne fournir que ce qui diffère de la CCN.**
 - Si une règle est identique à la CCN, ne pas la remonter comme "spécifique accord".
 
@@ -18,7 +20,8 @@ Règle importante :
 
 ### Option 1 : Contacter l'Équipe
 
-Envoyer un email à **ksa.syndic@gmail.com** avec :
+Envoyer un email à **kuhn.syndic.dev@gmail.com** avec :
+
 - Le nom de votre entreprise
 - Le nom de l'accord d'entreprise
 - Le fichier PDF de l'accord ou un lien vers le texte officiel
@@ -42,6 +45,7 @@ Voir `docs/AJOUTER_ACCORD.md` pour le guide technique complet.
 Pour ajouter un accord, nous avons besoin de :
 
 ### Informations Générales
+
 - Nom de l'accord
 - Nom de l'entreprise
 - Date de signature
@@ -49,17 +53,21 @@ Pour ajouter un accord, nous avons besoin de :
 - URL vers le texte officiel (si disponible)
 
 ### Prime d'Ancienneté
+
 - Seuil d'ancienneté (ex: 2 ans, 3 ans)
 - Plafond (ex: 25 ans, 15 ans)
 - S'applique aux cadres ? (oui/non)
 - Barème des taux par année d'ancienneté
 
 ### Majorations
+
 - Taux majoration nuit (ex: +20%)
 - Taux majoration dimanche (ex: +50%)
 
 ### Primes Spécifiques
+
 Pour chaque prime, nous avons besoin de :
+
 - Nom de la prime (ex: prime d'équipe, prime de vacances, prime de Noël)
 - Montant ou taux (ex: 0,82 €/h, 525 €/an, +15%)
 - Mois de versement (ex: juillet pour vacances, décembre pour Noël)
@@ -67,15 +75,18 @@ Pour chaque prime, nous avons besoin de :
 - **Inclusion dans le SMH** : cette prime est-elle un complément de salaire (oui) ou une contrepartie de conditions de travail (non) ? Cela détermine si l'employeur peut l'utiliser pour atteindre le minimum conventionnel. En cas de doute, l'équipe analysera la CCN.
 
 Note pratique (prime d'équipe) :
+
 - Dans l'outil, la prime d'équipe peut être calculée automatiquement sur `151,67 h/mois` (base 35h), sans saisir d'heures manuellement.
 
 ### Répartition Mensuelle
+
 - Répartition sur 13 mois ? (oui/non)
 - Mois du versement du 13e mois (précisé dans votre accord)
 
 ## Exemple
 
 **Exemple d'accord** :
+
 - Seuil ancienneté : 2 ans (au lieu de 3 ans CCN)
 - Plafond : 25 ans (au lieu de 15 ans CCN)
 - Majoration nuit : +20%
@@ -86,4 +97,4 @@ Note pratique (prime d'équipe) :
 
 ## Questions ?
 
-Pour toute question, contactez **ksa.syndic@gmail.com**.
+Pour toute question sur l'outil, contactez **kuhn.syndic.dev@gmail.com** ; pour une question syndicale, le bureau CFDT Kuhn : **cfdt.kuhn@gmail.com**.

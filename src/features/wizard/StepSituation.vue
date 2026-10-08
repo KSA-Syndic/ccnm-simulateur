@@ -12,7 +12,13 @@ import {
   hasBaremeDebutant,
 } from '../../domain/remuneration/smh';
 import { computed, onMounted, ref, watch } from 'vue';
-import { AppTooltip, NumericInput } from '../../components/ui';
+import { AppTooltip, NumericInput, SearchSelect } from '../../components/ui';
+import type { SearchSelectOption } from '../../components/ui/SearchSelect.vue';
+import {
+  listTerritoiresPourSelection,
+  TERRITOIRE_SAISIE_LIBRE,
+} from '../../domain/remuneration/pointTerritorial';
+import { formatFrDecimalFixed } from '../../domain/tooltip/builders';
 import { buildWizardTooltipHtml } from '../../domain/ui/wizardTooltips';
 import { WIZARD_TOOLTIPS, WIZARD_TOASTS } from '../../domain/ui/labels';
 import { wizardToastAncienneteMax } from '../../domain/ui/wizardToasts';
@@ -85,6 +91,29 @@ function onExperienceProUserInput(v: number) {
 
 const pointTerritorialTooltip = computed(() => buildWizardTooltipHtml('pointTerritorial'));
 
+const territoires = listTerritoiresPourSelection(new Date());
+const formatPoint = (v: number) => `${formatFrDecimalFixed(v)} €`;
+const territoireOptions: SearchSelectOption[] = [
+  ...territoires.map((t) => ({
+    value: t.id,
+    label: t.nom,
+    detail: t.departements,
+    meta: formatPoint(t.valeur),
+    keywords: t.codes.join(' '),
+  })),
+  {
+    value: TERRITOIRE_SAISIE_LIBRE,
+    label: 'Autre territoire',
+    detail: 'Saisir la valeur du point',
+  },
+];
+const saisieLibrePoint = computed(() => situation.territoireId === TERRITOIRE_SAISIE_LIBRE);
+const territoireActuel = computed(() => territoires.find((t) => t.id === situation.territoireId));
+const territoireDepuisLabel = computed(() => {
+  const t = territoireActuel.value;
+  return t ? new Date(`${t.depuis}T00:00:00`).toLocaleDateString('fr-FR') : '';
+});
+
 watch(
   [() => situation.forfait, () => isCadre(wizard.classe)],
   () => {
@@ -116,6 +145,7 @@ const ancienneteTooltip = computed(() => buildWizardTooltipHtml('anciennete'));
 
 onMounted(() => {
   situation.pointTerritorial = situation.pointTerritorial || CONFIG.POINT_TERRITORIAL.valeurDefaut;
+  if (!situation.territoireId) situation.territoireId = CONFIG.POINT_TERRITORIAL.territoireDefautId;
   agreementStore.bootstrapFromUrl();
 });
 
@@ -174,10 +204,23 @@ function validate() {
 
       <div v-if="!isCadreValue" id="modalites-non-cadre" class="modalites-non-cadre">
         <div class="form-group">
-          <label for="point-territorial">
-            Valeur du point territorial (€)
+          <label for="territoire-point">
+            Point territorial (zone)
             <AppTooltip :content="pointTerritorialTooltip" variant="result" position="top" />
           </label>
+          <SearchSelect
+            id="territoire-point"
+            v-model="situation.territoireId"
+            :options="territoireOptions"
+            placeholder="Rechercher un département ou un numéro…"
+          />
+          <p v-if="territoireActuel" class="field-help">
+            Valeur en vigueur depuis le {{ territoireDepuisLabel }} ; l'historique est appliqué mois
+            par mois aux arriérés.
+          </p>
+        </div>
+        <div v-if="saisieLibrePoint" class="form-group">
+          <label for="point-territorial">Valeur du point territorial (€)</label>
           <NumericInput
             id="point-territorial"
             v-model="situation.pointTerritorial"
@@ -255,6 +298,11 @@ function validate() {
 }
 .modalites-non-cadre {
   margin: 0 0 1rem;
+}
+.field-help {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  color: var(--gray-600);
 }
 .cadre-debutant-smh {
   margin: 0.75rem 0 0;

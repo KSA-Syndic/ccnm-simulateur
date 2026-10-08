@@ -34,7 +34,7 @@ Cet outil vous permet de :
 Renseignez vos informations :
 
 - **Ancienneté** dans l'entreprise (en années)
-- **Point Territorial** (valeur par défaut : 5,95 € pour le Bas-Rhin depuis le 1er avril 2026)
+- **Point Territorial** : choisissez votre zone dans la liste (recherche par nom ou numéro de département) ; la valeur en vigueur à chaque mois est appliquée, arriérés compris. « Autre territoire » permet une saisie libre.
 - **Type de forfait** (si vous êtes cadre : 35h, heures ou jours)
 - **Conditions de travail** (travail de nuit, dimanche, équipes postées)
 
@@ -180,7 +180,7 @@ L'outil peut être intégré dans n'importe quel site via **iframe** :
 Vous avez un accord d'entreprise à ajouter ? C'est simple !
 
 **Option 1 : Via Email** 📧
-Envoyez un email à **ksa.syndic@gmail.com** avec :
+Envoyez un email à **kuhn.syndic.dev@gmail.com** avec :
 
 - Le nom de votre entreprise
 - Le nom de l'accord
@@ -198,7 +198,7 @@ Voir le [guide simple](docs/AJOUTER_ACCORD_SIMPLE.md) pour plus de détails.
 ### Signaler un Bug ou Suggérer une Amélioration
 
 - Ouvrez une [Issue sur GitHub](https://github.com/votre-repo/issues)
-- Ou contactez **ksa.syndic@gmail.com**
+- Ou contactez **kuhn.syndic.dev@gmail.com**
 
 ## 📝 Mise à Jour Annuelle
 
@@ -222,7 +222,8 @@ Procédure et journal des mises à jour : [`docs/MAJ_DONNEES.md`](docs/MAJ_DONNE
 
 Pour toute question ou contribution :
 
-- **Email** : ksa.syndic@gmail.com
+- **Bureau CFDT Kuhn** (questions, accompagnement) : cfdt.kuhn@gmail.com
+- **Développement** (bugs, accords, contributions) : kuhn.syndic.dev@gmail.com
 - **GitHub** : [Repository du projet](https://github.com/votre-repo)
 
 ---

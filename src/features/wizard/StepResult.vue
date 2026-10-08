@@ -50,10 +50,11 @@ watch(
   },
 );
 
-const resolvedForHints = computed(() => resolveWizardRemunerationElements(wizardInput.value));
+/** Calcul unique de l'étape : détail affiché et hints. */
+const resolved = computed(() => resolveWizardRemunerationElements(wizardInput.value));
 
 const hintBlocks = computed(() => {
-  const r = resolvedForHints.value;
+  const r = resolved.value;
   const base = buildResultHintBlocks({
     scenario: r.scenario,
     groupe: r.active.groupe,
@@ -78,7 +79,7 @@ const hintBlocks = computed(() => {
 
       <AccordOptionsPanel />
 
-      <ResultDetails />
+      <ResultDetails :resolved="resolved" />
 
       <div id="hints-container" class="hints-container">
         <HintDisplay :blocks="hintBlocks" />

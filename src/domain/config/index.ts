@@ -75,8 +75,11 @@ export const ConfigSchema = z.object({
   CCNM_CONTREPARTIES_ORGANISATION: ContrepartiesOrganisationSchema,
   TAUX_ANCIENNETE: z.record(z.coerce.number(), z.number()),
   POINT_TERRITORIAL: z.object({
+    /** Valeur proposée pour une saisie libre (« autre territoire »). */
     valeurDefaut: z.number(),
     territoire: z.string(),
+    /** Zone sélectionnée par défaut (`POINTS_TERRITORIAUX`). */
+    territoireDefautId: z.string(),
   }),
   MAPPING_POINTS: z.array(MappingPointEntrySchema),
   GROUPE_CLASSES: z.record(z.string(), z.array(z.number())),
@@ -310,6 +313,7 @@ export const CONFIG: Config = ConfigSchema.parse({
   POINT_TERRITORIAL: {
     valeurDefaut: 5.95,
     territoire: 'Bas-Rhin (67)',
+    territoireDefautId: 'bas-rhin',
   },
   MAPPING_POINTS: [
     [6, 8, 'A', 1],

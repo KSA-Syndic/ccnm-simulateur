@@ -26,6 +26,10 @@ export const PrimeDefSchema = z.object({
   defaultActif: z.boolean().optional(),
   defaultHeures: z.number().optional(),
   autoHeures: z.boolean().optional(),
+  /** Quantité horaire proratisée au taux d'activité (temps partiel). */
+  prorataActivite: z.boolean().optional(),
+  /** La prime d'accord remplace la prime conventionnelle de même sémantique (pas de comparaison « le plus favorable »). */
+  remplaceConvention: z.boolean().optional(),
   moisVersement: z.number().min(1).max(12).optional(),
   conditionAnciennete: ConditionAncienneteSchema.optional(),
   tooltip: z.string().optional(),
@@ -225,7 +229,7 @@ export function primeDefToElementDef(primeDef: PrimeDef, agreement: Agreement): 
         : null;
 
     if (tarifAccord !== null) {
-      const autoHeures = primeDef.autoHeures === true || semanticId === SEMANTIC_ID.PRIME_EQUIPE;
+      const autoHeures = primeDef.autoHeures === true;
       const unites: ComputeRef = autoHeures
         ? { ref: 'constant', value: roundToCents(defaultHeuresLeg) }
         : primeDef.stateKeyHeures
@@ -239,7 +243,7 @@ export function primeDefToElementDef(primeDef: PrimeDef, agreement: Agreement): 
           unites,
           montant: { ref: 'constant', value: tarifAccord },
           period: 'annual',
-          ...(semanticId === SEMANTIC_ID.PRIME_EQUIPE ? { prorataActivite: true } : {}),
+          ...(primeDef.prorataActivite === true ? { prorataActivite: true } : {}),
         },
       };
     }

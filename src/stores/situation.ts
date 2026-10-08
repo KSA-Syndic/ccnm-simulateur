@@ -6,6 +6,9 @@ export const useSituationStore = defineStore('situation', {
     anciennete: 0,
     forfait: '35h' as '35h' | 'heures' | 'jours',
     experiencePro: 0,
+    /** Zone de valeur du point (historique daté) ; `TERRITOIRE_SAISIE_LIBRE` pour une saisie libre. */
+    territoireId: CONFIG.POINT_TERRITORIAL.territoireDefautId,
+    /** Valeur saisie librement (utilisée seulement hors zone référencée). */
     pointTerritorial: CONFIG.POINT_TERRITORIAL.valeurDefaut,
     tempsPartiel: false,
     tauxActivite: 100,

@@ -28,8 +28,6 @@ export const SIMULATOR_SHELL = {
   footerDisclaimer:
     'Outil indicatif — ne remplace pas un conseil juridique ou social personnalisé.',
   privacyLinkLabel: 'Données personnelles & mesure d’audience',
-  cfdtKuhnLinkLabel: 'CFDT Kuhn Saverne',
-  cfdtKuhnUrl: 'https://cfdt-kuhn.fr',
   privacyModalTitle: 'Données personnelles & mesure d’audience',
   privacyModalDescription:
     'Ce simulateur ne transmet pas vos saisies à un serveur : tout le calcul est effectué dans votre navigateur.',
@@ -43,6 +41,24 @@ export const SIMULATOR_SHELL = {
     'Informations : convention métallurgie, grilles des minima, dates d’effet et accord chargé',
 } as const;
 
+/**
+ * Éditeur du simulateur (déploiement) : lien de pied de page, ressources PDF et contacts.
+ * Distinct des accords d'entreprise, qui portent leurs propres coordonnées syndicales.
+ */
+export const EDITEUR = {
+  nom: 'CFDT Kuhn Saverne',
+  url: 'https://cfdt-kuhn.fr',
+  /** Contact du bureau syndical (questions, accompagnement). */
+  emailBureau: 'cfdt.kuhn@gmail.com',
+  /** Contact technique (bugs, ajout d'accord, contributions). */
+  emailDev: 'kuhn.syndic.dev@gmail.com',
+  /**
+   * Logo de l'annexe PDF : data URL PNG (`data:image/png;base64,…`), jsPDF n'acceptant pas d'URL distante.
+   * Vide : pas de logo.
+   */
+  logoPdfDataUrl: '',
+} as const;
+
 /** Libellés accessibilité réutilisables (ARIA, focus). */
 export const A11Y_LABELS = {
   /** Nom accessible par défaut pour tout déclencheur `AppTooltip` sans libellé explicite. */
@@ -50,11 +66,11 @@ export const A11Y_LABELS = {
 } as const;
 
 /** Libellés PDF / cohérence marque syndicale (liens publics, hors calcul). */
-export const CFDT_KUHN_BRANDING = {
+export const PDF_RESOURCES_LABELS = {
   pdfResourcesSectionTitle: '5. Ressources utiles (liens externes)',
   pdfConventionRowLabel:
     'Convention collective de la métallurgie (CCNM) · Textes conventionnels (UIMM)',
-  pdfCfdtSectionRowLabel: 'Section CFDT — site public',
+  pdfEditeurRowLabel: 'Section syndicale — site public',
   pdfAccordReferenceRowLabel: "Accord d'entreprise (référence)",
 } as const;
 
@@ -184,8 +200,8 @@ export const WIZARD_TOOLTIPS = {
   pointTerritorial: {
     title: 'Point territorial',
     description:
-      'Valeur du point territorial applicable dans votre secteur géographique ; montant indicatif issu des paramètres du simulateur — vérifiez la valeur officielle en vigueur.',
-    sourceArticle: 'CCNM — grilles et annexes territoriales',
+      "Valeur du point de la prime d'ancienneté, fixée par l'accord territorial de votre zone. Le calcul applique, mois par mois, la valeur en vigueur à la date concernée (arriérés compris). Choisissez « Autre territoire » pour saisir une valeur non référencée.",
+    sourceArticle: 'CCNM Art. 142 — accords territoriaux de valeur de point',
     externalLink: POINT_TERRITORIAL_CODE_TRAVAIL_CONTRIBUTION,
   },
   travailNuit: {

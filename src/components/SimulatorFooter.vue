@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { CONVENTION_METALLURGIE_URL, SIMULATOR_SHELL } from '../domain/ui/labels';
+import { CONVENTION_METALLURGIE_URL, EDITEUR, SIMULATOR_SHELL } from '../domain/ui/labels';
 import PrivacyModal from './PrivacyModal.vue';
 
 const privacyRef = ref<InstanceType<typeof PrivacyModal> | null>(null);
@@ -30,11 +30,11 @@ function openPrivacy() {
       <span class="footer-sep" aria-hidden="true" />
       <a
         class="footer-item footer-privacy-link"
-        :href="SIMULATOR_SHELL.cfdtKuhnUrl"
+        :href="EDITEUR.url"
         target="_blank"
         rel="noopener noreferrer"
       >
-        {{ SIMULATOR_SHELL.cfdtKuhnLinkLabel }}
+        {{ EDITEUR.nom }}
       </a>
       <span class="footer-sep" aria-hidden="true" />
       <button

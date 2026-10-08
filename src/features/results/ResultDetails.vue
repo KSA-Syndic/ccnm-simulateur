@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useUiStore } from '../../stores/ui';
-import { useWizardRemunerationInput } from '../../composables/useWizardRemunerationInput';
 import { aggregateRemunerationDetails } from '../../domain/remuneration/aggregate';
-import { resolveWizardRemunerationElements } from '../../domain/remuneration/compute';
+import type { WizardRemunerationResolved } from '../../domain/remuneration/compute';
 import RemunerationResult from './RemunerationResult.vue';
 
-const ui = useUiStore();
-const wizardInput = useWizardRemunerationInput();
+/** Éléments déjà résolus par l'étape résultat (un seul calcul partagé avec les hints). */
+const props = defineProps<{ resolved: WizardRemunerationResolved }>();
 
-const computedResult = computed(() => {
-  const resolved = resolveWizardRemunerationElements(wizardInput.value);
-  return aggregateRemunerationDetails(resolved.details, resolved.baseSMH, ui.nbMois);
-});
+const ui = useUiStore();
+
+const computedResult = computed(() =>
+  aggregateRemunerationDetails(props.resolved.details, props.resolved.baseSMH, ui.nbMois),
+);
 </script>
 
 <template>

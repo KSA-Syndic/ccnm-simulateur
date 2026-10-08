@@ -12,6 +12,7 @@ import { enrichResolvedElementsTooltips } from '../tooltip/resultElementTooltips
 import { buildComputeContext, resolveBySubstitution } from './engine';
 import { getSmhForClasse, isBaremeDebutantApplicable } from './smh';
 import { resolveActivityRate } from './rates';
+import { resolvePointTerritorial } from './pointTerritorial';
 import { roundHourlyRate, roundToCents } from '../utils/rounding';
 import { computeSmhAssietteVerif, detailContributesToSmhAssiette } from './smhConformity';
 import type { ComputeContext, ElementResult } from '../types';
@@ -29,6 +30,8 @@ export interface AnnualRemunerationSummary {
 
 export type WizardSituationInput = {
   anciennete: number;
+  /** Zone de valeur du point (historique daté) ; absente ou inconnue : `pointTerritorial` saisi. */
+  territoireId?: string | null;
   pointTerritorial: number;
   tempsPartiel: boolean;
   tauxActivite: number;
@@ -66,6 +69,8 @@ export type WizardRemunerationInput = {
 /** Surcharges pour un mois d'arriérés (année grille SMH, ancienneté à date). */
 export type WizardComputeOverrides = {
   referenceYear?: number;
+  /** Date du mois calculé (valeur du point en vigueur) ; défaut : aujourd'hui. */
+  referenceDate?: Date;
   anciennete?: number;
 };
 
@@ -125,7 +130,10 @@ export function prepareWizardCompute(
     },
     typeNuit: input.situation.travailNuit ? 'poste-nuit' : 'aucun',
     anciennete,
-    pointTerritorial: input.situation.pointTerritorial,
+    pointTerritorial: resolvePointTerritorial(
+      input.situation,
+      overrides?.referenceDate ?? new Date(),
+    ),
     forfait: input.situation.forfait,
     travailNuit: input.situation.travailNuit,
     heuresNuit: input.situation.heuresNuit,
@@ -156,9 +164,14 @@ export function resolveWizardTauxHoraireBase(input: WizardRemunerationInput): nu
   return roundHourlyRate(prepareWizardCompute(input).ctx.tauxHoraireBase);
 }
 
+/**
+ * Éléments de rémunération résolus (convention + accord).
+ * `tooltips: false` pour les calculs en boucle (arriérés, projection, PDF) qui n'affichent pas d'infobulle.
+ */
 export function resolveWizardRemunerationElements(
   input: WizardRemunerationInput,
   overrides?: WizardComputeOverrides,
+  options: { tooltips?: boolean } = {},
 ): WizardRemunerationResolved {
   const { active, baseSMH, state, ctx, accDoc } = prepareWizardCompute(input, overrides);
 
@@ -174,7 +187,10 @@ export function resolveWizardRemunerationElements(
     state.nationalPrimeOverrides as Record<string, unknown>,
   );
   const resolved = resolveBySubstitution(convDefs, accordDefs, ctx);
-  const details = enrichResolvedElementsTooltips(resolved, ctx, accDoc);
+  const details =
+    options.tooltips === false
+      ? resolved.map((r) => r.result)
+      : enrichResolvedElementsTooltips(resolved, ctx, accDoc);
 
   return {
     active,
@@ -212,7 +228,7 @@ export function computePdfRemunerationBreakdown(
   input: WizardRemunerationInput,
   nbMois: number,
 ): PdfRemunerationBreakdown {
-  const resolved = resolveWizardRemunerationElements(input);
+  const resolved = resolveWizardRemunerationElements(input, undefined, { tooltips: false });
   const agg = aggregateRemunerationDetails(resolved.details, resolved.baseSMH, nbMois);
   const totalAssietteSmhIndicatif = roundToCents(
     computeSmhAssietteVerif(resolved.baseSMH, resolved.details),
@@ -240,6 +256,7 @@ export function computeAnnualRemunerationFromWizardStores(
   const { active, scenario, baseSMH, details } = resolveWizardRemunerationElements(
     input,
     overrides,
+    { tooltips: false },
   );
   const agg = aggregateRemunerationDetails(details, baseSMH, 12);
 

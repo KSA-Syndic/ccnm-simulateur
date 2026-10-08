@@ -5,7 +5,7 @@ import { useWizardStore } from '../../stores/wizard';
 import { useAgreementStore } from '../../stores/agreement';
 import { isCadre } from '../../domain/classification/engine';
 import { CONFIG } from '../../domain/config';
-import { resolvePrimeSemanticId } from '../../domain/agreements/interface';
+import { getSemantiquesRemplaceesParAccord } from '../../domain/agreements/accord-element-defs';
 import { SEMANTIC_ID } from '../../domain/types';
 import { AppTooltip, NumericInput } from '../../components/ui';
 import { buildWizardTooltipHtml, type WizardTooltipKey } from '../../domain/ui/wizardTooltips';
@@ -22,9 +22,9 @@ const isCadreStatus = computed(() => isCadre(wizard.classe));
 const showForfaitJours = computed(() => isCadreStatus.value && situation.forfait === 'jours');
 
 const accordSubstitueEquipe = computed(() => {
-  const doc = agreementStore.activeAgreement;
-  if (!doc) return false;
-  return doc.primes.some((p) => resolvePrimeSemanticId(p) === SEMANTIC_ID.PRIME_EQUIPE);
+  return getSemantiquesRemplaceesParAccord(agreementStore.activeAgreement).has(
+    SEMANTIC_ID.PRIME_EQUIPE,
+  );
 });
 
 const showEquipeCcnm = computed(() => !isCadreStatus.value && !accordSubstitueEquipe.value);

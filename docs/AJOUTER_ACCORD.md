@@ -136,7 +136,9 @@ import './mon-accord';
 Les valeurs saisies vivent dans **`useAgreementStore().inputs`** (`src/stores/agreement.ts`), pas dans un `state.js` global.
 
 - Primes **horaires** avec `autoHeures: true` : pas de champ heures en UI (`primeUiDefaults.ts` → `shouldShowPrimeHoursField`).
-- Nouvelle clé d'activation (ex. `primeNoel`) : prévoir une valeur par défaut si besoin (ex. dans `AccordOptionsPanel.vue` ou au premier affichage de `HourlyPrimesList.vue` via `seedAgreementPrimeUiDefaults`).
+- Prime cochée par défaut : `defaultActif: true` (appliqué de façon générique par `withDefaultActivePrimes`, sans code dans les composants).
+- Prime horaire proratisée au temps partiel : `prorataActivite: true`.
+- Prime qui remplace la prime conventionnelle de même sémantique (au lieu de retenir la plus favorable) : `remplaceConvention: true` ; le formulaire CCNM correspondant est alors masqué.
 - Primes `inclusDansSMH: true` : toujours actives ; `defaultActif` est ignoré pour l'activation.
 
 ### 4. Tester
@@ -157,7 +159,7 @@ Voir **[Intégrer un accord via texte et prompt IA](INTEGRER_ACCORD_TEXTE_ET_IA.
 ## Contribution
 
 - **GitHub** : branche `feature/accord-xxx`, fichier sous `src/accords/`, import dans `index.ts`, PR avec tests (`accord-element-defs`, scénario E2E si pertinent).
-- **Email** : ksa.syndic@gmail.com — nom de l'accord, lien ou PDF, éléments qui diffèrent de la CCN.
+- **Email** : kuhn.syndic.dev@gmail.com — nom de l'accord, lien ou PDF, éléments qui diffèrent de la CCN.
 
 ## Schéma complet
 

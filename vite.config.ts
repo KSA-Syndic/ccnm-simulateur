@@ -12,7 +12,7 @@ function resolveViteBase(): string {
 
 export default defineConfig({
   plugins: [vue()],
-  /** Défini par `VITE_BASE` (CI / `npm run build:pages`). */
+  /** Défini par `VITE_BASE` (CI, voir docs/DEPLOIEMENT_PAGES.md). */
   base: resolveViteBase(),
   resolve: {
     alias: {

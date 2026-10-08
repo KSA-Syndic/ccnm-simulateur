@@ -1,4 +1,5 @@
 import { CONFIG } from '../domain/config';
+import { EDITEUR } from '../domain/ui/labels';
 import { type Agreement } from '../domain/agreements/interface';
 import { registerAgreement } from '../domain/agreements/registry';
 
@@ -62,6 +63,8 @@ const KuhnAgreement: Agreement = {
       stateKeyActif: 'travailEquipe',
       stateKeyHeures: 'heuresEquipe',
       autoHeures: true,
+      prorataActivite: true,
+      remplaceConvention: true,
       inclusDansSMH: false,
       conditionAnciennete: { type: 'aucune', description: 'Aucune' },
       tooltip:
@@ -176,7 +179,7 @@ const KuhnAgreement: Agreement = {
   },
 
   syndicatNom: 'CFDT Kuhn Saverne',
-  syndicatEmail: 'ksa.syndic@gmail.com',
+  syndicatEmail: EDITEUR.emailBureau,
 };
 
 registerAgreement(KuhnAgreement);

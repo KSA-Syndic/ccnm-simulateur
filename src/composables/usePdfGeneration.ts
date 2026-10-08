@@ -10,11 +10,15 @@ import { computePdfRemunerationBreakdown } from '../domain/remuneration/compute'
 import { useWizardRemunerationInput } from './useWizardRemunerationInput';
 import { buildPdfArrieresAnalyticsPayload, trackPdfArrieres } from '../infra/analytics';
 import { formatMoney } from '../domain/utils/format';
+import {
+  aggregateArreteesParAnneeFromPeriodeLabels,
+  yearOfPeriode,
+} from '../domain/arretees/aggregateFromPeriodes';
 import { formatFrDecimalFixed } from '../domain/tooltip/builders';
 import { getBaremeDebutantTranche } from '../domain/remuneration/smh';
+import { getTerritoirePoint } from '../domain/remuneration/pointTerritorial';
 import { fileDateStamp, MOIS_LONGS, todayFrLong } from '../domain/utils/date';
 import type { ExportDocumentsPayload } from '../domain/pdf/exportDocumentsPayload';
-import { CFDT_KUHN_LOGO_DATA_URL } from '../domain/pdf/cfdtKuhnLogoDataUrl';
 import {
   PDF_MARGIN_MM,
   addPdfFooter,
@@ -24,11 +28,7 @@ import {
   pdfEcartCell,
   sanitizePdfStandardFontText,
 } from '../domain/pdf/jsPdfHelpers';
-import {
-  CFDT_KUHN_BRANDING,
-  CONVENTION_METALLURGIE_URL,
-  SIMULATOR_SHELL,
-} from '../domain/ui/labels';
+import { EDITEUR, PDF_RESOURCES_LABELS, CONVENTION_METALLURGIE_URL } from '../domain/ui/labels';
 
 const LEGAL_SNIPPET_INDICATIF =
   'Références indicatives (à contrôler sur les textes en vigueur et le dossier) : CCNM Art. 140 et 141 (SMH) ; Code du travail L. 3245-1 (reclassement des salaires, prescription), L. 2254-2 (nullité des clauses inférieures au minimum).';
@@ -90,15 +90,11 @@ function forfaitPdfLabel(forfa: '35h' | 'heures' | 'jours'): string {
   return 'Horaire collectif (35h/sem.)';
 }
 
-function yearsFromPeriodeLabels(periodes: { label: string }[]): string {
-  const re = /\b(20\d{2})\b/g;
+function yearsFromPeriodes(periodes: { label: string; periodKey?: string }[]): string {
   const years = new Set<number>();
   for (const p of periodes) {
-    re.lastIndex = 0;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(p.label)) !== null) {
-      years.add(Number(m[1]));
-    }
+    const y = yearOfPeriode(p);
+    if (y !== null) years.add(y);
   }
   return [...years].sort((a, b) => a - b).join(', ') || 'non déterminé';
 }
@@ -130,13 +126,13 @@ export function usePdfGeneration() {
       const textW = pw - 2 * PDF_MARGIN_MM;
       let y = PDF_MARGIN_MM;
 
-      if (CFDT_KUHN_LOGO_DATA_URL.length > 20) {
+      if (EDITEUR.logoPdfDataUrl.startsWith('data:image/')) {
         try {
           const pdf = doc as {
             addImage: (u: string, fmt: string, x: number, y2: number, w: number, h: number) => void;
           };
           pdf.addImage(
-            CFDT_KUHN_LOGO_DATA_URL,
+            EDITEUR.logoPdfDataUrl,
             'PNG',
             pw - PDF_MARGIN_MM - 20,
             PDF_MARGIN_MM,
@@ -187,6 +183,17 @@ export function usePdfGeneration() {
       if (infos.employeur)
         contractRows.push(['Employeur', sanitizePdfStandardFontText(infos.employeur)]);
       contractRows.push(['Classification', `${active.groupe}${active.classe}`]);
+      if (!isCadre(active.classe)) {
+        const zone = getTerritoirePoint(situationStore.territoireId);
+        contractRows.push([
+          'Point territorial',
+          sanitizePdfStandardFontText(
+            zone
+              ? `${zone.nom} (valeur en vigueur à chaque mois)`
+              : `Saisie libre : ${formatFrDecimalFixed(situationStore.pointTerritorial)} €`,
+          ),
+        ]);
+      }
       if (arreteesStore.dateEmbauche) {
         const d = new Date(arreteesStore.dateEmbauche);
         const emb = Number.isNaN(d.getTime())
@@ -363,7 +370,7 @@ export function usePdfGeneration() {
         }
       }
 
-      const yearsLabel = yearsFromPeriodeLabels(arreteesStore.periodes);
+      const yearsLabel = yearsFromPeriodes(arreteesStore.periodes);
       const inclusTxt =
         br.inclusSmhLabels.length > 0
           ? br.inclusSmhLabels.map((s) => s.toLowerCase()).join(', ')
@@ -428,7 +435,7 @@ export function usePdfGeneration() {
       doc.setFontSize(9);
       doc.setTextColor(55, 65, 81);
       doc.text(
-        sanitizePdfStandardFontText(CFDT_KUHN_BRANDING.pdfResourcesSectionTitle),
+        sanitizePdfStandardFontText(PDF_RESOURCES_LABELS.pdfResourcesSectionTitle),
         PDF_MARGIN_MM,
         y,
       );
@@ -439,19 +446,17 @@ export function usePdfGeneration() {
 
       const resourceRows: [string, string][] = [
         [
-          CFDT_KUHN_BRANDING.pdfConventionRowLabel,
+          PDF_RESOURCES_LABELS.pdfConventionRowLabel,
           sanitizePdfStandardFontText(CONVENTION_METALLURGIE_URL),
         ],
         [
-          CFDT_KUHN_BRANDING.pdfCfdtSectionRowLabel,
-          sanitizePdfStandardFontText(
-            `${SIMULATOR_SHELL.cfdtKuhnLinkLabel} — ${SIMULATOR_SHELL.cfdtKuhnUrl}`,
-          ),
+          PDF_RESOURCES_LABELS.pdfEditeurRowLabel,
+          sanitizePdfStandardFontText(`${EDITEUR.nom} — ${EDITEUR.url}`),
         ],
       ];
       if (accDoc?.url?.trim()) {
         resourceRows.push([
-          CFDT_KUHN_BRANDING.pdfAccordReferenceRowLabel,
+          PDF_RESOURCES_LABELS.pdfAccordReferenceRowLabel,
           sanitizePdfStandardFontText(accDoc.url.trim()),
         ]);
       }
@@ -469,13 +474,11 @@ export function usePdfGeneration() {
       const periodesRenseignees = arreteesStore.periodes.filter(
         (p) => p.salaireVerse !== undefined,
       );
-      let totalDu = 0;
-      let totalVerse = 0;
-      for (const p of periodesRenseignees) {
-        totalDu += p.salaireDu;
-        totalVerse += p.salaireVerse ?? 0;
-      }
-      const totalEcart = totalDu - totalVerse;
+      // Même agrégat que l'écran et la lettre Word : écart positif par année civile (Art. 140).
+      const { detailsParAnnee, totalArretees } =
+        aggregateArreteesParAnneeFromPeriodeLabels(periodesRenseignees);
+      const totalDu = detailsParAnnee.reduce((sum, r) => sum + r.totalDu, 0);
+      const totalVerse = detailsParAnnee.reduce((sum, r) => sum + r.totalReel, 0);
 
       y = docWithPageBreak(doc, y, 35);
       doc.setFont('helvetica', 'bold');
@@ -493,7 +496,14 @@ export function usePdfGeneration() {
             ['Nombre de périodes', String(periodesRenseignees.length)],
             ['Total salaire dû', formatMoney(totalDu)],
             ['Total salaire versé', formatMoney(totalVerse)],
-            ['Total écart (dû - versé)', pdfEcartCell(totalEcart, { bold: true })],
+            ...detailsParAnnee.map((r) => [
+              `Arriérés ${r.annee} (${r.nbMoisSaisis} mois)`,
+              pdfEcartCell(r.ecart),
+            ]),
+            [
+              'Total arriérés (écarts annuels positifs)',
+              pdfEcartCell(totalArretees, { bold: true }),
+            ],
           ],
           theme: 'plain',
           styles: { fontSize: 8, cellPadding: 1.2 },

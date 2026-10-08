@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { CFDT_KUHN_BRANDING, WIZARD_LABELS } from './labels';
+import { PDF_RESOURCES_LABELS, WIZARD_LABELS } from './labels';
 
 describe('labels', () => {
-  it('CFDT_KUHN_BRANDING — section PDF numérotée', () => {
-    expect(CFDT_KUHN_BRANDING.pdfResourcesSectionTitle).toMatch(/^5\./);
+  it('PDF_RESOURCES_LABELS — section PDF numérotée', () => {
+    expect(PDF_RESOURCES_LABELS.pdfResourcesSectionTitle).toMatch(/^5\./);
   });
 
   it('export arriérés — libellé unique rapport', () => {

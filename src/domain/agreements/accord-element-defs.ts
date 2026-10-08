@@ -79,15 +79,22 @@ function buildAccordPrimeAncienneteElementDef(agreement: Agreement): ElementDef 
   return primeDef;
 }
 
-function attachConventionSubstitution(def: ElementDef): ElementDef {
-  if (def.semanticId === SEMANTIC_ID.PRIME_EQUIPE) {
-    return {
-      ...def,
-      /** Si l’accord définit la prime équipe, on retient le calcul accord (pas le max CCN/accord). */
-      substitution: { semanticId: SEMANTIC_ID.PRIME_EQUIPE, strategy: 'replaces' },
-    };
-  }
-  return def;
+/** Prime déclarée `remplaceConvention` : le calcul accord est retenu (pas le max CCN / accord). */
+function attachConventionSubstitution(def: ElementDef, prime: PrimeDef): ElementDef {
+  if (prime.remplaceConvention !== true) return def;
+  return { ...def, substitution: { semanticId: def.semanticId, strategy: 'replaces' } };
+}
+
+/** Sémantiques conventionnelles remplacées par l'accord (masquées côté formulaire CCNM). */
+export function getSemantiquesRemplaceesParAccord(
+  agreement: Agreement | null,
+): ReadonlySet<string> {
+  if (!agreement) return new Set();
+  return new Set(
+    getPrimes(agreement)
+      .filter((p) => p.remplaceConvention === true)
+      .map((p) => resolvePrimeSemanticId(p)),
+  );
 }
 
 /**
@@ -100,7 +107,7 @@ export function getAccordElementDefsForRemuneration(agreement: Agreement): Eleme
   if (anciennete) out.push(anciennete);
   for (const p of getPrimes(agreement)) {
     if (resolvePrimeSemanticId(p) === SEMANTIC_ID.PRIME_ANCIENNETE) continue;
-    out.push(attachConventionSubstitution(primeDefToElementDef(p, agreement)));
+    out.push(attachConventionSubstitution(primeDefToElementDef(p, agreement), p));
   }
   return out;
 }

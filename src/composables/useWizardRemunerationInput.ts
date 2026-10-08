@@ -18,6 +18,7 @@ export function useWizardRemunerationInput() {
       scores: wizard.scores,
       situation: {
         anciennete: situation.anciennete,
+        territoireId: situation.territoireId,
         pointTerritorial: situation.pointTerritorial,
         tempsPartiel: situation.tempsPartiel,
         tauxActivite: situation.tauxActivite,

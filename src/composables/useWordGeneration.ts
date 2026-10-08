@@ -33,6 +33,7 @@ export function useWordGeneration() {
         .filter((p) => p.salaireVerse !== undefined)
         .map((p) => ({
           label: p.label,
+          periodKey: p.periodKey,
           salaireDu: p.salaireDu,
           salaireVerse: p.salaireVerse as number,
         }));
