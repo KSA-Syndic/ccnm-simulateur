@@ -9,7 +9,7 @@
 - **Sources Juridiques :**
   - **CCNM 2024 :** Convention Collective Nationale de la Métallurgie (IDCC 3248) - Entrée en vigueur 01/01/2024
   - **Code du Travail :** Art. L2254-2 (Principe de faveur)
-  - **Accords d'entreprise :** Définis dans le dossier `accords/` et chargés à l'exécution (voir documentation technique et `docs/AJOUTER_ACCORD.md`).
+  - **Accords d'entreprise :** Définis dans `src/accords/` et enregistrés au démarrage (voir documentation technique et `docs/AJOUTER_ACCORD.md`).
 - **Cible Technique :** Module web intégrable nativement dans un site de documentation statique (Hugo avec thème "Book") ou via iframe.
 - **Territoire cible :** Bas-Rhin (67) - valeur du point territorial configurée en conséquence.
 - **Extensibilité :** L'application supporte désormais un système générique d'accords d'entreprise, permettant d'ajouter facilement de nouveaux accords sans modifier le code de base.
@@ -124,7 +124,7 @@ Le simulateur doit gérer **3 profils distincts** avec des règles de paie radic
 
 #### 3.3. Accord d'entreprise
 
-Les accords d'entreprise sont **définis en dehors du PRD** (dossier `accords/`, chargés à l'exécution). Le PRD ne fixe pas les règles d'un accord particulier.
+Les accords d'entreprise sont **définis en dehors du PRD** (`src/accords/<id>.ts`). Le PRD ne fixe pas les règles d'un accord particulier.
 
 **Comportement générique :**
 
@@ -161,7 +161,7 @@ Le 13e mois est une **modalité de versement**, pas un élément de rémunérati
 
 #### 3.4.1. Assiette SMH – Inclus / Exclus (Art. 140 CCNM)
 
-Aligné sur la convention (IDCC 3248, Art. 140) et la config (config.js). Chaque prime d'accord porte un flag `inclusDansSMH` (défini dans le fichier d'accord) qui détermine dynamiquement son inclusion.
+Aligné sur la convention (IDCC 3248, Art. 140) et la configuration `CONFIG` (`src/domain/config/index.ts`). Chaque prime d'accord porte un flag `inclusDansSMH` (défini dans le fichier d'accord) qui détermine dynamiquement son inclusion.
 
 **INCLUS (comptent pour atteindre le minimum) :** Base SMH (ou CONFIG.BAREME_DEBUTANTS si cadre F11/F12 sous le seuil), majorations forfaits cadres (CONFIG.FORFAITS), majorations heures sup, 13e mois (répartition 12/13), primes d'accord avec `inclusDansSMH: true` (ex. prime de vacances = complément salarial annuel).
 
@@ -405,13 +405,11 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 
 **Format :** PDF générés avec jsPDF, noms de fichiers : `mise_en_demeure_[date].pdf` et `annexe_technique_[date].pdf`
 
-##### 3.9.6. Instructions Juridiques Interactives (Version avec Onglets)
+##### 3.9.6. Instructions Juridiques Interactives (carrousel)
 
-**Affichage amélioré :** Système d'onglets dans l'étape 4 pour réduire le scroll et améliorer la navigation.
+**Affichage :** carrousel d'étapes dans l'étape 4 (`LegalCarousel.vue`, contenu dans `src/domain/legal/legalCarouselSteps.ts`), une étape visible à la fois pour réduire le scroll.
 
-**Structure en deux onglets :**
-
-**Onglet 1 : Guide juridique**
+**Partie 1 : Guide juridique**
 
 - **Étape 1 : Vérification des informations**
   - Vérifier classification, ancienneté, dates, salaires saisis
@@ -426,7 +424,7 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
   - Correspondances écrites
   - Fiches de poste, évaluations, emails
 
-**Onglet 2 : Prochaines étapes**
+**Partie 2 : Prochaines étapes**
 
 - **Étape 1 : Demande amiable**
   - Rédaction d'une LRAR
@@ -445,12 +443,12 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 
 **Avantages de cette approche :**
 
-- **Réduction du scroll** : Contenu organisé en deux sections accessibles via onglets
-- **Navigation intuitive** : L'utilisateur peut facilement basculer entre le guide et les étapes pratiques
+- **Réduction du scroll** : une étape affichée à la fois
+- **Navigation intuitive** : passage d'une étape à l'autre par les flèches du carrousel
 - **Meilleure lisibilité** : Contenu moins dense, plus facile à parcourir
 - **Engagement utilisateur** : Interface plus moderne et interactive
 
-**Style interactif :** Chaque étape est présentée dans une carte avec numéro, titre et contenu détaillé. Les onglets sont stylisés avec état actif/inactif clair.
+**Style interactif :** Chaque étape est présentée dans une carte avec numéro, titre et contenu détaillé. L'étape courante est signalée dans la navigation du carrousel.
 
 **Avertissement légal :** Le rapport est indicatif et ne constitue pas un avis juridique. Consultation professionnelle obligatoire avant toute démarche.
 
@@ -475,15 +473,15 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 
 #### A. Stack Technique
 
-- **Langages :** HTML5, CSS3, JavaScript (ES6+).
-- **Dépendances Externes :**
-- `Popper.js` (Core positionnement).
-- `Tippy.js` (Gestion des tooltips).
-  - `Chart.js` (Graphiques d'évolution).
-  - `jsPDF` (Génération de rapports PDF).
-- _Aucun framework lourd (React/Vue) pour garantir la portabilité._
+- **Langages :** TypeScript, Vue 3 (Composition API, `<script setup>`), CSS3 ; build Vite.
+- **Dépendances :**
+  - `Pinia` (état, persistance sessionStorage).
+  - `@floating-ui/dom` (positionnement des infobulles).
+  - `Chart.js` (graphiques d'évolution et courbe des salaires).
+  - `jsPDF` + `jspdf-autotable` (rapports PDF), `docx` (lettre Word).
+  - `zod` (validation de la configuration, des accords et des entrées externes), `decimal.js` (calculs monétaires).
 - **APIs Externes :**
-  - API Banque Mondiale (données inflation France) - avec fallback local INSEE
+  - Eurostat puis Banque Mondiale (inflation France), avec série de secours INSEE intégrée à `CONFIG`.
 
 #### B. Interface Utilisateur (UI)
 
@@ -511,7 +509,7 @@ Si l'option « Calculer les arriérés sur le SMH seul » est cochée :
 
 #### C. Structure des Données (`CONFIG`)
 
-Le code centralise les données **CCN** dans la configuration `CONFIG` : SMH, BAREME_DEBUTANTS, TAUX_ANCIENNETE, FORFAITS, MAJORATIONS_CCN, textes de tooltips et libellés UI. Les **accords d'entreprise** ne sont pas dans CONFIG : ils sont définis dans le dossier `accords/` (fichiers par accord) et chargés à l'exécution via AgreementLoader/AgreementRegistry.
+Le code centralise les données **CCN** dans la configuration `CONFIG` : SMH, BAREME_DEBUTANTS, TAUX_ANCIENNETE, FORFAITS, MAJORATIONS_CCN, textes de tooltips et libellés UI. Les **accords d'entreprise** ne sont pas dans CONFIG : ils sont définis dans `src/accords/<id>.ts` et enregistrés dans le registre `src/domain/agreements/registry.ts`.
 
 **Règle d'architecture (obligatoire) :**
 
@@ -521,41 +519,13 @@ Le code centralise les données **CCN** dans la configuration `CONFIG` : SMH, BA
 - Les modalités issues du **Code du travail** doivent conserver explicitement cette origine dans le rendu (pas de fallback CCNM erroné).
 - Objectif de maintenance : converger vers **une seule source de vérité de configuration** ; les éventuels fichiers de compatibilité runtime ne doivent être que des adaptateurs sans duplication métier.
 
-**Valeurs numériques (convention, accords) :** Les montants, taux, seuils et délais mentionnés dans ce PRD (SMH, majorations, forfaits, ancienneté, barèmes, prescription, etc.) sont donnés **à titre d'exemple** ou reflètent une version antérieure des textes. Les valeurs à jour à utiliser dans l'application doivent être cherchées dans les **fichiers de configuration** (`src/core/config.js`, objet CONFIG) et dans les **définitions d'accord** (dossier `accords/`, fichiers par accord).
+**Valeurs numériques (convention, accords) :** Les montants, taux, seuils et délais mentionnés dans ce PRD (SMH, majorations, forfaits, ancienneté, barèmes, prescription, etc.) sont donnés **à titre d'exemple** ou reflètent une version antérieure des textes. Les valeurs à jour à utiliser dans l'application doivent être cherchées dans la **configuration** (`src/domain/config/index.ts`, objet `CONFIG`) et dans les **définitions d'accord** (`src/accords/<id>.ts`).
 
-```javascript
-const CONFIG = {
-    SMH: {/* dynamique */},
-    BAREME_DEBUTANTS: {/* dynamique */},
-    TAUX_ANCIENNETE: {/* dynamique */},
-    MAPPING_POINTS: [/* dynamique */],
-    CRITERES: [/* dynamique */],
-    SEUIL_CADRE: /* dynamique */,
-    FORFAITS: {/* dynamique */},
-    ANCIENNETE: {/* dynamique */},
-    POINT_TERRITORIAL_DEFAUT: /* dynamique */,
-    MAJORATIONS_CCN: {/* dynamique */},
-    DUREE_LEGALE_HEURES_MOIS: /* dynamique */
-};
-// Accords : dossier accords/, chargés via AgreementLoader/AgreementRegistry
-```
+**Audit config vs calculs et tooltips :** Les calculs (rémunération, arriérés, évolution) s'appuient sur `CONFIG` (`src/domain/config/index.ts`) pour la CCN : SMH, BAREME_DEBUTANTS, TAUX_ANCIENNETE, POINT_TERRITORIAL, MAJORATIONS_CCN, FORFAITS. Les accords d'entreprise sont définis dans `src/accords/` et enregistrés via `src/domain/agreements/registry.ts`. Les tooltips du détail de rémunération (étape 3) indiquent l'origine de chaque ligne (CCN ou accord d'entreprise). Les conditions et montants doivent rester alignés sur la config et les définitions d'accord pour éviter les régressions.
 
-**Audit config vs calculs et tooltips :** Les calculs (rémunération, arriérés, évolution) s'appuient sur `config.js` (CONFIG) pour la CCN : SMH, BAREME_DEBUTANTS, TAUX_ANCIENNETE, POINT_TERRITORIAL, MAJORATIONS_CCN, FORFAITS. Les accords d'entreprise sont définis dans le dossier `accords/` et chargés via AgreementLoader/AgreementRegistry. Les tooltips du détail de rémunération (étape 3) indiquent l'origine de chaque ligne (CCN ou accord d'entreprise). Les conditions et montants doivent rester alignés sur la config et les définitions d'accord pour éviter les régressions.
+#### D. Architecture du Code
 
-#### D. Architecture du Code (`app.js`)
-
-Le code est organisé en modules fonctionnels :
-
-- **État global (`state`)** : Centralise toutes les valeurs saisies par l'utilisateur
-- **Moteur de classification** : `calculateClassification()`, `getActiveClassification()`
-- **Moteur de rémunération** : `calculateRemuneration()` - source unique de vérité
-- **Fonctions d'affichage** : `updateAll()`, `updateRemunerationDisplay()`, `updateHintDisplay()`
-- **Graphique d'évolution** : `calculateSalaryEvolution()` - **réutilise `calculateRemuneration()`**
-- **Rapport arriérés** : `calculerArretees()`, `afficherResultatsArretees()`, `genererPDFArretees()`
-- **Notifications** : `showToast()` - Messages temporaires pour actions automatiques
-- **Utilitaires** : `formatMoney()`, `computePrime()`, `computeMajoration()`, `computeForfait()`, etc.
-
-**Principe de factorisation** : Le graphique d'évolution ne duplique pas la logique de calcul. Il modifie temporairement l'état, appelle `calculateRemuneration()`, puis restaure l'état original.
+Voir **`README_TECHNIQUE.md`** (couches `domain` / `stores` / `composables` / `features`, moteur de rémunération, arriérés, tests). Le graphique d'évolution réutilise le moteur de rémunération (`src/domain/evolution/projection.ts`) sans dupliquer la logique de calcul.
 
 ---
 
@@ -655,14 +625,13 @@ Ce PRD ne doit pas embarquer de valeurs chiffrées figées (montants, taux, seui
 
 Sources uniques :
 
-- **Convention (valeurs dynamiques + textes UI métier)** : `src/core/config.js` (`CONFIG` : SMH, barèmes débutants, taux ancienneté, majorations, forfaits, durée légale, `TOOLTIP_TEXTS`, etc.).
-- **Accords entreprise (valeurs dynamiques)** : dossier `accords/` (fichiers d'accord chargés à l'exécution).
+- **Convention (valeurs dynamiques + textes UI métier)** : `src/domain/config/index.ts` (`CONFIG` : SMH, barèmes débutants, taux ancienneté, majorations, forfaits, durée légale, `TOOLTIP_TEXTS`, etc.).
+- **Accords entreprise (valeurs dynamiques)** : `src/accords/<id>.ts`.
 
 Règle de non-régression :
 
 - Interdit d'introduire des chaînes juridiques/tooltip en dur dans la couche UI.
 - Toute nouvelle modalité doit fournir `sourceArticle` + `conditionTexte` (ou équivalent) dans la config/définition d'accord.
-- En cas de besoin legacy multi-runtime, l'adaptateur secondaire doit être dérivé automatiquement de la source principale (pas de copie manuelle divergente).
 
 Référence des clés de configuration (sans valeurs en dur dans ce PRD) :
 
@@ -672,7 +641,7 @@ Référence des clés de configuration (sans valeurs en dur dans ce PRD) :
 - `CONFIG.ANCIENNETE`
 - `CONFIG.MAJORATIONS_CCN`
 - `CONFIG.FORFAITS`
-- `CONFIG.POINT_TERRITORIAL_DEFAUT`
+- `CONFIG.POINT_TERRITORIAL`
 - `CONFIG.DUREE_LEGALE_HEURES_MOIS`
 
 #### 6.1. Textes des 6 Critères (Pour les Tooltips)

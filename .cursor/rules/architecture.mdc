@@ -1,0 +1,42 @@
+---
+description: Règles d'architecture et de calcul du simulateur CCNM (Vue 3 / TypeScript). Appliquées à toute édition de src/, tests/ et e2e/.
+globs:
+  - src/**
+  - tests/**
+  - e2e/**
+---
+
+# Architecture du simulateur CCNM
+
+## 1. Couches (vérifiées par ESLint)
+
+- `src/domain/**` : TypeScript pur. Aucun import de `vue`, `pinia`, `@/components/**`, `@/features/**`, `@/stores/**`.
+- `src/stores/**` : peut importer `@/domain/**`, jamais `@/components/**` ni `@/features/**`.
+- `src/composables/**` : peut importer `@/domain/**` et `@/stores/**`.
+- `src/components/**` et `src/features/**` : peuvent tout importer. Les règles métier restent dans `src/domain/**`.
+
+## 2. Précision monétaire
+
+- `decimal.js` pour tout calcul de salaire, taux, heures, jours, ancienneté.
+- Configuration unique dans `src/domain/utils/rounding.ts` : `Decimal.set({ precision: 20, rounding: Decimal.ROUND_CEIL })` (arrondi au plafond, en faveur du salarié).
+- Helpers d'arrondi (même fichier) : `roundHourlyRate` (4 décimales), `roundToCents` (centimes), `roundToEuro` (euro entier), `annualFromMonthly` (× 12 puis un seul arrondi).
+- Pas de `Math.round` / `Math.floor` / `Math.ceil` directement sur des montants.
+
+## 3. Données juridiques
+
+- Valeurs de référence (SMH, barèmes, point territorial, taux) : `src/domain/config/index.ts`, validées par zod. Procédure : `docs/MAJ_DONNEES.md`.
+- Accords d'entreprise : `src/accords/<id>.ts`, déclaratifs (voir `docs/AJOUTER_ACCORD.md`). Pas d'identifiant d'accord en dur dans le code générique.
+- Tout `ElementDef` conserve ses métadonnées juridiques (`sourceArticle`, `conditionTexte`, `tooltip`).
+
+## 4. Style de code
+
+- TS strict (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`).
+- Composition API `<script setup lang="ts">`.
+- Imports absolus via l'alias `@/`.
+- Pas de `any` sans commentaire `// any: <raison>`.
+- Schémas zod pour toute entrée externe (paramètres d'URL, état persisté).
+- Voir aussi `ts-vue-code-quality.mdc`.
+
+## 5. Git
+
+- Pré-commit `lint-staged` (eslint --fix + prettier sur les fichiers modifiés). Husky ne lance pas la suite de tests complète.

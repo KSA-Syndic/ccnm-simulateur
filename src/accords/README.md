@@ -24,5 +24,3 @@ Génération depuis un texte juridique + IA : **`docs/INTEGRER_ACCORD_TEXTE_ET_I
 - Enregistrement : `src/domain/agreements/registry.ts`.
 - Mapping primes → éléments calculables : `src/domain/agreements/accord-element-defs.ts`, `accord-majoration-defs.ts`.
 - UI (cases, heures, tooltips) : `src/features/agreement-options/`, store `src/stores/agreement.ts` (`inputs`).
-
-Un dossier d’**archive facultatif** (calculateur JavaScript de référence pour les tests de parité) n’est **pas** requis pour faire tourner ni étendre l’application Vue.

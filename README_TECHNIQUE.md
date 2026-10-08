@@ -119,7 +119,7 @@ npm run lint
 npm run build
 ```
 
-Détail : **`tests/README.md`**, matrice : **`docs/PARITE_MATRIX.md`**.
+Détail : **`tests/README.md`**.
 
 ## Déploiement
 
@@ -140,14 +140,12 @@ Procédure complète (liste de veille, sources primaires, journal des mises à j
 
 ## Conventions code (agents / contributeurs)
 
+- **`.cursor/rules/architecture.mdc`** : couches, arrondis decimal.js, données juridiques.
 - **`.cursor/rules/ts-vue-code-quality.mdc`** : pas de `delete` sur objets métier ; immutabilité ; `exactOptionalPropertyTypes` ; helper `omitRecordKeys` (`src/domain/utils/record.ts`).
 
 ## Documentation associée
 
-| Document                     | Contenu                                 |
-| ---------------------------- | --------------------------------------- |
-| `docs/MAJ_DONNEES.md`        | Mise à jour des chiffres (veille)       |
-| `docs/PARITE_MATRIX.md`      | Historique migration + preuves tests    |
-| `docs/MIGRATION_COMPLETE.md` | Synthèse clôture passe 1                |
-| `docs/GATE_PASSE2.md`        | Avant uniformisation libellés (passe 2) |
-| `PRD.md`                     | Exigences produit                       |
+| Document              | Contenu                           |
+| --------------------- | --------------------------------- |
+| `docs/MAJ_DONNEES.md` | Mise à jour des chiffres (veille) |
+| `PRD.md`              | Exigences produit                 |

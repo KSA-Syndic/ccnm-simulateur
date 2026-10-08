@@ -24,7 +24,7 @@ e2e/                         # Playwright — app Vue (port 5173)
 ├── wizard-ui-coverage.spec.ts
 ├── accord-kuhn.spec.ts
 ├── remuneration-values.spec.ts
-└── helpers/
+└── wizard-helpers.ts
 ```
 
 ## Exécution
@@ -55,7 +55,7 @@ Principaux specs : `baseline`, `wizard-ui-coverage`, `a11y-wizard`, `remuneratio
 
 `npm ci` → `lint` → `build` (`VITE_BASE=/`) → `test:run` → Playwright.
 
-## Parité chiffrée (fixtures)
+## Profils de rémunération (fixtures)
 
 **`tests/fixtures/profils-remuneration.json`** alimente les attentes du moteur **`computeAnnualRemunerationFromWizardStores`** dans **`e2e/remuneration-values.spec.ts`** et les invariants sous **`tests/invariants/`**.
 
@@ -70,5 +70,4 @@ npx playwright test e2e/accord-kuhn.spec.ts
 ## Documentation
 
 - Architecture : **`README_TECHNIQUE.md`**
-- Matrice migration : **`docs/PARITE_MATRIX.md`**
 - Déploiement : **`docs/DEPLOIEMENT_PAGES.md`**

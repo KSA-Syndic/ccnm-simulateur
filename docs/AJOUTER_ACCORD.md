@@ -2,8 +2,6 @@
 
 Ce guide décrit l'application **Vue 3** (`src/`). Le schéma métier est défini dans **`src/domain/agreements/interface.ts`** (validation Zod via `validateAgreement`).
 
-> L’**archive JavaScript optionnelle** à la racine du dépôt (calculateur de référence pour les tests) n’est pas une dépendance du code actif. Les preuves de non-régression sont les tests **`src/**`** et **`tests/**`** (voir `tests/README.md`).
-
 ## Référentiel métier (obligatoire)
 
 | Concept                | Définition opérationnelle                                          | Impact de modélisation                            |
@@ -147,7 +145,7 @@ Les valeurs saisies vivent dans **`useAgreementStore().inputs`** (`src/stores/ag
 npm run dev
 # Ouvrir http://localhost:5173/?accord=mon-accord
 npm run test:run -- src/domain/agreements
-npm run test:run -- tests/parity   # si le profil est ajouté aux fixtures
+npm run test:run -- tests/invariants   # si le profil est ajouté aux fixtures
 ```
 
 Playwright (accord actif) : `e2e/accord-kuhn.spec.ts` comme modèle.

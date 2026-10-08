@@ -89,11 +89,10 @@ L'outil supporte les **accords d'entreprise** qui peuvent améliorer votre rému
 ### Pour les Développeurs et Syndicats
 
 - **[Documentation technique](README_TECHNIQUE.md)** : Architecture Vue 3 (`src/`), moteur, stores, tests
-- **[Matrice de parité](docs/PARITE_MATRIX.md)** : Jalons migration et preuves (tests `src/` + `tests/`)
 - **[Déploiement GitHub Pages](docs/DEPLOIEMENT_PAGES.md)** : Publication Vue sur Pages
 - **[Guide des tests](tests/README.md)** : Vitest, Playwright
 - **[Guide technique pour ajouter un accord](docs/AJOUTER_ACCORD.md)** : Instructions détaillées pour développeurs
-- **[Intégrer un accord via texte complet + prompt IA](docs/INTEGRER_ACCORD_TEXTE_ET_IA.md)** : Fournir le texte de l'accord et un prompt pour générer le fichier JS avec un assistant IA
+- **[Intégrer un accord via texte complet + prompt IA](docs/INTEGRER_ACCORD_TEXTE_ET_IA.md)** : Fournir le texte de l'accord et un prompt pour générer le fichier TypeScript `src/accords/<id>.ts` avec un assistant IA
 - **[PRD (Product Requirements Document)](PRD.md)** : Spécifications complètes de l'application
 
 ## 🔧 Installation (pour développeurs)

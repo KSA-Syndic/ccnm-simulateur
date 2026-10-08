@@ -54,7 +54,6 @@ Un même paragraphe mélange souvent **la règle** (formule, taux issu d'une ann
 ## Phase 2 — Cartographie code
 
 - Parcourir les points d'ancrage **Vue / TS** : `src/domain/convention/catalog.ts`, `src/domain/config/`, `src/domain/remuneration/` (`engine.ts`, `compute.ts`, `aggregate.ts`), `src/domain/agreements/` (`interface.ts`, `accord-element-defs.ts`), `src/accords/*.ts`, `src/domain/ui/labels.ts`, `src/features/`, `src/stores/`, tests `tests/domain/`, `src/**/__tests__`.
-- Oracle JavaScript optionnel : dossier d’archive en lecture comparative uniquement — pas source de vérité pour les nouveaux changements.
 - Pour chaque règle extraite, associer **un ou plusieurs emplacements** (définition d'élément, calcul, agrégation SMH, hint arriérés, affichage résultat).
 - Vérifier la **cohérence** des sémantiques (`semanticId`).
 
