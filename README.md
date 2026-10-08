@@ -34,7 +34,7 @@ Cet outil vous permet de :
 Renseignez vos informations :
 
 - **Ancienneté** dans l'entreprise (en années)
-- **Point Territorial** (valeur par défaut : 5,90 € pour le Bas-Rhin)
+- **Point Territorial** (valeur par défaut : 5,95 € pour le Bas-Rhin depuis le 1er avril 2026)
 - **Type de forfait** (si vous êtes cadre : 35h, heures ou jours)
 - **Conditions de travail** (travail de nuit, dimanche, équipes postées)
 

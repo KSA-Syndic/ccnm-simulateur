@@ -8,7 +8,7 @@ describe('useSituationStore', () => {
     const s = useSituationStore(pinia);
     expect(s.anciennete).toBe(0);
     expect(s.forfait).toBe('35h');
-    expect(s.pointTerritorial).toBe(5.9);
+    expect(s.pointTerritorial).toBe(5.95);
     expect(s.tempsPartiel).toBe(false);
     expect(s.tauxActivite).toBe(100);
     expect(s.travailNuit).toBe(false);
@@ -37,6 +37,6 @@ describe('useSituationStore', () => {
     s.$patch({ anciennete: 10, pointTerritorial: 6.2 });
     s.$reset();
     expect(s.anciennete).toBe(0);
-    expect(s.pointTerritorial).toBe(5.9);
+    expect(s.pointTerritorial).toBe(5.95);
   });
 });

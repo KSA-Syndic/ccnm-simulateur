@@ -225,7 +225,7 @@ const CCNM_SOURCE_ANNEXE_CLASSIFICATION_6_CRITERES =
  * Ne pas utiliser comme vérité juridique : paramètre de simulation uniquement.
  */
 const INFLATION_FALLBACK_SERIES: Record<number, number> = {
-  2025: 1.8,
+  2025: 0.9,
   2024: 2.0,
   2023: 4.9,
   2022: 5.2,
@@ -253,7 +253,7 @@ export const CONFIG: Config = ConfigSchema.parse({
   SMH_BY_YEAR,
   SMH_UPDATE: {
     referenceYear: CURRENT_DATA_YEAR,
-    updatedAt: '2026-03-12',
+    updatedAt: '2026-10-08',
     years: {
       2024: {
         effectiveDate: '2024-01-01',
@@ -273,7 +273,8 @@ export const CONFIG: Config = ConfigSchema.parse({
         effectiveDate: '2026-01-01',
         indicativeRate: 0.0086,
         change: 'Revalorisation moyenne annoncée +0,86%',
-        sourceLabel: 'Avenant du 20 février 2026 à la CCN Métallurgie',
+        sourceLabel:
+          'Avenant du 20 février 2026 à la CCN Métallurgie (étendu par arrêté du 20 mai 2026, JO du 5 juin 2026)',
         sourceUrl:
           'https://uimm.lafabriquedelavenir.fr/wp-content/uploads/2026/03/Avenant-accord-SMH-2026-a-la-CCN-du-07.02.2022_VA.pdf',
       },
@@ -291,7 +292,7 @@ export const CONFIG: Config = ConfigSchema.parse({
     rolesSimulation: {
       horsAssietteComparaisonSMH: true,
       noteAssimilee:
-        "Distinction indicative CCNM art. 140 : rémunération du travail (incluse dans l'assiette de comparaison au SMH telle que paramétrée) vs sujétion ou organisation (nuit, équipes, dimanche, astreintes hors TTE, temps annexes, frais…) et majorations d'heures supplémentaires, comptées en plus. Jurisprudence récente sur l'abus d'absorption (déc. 2025) : à relier au dossier ; paramétrage du simulateur, pas conseil juridique.",
+        "Distinction indicative CCNM art. 140 : rémunération du travail (incluse dans l'assiette de comparaison au SMH telle que paramétrée) vs sujétion ou organisation (nuit, équipes, dimanche, astreintes hors TTE, temps annexes, frais…) et majorations d'heures supplémentaires, comptées en plus. TJ Paris, 2 déc. 2025, RG 25/08553 : primes de sujétion (nuit, équipes, astreintes…) exclues de l'assiette de comparaison, primes d'ancienneté d'entreprise incluses (1re instance) : à relier au dossier ; paramétrage du simulateur, pas conseil juridique.",
     },
   },
   TAUX_ANCIENNETE: {
@@ -307,7 +308,7 @@ export const CONFIG: Config = ConfigSchema.parse({
     10: 3.8,
   },
   POINT_TERRITORIAL: {
-    valeurDefaut: 5.9,
+    valeurDefaut: 5.95,
     territoire: 'Bas-Rhin (67)',
   },
   MAPPING_POINTS: [
