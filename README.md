@@ -209,7 +209,9 @@ L'outil est mis à jour chaque année avec :
 - ✅ Les nouveaux accords d'entreprise
 - ✅ Les nouvelles valeurs du Point Territorial
 
-**Dernière mise à jour** : 2026 (SMH + historique annuel)
+**Dernière mise à jour** : 8 octobre 2026 (grille SMH 2026 étendue, point Bas-Rhin 5,95 €, inflation 2025)
+
+Procédure et journal des mises à jour : [`docs/MAJ_DONNEES.md`](docs/MAJ_DONNEES.md).
 
 ## 🌐 Liens Utiles
 

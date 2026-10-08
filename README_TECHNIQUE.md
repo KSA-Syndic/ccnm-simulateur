@@ -127,6 +127,8 @@ GitHub Pages : **`docs/DEPLOIEMENT_PAGES.md`** — app à la racine (`VITE_BASE=
 
 ## Maintenance annuelle (SMH / barèmes)
 
+Procédure complète (liste de veille, sources primaires, journal des mises à jour) : **`docs/MAJ_DONNEES.md`**.
+
 1. `src/domain/config/index.ts` et constantes associées.
 2. Grilles `SMH_BY_YEAR`, `BAREME_DEBUTANTS_BY_YEAR`, métadonnées `SMH_UPDATE`.
 3. `npm run test:run` + scénarios arriérés / PDF.
@@ -144,6 +146,7 @@ GitHub Pages : **`docs/DEPLOIEMENT_PAGES.md`** — app à la racine (`VITE_BASE=
 
 | Document                     | Contenu                                 |
 | ---------------------------- | --------------------------------------- |
+| `docs/MAJ_DONNEES.md`        | Mise à jour des chiffres (veille)       |
 | `docs/PARITE_MATRIX.md`      | Historique migration + preuves tests    |
 | `docs/MIGRATION_COMPLETE.md` | Synthèse clôture passe 1                |
 | `docs/GATE_PASSE2.md`        | Avant uniformisation libellés (passe 2) |
