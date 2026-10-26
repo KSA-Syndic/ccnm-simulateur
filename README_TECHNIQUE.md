@@ -34,7 +34,7 @@ Pour faire évoluer tout le style modale d’un coup, modifier ces tokens plutô
 ## Conformité juridique
 
 - **CCNM (IDCC 3248)** : grilles et paramètres dans `src/domain/config/`
-- **Assiette SMH** : distinction indicative « rémunération du travail » / « sujétion » (CCNM art. 140, jurisprudence déc. 2025 à contextualiser) centralisée dans `src/domain/remuneration/smhAssiettePolicy.ts` ; le moteur la matérialise via `inclusDansSMH` sur chaque `ElementDef` (agrégats, PDF, encarts « Inclus / Exclus »).
+- **Assiette SMH** : distinction indicative « rémunération du travail » / « sujétion » (CCNM art. 140 ; TJ Paris, 2 déc. 2025, RG 25/08553, 1re instance) centralisée dans `src/domain/remuneration/smhAssiettePolicy.ts` ; le moteur la matérialise via `inclusDansSMH` sur chaque `ElementDef` (agrégats, PDF, encarts « Inclus / Exclus »).
 - **Accords d'entreprise** : `src/accords/` (ex. `kuhn.ts`)
 
 Les montants par défaut sont des **paramètres de simulation** ; les métadonnées juridiques (`sourceArticle`, `conditionTexte`, tooltips) doivent être conservées ou complétées lors des évolutions catalogue / accord.

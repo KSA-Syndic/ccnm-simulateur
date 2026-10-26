@@ -1,3 +1,4 @@
+import { isCadre } from '../classification/engine';
 import { SMH_ASSIETTE_SOURCE_ARTICLE } from '../remuneration/smhAssiettePolicy';
 import { POINT_TERRITORIAL_CODE_TRAVAIL_CONTRIBUTION } from './tooltipReferences';
 
@@ -299,3 +300,13 @@ export const GROUPE_SELECT_LABELS: Record<string, string> = {
   H: 'H - Cadres supérieurs',
   I: 'I - Cadres dirigeants',
 };
+
+/** Libellé du badge de statut selon la classe. */
+export function statutCadreLabel(classe: number): 'Cadre' | 'Non-Cadre' {
+  return isCadre(classe) ? 'Cadre' : 'Non-Cadre';
+}
+
+/** Classe CSS du badge de statut (`.statut-badge.cadre` / `.non-cadre`). */
+export function statutCadreClass(classe: number): 'cadre' | 'non-cadre' {
+  return isCadre(classe) ? 'cadre' : 'non-cadre';
+}

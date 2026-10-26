@@ -1,5 +1,5 @@
 /**
- * Contrôle de conformité au SMH — étanchéité des variables (jurisprudence déc. 2025, art. 140 CCNM).
+ * Contrôle de conformité au SMH — étanchéité des variables (art. 140 CCNM ; TJ Paris, 2 déc. 2025, RG 25/08553).
  * @see smhAssiettePolicy.ts
  */
 import { SEMANTIC_ID, type ElementDef, type ElementResult } from '../types';

@@ -19,10 +19,12 @@
  * que les autres lignes « heures mensuelles » du moteur : montant mensuel reconstitué puis ×12
  * pour le total annuel affiché (`period: 'annual'` sur le mode `heuresXtaux`).
  *
- * Une jurisprudence récente (Cass. civ., 2 déc. 2025) éclaire notamment l’assiette par rapport
- * aux primes d’ancienneté (entreprise vs branche) et à l’abus consistant à absorber le SMH avec
- * des primes de sujétion : interprétation indicative ; chaque dossier dépend du texte
- * applicable et des faits.
+ * Prime d’ancienneté (TJ Paris, 2 déc. 2025, RG 25/08553, 1re instance) : seule la prime
+ * d’ancienneté de branche (CCNM art. 142) est exclue de l’assiette ; une prime d’ancienneté
+ * redéfinie par un accord d’entreprise y est incluse, sauf déclaration contraire de l’accord
+ * (`anciennete.inclusDansSMH`). Le même jugement exclut les primes de sujétion, qui ne peuvent
+ * servir à absorber le SMH. Interprétation indicative : chaque dossier dépend du texte applicable
+ * et des faits.
  */
 
 /** Référence courte pour infobulles, PDF et aide contextuelle. */

@@ -29,6 +29,11 @@ export function formatFrDecimalFixed(value: unknown, digits = 2): string {
   return n.toFixed(digits).replace('.', ',');
 }
 
+/** Taux d'activité affiché (ex. `80` → `80`, `62.5` → `62,5`) : au plus 2 décimales, sans zéros inutiles. */
+export function formatTauxActivite(taux: number): string {
+  return String(Math.round(taux * 100) / 100).replace('.', ',');
+}
+
 /** Comme `formatFrDecimalFixed`, sans décimales pour une valeur entière, 2 sinon. */
 export function formatFrDecimalAuto(value: unknown): string {
   const n = Number(value);

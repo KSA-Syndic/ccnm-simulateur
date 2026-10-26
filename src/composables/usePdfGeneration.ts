@@ -9,7 +9,7 @@ import { getPrimes, isFlagOn, type PrimeDef } from '../domain/agreements/interfa
 import { computePdfRemunerationBreakdown } from '../domain/remuneration/compute';
 import { useWizardRemunerationInput } from './useWizardRemunerationInput';
 import { buildPdfArrieresAnalyticsPayload, trackPdfArrieres } from '../infra/analytics';
-import { formatFrDecimalFixed, formatMoney } from '../domain/utils/format';
+import { formatFrDecimalFixed, formatMoney, formatTauxActivite } from '../domain/utils/format';
 import {
   aggregateArreteesParAnneeFromPeriodeLabels,
   yearOfPeriode,
@@ -251,12 +251,12 @@ export function usePdfGeneration() {
 
       const isCadreCl = isCadre(active.classe);
       const isTp = situationStore.tempsPartiel === true;
-      const tauxPct = Math.round(situationStore.tauxActivite * 100) / 100;
+      const tauxPct = formatTauxActivite(situationStore.tauxActivite);
       let baseCalc = `Temps plein 35h/sem. (${formatFrDecimalFixed(CONFIG.DUREE_LEGALE_HEURES_MOIS)}h/mois)`;
       if (situationStore.forfait === 'jours')
         baseCalc = `${CONFIG.FORFAIT_JOURS_REFERENCE} jours/an`;
       if (isTp) {
-        baseCalc = `${baseCalc} au prorata ${String(tauxPct).replace('.', ',')} %`;
+        baseCalc = `${baseCalc} au prorata ${tauxPct} %`;
       }
 
       const refAnnuellePdf = scopeSmhSeul ? br.totalAssietteSmhIndicatif : br.agg.totalAnnual;
@@ -278,7 +278,7 @@ export function usePdfGeneration() {
         [
           'Temps de travail',
           sanitizePdfStandardFontText(
-            isTp ? `Temps partiel (${String(tauxPct).replace('.', ',')} %)` : 'Temps plein (100 %)',
+            isTp ? `Temps partiel (${tauxPct} %)` : 'Temps plein (100 %)',
           ),
         ],
         ['Base de calcul (lissage)', sanitizePdfStandardFontText(baseCalc)],

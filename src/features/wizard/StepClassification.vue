@@ -3,12 +3,13 @@ import { ref, computed, watch } from 'vue';
 import { useWizardStore } from '../../stores/wizard';
 import { useWizardNavigation } from '../../composables/useWizardNavigation';
 import { CONFIG } from '../../domain/config';
+import { calculateClassification, getClassesForGroupe } from '../../domain/classification/engine';
 import {
-  calculateClassification,
-  getClassesForGroupe,
-  isCadre,
-} from '../../domain/classification/engine';
-import { GROUPE_SELECT_LABELS, WIZARD_LABELS } from '../../domain/ui/labels';
+  GROUPE_SELECT_LABELS,
+  statutCadreClass,
+  statutCadreLabel,
+  WIZARD_LABELS,
+} from '../../domain/ui/labels';
 import { AppTooltip } from '../../components/ui';
 import { buildWizardTooltipHtml } from '../../domain/ui/wizardTooltips';
 import { scoresArrayFromWizardScores } from '../../domain/remuneration/compute';
@@ -37,14 +38,9 @@ const previewClassification = computed(() =>
   calculateClassification(scoresArrayFromWizardScores(wizard.scores)),
 );
 
-const statutEstimation = computed(() =>
-  isCadre(previewClassification.value.classe) ? 'Cadre' : 'Non-Cadre',
-);
+const statutEstimation = computed(() => statutCadreLabel(previewClassification.value.classe));
 
-const statutDirect = computed(() => {
-  if (!wizard.classe) return '—';
-  return isCadre(wizard.classe) ? 'Cadre' : 'Non-Cadre';
-});
+const statutDirect = computed(() => (wizard.classe ? statutCadreLabel(wizard.classe) : '—'));
 
 function chooseManual() {
   wizard.mode = 'manual';
@@ -138,7 +134,7 @@ function validateEstimation() {
           <span class="groupe">{{ wizard.groupe }}</span>
           <span class="classe">{{ wizard.classe }}</span>
         </div>
-        <span class="statut-badge" :class="isCadre(wizard.classe) ? 'cadre' : 'non-cadre'">{{
+        <span class="statut-badge" :class="statutCadreClass(wizard.classe)">{{
           statutDirect
         }}</span>
       </div>
@@ -179,11 +175,9 @@ function validateEstimation() {
           <span class="groupe">{{ previewClassification.groupe }}</span>
           <span class="classe">{{ previewClassification.classe }}</span>
         </div>
-        <span
-          class="statut-badge"
-          :class="isCadre(previewClassification.classe) ? 'cadre' : 'non-cadre'"
-          >{{ statutEstimation }}</span
-        >
+        <span class="statut-badge" :class="statutCadreClass(previewClassification.classe)">{{
+          statutEstimation
+        }}</span>
       </div>
       <div class="step-actions">
         <button class="book-btn btn-secondary" @click="subStep = '1a'">

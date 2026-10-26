@@ -19,7 +19,12 @@ import {
   TERRITOIRE_SAISIE_LIBRE,
 } from '../../domain/remuneration/pointTerritorial';
 import { buildWizardTooltipHtml } from '../../domain/ui/wizardTooltips';
-import { WIZARD_TOOLTIPS, WIZARD_TOASTS } from '../../domain/ui/labels';
+import {
+  statutCadreClass,
+  statutCadreLabel,
+  WIZARD_TOOLTIPS,
+  WIZARD_TOASTS,
+} from '../../domain/ui/labels';
 import { wizardToastAncienneteMax } from '../../domain/ui/wizardToasts';
 import { dispatchAppToast } from '../../utils/appToast';
 import ConditionsTravailPanel from '../agreement-options/ConditionsTravailPanel.vue';
@@ -34,7 +39,7 @@ const classificationReady = computed(() => Boolean(wizard.groupe && wizard.class
 
 const statutLabel = computed(() => {
   if (!classificationReady.value) return '—';
-  return isCadreValue.value ? 'Cadre' : 'Non-Cadre';
+  return statutCadreLabel(wizard.classe);
 });
 
 /** Ancienneté en années entières positives : plancher de l'expérience professionnelle. */
@@ -168,7 +173,7 @@ function validate() {
           </div>
           <span
             class="statut-badge small"
-            :class="!classificationReady ? '' : isCadreValue ? 'cadre' : 'non-cadre'"
+            :class="classificationReady ? statutCadreClass(wizard.classe) : ''"
             >{{ statutLabel }}</span
           >
         </div>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue';
+import { defineAsyncComponent, onMounted, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useWizardStore } from '../stores/wizard';
 import { useUiStore } from '../stores/ui';
@@ -8,11 +8,17 @@ import SimulatorLayout from './SimulatorLayout.vue';
 import StepClassification from '../features/wizard/StepClassification.vue';
 import StepSituation from '../features/wizard/StepSituation.vue';
 import StepResult from '../features/wizard/StepResult.vue';
-import StepArretees from '../features/wizard/StepArretees.vue';
+
+/**
+ * Étape 4 (arriérés : courbe, PDF, lettre) chargée à la demande : hors du bundle initial,
+ * préchargée dès l'étape 3 et montée seulement une fois l'étape atteinte.
+ */
+const loadStepArretees = () => import('../features/wizard/StepArretees.vue');
+const StepArretees = defineAsyncComponent(loadStepArretees);
 
 const wizard = useWizardStore();
 const ui = useUiStore();
-const { currentStep } = storeToRefs(wizard);
+const { currentStep, maxStepReached } = storeToRefs(wizard);
 const { wizardSessionKey } = storeToRefs(ui);
 
 onMounted(() => {
@@ -23,6 +29,7 @@ watch(
   currentStep,
   (step) => {
     if (step === 3) trackResultatSalaireOnce();
+    if (step >= 3) void loadStepArretees();
   },
   { immediate: true },
 );
@@ -42,7 +49,7 @@ watch(
         <StepResult />
       </div>
       <div v-show="currentStep === 4" id="step-4" class="wizard-step-mount">
-        <StepArretees />
+        <StepArretees v-if="maxStepReached >= 4" />
       </div>
     </div>
   </SimulatorLayout>

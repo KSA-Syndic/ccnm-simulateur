@@ -20,7 +20,7 @@ function resolveAccordAncienneteSmhInclusion(
   if (primeOverride !== undefined) return normalizeAncienneteSmhMode(primeOverride);
   const accordOverride = agreement.anciennete?.inclusDansSMH;
   if (accordOverride !== undefined) return normalizeAncienneteSmhMode(accordOverride);
-  /** Par défaut : prime d’entreprise dans l’assiette (rémunération du travail), distincte de la prime d’ancienneté de branche (CCNM art. 142). Voir `smhAssiettePolicy.ts`. */
+  /** Par défaut : prime redéfinie par l’accord incluse dans l’assiette ; seule la prime de branche (CCNM art. 142) en est exclue (TJ Paris, 2 déc. 2025, RG 25/08553). Voir `smhAssiettePolicy.ts`. */
   return true;
 }
 

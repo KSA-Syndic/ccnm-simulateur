@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { type AggregatedRemuneration } from '../../domain/remuneration/aggregate';
-import { formatFrDecimalFixed, formatMoney } from '../../domain/utils/format';
+import { formatFrDecimalFixed, formatMoney, formatTauxActivite } from '../../domain/utils/format';
 import { roundHourlyRate } from '../../domain/utils/rounding';
 import { AppTooltip } from '../../components/ui';
 import { useUiStore } from '../../stores/ui';
@@ -9,7 +9,6 @@ import { useSituationStore } from '../../stores/situation';
 import { useAgreementStore } from '../../stores/agreement';
 import { useWizardStore } from '../../stores/wizard';
 import { CONFIG } from '../../domain/config';
-import { isCadre } from '../../domain/classification/engine';
 import {
   getSmhHourlyBaseRate,
   getSmhDailyBaseRate,
@@ -19,6 +18,8 @@ import {
   WIZARD_LABELS,
   WIZARD_TOOLTIPS,
   RESULT_SALAIRE_BASE_TOOLTIP,
+  statutCadreClass,
+  statutCadreLabel,
 } from '../../domain/ui/labels';
 import AccordBadge from '../agreement-options/AccordBadge.vue';
 import { buildLegalTooltipContent, getAccordNomCourt } from '../../domain/tooltip/builders';
@@ -35,14 +36,12 @@ const agreement = useAgreementStore();
 const wizard = useWizardStore();
 
 const classificationReady = computed(() => Boolean(wizard.groupe && wizard.classe >= 1));
-const statutBadgeLabel = computed(() => {
-  if (!classificationReady.value) return '—';
-  return isCadre(wizard.classe) ? 'Cadre' : 'Non-Cadre';
-});
-const statutBadgeClass = computed(() => {
-  if (!classificationReady.value) return '';
-  return isCadre(wizard.classe) ? 'cadre' : 'non-cadre';
-});
+const statutBadgeLabel = computed(() =>
+  classificationReady.value ? statutCadreLabel(wizard.classe) : '—',
+);
+const statutBadgeClass = computed(() =>
+  classificationReady.value ? statutCadreClass(wizard.classe) : '',
+);
 
 const nbMoisImpose = computed(() => agreement.nbMoisImpose);
 
@@ -59,9 +58,8 @@ const resultContextNotice = computed(() => {
     baseInfo = 'Base 35h/sem.';
   }
   if (situation.tempsPartiel) {
-    const taux =
-      Math.round((Number(situation.tauxActivite) || CONFIG.TAUX_ACTIVITE_DEFAUT) * 100) / 100;
-    baseInfo += ` · Temps partiel ${String(taux).replace('.', ',')}%`;
+    const taux = Number(situation.tauxActivite) || CONFIG.TAUX_ACTIVITE_DEFAUT;
+    baseInfo += ` · Temps partiel ${formatTauxActivite(taux)}%`;
   }
   const smhBaseAnnuel = Number(props.data.baseSMH) || 0;
   const activityRate = resolveActivityRate(situation.tempsPartiel, situation.tauxActivite);

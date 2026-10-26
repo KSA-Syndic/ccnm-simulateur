@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue';
 import { useArreteesStore } from '../../stores/arretees';
 import { AppTooltip, NumericInput } from '../../components/ui';
 import { formatMensuelDuAvecDetail } from '../../domain/arretees/formatDuDetail';
@@ -146,17 +146,34 @@ function findNextEmptyIndex(from: number): number {
   return -1;
 }
 
+/** Focus du champ montant, une fois le panneau positionné (rendu à jour). */
 async function focusSalaryInput() {
-  await nextTick();
   await nextTick();
   const input = salaryInputRef.value;
   if (!input) return;
   input.focus();
   input.select();
-  requestAnimationFrame(() => {
-    input.focus();
-    input.select();
-  });
+}
+
+/**
+ * Cordon placé sur la géométrie définitive du panneau : tout de suite, ou à la fin de son
+ * animation d'apparition (le panneau grandit pendant l'animation, son bas se déplace).
+ */
+function placeCordonAfterPanelAnimation() {
+  const panel = panelRef.value;
+  const animating = panel?.getAnimations?.().some((a) => a.playState === 'running') === true;
+  if (!panel || !animating) {
+    updateCordonLayout();
+    return;
+  }
+  const onEnd = (e: AnimationEvent) => {
+    if (e.target !== panel) return;
+    panel.removeEventListener('animationend', onEnd);
+    panel.removeEventListener('animationcancel', onEnd);
+    updateCordonLayout();
+  };
+  panel.addEventListener('animationend', onEnd);
+  panel.addEventListener('animationcancel', onEnd);
 }
 
 async function updateAnchorPosition(options?: { animate?: boolean; pop?: boolean }) {
@@ -188,23 +205,20 @@ async function updateAnchorPosition(options?: { animate?: boolean; pop?: boolean
     popIn.value = true;
   }
 
-  const deferCordonForPop = Boolean(options?.pop && mobilePanelFixed.value);
-  if (deferCordonForPop) {
+  /** Mobile : cordon masqué pendant l'apparition du panneau, révélé à la fin de l'animation. */
+  const hideCordonDuringPop = Boolean(options?.pop && mobilePanelFixed.value);
+  if (hideCordonDuringPop) {
     cordonLayout.value = { left: pointCoords.value?.x ?? 0, top: 0, visible: false };
   }
 
   await nextTick();
-  if (!deferCordonForPop) {
+  if (!hideCordonDuringPop) {
     updateCordonLayout();
   }
 
   requestAnimationFrame(() => {
     layerAnimating.value = false;
-    if (deferCordonForPop) {
-      window.setTimeout(() => updateCordonLayout(), 420);
-    } else {
-      updateCordonLayout();
-    }
+    placeCordonAfterPanelAnimation();
   });
 }
 
@@ -305,10 +319,6 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onGlobalKeydown, true);
   mobileMq?.removeEventListener('change', onMobileMqChange);
   resizeObserver?.disconnect();
-});
-
-watch(visible, (v) => {
-  if (v) void focusSalaryInput();
 });
 
 defineExpose({

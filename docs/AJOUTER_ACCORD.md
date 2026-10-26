@@ -17,7 +17,7 @@ Ce guide décrit l'application **Vue 3** (`src/`). Le schéma métier est défin
 - `inclusDansSMH: true` uniquement pour les composantes salariales / contreparties directes.
 - `inclusDansSMH: false` pour sujétions et indemnisations.
 - Le contrôle porte sur la **réalité de l'élément**, pas son intitulé.
-- Doctrine projet (prime d'ancienneté) : la prime **de branche** (CCNM art. 142) est **exclue** de l'assiette SMH ; la prime d'ancienneté **de l'accord d'entreprise** y est **incluse par défaut** (rémunération du travail, cf. `smhAssiettePolicy.ts`). Pour l'exclure ou ne la retenir que si elle dépasse la prime conventionnelle, le déclarer explicitement sur `anciennete` : `inclusDansSMH: false` ou `'ifSuperiorToConvention'`.
+- Doctrine projet (prime d'ancienneté) : **par défaut exclue** de l'assiette SMH, c'est-à-dire la prime **de branche** (CCNM art. 142, exclue par l'art. 140). Exception : une prime d'ancienneté **redéfinie par l'accord d'entreprise** (bloc `anciennete`) est **incluse** dans l'assiette (TJ Paris, 2 déc. 2025, RG 25/08553, 1re instance : seule la prime de branche est exclue). Pour l'exclure malgré tout, ou ne la retenir que si elle dépasse la prime conventionnelle, le déclarer sur `anciennete` : `inclusDansSMH: false` ou `'ifSuperiorToConvention'`.
 
 ## Règle prioritaire : modéliser uniquement les écarts à la CCN
 
