@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CONVENTION_MODALITES_PRIMES } from '@/domain/convention/catalog';
 import {
-  assertNationalModalityRegistryCoversCatalog,
   buildNationalModalityElementDefs,
   getNationalModalityRegistryEntries,
   getNationalPrimeOverrideRows,
@@ -14,13 +12,9 @@ import { baseWizardInput, computeDetails } from './helpers/remunerationTestHelpe
  * Garantit l’évolutivité : nouvelle entrée registre → UI + calcul + surcharge sans liste parallèle.
  */
 describe('Registre modalités — cohérence UI / moteur / overrides', () => {
-  it('catalogue ↔ registre synchronisés', () => {
-    expect(() => assertNationalModalityRegistryCoversCatalog()).not.toThrow();
-  });
-
   for (const entry of getNationalModalityRegistryEntries()) {
-    it(`[${entry.catalogKey}] UI + ElementDef + activation`, () => {
-      const mod = CONVENTION_MODALITES_PRIMES[entry.catalogKey];
+    it(`[${entry.id}] UI + ElementDef + activation`, () => {
+      const mod = entry.modalite;
       const uiRow = getNationalPrimeOverrideRows().find((r) => r.semanticId === entry.semanticId);
       expect(uiRow?.stateKeyActif).toBe(mod.stateKeyActif);
 

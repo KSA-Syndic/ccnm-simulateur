@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed } from 'vue';
 import { useWizardStore } from '../../stores/wizard';
 import { useAgreementStore } from '../../stores/agreement';
 import { useSituationStore } from '../../stores/situation';
@@ -31,25 +31,6 @@ function onRecommencer() {
   goToStep(1);
 }
 
-/** 12 ou 13 mois imposés par `repartition13Mois.actif` sur l'accord appliqué. */
-const nbMoisImpose = computed(() => agreement.nbMoisImpose);
-
-watch(
-  nbMoisImpose,
-  (v) => {
-    if (v != null) ui.nbMois = v;
-  },
-  { immediate: true },
-);
-
-watch(
-  () => ui.nbMois,
-  (v) => {
-    const imp = nbMoisImpose.value;
-    if (imp != null && v !== imp) ui.nbMois = imp;
-  },
-);
-
 /** Calcul unique de l'étape : détail affiché et hints. */
 const resolved = computed(() => resolveWizardRemunerationElements(wizardInput.value));
 
@@ -65,7 +46,7 @@ const hintBlocks = computed(() => {
     agreement: r.accDoc,
     details: r.details,
   });
-  return [...base];
+  return base;
 });
 </script>
 

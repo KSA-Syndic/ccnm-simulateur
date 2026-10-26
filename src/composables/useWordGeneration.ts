@@ -29,16 +29,9 @@ export function useWordGeneration() {
     generating.value = true;
     try {
       const arretees = useArreteesStore();
-      const periodesSaisies = arretees.periodes
-        .filter((p) => p.salaireVerse !== undefined)
-        .map((p) => ({
-          label: p.label,
-          periodKey: p.periodKey,
-          salaireDu: p.salaireDu,
-          salaireVerse: p.salaireVerse as number,
-        }));
-      const { detailsParAnnee, totalArretees } =
-        aggregateArreteesParAnneeFromPeriodeLabels(periodesSaisies);
+      const { detailsParAnnee, totalArretees } = aggregateArreteesParAnneeFromPeriodeLabels(
+        arretees.periodes,
+      );
       const html = buildMiseEnDemeureWordHtml(mapToLetterInfos(data), {
         detailsParAnnee,
         totalArretees,

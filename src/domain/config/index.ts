@@ -89,7 +89,7 @@ export const ConfigSchema = z.object({
     plafond: z.number().int(),
     inclusDansSMH: z.boolean(),
   }),
-  FORFAITS: z.record(z.string(), z.number()),
+  FORFAITS: z.object({ '35h': z.number(), heures: z.number(), jours: z.number() }),
   MAJORATIONS_CCN: z.object({
     nuit: z.number(),
     dimanche: z.number(),

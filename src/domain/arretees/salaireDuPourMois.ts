@@ -1,16 +1,18 @@
 import { getMois13eVersement, type Agreement } from '../agreements/interface';
-import { getAccordElementDefsForRemuneration } from '../agreements/accord-element-defs';
 import {
-  computeAnnualRemunerationFromWizardStores,
+  annualTotalFromResolved,
+  getAccordDefsForRemuneration,
   prepareWizardCompute,
+  resolvePreparedRemunerationElements,
   resolveWizardRemunerationElements,
   type WizardComputeOverrides,
   type WizardRemunerationInput,
+  type WizardRemunerationResolved,
 } from '../remuneration/compute';
 import { computeElement } from '../remuneration/engine';
 import type { ComputeContext, ElementDef } from '../types';
 import { computeMensuelDueProfile } from './mensuelDue';
-import { computeSalaireProrataEntree } from '../utils/date';
+import { computeSalaireProrataPeriode } from '../utils/date';
 import { roundToEuro } from '../utils/rounding';
 import { computeSmhAssietteVerif } from '../remuneration/smhConformity';
 
@@ -21,7 +23,7 @@ export function ancienneteAnneesPourMois(dateMois: Date, dateEmbauche: Date): nu
 }
 
 export function getAccordMontantPrimeDefs(agreement: Agreement): ElementDef[] {
-  return getAccordElementDefsForRemuneration(agreement).filter((d) => d.valueKind === 'montant');
+  return getAccordDefsForRemuneration(agreement).filter((d) => d.valueKind === 'montant');
 }
 
 /** Libellés des primes accord versées un mois donné (pour détail arriérés). */
@@ -49,12 +51,20 @@ export function libellesPrimesVerseesCeMois(
   return out;
 }
 
-function montantAnnuelAssietteSmh(
-  input: WizardRemunerationInput,
-  overrides?: WizardComputeOverrides,
-): number {
-  const resolved = resolveWizardRemunerationElements(input, overrides, { tooltips: false });
-  return computeSmhAssietteVerif(resolved.baseSMH, resolved.details);
+/** Surcharges moteur d'un mois d'arriérés : grille de l'année, point à date, ancienneté à date. */
+function computeOverridesPourMois(dateMois: Date, dateEmbauche: Date): WizardComputeOverrides {
+  return {
+    referenceYear: dateMois.getFullYear(),
+    referenceDate: dateMois,
+    anciennete: ancienneteAnneesPourMois(dateMois, dateEmbauche),
+  };
+}
+
+/** Dû annuel : assiette SMH seule, ou rémunération annuelle complète. */
+function salaireAnnuelDu(resolved: WizardRemunerationResolved, smhSeul: boolean): number {
+  return smhSeul
+    ? computeSmhAssietteVerif(resolved.baseSMH, resolved.details)
+    : annualTotalFromResolved(resolved);
 }
 
 /** Salaire annuel dû pour un mois (référence année civile + ancienneté à cette date). */
@@ -64,18 +74,12 @@ export function calculateSalaireAnnuelDuPourMois(
   dateEmbauche: Date,
   options: { smhSeul: boolean },
 ): number {
-  const year = dateMois.getFullYear();
-  const anciennete = ancienneteAnneesPourMois(dateMois, dateEmbauche);
-  const computeOverrides: WizardComputeOverrides = {
-    referenceYear: year,
-    referenceDate: dateMois,
-    anciennete,
-  };
-
-  if (options.smhSeul) {
-    return montantAnnuelAssietteSmh(input, computeOverrides);
-  }
-  return computeAnnualRemunerationFromWizardStores(input, computeOverrides).total;
+  const resolved = resolveWizardRemunerationElements(
+    input,
+    computeOverridesPourMois(dateMois, dateEmbauche),
+    { tooltips: false },
+  );
+  return salaireAnnuelDu(resolved, options.smhSeul);
 }
 
 export interface SalaireMensuelDuCalcule {
@@ -94,7 +98,8 @@ export function calculateSalaireMensuelDuPourPeriode(
     dateEmbauche: string;
     nbMois: number;
     smhSeul: boolean;
-    agreement: Agreement | null;
+    /** Date de rupture du contrat (`YYYY-MM-DD`) : le mois de rupture est proratisé. */
+    dateRupture?: string | null;
   },
 ): SalaireMensuelDuCalcule {
   const [yStr, mStr] = params.periodKey.split('-');
@@ -102,22 +107,17 @@ export function calculateSalaireMensuelDuPourPeriode(
   const month = Number(mStr);
   const dateMois = new Date(year, month - 1, 1);
   const emb = new Date(params.dateEmbauche);
-  const anciennete = ancienneteAnneesPourMois(dateMois, emb);
-  const computeOverrides: WizardComputeOverrides = {
-    referenceYear: year,
-    referenceDate: dateMois,
-    anciennete,
-  };
 
-  const { ctx, accDoc } = prepareWizardCompute(input, computeOverrides);
-  const agreement = params.agreement ?? accDoc;
+  const prepared = prepareWizardCompute(input, computeOverridesPourMois(dateMois, emb));
+  const { ctx, accDoc: agreement } = prepared;
   const accordDefs = agreement ? getAccordMontantPrimeDefs(agreement) : [];
   const moisVersement13e = getMois13eVersement(agreement);
   const estMois13eMois = month === moisVersement13e && !!agreement?.repartition13Mois?.actif;
 
-  const salaireAnnuelDuMois = calculateSalaireAnnuelDuPourMois(input, dateMois, emb, {
-    smhSeul: params.smhSeul,
-  });
+  const salaireAnnuelDuMois = salaireAnnuelDu(
+    resolvePreparedRemunerationElements(input, prepared, { tooltips: false }),
+    params.smhSeul,
+  );
 
   const dueProfile = computeMensuelDueProfile({
     salaireAnnuelDuMois,
@@ -130,11 +130,14 @@ export function calculateSalaireMensuelDuPourPeriode(
   });
 
   let salaireMensuelDu = dueProfile.salaireMensuelDuFinal;
-  const estPremierMois =
-    dateMois.getFullYear() === emb.getFullYear() && dateMois.getMonth() === emb.getMonth();
-  if (estPremierMois) {
-    const dernierJourMois = new Date(year, month, 0);
-    salaireMensuelDu = computeSalaireProrataEntree(salaireMensuelDu, emb, dernierJourMois);
+  const memeMois = (d: Date) => d.getFullYear() === year && d.getMonth() === month - 1;
+  const estPremierMois = memeMois(emb);
+  const rupture = params.dateRupture ? new Date(params.dateRupture) : null;
+  const estMoisRupture = rupture != null && !Number.isNaN(rupture.getTime()) && memeMois(rupture);
+  if (estPremierMois || estMoisRupture) {
+    const debut = estPremierMois ? emb : dateMois;
+    const fin = estMoisRupture ? rupture : new Date(year, month, 0);
+    salaireMensuelDu = computeSalaireProrataPeriode(salaireMensuelDu, debut, fin);
   }
 
   const primesVerseesLabels = libellesPrimesVerseesCeMois(accordDefs, ctx, month, {

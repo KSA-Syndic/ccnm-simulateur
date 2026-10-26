@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import { useArreteesStore } from '../../stores/arretees';
-import { NumericInput } from '../../components/ui';
-import { AppTooltip } from '../../components/ui';
+import { AppTooltip, NumericInput } from '../../components/ui';
 import { formatMensuelDuAvecDetail } from '../../domain/arretees/formatDuDetail';
+import { isPeriodeSaisie } from '../../domain/arretees/timeline';
+import { clampNumber } from '../../domain/input/numericSanitize';
+import { toFiniteNumber } from '../../domain/utils/rounding';
 import { WIZARD_LABELS } from '../../domain/ui/labels';
 
 const props = defineProps<{
@@ -92,7 +94,7 @@ function getPositionHost(): HTMLElement | null {
 }
 
 function clampPanelX(x: number, wrapper: HTMLElement): number {
-  const half = Math.min(158, Math.max(120, wrapper.clientWidth * 0.42));
+  const half = clampNumber(wrapper.clientWidth * 0.42, 120, 158);
   return Math.max(half, Math.min(wrapper.clientWidth - half, x));
 }
 
@@ -136,10 +138,10 @@ function updateCordonLayout() {
 function findNextEmptyIndex(from: number): number {
   const ps = arreteesStore.periodes;
   for (let i = from + 1; i < ps.length; i++) {
-    if (ps[i]?.salaireVerse == null) return i;
+    if (!isPeriodeSaisie(ps[i])) return i;
   }
   for (let i = 0; i < ps.length; i++) {
-    if (ps[i]?.salaireVerse == null) return i;
+    if (!isPeriodeSaisie(ps[i])) return i;
   }
   return -1;
 }
@@ -210,8 +212,7 @@ async function advanceToPeriod(index: number, options?: { keepAmount?: boolean }
   arreteesStore.currentPeriodIndex = index;
   if (!options?.keepAmount) {
     const p = arreteesStore.periodes[index];
-    const v = p?.salaireVerse;
-    salaryAmount.value = typeof v === 'number' && Number.isFinite(v) ? v : 0;
+    salaryAmount.value = toFiniteNumber(p?.salaireVerse);
   }
   await updateAnchorPosition({ animate: true, pop: false });
   await focusSalaryInput();
@@ -242,8 +243,7 @@ async function show(index: number, options?: { pop?: boolean }) {
   dismissedByUser.value = false;
   arreteesStore.currentPeriodIndex = index;
   const p = arreteesStore.periodes[index];
-  const v = p?.salaireVerse;
-  salaryAmount.value = typeof v === 'number' && Number.isFinite(v) ? v : 0;
+  salaryAmount.value = toFiniteNumber(p?.salaireVerse);
   visible.value = true;
   emit('opened');
   await updateAnchorPosition({ animate: false, pop: options?.pop ?? true });

@@ -2,7 +2,6 @@
 import { ref, watch, onBeforeUnmount, nextTick, computed } from 'vue';
 import { createChart, type ChartType } from '../../infra/adapters/chartjs';
 import { useWizardRemunerationInput } from '../../composables/useWizardRemunerationInput';
-import { computeAnnualRemunerationFromWizardStores } from '../../domain/remuneration/compute';
 import {
   projectSalaryTotals,
   projectInflationTotals,
@@ -13,7 +12,7 @@ import {
 } from '../../domain/evolution/projection';
 import { loadInflationSeries } from '../../domain/evolution/inflationFetch';
 import { WIZARD_LABELS } from '../../domain/ui/labels';
-import { formatMoney } from '../../domain/utils/format';
+import { formatFrDecimalFixed, formatMoney } from '../../domain/utils/format';
 import { buildWizardTooltipHtml } from '../../domain/ui/wizardTooltips';
 import { AppTooltip, NumericInput } from '../../components/ui';
 
@@ -66,12 +65,12 @@ async function renderChart() {
       : INFLATION_FALLBACK_PCT;
 
   const salaryLine = projectSalaryTotals(input, years, aug);
-  const initial = computeAnnualRemunerationFromWizardStores(input).total;
+  const initial = salaryLine[0]?.total ?? 0;
   const inflLine = projectInflationTotals(initial, years, avgInfl);
 
   const labels = salaryLine.map((p) => String(p.year));
   const salaryLabel = aug > 0 ? `Salaire (+${aug}%/an)` : 'Votre salaire';
-  const inflationLabel = `Inflation cumulée (${avgInfl.toFixed(1).replace('.', ',')}%/an moy.)`;
+  const inflationLabel = `Inflation cumulée (${formatFrDecimalFixed(avgInfl, 1)}%/an moy.)`;
 
   const finalSalary = salaryLine[salaryLine.length - 1]?.salary ?? 0;
   const finalInflation = inflLine[inflLine.length - 1]?.salary ?? 0;

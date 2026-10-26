@@ -1,5 +1,5 @@
-import { CONFIG } from '../config';
 import { SEMANTIC_ID, type ElementDef } from '../types';
+import { isCadre } from '../classification/engine';
 import type { Agreement, PrimeDef } from './interface';
 import { getPrimes, primeDefToElementDef, resolvePrimeSemanticId } from './interface';
 
@@ -8,14 +8,8 @@ function getAnciennetePrimeOverride(agreement: Agreement): PrimeDef | null {
   return primes.find((p) => resolvePrimeSemanticId(p) === SEMANTIC_ID.PRIME_ANCIENNETE) ?? null;
 }
 
-function normalizeAncienneteSmhMode(
-  value: unknown,
-  source: 'accord' | 'ccn',
-): boolean | 'ifSuperiorToConvention' {
-  if (value === 'ifSuperiorToConvention' && source === 'accord') return 'ifSuperiorToConvention';
-  if (value === true || value === false) return value;
-  if (source === 'accord') return false;
-  return CONFIG.ANCIENNETE.inclusDansSMH === true;
+function normalizeAncienneteSmhMode(value: unknown): boolean | 'ifSuperiorToConvention' {
+  return value === 'ifSuperiorToConvention' ? value : value === true;
 }
 
 function resolveAccordAncienneteSmhInclusion(
@@ -23,9 +17,9 @@ function resolveAccordAncienneteSmhInclusion(
   primeAncienneteAccord: PrimeDef | null,
 ): boolean | 'ifSuperiorToConvention' {
   const primeOverride = primeAncienneteAccord?.inclusDansSMH;
-  if (primeOverride !== undefined) return normalizeAncienneteSmhMode(primeOverride, 'accord');
+  if (primeOverride !== undefined) return normalizeAncienneteSmhMode(primeOverride);
   const accordOverride = agreement.anciennete?.inclusDansSMH;
-  if (accordOverride !== undefined) return normalizeAncienneteSmhMode(accordOverride, 'accord');
+  if (accordOverride !== undefined) return normalizeAncienneteSmhMode(accordOverride);
   /** Par défaut : prime d’entreprise dans l’assiette (rémunération du travail), distincte de la prime d’ancienneté de branche (CCNM art. 142). Voir `smhAssiettePolicy.ts`. */
   return true;
 }
@@ -54,8 +48,7 @@ function buildAccordPrimeAncienneteElementDef(agreement: Agreement): ElementDef 
       type: 'custom',
       check: (ctx) => {
         const anc = Number(ctx.state['anciennete'] ?? 0);
-        const cadre = ctx.classe >= CONFIG.SEUIL_CADRE;
-        if (cadre && !agreement.anciennete.tousStatuts) return false;
+        if (isCadre(ctx.classe) && !agreement.anciennete.tousStatuts) return false;
         return anc >= seuil;
       },
     },

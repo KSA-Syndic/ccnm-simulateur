@@ -57,7 +57,7 @@ Principaux specs : `baseline`, `wizard-ui-coverage`, `a11y-wizard`, `remuneratio
 
 ## Profils de rémunération (fixtures)
 
-**`tests/fixtures/profils-remuneration.json`** alimente les attentes du moteur **`computeAnnualRemunerationFromWizardStores`** dans **`e2e/remuneration-values.spec.ts`** et les invariants sous **`tests/invariants/`**.
+**`tests/fixtures/profils-remuneration.json`** alimente les attentes du moteur **`computeAnnualTotal`** dans **`e2e/remuneration-values.spec.ts`** et les invariants sous **`tests/invariants/`**.
 
 ## Ajouter un accord — tests utiles
 

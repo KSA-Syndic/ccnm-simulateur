@@ -7,8 +7,9 @@ import { isCadre } from '../../domain/classification/engine';
 import { CONFIG } from '../../domain/config';
 import { getSemantiquesRemplaceesParAccord } from '../../domain/agreements/accord-element-defs';
 import { SEMANTIC_ID } from '../../domain/types';
+import { isNationalModalityActive } from '../../domain/convention/nationalModalityState';
 import { AppTooltip, NumericInput } from '../../components/ui';
-import { buildWizardTooltipHtml, type WizardTooltipKey } from '../../domain/ui/wizardTooltips';
+import { buildWizardTooltipHtml } from '../../domain/ui/wizardTooltips';
 import { wizardToastTauxActivitePlage } from '../../domain/ui/wizardToasts';
 import { dispatchAppToast } from '../../utils/appToast';
 import HourlyPrimesList from './HourlyPrimesList.vue';
@@ -30,15 +31,20 @@ const accordSubstitueEquipe = computed(() => {
 const showEquipeCcnm = computed(() => !isCadreStatus.value && !accordSubstitueEquipe.value);
 
 const travailEquipeActif = computed({
-  get: () => situation.modalityState.travailEquipe === true,
+  get: () => isNationalModalityActive(situation.modalityState, 'travailEquipe'),
   set: (on: boolean) => {
     situation.modalityState = { ...situation.modalityState, travailEquipe: on };
   },
 });
 
-function tt(key: WizardTooltipKey) {
-  return buildWizardTooltipHtml(key);
-}
+/** Infobulles statiques : construites une fois, pas à chaque rendu. */
+const TOOLTIPS = {
+  travailNuit: buildWizardTooltipHtml('travailNuit'),
+  travailDimanche: buildWizardTooltipHtml('travailDimanche'),
+  heuresSup: buildWizardTooltipHtml('heuresSup'),
+  travailEquipe: buildWizardTooltipHtml('travailEquipe'),
+  joursSupForfait: buildWizardTooltipHtml('joursSupForfait'),
+};
 
 function onTauxActiviteBlocked() {
   dispatchAppToast(
@@ -79,7 +85,7 @@ function onTauxActiviteBlocked() {
         <label class="checkbox-label">
           <input v-model="situation.travailNuit" type="checkbox" class="book-checkbox" />
           <span>Travail de nuit</span>
-          <AppTooltip :content="tt('travailNuit')" variant="result" position="top" />
+          <AppTooltip :content="TOOLTIPS.travailNuit" variant="result" position="top" />
         </label>
         <div v-if="situation.travailNuit" class="sub-field sub-field-inline">
           <div class="input-with-unit">
@@ -99,7 +105,7 @@ function onTauxActiviteBlocked() {
         <label class="checkbox-label">
           <input v-model="situation.travailDimanche" type="checkbox" class="book-checkbox" />
           <span>Travail le dimanche</span>
-          <AppTooltip :content="tt('travailDimanche')" variant="result" position="top" />
+          <AppTooltip :content="TOOLTIPS.travailDimanche" variant="result" position="top" />
         </label>
         <div v-if="situation.travailDimanche" class="sub-field sub-field-inline">
           <div class="input-with-unit">
@@ -119,7 +125,7 @@ function onTauxActiviteBlocked() {
         <label class="checkbox-label">
           <input v-model="situation.travailHeuresSup" type="checkbox" class="book-checkbox" />
           <span>Heures supplémentaires</span>
-          <AppTooltip :content="tt('heuresSup')" variant="result" position="top" />
+          <AppTooltip :content="TOOLTIPS.heuresSup" variant="result" position="top" />
         </label>
         <div v-if="situation.travailHeuresSup" class="sub-field sub-field-inline">
           <div class="input-with-unit">
@@ -139,7 +145,7 @@ function onTauxActiviteBlocked() {
         <label class="checkbox-label">
           <input v-model="travailEquipeActif" type="checkbox" class="book-checkbox" />
           <span>Travail en équipe</span>
-          <AppTooltip :content="tt('travailEquipe')" variant="result" position="top" />
+          <AppTooltip :content="TOOLTIPS.travailEquipe" variant="result" position="top" />
         </label>
       </div>
 
@@ -148,7 +154,7 @@ function onTauxActiviteBlocked() {
         <label class="checkbox-label">
           <input v-model="situation.travailJoursSupForfait" type="checkbox" class="book-checkbox" />
           <span>Jours supplémentaires (rachat)</span>
-          <AppTooltip :content="tt('joursSupForfait')" variant="result" position="top" />
+          <AppTooltip :content="TOOLTIPS.joursSupForfait" variant="result" position="top" />
         </label>
         <div v-if="situation.travailJoursSupForfait" class="sub-field sub-field-inline">
           <div class="input-with-unit">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch, onMounted, onUnmounted, ref } from 'vue';
+import { watch, onUnmounted, ref } from 'vue';
 
 const props = defineProps<{
   open: boolean;
@@ -16,15 +16,20 @@ function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') emit('close');
 }
 
+/** Échap n'est écouté que modale ouverte (sinon chaque modale montée réagirait à toute touche Échap). */
 watch(
   () => props.open,
   (val) => {
-    if (val) dialogRef.value?.showModal();
-    else dialogRef.value?.close();
+    if (val) {
+      dialogRef.value?.showModal();
+      document.addEventListener('keydown', onKeydown);
+    } else {
+      dialogRef.value?.close();
+      document.removeEventListener('keydown', onKeydown);
+    }
   },
 );
 
-onMounted(() => document.addEventListener('keydown', onKeydown));
 onUnmounted(() => document.removeEventListener('keydown', onKeydown));
 </script>
 

@@ -20,7 +20,10 @@ export const useAgreementStore = defineStore('agreement', {
     },
   },
   actions: {
-    /** Lit `accord` dans l’URL (y compris query après le hash) et active l’accord si enregistré. */
+    /**
+     * Lit `accord` dans l’URL (y compris query après le hash) et active l’accord si enregistré.
+     * Accord déjà chargé (session restaurée) : la case « Appliquer » reste celle choisie par l’utilisateur.
+     */
     bootstrapFromUrl(): void {
       const accord = extractURLParams().accord;
       if (!accord) return;
@@ -29,6 +32,7 @@ export const useAgreementStore = defineStore('agreement', {
         console.warn(`Accord "${accord}" non trouvé dans le registre`);
         return;
       }
+      if (this.activeAccordId === loaded.id) return;
       this.activeAccordId = loaded.id;
       this.accordActif = true;
     },

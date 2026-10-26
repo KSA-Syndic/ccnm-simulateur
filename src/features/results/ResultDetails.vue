@@ -11,7 +11,7 @@ const props = defineProps<{ resolved: WizardRemunerationResolved }>();
 const ui = useUiStore();
 
 const computedResult = computed(() =>
-  aggregateRemunerationDetails(props.resolved.details, props.resolved.baseSMH, ui.nbMois),
+  aggregateRemunerationDetails(props.resolved.details, props.resolved.baseSMH, ui.nbMoisEffectif),
 );
 </script>
 

@@ -1,4 +1,5 @@
 import { CONFIG } from '@/domain/config';
+import { isPeriodeSaisie } from '@/domain/arretees/timeline';
 
 const UMAMI_STORAGE_KEY = 'analytics_consent';
 
@@ -113,7 +114,7 @@ export function buildPdfArrieresAnalyticsPayload(
   },
 ): PdfArrieresAnalyticsPayload {
   const periodKeys = periodes
-    .filter((p) => p.salaireVerse !== undefined && p.periodKey)
+    .filter((p) => isPeriodeSaisie(p) && p.periodKey)
     .map((p) => p.periodKey as string)
     .sort();
   const iso = (key: string) => (/^\d{4}-\d{2}$/.test(key) ? `${key}-01` : key);

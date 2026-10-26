@@ -4,19 +4,19 @@ Application **Vue 3**, **Pinia**, moteur métier sous **`src/domain/`**. Point d
 
 ## Cartographie rapide
 
-| Domaine                           | Emplacement                                                                                              |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Wizard (4 étapes)                 | `src/features/wizard/`, `src/components/SimulatorLayout.vue`, `WizardShell.vue`                          |
-| Classification                    | `src/domain/classification/engine.ts`                                                                    |
-| Convention / modalités nationales | `src/domain/convention/catalog.ts`, `nationalModalityRegistry.ts`                                        |
-| Rémunération                      | `src/domain/remuneration/` (`engine.ts`, `compute.ts`, `aggregate.ts`, `smh.ts`, `smhAssiettePolicy.ts`) |
-| Accords d'entreprise              | `src/accords/*.ts`, `src/domain/agreements/`                                                             |
-| Arriérés                          | `src/domain/arretees/`, `src/composables/useTimeline.ts`, `src/stores/arretees.ts`                       |
-| Évolution / inflation             | `src/domain/evolution/inflationFetch.ts`, `projection.ts`                                                |
-| Tooltips & libellés               | `src/domain/tooltip/`, `src/domain/ui/labels.ts`, `glossary.ts`                                          |
-| PDF / Word / post-export          | `src/composables/usePdfGeneration.ts`, `src/domain/pdf/`, `src/features/pdf/`                            |
-| État global                       | `src/stores/*.ts`, `useWizardRemunerationInput.ts`                                                       |
-| Tests                             | `src/**/__tests__`, `tests/**`, `e2e/**`                                                                 |
+| Domaine                           | Emplacement                                                                                                  |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Wizard (4 étapes)                 | `src/features/wizard/`, `src/components/SimulatorLayout.vue`, `WizardShell.vue`                              |
+| Classification                    | `src/domain/classification/engine.ts`                                                                        |
+| Convention / modalités nationales | `src/domain/convention/catalog.ts`, `nationalModalityRegistry.ts` (registre unique des modalités « Autres ») |
+| Rémunération                      | `src/domain/remuneration/` (`engine.ts`, `compute.ts`, `aggregate.ts`, `smh.ts`, `smhAssiettePolicy.ts`)     |
+| Accords d'entreprise              | `src/accords/*.ts`, `src/domain/agreements/`                                                                 |
+| Arriérés                          | `src/domain/arretees/` (frise : `timeline.ts`), `src/stores/arretees.ts`                                     |
+| Évolution / inflation             | `src/domain/evolution/inflationFetch.ts`, `projection.ts`                                                    |
+| Tooltips & libellés               | `src/domain/tooltip/`, `src/domain/ui/labels.ts`                                                             |
+| PDF / Word / post-export          | `src/composables/usePdfGeneration.ts`, `src/domain/pdf/`, `src/features/pdf/`                                |
+| État global                       | `src/stores/*.ts`, `useWizardRemunerationInput.ts`                                                           |
+| Tests                             | `src/**/__tests__`, `tests/**`, `e2e/**`                                                                     |
 
 **PDF annexe arriérés** : jspdf-autotable **v5** — `importPdfAutoTable()` / `drawPdfAutoTable()` dans `src/domain/pdf/jsPdfHelpers.ts` (un simple `import 'jspdf-autotable'` ne branche plus `doc.autoTable` en ESM).
 
@@ -86,17 +86,17 @@ src/
 
 ### 2. Classification (étape 1)
 
-Saisie des 6 critères → `ClassificationEngine` → groupe/classe (`CONFIG.MAPPING_POINTS`).
+Saisie des 6 critères → `calculateClassification` (`domain/classification/engine.ts`) → groupe/classe (`CONFIG.MAPPING_POINTS`).
 
 ### 3. Rémunération (étapes 2–3)
 
 1. Stores Pinia (`situation`, `agreement`, `wizard`) + `useWizardRemunerationInput()`.
-2. `computeAnnualRemunerationFromWizardStores` (`domain/remuneration/compute.ts`) agrège convention, modalités nationales et accord actif.
+2. `resolveWizardRemunerationElements` / `computeAnnualTotal` (`domain/remuneration/compute.ts`) agrègent convention, modalités nationales et accord actif.
 3. Affichage : `RemunerationResult.vue`, tooltips via `domain/tooltip/builders.ts`.
 
 ### 4. Arriérés (étape 4)
 
-1. `useTimeline.ts` construit les périodes ; `mensuelDue.ts` / `salaireDuPourMois.ts` pour le dû mensuel accord.
+1. `domain/arretees/timeline.ts` construit les périodes (embauche → aujourd'hui ou rupture du contrat ; classification antérieure avant un changement, mois du changement au prorata) ; `mensuelDue.ts` / `salaireDuPourMois.ts` pour le dû mensuel accord. Mentions de prescription : `domain/legal/arreteesLegalNotes.ts`.
 2. Saisie : `FloatingBlock.vue`, `SalaryModal.vue` ; courbe : `SalaryCurveView.vue`.
 3. Export : `usePdfGeneration.ts`, lettre Word, flux syndicat (`PostPdfFlow.vue`).
 

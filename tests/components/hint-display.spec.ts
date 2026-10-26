@@ -3,9 +3,9 @@ import { mount } from '@vue/test-utils';
 import HintDisplay from '@/features/results/HintDisplay.vue';
 
 describe('HintDisplay', () => {
-  it('n’affiche rien si hint vide', () => {
-    const w = mount(HintDisplay, { props: { hint: '' } });
-    expect(w.find('.hint-display').exists()).toBe(false);
+  it('n’affiche rien sans bloc', () => {
+    const w = mount(HintDisplay, { props: { blocks: [] } });
+    expect(w.find('.hints-book-wrap').exists()).toBe(false);
     w.unmount();
   });
 

@@ -1,6 +1,5 @@
 import { getMois13eVersement, type Agreement } from '../agreements/interface';
-import type { ElementDef } from '../types';
-import type { ComputeContext } from '../types';
+import type { ComputeContext, ElementDef } from '../types';
 import {
   getMontantPrimesFixesAnnuel,
   getMontantPrimesVerseesCeMois,
@@ -9,14 +8,11 @@ import { roundToEuro } from '../utils/rounding';
 
 export interface MensuelDueProfile {
   mensuelDuBase: number;
-  primesFixesAnnuel: number;
   primesVerseesCeMois: number;
   salaireMensuelDuFinal: number;
 }
 
-/**
- * Répartition mensuelle du dû (13e mois, primes à mois fixe) — aligné `ArreteesCalculator.computeMensuelDueProfile`.
- */
+/** Répartition mensuelle du dû (13e mois, primes à mois fixe). */
 export function computeMensuelDueProfile(params: {
   salaireAnnuelDuMois: number;
   ctx: ComputeContext;
@@ -52,7 +48,6 @@ export function computeMensuelDueProfile(params: {
 
   return {
     mensuelDuBase,
-    primesFixesAnnuel,
     primesVerseesCeMois,
     salaireMensuelDuFinal: roundToEuro(mensuelDuBase + primesVerseesCeMois),
   };

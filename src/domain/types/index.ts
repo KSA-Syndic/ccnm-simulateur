@@ -31,7 +31,7 @@ export type ComputeRef =
   | { ref: 'context'; key: string }
   | { ref: 'state'; key: string }
   | { ref: 'input'; stateKey: string }
-  /** `getAccordInput(state, key) ?? state[key]` — résolution entrée accord ou état global. */
+  /** `getAccordInput(state, key)` — résolution entrée accord ou état global. */
   | {
       ref: 'accordInputOrState';
       key: string;
@@ -82,7 +82,7 @@ export type ComputeMode =
       prorataActivite?: boolean;
       /**
        * Si vrai avec `period: 'annual'` : `roundToCents(unites × montant)` sans mensualisation ×12
-       * (ex. inventions brevetables, aligné `PrimeCalculator` convention).
+       * (ex. inventions brevetables).
        */
       forfaitAnnuel?: boolean;
     }
@@ -100,7 +100,7 @@ export type ComputeMode =
       dureeMinutes: ComputeRef;
       taux: ComputeRef;
       period: 'monthly' | 'annual';
-      /** Si vrai : `postes × context.activityRate` (ex. prime équipe CCN, aligné `PrimeCalculator`). */
+      /** Si vrai : `postes × context.activityRate` (ex. prime équipe CCN). */
       prorataActivite?: boolean;
     }
   | { mode: 'custom'; compute: (ctx: ComputeContext) => number };

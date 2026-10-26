@@ -56,3 +56,11 @@ export function isCadre(classe: number): boolean {
 export function getClassesForGroupe(groupe: string): number[] {
   return CONFIG.GROUPE_CLASSES[groupe] ?? [];
 }
+
+/** Groupe d'emploi d'une classe (A…I) ; `null` si la classe n'existe pas. */
+export function getGroupeForClasse(classe: number): string | null {
+  for (const [groupe, classes] of Object.entries(CONFIG.GROUPE_CLASSES)) {
+    if (classes.includes(classe)) return groupe;
+  }
+  return null;
+}

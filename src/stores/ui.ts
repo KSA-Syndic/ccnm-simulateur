@@ -7,18 +7,20 @@ import { useWizardStore } from './wizard';
 
 export const useUiStore = defineStore('ui', {
   state: () => ({
+    /** Choix 12 / 13 mois de l'utilisateur (ignoré tant qu'un accord appliqué impose la répartition). */
     nbMois: 12 as 12 | 13,
-    isDirty: false,
     /** Incrémenté à chaque « Recommencer » pour remonter les étapes (état local hors Pinia). */
     wizardSessionKey: 0,
   }),
-  actions: {
-    markDirty() {
-      this.isDirty = true;
+  getters: {
+    /** Répartition retenue partout (résultat, arriérés, PDF) : celle imposée par l'accord, sinon le choix utilisateur. */
+    nbMoisEffectif(state): 12 | 13 {
+      return useAgreementStore().nbMoisImpose ?? state.nbMois;
     },
+  },
+  actions: {
     resetAll() {
       resetAnalyticsSession();
-      sessionStorage.clear();
       const pinia = getActivePinia();
       if (pinia) {
         useWizardStore(pinia).$reset();
@@ -28,7 +30,6 @@ export const useUiStore = defineStore('ui', {
         useAgreementStore(pinia).bootstrapFromUrl();
       }
       this.nbMois = 12;
-      this.isDirty = false;
       this.wizardSessionKey += 1;
       sessionStorage.clear();
     },

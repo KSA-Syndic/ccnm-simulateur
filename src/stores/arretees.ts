@@ -1,36 +1,44 @@
 import { defineStore } from 'pinia';
 import type { ArreteesSummaryVue } from '@/domain/arretees/aggregateFromPeriodes';
+import {
+  resolveDateRupture,
+  type ArreteePeriode,
+  type ChangementClassification,
+} from '@/domain/arretees/timeline';
+import { getGroupeForClasse } from '@/domain/classification/engine';
 
-export interface ArreteePeriode {
-  label: string;
-  /** Clé stable `YYYY-MM` pour l’indexation mensuelle. */
-  periodKey?: string;
-  salaireDu: number;
-  salaireVerse: number | undefined;
-  /** Part mensuelle hors primes ponctuelles (répartition 12/13). */
-  mensuelDuBase?: number;
-  /** Primes accord versées ce mois (ex. vacances en juillet). */
-  primesVerseesCeMois?: number;
-  primesVerseesLabels?: string[];
-  /** Mois de versement du 13e mois (double mensualité de base). */
-  estMois13eMois?: boolean;
-}
+export type { ArreteePeriode };
 
 export const useArreteesStore = defineStore('arretees', {
   state: () => ({
-    salaires: {} as Record<string, number>,
     dateEmbauche: '',
     dateChangementClassification: '',
+    /** Classe (1–18) occupée avant `dateChangementClassification` ; `null` : non renseignée. */
+    classeAvantChangement: null as number | null,
     ruptureContrat: false,
     dateRupture: '',
     accordEcrit: false,
-    resultats: null as unknown,
     surSMHSeul: true,
     periodes: [] as ArreteePeriode[],
     currentPeriodIndex: -1,
     /** Synthèse affichée après « Calculer les arriérés » (null tant que non calculé). */
     summary: null as ArreteesSummaryVue | null,
   }),
+  getters: {
+    /** Changement de classification applicable (date d'effet + classe antérieure), sinon `null`. */
+    changementClassification(state): ChangementClassification | null {
+      const classe = state.classeAvantChangement;
+      const groupe = classe != null ? getGroupeForClasse(classe) : null;
+      if (!state.dateChangementClassification || classe == null || !groupe) return null;
+      return { date: state.dateChangementClassification, groupe, classe };
+    },
+    /** Date de rupture retenue : case cochée et date valide, postérieure à l'embauche. */
+    dateRuptureEffective(state): string | null {
+      return state.ruptureContrat
+        ? resolveDateRupture(state.dateEmbauche, state.dateRupture)
+        : null;
+    },
+  },
   actions: {
     setSalaireVerse(index: number, amount: number) {
       const p = this.periodes[index];

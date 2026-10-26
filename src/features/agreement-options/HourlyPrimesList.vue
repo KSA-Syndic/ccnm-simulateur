@@ -2,7 +2,7 @@
 import { computed, watch } from 'vue';
 import { useAgreementStore } from '../../stores/agreement';
 import { useSituationStore } from '../../stores/situation';
-import type { PrimeDef } from '../../domain/agreements/interface';
+import { resolvePrimeSemanticId, type PrimeDef } from '../../domain/agreements/interface';
 import { NumericInput, AppTooltip } from '../../components/ui';
 import AccordBadge from './AccordBadge.vue';
 import { CONFIG } from '../../domain/config';
@@ -10,12 +10,12 @@ import { buildPrimeConditionTooltip } from '../../domain/tooltip/builders';
 import {
   resolvePrimeDefaultHours,
   resolvePrimeOfficialValue,
-  resolvePrimeSemanticIdForUi,
   seedAgreementPrimeUiDefaults,
   shouldShowPrimeHoursField,
   shouldShowPrimeOfficialValueField,
 } from '../../domain/agreements/primeUiDefaults';
 import { roundHourlyRate } from '../../domain/utils/rounding';
+import { nationalPrimeOverrideValue } from '../../domain/convention/nationalModalityState';
 
 const agreementStore = useAgreementStore();
 const situationStore = useSituationStore();
@@ -53,14 +53,17 @@ function setHours(p: PrimeDef, v: number) {
 }
 
 function semanticId(p: PrimeDef): string {
-  return resolvePrimeSemanticIdForUi(p);
+  return resolvePrimeSemanticId(p);
 }
 
 function officialRateModel(p: PrimeDef): number {
-  const sid = semanticId(p);
-  const cur = situationStore.nationalPrimeOverrides[sid];
-  if (typeof cur === 'number' && Number.isFinite(cur)) return roundHourlyRate(cur);
-  return roundHourlyRate(resolvePrimeOfficialValue(p) ?? 0);
+  return roundHourlyRate(
+    nationalPrimeOverrideValue(
+      situationStore.nationalPrimeOverrides,
+      semanticId(p),
+      resolvePrimeOfficialValue(p) ?? 0,
+    ),
+  );
 }
 
 function setOfficialRate(p: PrimeDef, v: number) {

@@ -17,7 +17,7 @@ Ce guide décrit l'application **Vue 3** (`src/`). Le schéma métier est défin
 - `inclusDansSMH: true` uniquement pour les composantes salariales / contreparties directes.
 - `inclusDansSMH: false` pour sujétions et indemnisations.
 - Le contrôle porte sur la **réalité de l'élément**, pas son intitulé.
-- Doctrine projet : **prime d'ancienneté exclue du SMH par défaut** ; inclusion possible uniquement avec justification juridique explicite (`inclusDansSMH: true` ou `'ifSuperiorToConvention'` sur `anciennete`).
+- Doctrine projet (prime d'ancienneté) : la prime **de branche** (CCNM art. 142) est **exclue** de l'assiette SMH ; la prime d'ancienneté **de l'accord d'entreprise** y est **incluse par défaut** (rémunération du travail, cf. `smhAssiettePolicy.ts`). Pour l'exclure ou ne la retenir que si elle dépasse la prime conventionnelle, le déclarer explicitement sur `anciennete` : `inclusDansSMH: false` ou `'ifSuperiorToConvention'`.
 
 ## Règle prioritaire : modéliser uniquement les écarts à la CCN
 
@@ -41,19 +41,26 @@ Ce guide décrit l'application **Vue 3** (`src/`). Le schéma métier est défin
 
 Champs principaux (détail complet dans `AgreementSchema` / `interface.ts`) :
 
-| Champ               | Type      | Description                                                 |
-| ------------------- | --------- | ----------------------------------------------------------- |
-| `id`                | string    | Identifiant unique kebab-case (ex. `'mon-accord'`)          |
-| `nom`               | string    | Nom complet affiché                                         |
-| `nomCourt`          | string    | Nom court (badges, tooltips)                                |
-| `url`               | string    | Lien vers le texte officiel                                 |
-| `dateEffet`         | string    | ISO `YYYY-MM-DD`                                            |
-| `anciennete`        | object    | Seuil, plafond, barème, `inclusDansSMH`, …                  |
-| `majorations`       | object    | Nuit, dimanche, HS optionnelles, forfait jours              |
-| `primes`            | **array** | Liste `PrimeDef`                                            |
-| `repartition13Mois` | object    | `actif`, `moisVersement`, `inclusDansSMH`                   |
-| `labels`            | object    | `nomCourt`, `tooltip`, `description`                        |
-| `metadata`          | object    | `version`, `articlesSubstitues`, `territoire`, `entreprise` |
+| Champ               | Type      | Description                                             |
+| ------------------- | --------- | ------------------------------------------------------- |
+| `id`                | string    | Identifiant unique kebab-case (ex. `'mon-accord'`)      |
+| `nom`               | string    | Nom complet affiché                                     |
+| `nomCourt`          | string    | Nom court (badges, tooltips)                            |
+| `url`               | string    | Lien vers le texte officiel                             |
+| `dateEffet`         | string    | ISO `YYYY-MM-DD`                                        |
+| `anciennete`        | object    | Seuil, plafond, barème, `inclusDansSMH`, …              |
+| `majorations`       | object    | Nuit, dimanche, HS optionnelles, forfait jours          |
+| `primes`            | **array** | Liste `PrimeDef`                                        |
+| `repartition13Mois` | object    | `actif`, `moisVersement`                                |
+| `labels`            | object    | `description`, `tooltip`, `tooltipHeader` (facultatifs) |
+| `metadata`          | object    | Documentaire, facultatif (voir ci-dessous)              |
+
+**Champs documentaires** (facultatifs, non lus par le calcul ni par l'interface ; utiles pour tracer le
+texte de l'accord et la relecture) : `anciennete.baseCalcul`, `majorations.nuit.plageDebut` /
+`plageFin` / `seuilHeuresPosteNuit` / `posteMatin`, `heuresSupplementaires.contingent`,
+`repartition13Mois.inclusDansSMH`, `labels.nomCourt`, `metadata`, `elements`, `pointsVigilance`,
+`conges`, et côté primes `nonCumulAvec`, `uiSection`, `inputUnitLabel`, `stateKeyValeur`. Un accord
+sans eux est calculé à l'identique ; ils sont signalés « Documentaire » dans `interface.ts`.
 
 ### Primes (`PrimeDef`)
 
@@ -88,28 +95,28 @@ const MonAccord = {
     seuil: 2,
     plafond: 25,
     tousStatuts: true,
-    baseCalcul: 'salaire',
+    baseCalcul: 'salaire', // documentaire
     barème: { 2: 0.02 },
     inclusDansSMH: false,
   },
   majorations: {
     nuit: {
       posteNuit: 0.2,
-      plageDebut: 20,
-      plageFin: 6,
-      seuilHeuresPosteNuit: 2,
+      plageDebut: 20, // documentaire
+      plageFin: 6, // documentaire
+      seuilHeuresPosteNuit: 2, // documentaire
     },
     dimanche: 0.5,
   },
   primes: [
     /* PrimeDef[] — voir kuhn.ts */
   ],
-  repartition13Mois: { actif: false, moisVersement: 11, inclusDansSMH: true },
+  repartition13Mois: { actif: false, moisVersement: 11 },
   labels: {
-    nomCourt: 'Mon Accord',
     tooltip: '…',
     description: '…',
   },
+  // documentaire (facultatif)
   metadata: {
     version: '1.0',
     articlesSubstitues: [],
@@ -163,13 +170,13 @@ Voir **[Intégrer un accord via texte et prompt IA](INTEGRER_ACCORD_TEXTE_ET_IA.
 
 ## Schéma complet
 
-`src/domain/agreements/interface.ts` — types `Agreement`, `PrimeDef`, `ElementDroit`, champs optionnels (`elements`, `pointsVigilance`, `exemplesRecrutement`, `conges`).
+`src/domain/agreements/interface.ts` — types `Agreement`, `PrimeDef` ; champs documentaires signalés en commentaire (`elements`, `pointsVigilance`, `conges`, `metadata`…).
 
 ## Check-list anti-régression
 
 - Ajouter une prime ne doit pas masquer les autres modalités nationales / accord.
 - Une sujétion ne doit jamais passer dans le SMH sans justification explicite.
-- Le non-cumul (`nonCumulAvec`) doit rester cohérent UI + calcul.
+- Non-cumul avec la prime conventionnelle : `remplaceConvention: true` (le champ `nonCumulAvec` est documentaire et n'a aucun effet sur le calcul).
 - Vérifier : nuit, équipe, astreinte, prime objectif, avantage en nature.
 - Lancer `npm run test:run` et, si accord Kuhn-like, `tests/domain/arretees/mensuelDueKuhn.test.ts` comme référence.
 
@@ -184,6 +191,6 @@ Voir **[Intégrer un accord via texte et prompt IA](INTEGRER_ACCORD_TEXTE_ET_IA.
 
 ## Réajustement Convention + Kuhn
 
-- Convention : `inclusDansSMH` explicite dans `src/domain/convention/catalog.ts` où pertinent.
+- Convention : `inclusDansSMH` explicite dans `src/domain/convention/catalog.ts` (primes, majorations, forfaits) et `nationalModalityRegistry.ts` (modalités « Autres ») où pertinent.
 - Kuhn : `src/accords/kuhn.ts` — référence pour barèmes, 13e mois, primes à mois fixe.
 - UI : séparation modalités **nationales** (`ConditionsTravailPanel`, `AutresPrimesNationalesList`) et **accord** (`HourlyPrimesList`, `AccordOptionsPanel`).

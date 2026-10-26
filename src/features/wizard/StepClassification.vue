@@ -11,6 +11,7 @@ import {
 import { GROUPE_SELECT_LABELS, WIZARD_LABELS } from '../../domain/ui/labels';
 import { AppTooltip } from '../../components/ui';
 import { buildWizardTooltipHtml } from '../../domain/ui/wizardTooltips';
+import { scoresArrayFromWizardScores } from '../../domain/remuneration/compute';
 import CriteriaRoulette from './CriteriaRoulette.vue';
 
 const wizard = useWizardStore();
@@ -32,14 +33,9 @@ watch(
   },
 );
 
-const totalScorePreview = computed(() =>
-  CONFIG.CRITERES.reduce((s, c) => s + (wizard.scores[c.id] ?? 1), 0),
+const previewClassification = computed(() =>
+  calculateClassification(scoresArrayFromWizardScores(wizard.scores)),
 );
-
-const previewClassification = computed(() => {
-  const scoresArray = CONFIG.CRITERES.map((c) => wizard.scores[c.id] ?? 1);
-  return calculateClassification(scoresArray);
-});
 
 const statutEstimation = computed(() =>
   isCadre(previewClassification.value.classe) ? 'Cadre' : 'Non-Cadre',
@@ -74,8 +70,7 @@ function groupeClasseTooltipHtml() {
 }
 
 function validateEstimation() {
-  const scoresArray = CONFIG.CRITERES.map((c) => wizard.scores[c.id] ?? 1);
-  const result = calculateClassification(scoresArray);
+  const result = previewClassification.value;
   wizard.groupe = result.groupe;
   wizard.classe = result.classe;
   nextStep();
@@ -177,7 +172,7 @@ function validateEstimation() {
       <div class="estimation-result vertical">
         <div class="score-mini">
           <span class="score-label">Score</span>
-          <span class="score-value">{{ totalScorePreview }}</span>
+          <span class="score-value">{{ previewClassification.totalScore }}</span>
           <span class="score-max">/ 60</span>
         </div>
         <div class="classification-badge large">

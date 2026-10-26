@@ -1,20 +1,15 @@
 <script setup lang="ts">
 import type { ResultHintBlock } from '../../domain/hints/engine';
 
-const props = defineProps<{
-  /** Blocs contextualisés type `book-hint` (prioritaire si non vide). */
+defineProps<{
+  /** Blocs contextualisés type `book-hint`. */
   blocks?: ResultHintBlock[];
-  /** Fragment HTML (liste plate) pour affichage dans l’encart d’aide. */
-  hint?: string;
 }>();
-
-const hasBlocks = () => (props.blocks?.length ?? 0) > 0;
-const hasHint = () => !!(props.hint && props.hint.trim());
 </script>
 
 <template>
   <div
-    v-if="hasBlocks()"
+    v-if="blocks?.length"
     class="hints-book-wrap"
     role="region"
     aria-label="Conseils liés au calcul"
@@ -29,9 +24,5 @@ const hasHint = () => !!(props.hint && props.hint.trim());
     >
       <p v-html="b.html" />
     </div>
-  </div>
-  <div v-else-if="hasHint()" class="hint-display" role="status" aria-live="polite">
-    <span class="hint-icon">ℹ</span>
-    <span class="hint-text" v-html="hint" />
   </div>
 </template>

@@ -32,4 +32,13 @@ test.describe('Accessibilité (axe) — 4 étapes wizard', () => {
     await goToStep4(page, 'A', '1');
     await assertNoCriticalOrSerious(page, 'étape 4');
   });
+
+  test('étape 4 — options (changement de classification, rupture)', async ({ page }) => {
+    await goToStep4(page, 'A', '1');
+    await page.locator('#arretees-options-accordion > summary').click();
+    await page.locator('#date-changement-classification-arretees').fill('2024-04-01');
+    await page.getByRole('checkbox', { name: /Le contrat est rompu/i }).check();
+    await expect(page.locator('#classe-avant-changement-arretees')).toBeVisible();
+    await assertNoCriticalOrSerious(page, 'étape 4 options');
+  });
 });

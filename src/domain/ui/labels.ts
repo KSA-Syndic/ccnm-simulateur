@@ -50,8 +50,6 @@ export const EDITEUR = {
   url: 'https://cfdt-kuhn.fr',
   /** Contact du bureau syndical (questions, accompagnement). */
   emailBureau: 'cfdt.kuhn@gmail.com',
-  /** Contact technique (bugs, ajout d'accord, contributions). */
-  emailDev: 'kuhn.syndic.dev@gmail.com',
   /**
    * Logo de l'annexe PDF : data URL PNG (`data:image/png;base64,…`), jsPDF n'acceptant pas d'URL distante.
    * Vide : pas de logo.
@@ -72,20 +70,6 @@ export const PDF_RESOURCES_LABELS = {
     'Convention collective de la métallurgie (CCNM) · Textes conventionnels (UIMM)',
   pdfEditeurRowLabel: 'Section syndicale — site public',
   pdfAccordReferenceRowLabel: "Accord d'entreprise (référence)",
-} as const;
-
-/** Textes des hints contextuels (moteur `domain/hints/engine.ts`). */
-export const HINT_ENGINE = {
-  cadreDebutant:
-    'Profil <strong>F11 / F12</strong> avec moins de 6 ans d’expérience : le barème débutants peut s’appliquer sur le SMH (paramètres CCNM du simulateur).',
-  accordApplique:
-    'Un <strong>accord d’entreprise</strong> est pris en compte : vérifiez les options sur l’étape Résultat et les mentions dans le détail.',
-  majorationsSansAccord:
-    'Vous avez saisi des <strong>majorations</strong> (nuit, dimanche, heures sup.) sans accord d’entreprise actif : les taux CCNM de base s’appliquent.',
-  defautCadre:
-    'Statut <strong>cadre</strong> : pensez au type de forfait (heures / jours) et aux contreparties applicables dans votre situation réelle.',
-  defautNonCadre:
-    'Statut <strong>non-cadre</strong> : le point territorial et la prime d’ancienneté CCNM sont des paramètres clés du calcul.',
 } as const;
 
 /** Flux post-export arriérés (modal syndicat + mail) — sujet et corps du courrier type. */
@@ -165,6 +149,10 @@ export const WIZARD_LABELS = {
   arreteesBaseInfoTitle: 'Informations nécessaires',
   arreteesOptionsTitle: 'Options et autres informations',
   ruptureContratLabel: 'Le contrat est rompu',
+  classeAvantChangementHint:
+    'Choisissez la classification occupée avant cette date pour l’appliquer aux mois antérieurs.',
+  dateRuptureInvalideHint:
+    'La date de rupture doit être postérieure à la date d’embauche ; elle est ignorée en attendant.',
   accordEcritLabel: "Un accord écrit existe avec l'employeur concernant la classification",
   arreteesSmhSeulLabel: 'Calculer sur le minimum conventionnel seul (recommandé)',
   salaryCurveTitle: 'Saisie de vos salaires par mois',
@@ -252,7 +240,7 @@ export const WIZARD_TOOLTIPS = {
   dateChangementClassificationArretees: {
     title: 'Changement de classification',
     description:
-      'Si votre groupe ou classe a changé en cours de contrat, indiquez la date d’effet ; sinon laissez vide.',
+      'Si votre groupe ou classe a changé en cours de contrat, indiquez la date d’effet puis la classification occupée avant : les mois antérieurs sont calculés sur celle-ci, le mois du changement au prorata. Sinon laissez vide.',
   },
   arreteesSmhSeul: {
     title: 'Minimum conventionnel seul',

@@ -1,57 +1,13 @@
-import { HINT_ENGINE } from '../ui/labels';
 import { CONFIG } from '../config';
 import type { Agreement } from '../agreements/interface';
 import type { ElementResult } from '../types';
-import { getSmhGridAnnual, isBaremeDebutantApplicable } from '../remuneration/smh';
+import { isCadre } from '../classification/engine';
+import { getSmhGridAnnual } from '../remuneration/smh';
 import { formatMoney } from '../utils/format';
 import {
   computePdfRemunerationBreakdown,
   type WizardRemunerationInput,
 } from '../remuneration/compute';
-
-export type HintId = keyof typeof HINT_ENGINE;
-
-export interface HintContext {
-  isCadre: boolean;
-  classe: number;
-  experiencePro: number;
-  accordActif: boolean;
-  travailNuit: boolean;
-  travailDimanche: boolean;
-  travailHeuresSup: boolean;
-}
-
-/** Retourne les hints applicables, dans l’ordre de priorité d’affichage (liste plate). */
-export function eligibleHints(ctx: HintContext): HintId[] {
-  const out: HintId[] = [];
-
-  if (ctx.isCadre && isBaremeDebutantApplicable(ctx.classe, ctx.experiencePro)) {
-    out.push('cadreDebutant');
-  }
-
-  if (ctx.accordActif) {
-    out.push('accordApplique');
-  }
-
-  if (!ctx.accordActif && (ctx.travailNuit || ctx.travailDimanche || ctx.travailHeuresSup)) {
-    out.push('majorationsSansAccord');
-  }
-
-  if (ctx.isCadre) {
-    out.push('defautCadre');
-  } else {
-    out.push('defautNonCadre');
-  }
-
-  return out;
-}
-
-/** Concatène plusieurs hints en un bloc HTML (puces). */
-export function formatHintsHtml(ids: HintId[]): string {
-  if (!ids.length) return '';
-  const items = ids.map((id) => `<li>${HINT_ENGINE[id]}</li>`).join('');
-  return `<ul class="hint-engine-list">${items}</ul>`;
-}
 
 /**
  * Bloc hint assiette SMH pour la saisie des salaires (étape arriérés).
@@ -67,21 +23,15 @@ export function buildSmhAssietteHintBlocks(
   const exclus = b.exclusSmhLabels;
   if (!inclus.length && !exclus.length) return [];
 
-  const lines: string[] = [];
   const inclusListe = inclus.length ? `Base, ${inclus.join(', ')}.` : 'Base.';
-
-  lines.push(`<span><strong>Inclus :</strong><br>${inclusListe}</span>`);
-
+  const blocks: ResultHintBlock[] = [
+    { type: 'info', html: `<span><strong>Inclus :</strong><br>${inclusListe}</span>` },
+  ];
   if (exclus.length) {
-    lines.push(`<span><strong>Exclus :</strong><br>${exclus.join(', ')}.</span>`);
-  }
-
-  const inclusHtml = lines[0];
-  if (!inclusHtml) return [];
-  const blocks: ResultHintBlock[] = [{ type: 'info', html: inclusHtml }];
-  const exclusHtml = lines[1];
-  if (exclusHtml) {
-    blocks.push({ type: 'info', html: exclusHtml });
+    blocks.push({
+      type: 'info',
+      html: `<span><strong>Exclus :</strong><br>${exclus.join(', ')}.</span>`,
+    });
   }
   return blocks;
 }
@@ -157,8 +107,8 @@ export function buildResultHintBlocks(p: BuildResultHintsParams): ResultHintBloc
             `,
     });
   } else if (hasMajorations && !p.accordActif) {
-    const pctNuitCCN = Math.round((CONFIG.MAJORATIONS_CCN?.nuit ?? 0.15) * 100);
-    const pctDimCCN = Math.round((CONFIG.MAJORATIONS_CCN?.dimanche ?? 1) * 100);
+    const pctNuitCCN = Math.round(CONFIG.MAJORATIONS_CCN.nuit * 100);
+    const pctDimCCN = Math.round(CONFIG.MAJORATIONS_CCN.dimanche * 100);
     hints.push({
       type: 'info',
       html: `
@@ -170,8 +120,7 @@ export function buildResultHintBlocks(p: BuildResultHintsParams): ResultHintBloc
   }
 
   if (hints.length === 0) {
-    const isCadre = typeof p.classe === 'number' && p.classe >= CONFIG.SEUIL_CADRE;
-    if (isCadre) {
+    if (isCadre(p.classe)) {
       const ancienneteAccordCadre = p.accordActif && p.agreement?.anciennete?.tousStatuts === true;
       hints.push({
         type: 'info',
@@ -184,7 +133,7 @@ export function buildResultHintBlocks(p: BuildResultHintsParams): ResultHintBloc
       const seuilAnc =
         p.accordActif && typeof seuilAccord === 'number'
           ? `${seuilAccord} ans (${p.agreement?.nomCourt ?? 'accord'})`
-          : `3 ans (CCNM)`;
+          : `${CONFIG.ANCIENNETE.seuil} ans (CCNM)`;
       const hasAnciennete =
         p.anciennete >= CONFIG.ANCIENNETE.seuil ||
         (p.accordActif && typeof seuilAccord === 'number' && p.anciennete >= seuilAccord);

@@ -4,13 +4,20 @@ import { SEMANTIC_ID, type ElementActivation, type ElementDef, type ComputeRef }
 import { roundToCents } from '../utils/rounding';
 import { MOIS_LONGS } from '../utils/date';
 
+/*
+ * Champs « documentaires » : conservés pour décrire fidèlement le texte de l'accord (relecture
+ * juridique, intégration assistée par IA, évolutions futures) mais NON lus par le moteur de calcul
+ * ni par l'interface. Ils sont tous facultatifs : un accord sans eux est calculé à l'identique.
+ * Les marquer « Documentaire » ci-dessous ; en brancher un sur le calcul = le retirer de cette liste.
+ */
+
 export const ConditionAncienneteSchema = z.object({
+  /** `'proratise'` : documentaire (non appliqué, traité comme `'aucune'`). */
   type: z.enum(['aucune', 'annees_revolues', 'proratise']),
   annees: z.number().optional(),
+  /** Documentaire : formulation de la condition dans l'accord. */
   description: z.string().optional(),
 });
-
-export type ConditionAnciennete = z.infer<typeof ConditionAncienneteSchema>;
 
 export const PrimeDefSchema = z.object({
   id: z.string(),
@@ -22,6 +29,7 @@ export const PrimeDefSchema = z.object({
   valeurAccord: z.number().nullable().optional(),
   stateKeyActif: z.string(),
   stateKeyHeures: z.string().optional(),
+  /** Documentaire : clé d'une valeur saisie (non câblée ; la valeur passe par `nationalPrimeOverrides`). */
   stateKeyValeur: z.string().optional(),
   defaultActif: z.boolean().optional(),
   defaultHeures: z.number().optional(),
@@ -33,8 +41,14 @@ export const PrimeDefSchema = z.object({
   moisVersement: z.number().min(1).max(12).optional(),
   conditionAnciennete: ConditionAncienneteSchema.optional(),
   tooltip: z.string().optional(),
+  /** Documentaire : libellé d'unité du champ de saisie (l'interface affiche `unit`). */
   inputUnitLabel: z.string().optional(),
+  /**
+   * Documentaire : primes non cumulables selon l'accord. Non appliqué par le moteur ; pour qu'une prime
+   * d'accord écarte la prime conventionnelle, utiliser `remplaceConvention` (sinon : la plus favorable).
+   */
   nonCumulAvec: z.array(z.string()).optional(),
+  /** Documentaire : rubrique d’affichage souhaitée (l’interface sélectionne selon `valueType` et `stateKeyHeures`). */
   uiSection: z.enum(['basique', 'accord']).optional(),
   sourceArticle: z.string().optional(),
   conditionTexte: z.string().optional(),
@@ -54,23 +68,28 @@ export const AgreementSchema = z.object({
     seuil: z.number(),
     plafond: z.number(),
     tousStatuts: z.boolean(),
-    baseCalcul: z.enum(['salaire', 'point']),
+    /** Documentaire : assiette citée par l'accord (le moteur applique le barème au SMH de la classe). */
+    baseCalcul: z.enum(['salaire', 'point']).optional(),
     barème: z.record(z.coerce.number(), z.number()),
     inclusDansSMH: z.union([z.boolean(), z.literal('ifSuperiorToConvention')]).optional(),
   }),
   majorations: z.object({
     nuit: z.object({
       posteNuit: z.number(),
+      /** Documentaire : majoration du poste du matin (non calculée). */
       posteMatin: z.number().optional(),
-      plageDebut: z.number(),
-      plageFin: z.number(),
-      seuilHeuresPosteNuit: z.number(),
+      /** Documentaire : plage horaire de nuit (heures de début et de fin) selon l'accord. */
+      plageDebut: z.number().optional(),
+      plageFin: z.number().optional(),
+      /** Documentaire : heures de nuit minimales pour qualifier un poste de nuit. */
+      seuilHeuresPosteNuit: z.number().optional(),
     }),
     dimanche: z.number(),
     heuresSupplementaires: z
       .object({
         majoration25: z.number(),
         majoration50: z.number(),
+        /** Documentaire : contingent annuel d'heures supplémentaires de l'accord. */
         contingent: z.number().optional(),
       })
       .optional(),
@@ -84,23 +103,31 @@ export const AgreementSchema = z.object({
   repartition13Mois: z.object({
     actif: z.boolean(),
     moisVersement: z.number(),
-    inclusDansSMH: z.boolean(),
+    /** Documentaire : le 13e mois est une répartition du SMH annuel, pas un supplément. */
+    inclusDansSMH: z.boolean().optional(),
   }),
+  /** Documentaire : dispositions congés de l'accord. */
   conges: z.record(z.string(), z.unknown()).optional(),
+  /** Documentaire : éléments de l'accord sans effet sur le calcul (commentaire juridique). */
   elements: z.array(z.record(z.string(), z.unknown())).optional(),
+  /** Documentaire : points d'attention pour la relecture syndicale. */
   pointsVigilance: z.array(z.string()).optional(),
   labels: z.object({
-    nomCourt: z.string(),
+    /** Documentaire : doublon de `nomCourt` (racine), seul lu par l'interface. */
+    nomCourt: z.string().optional(),
     description: z.string().optional(),
     tooltip: z.string().optional(),
     tooltipHeader: z.string().optional(),
   }),
-  metadata: z.object({
-    version: z.string(),
-    articlesSubstitues: z.array(z.string()),
-    territoire: z.string().optional(),
-    entreprise: z.string(),
-  }),
+  /** Documentaire : version du paramétrage, articles CCNM substitués, territoire, entreprise. */
+  metadata: z
+    .object({
+      version: z.string(),
+      articlesSubstitues: z.array(z.string()),
+      territoire: z.string().optional(),
+      entreprise: z.string(),
+    })
+    .optional(),
   syndicatNom: z.string().optional(),
   syndicatEmail: z.string().optional(),
 });
@@ -134,10 +161,16 @@ export function getPrimes(agreement: Agreement | null | undefined): PrimeDef[] {
   return agreement.primes;
 }
 
+/** Entrée accord (`state.accordInputs[key]`), à défaut l'état global (`state[key]`). */
 export function getAccordInput(state: Record<string, unknown>, key: string): unknown {
   if (!state) return undefined;
   const inputs = state['accordInputs'] as Record<string, unknown> | undefined;
-  return inputs && key in inputs ? inputs[key] : state[key];
+  return inputs?.[key] ?? state[key];
+}
+
+/** Case cochée (booléen, ou chaîne `'true'` issue d'un état sérialisé). */
+export function isFlagOn(v: unknown): boolean {
+  return v === true || v === 'true';
 }
 
 /** Prime accord — activation et seuil `annees_revolues` pour `valueKind === 'montant'`. */
@@ -151,8 +184,7 @@ function buildMontantAccordActivation(primeDef: PrimeDef): ElementActivation {
     check: (ctx) => {
       if (primeDef.inclusDansSMH !== true) {
         const key = primeDef.stateKeyActif;
-        const v = getAccordInput(ctx.state, key) ?? ctx.state[key];
-        if (!(v === true || v === 'true')) return false;
+        if (!isFlagOn(getAccordInput(ctx.state, key))) return false;
       }
       if (seuilAnc != null) {
         const anc = Number(ctx.state['anciennete']);
@@ -190,12 +222,10 @@ export function resolvePrimeSemanticId(primeDef: PrimeDef): string {
   return primeDef.id || '';
 }
 
-const MOIS_VERSEMENT_LABELS = MOIS_LONGS;
-
 function accordPrimeDisplayLabel(primeDef: PrimeDef): string {
   const m = primeDef.moisVersement;
   if (m != null && m >= 1 && m <= 12) {
-    return `${primeDef.label} (${MOIS_VERSEMENT_LABELS[m - 1]})`;
+    return `${primeDef.label} (${MOIS_LONGS[m - 1]})`;
   }
   return primeDef.label;
 }

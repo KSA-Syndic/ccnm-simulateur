@@ -3,6 +3,7 @@ import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { AppTooltip } from '@/components/ui';
 import { CONFIG } from '@/domain/config';
 import { escapeHTML } from '@/domain/utils/format';
+import { clampNumber } from '@/domain/input/numericSanitize';
 
 const props = defineProps<{
   critere: (typeof CONFIG.CRITERES)[number];
@@ -73,7 +74,7 @@ onBeforeUnmount(() => {
 });
 
 function clampDeg(v: number): number {
-  return Math.min(10, Math.max(1, Math.round(v)));
+  return clampNumber(Math.round(v), 1, 10);
 }
 
 function change(delta: number) {

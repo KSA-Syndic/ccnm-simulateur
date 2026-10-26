@@ -8,7 +8,7 @@ import {
 } from '../utils/rounding';
 import { getSmhHourlyBaseRate, resolveActivityRate } from './rates';
 import { applySmhInclusionPolicy, applySmhInclusionPolicyToResult } from './smhConformity';
-import { getAccordInput } from '../agreements/interface';
+import { getAccordInput, isFlagOn } from '../agreements/interface';
 import {
   type ComputeRef,
   type ComputeMode,
@@ -23,25 +23,25 @@ import {
 export function resolveRef(ref: ComputeRef, ctx: ComputeContext): number {
   switch (ref.ref) {
     case 'constant':
-      return safeNum(ref.value);
+      return toFiniteNumber(ref.value);
     case 'config':
-      return safeNum(getNestedValue(ctx.configValues, ref.path));
+      return toFiniteNumber(getNestedValue(ctx.configValues, ref.path));
     case 'context':
-      return safeNum((ctx as unknown as Record<string, unknown>)[ref.key]);
+      return toFiniteNumber((ctx as unknown as Record<string, unknown>)[ref.key]);
     case 'state':
-      return safeNum(ctx.state[ref.key]);
+      return toFiniteNumber(ctx.state[ref.key]);
     case 'input':
-      return safeNum(ctx.state[ref.stateKey]);
+      return toFiniteNumber(ctx.state[ref.stateKey]);
     case 'accordInputOrState': {
-      const raw = getAccordInput(ctx.state, ref.key) ?? ctx.state[ref.key];
+      const raw = getAccordInput(ctx.state, ref.key);
       if (raw == null || raw === '') {
-        return ref.defaultIfMissing !== undefined ? safeNum(ref.defaultIfMissing) : 0;
+        return ref.defaultIfMissing !== undefined ? toFiniteNumber(ref.defaultIfMissing) : 0;
       }
       const n = Number(raw);
       return Number.isFinite(n) ? n : 0;
     }
     case 'heuresSupTranche': {
-      const total = safeNum(ctx.state[ref.stateKeyHeures]);
+      const total = toFiniteNumber(ctx.state[ref.stateKeyHeures]);
       const seuil = ref.seuilMensuel;
       const h25 = Math.min(Math.max(total, 0), seuil);
       const h50 = Math.max(total - seuil, 0);
@@ -59,11 +59,26 @@ function resolveBaremeLookupKey(
   ctx: ComputeContext,
 ): number {
   if (lookupKey === 'classe') return ctx.classe;
-  const rawAnc = safeNum(ctx.state['anciennete']);
+  const rawAnc = toFiniteNumber(ctx.state['anciennete']);
   if (lookupKey === 'anciennete') return rawAnc;
   const agr = ctx.agreement as { anciennete?: { plafond?: number } } | undefined;
   const plafond = agr?.anciennete?.plafond ?? 0;
   return Math.min(rawAnc, plafond);
+}
+
+const baremeKeysCache = new WeakMap<Record<number, number>, readonly number[]>();
+
+/** Clés numériques d'un barème, par ordre décroissant (barèmes immuables : calculées une fois). */
+function sortedBaremeKeys(table: Record<number, number>): readonly number[] {
+  let keys = baremeKeysCache.get(table);
+  if (!keys) {
+    keys = Object.keys(table)
+      .map(Number)
+      .filter((k) => !Number.isNaN(k))
+      .sort((a, b) => b - a);
+    baremeKeysCache.set(table, keys);
+  }
+  return keys;
 }
 
 function resolveBareme(
@@ -72,13 +87,9 @@ function resolveBareme(
   ctx: ComputeContext,
 ): number {
   const key = resolveBaremeLookupKey(lookupKey, ctx);
-  if (table[key] !== undefined) return safeNum(table[key]);
-  const sortedKeys = Object.keys(table)
-    .map(Number)
-    .filter((k) => !Number.isNaN(k))
-    .sort((a, b) => b - a);
-  for (const k of sortedKeys) {
-    if (k <= key) return safeNum(table[k]);
+  if (table[key] !== undefined) return toFiniteNumber(table[key]);
+  for (const k of sortedBaremeKeys(table)) {
+    if (k <= key) return toFiniteNumber(table[k]);
   }
   return 0;
 }
@@ -126,12 +137,8 @@ function executeComputeMode(mode: ComputeMode, ctx: ComputeContext): number {
       const taux = resolveRef(mode.taux, ctx);
       const base = resolveRef(mode.base, ctx);
       const annees = mode.annees ? resolveRef(mode.annees, ctx) : 1;
-      const raw = new Decimal(base).times(taux).times(annees).toNumber();
-      if (mode.period === 'annual') {
-        /** Base déjà annuelle (ex. SMH × %) — pas de coefficient mensuel `×12`. */
-        return roundToCents(raw);
-      }
-      return roundToCents(raw);
+      /** Base déjà annuelle (ex. SMH × %) — pas de coefficient mensuel `×12`, quelle que soit la période. */
+      return roundToCents(new Decimal(base).times(taux).times(annees).toNumber());
     }
     case 'unitesXmontant': {
       let unites = resolveRef(mode.unites, ctx);
@@ -143,8 +150,7 @@ function executeComputeMode(mode: ComputeMode, ctx: ComputeContext): number {
       if (mode.forfaitAnnuel === true && mode.period === 'annual') {
         return roundToCents(raw);
       }
-      const monthly = raw;
-      return mode.period === 'annual' ? annualFromMonthly(monthly) : roundToCents(monthly);
+      return mode.period === 'annual' ? annualFromMonthly(raw) : roundToCents(raw);
     }
     case 'periodesIndemniteSmh': {
       const periodes = resolveRef(mode.periodes, ctx);
@@ -347,7 +353,7 @@ export function buildComputeContext(
   classe: number,
   agreement?: Record<string, unknown>,
 ): ComputeContext {
-  const baseSMHFull = safeNum(state['baseSMHFull'] ?? baseSMH);
+  const baseSMHFull = toFiniteNumber(state['baseSMHFull'] ?? baseSMH);
   const activityRate = resolveActivityRate(
     state['travailTempsPartiel'] === true,
     state['tauxActivite'],
@@ -359,7 +365,7 @@ export function buildComputeContext(
     tauxHoraireBase,
     baseSMH,
     salaireBase: baseSMH,
-    pointTerritorial: safeNum(state['pointTerritorial']),
+    pointTerritorial: toFiniteNumber(state['pointTerritorial']),
     classe,
     activityRate,
     agreement,
@@ -369,13 +375,8 @@ export function buildComputeContext(
 
 // ── Helpers ──
 
-function safeNum(v: unknown): number {
-  return toFiniteNumber(v);
-}
-
 function guardFinite(v: number): number {
-  if (!Number.isFinite(v) || Number.isNaN(v)) return 0;
-  return v;
+  return Number.isFinite(v) ? v : 0;
 }
 
 function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
@@ -394,9 +395,9 @@ function isActivated(def: ElementDef, ctx: ComputeContext): boolean {
       case 'always':
         return true;
       case 'stateFlag':
-        return ctx.state[def.activation.key] === true || ctx.state[def.activation.key] === 'true';
+        return isFlagOn(ctx.state[def.activation.key]);
       case 'anciennete':
-        return safeNum(ctx.state['anciennete']) >= def.activation.seuil;
+        return toFiniteNumber(ctx.state['anciennete']) >= def.activation.seuil;
       case 'custom':
         return def.activation.check(ctx);
       default:
@@ -410,8 +411,7 @@ function isActivated(def: ElementDef, ctx: ComputeContext): boolean {
   const actifKey =
     def.stateKeyActif ?? (typeof cfg?.stateKeyActif === 'string' ? cfg.stateKeyActif : undefined);
   if (actifKey) {
-    const v = getAccordInput(ctx.state, actifKey) ?? ctx.state[actifKey];
-    return v === true || v === 'true';
+    return isFlagOn(getAccordInput(ctx.state, actifKey));
   }
 
   if (def.source === 'accord') return false;

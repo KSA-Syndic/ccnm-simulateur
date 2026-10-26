@@ -1,11 +1,6 @@
 export const CONSTANTS = {
-  DATE_CCNM_EFFET: new Date('2024-01-01'),
+  /** Entrée en vigueur de la CCNM : 1er janvier 2024 à minuit, heure locale. */
+  DATE_CCNM_EFFET: new Date(2024, 0, 1),
   AGE_RETRAITE: 64,
   PRESCRIPTION_ANNEES: 3,
-  HEURES_MENSUELLES: 151.67,
-  HEURES_ANNUELLES: 1820,
-  SCORE_MIN: 6,
-  SCORE_MAX: 60,
-  CLASSES_MIN: 1,
-  CLASSES_MAX: 18,
 } as const;

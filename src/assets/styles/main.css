@@ -1011,6 +1011,14 @@ body.iframe-mode .simulator-container.iframe-container {
   line-height: 1.5;
 }
 
+/* Aide courte sous un champ de formulaire */
+.field-hint {
+  color: var(--gray-600);
+  font-size: 0.85rem;
+  margin: 6px 0 0;
+  line-height: 1.4;
+}
+
 /* Modal pour saisie salaire */
 
 .modal {
@@ -1332,7 +1340,7 @@ body.iframe-mode .simulator-container.iframe-container {
   }
 }
 
-/* Rapport Arriérés - Ancien (à garder pour compatibilité) */
+/* Rapport Arriérés */
 
 .arretees-results h3 {
   margin-top: 0;

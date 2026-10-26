@@ -30,10 +30,6 @@ export function isCompleteIsoDateString(
   return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
 }
 
-export function getJoursOuvresReference(): number {
-  return CONFIG.JOURS_OUVRES_CCN;
-}
-
 export function getWorkingDaysBetween(startDate: Date, endDate: Date): number {
   const start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
   const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
@@ -48,13 +44,17 @@ export function getWorkingDaysBetween(startDate: Date, endDate: Date): number {
   return count;
 }
 
-export function computeSalaireProrataEntree(
+/**
+ * Mois partiellement travaillé (embauche et/ou rupture en cours de mois) :
+ * jours ouvrés travaillés du `debut` à la `fin` inclus, rapportés à la référence CCN.
+ */
+export function computeSalaireProrataPeriode(
   salaireMensuelComplet: number,
-  dateDebutTravail: Date,
-  dernierJourMois: Date,
+  debut: Date,
+  fin: Date,
 ): number {
-  const joursOuvres = getWorkingDaysBetween(dateDebutTravail, dernierJourMois);
-  const joursRef = getJoursOuvresReference();
+  const joursOuvres = getWorkingDaysBetween(debut, fin);
+  const joursRef = CONFIG.JOURS_OUVRES_CCN;
   if (joursRef <= 0) return salaireMensuelComplet;
   if (joursOuvres >= joursRef) return salaireMensuelComplet;
   return salaireMensuelComplet * (joursOuvres / joursRef);

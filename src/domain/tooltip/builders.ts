@@ -1,9 +1,10 @@
 /**
  * Construction HTML des tooltips « bloc légal » (gabarits, origines, primes).
  */
-import { escapeHTML, formatMoneyTooltipDetail } from '../utils/format';
+import { escapeHTML, formatFrDecimalFixed, formatMoneyTooltipDetail } from '../utils/format';
 import { resolvePrimeSemanticId, type Agreement, type PrimeDef } from '../agreements/interface';
 import { resolvePrimeDefaultHours, resolvePrimeOfficialValue } from '../agreements/primeUiDefaults';
+import { nationalPrimeOverrideValue } from '../convention/nationalModalityState';
 
 export interface TooltipOrigins {
   codeTravail: string;
@@ -16,19 +17,6 @@ export interface TooltipTextsConfig {
   origins?: Partial<TooltipOrigins>;
   templates?: { legalBlock?: string };
   result?: { breakdownLineTemplate?: string };
-}
-
-/** Format décimal fixe `fr-FR` (virgule) pour les fragments de tooltips — stable avec l’affichage historique. */
-export function formatFrDecimalFixed(value: unknown, digits = 2): string {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return '0';
-  return n.toFixed(digits).replace('.', ',');
-}
-
-/** Comme `formatFrDecimalFixed`, sans décimales pour une valeur entière, 2 sinon. */
-export function formatFrDecimalAuto(value: unknown): string {
-  const n = Number(value);
-  return formatFrDecimalFixed(n, n % 1 === 0 ? 0 : 2);
 }
 
 export function applyTooltipTemplate(
@@ -142,10 +130,11 @@ export function formatAccordEntrepriseSourceArticle(
 }
 
 function resolveAccordPrimeRateForTooltip(p: PrimeDef, overrides: Record<string, number>): number {
-  const sid = resolvePrimeSemanticId(p);
-  const fromOverride = sid ? overrides[sid] : undefined;
-  if (typeof fromOverride === 'number' && Number.isFinite(fromOverride)) return fromOverride;
-  return resolvePrimeOfficialValue(p) ?? 0;
+  return nationalPrimeOverrideValue(
+    overrides,
+    resolvePrimeSemanticId(p),
+    resolvePrimeOfficialValue(p) ?? 0,
+  );
 }
 
 function formatAccordPrimeActiveDetail(

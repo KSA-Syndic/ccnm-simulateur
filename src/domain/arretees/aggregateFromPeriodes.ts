@@ -4,6 +4,7 @@
  */
 
 import { roundToCents, roundToEuro } from '../utils/rounding';
+import { isPeriodeSaisie } from './timeline';
 
 export interface ArreteesAnneeStub {
   annee: number;
@@ -39,7 +40,7 @@ export function aggregateArreteesParAnneeFromPeriodeLabels(
   const map = new Map<number, { totalDu: number; totalReel: number; nbMoisSaisis: number }>();
 
   for (const p of periodes) {
-    if (p.salaireVerse === undefined) continue;
+    if (!isPeriodeSaisie(p)) continue;
     const annee = yearOfPeriode(p);
     if (annee === null) continue;
     let e = map.get(annee);
@@ -113,7 +114,7 @@ export function buildArreteesSummaryFromPeriodes(
     estMois13eMois?: boolean;
   }>,
 ): ArreteesSummaryVue | null {
-  const filled = periodes.filter((p) => p.salaireVerse !== undefined && p.salaireVerse !== null);
+  const filled = periodes.filter(isPeriodeSaisie);
   if (filled.length === 0) return null;
 
   const sorted = [...filled].sort((a, b) =>

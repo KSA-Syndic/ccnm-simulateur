@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from '@playwright/test';
 import '../src/accords';
-import { computeAnnualRemunerationFromWizardStores } from '../src/domain/remuneration/compute';
+import { computeAnnualTotal } from '../src/domain/remuneration/compute';
 import { wizardStoresInputFromFixtureState } from '../tests/fixtures/fixtureState';
 import {
   goToStep2ViaEstimation,
@@ -19,8 +19,7 @@ const profils: { id: string; state: Record<string, unknown> }[] = JSON.parse(
 function expectedAnnualTotalFromFixture(id: string): number {
   const p = profils.find((x) => x.id === id);
   if (!p) throw new Error(`profil inconnu: ${id}`);
-  return computeAnnualRemunerationFromWizardStores(wizardStoresInputFromFixtureState(p.state))
-    .total;
+  return computeAnnualTotal(wizardStoresInputFromFixtureState(p.state));
 }
 
 async function fillSituationFromFixture(page: import('@playwright/test').Page, id: string) {

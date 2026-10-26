@@ -3,14 +3,9 @@ import {
   getNationalPrimeOverrideRows,
   isModaliteVisiblePourProfil,
   UI_VISIBLE_MODALITE,
-} from '@/domain/convention/catalog';
-import { assertNationalModalityRegistryCoversCatalog } from '@/domain/convention/nationalModalityRegistry';
+} from '@/domain/convention/nationalModalityRegistry';
 
 describe('getNationalPrimeOverrideRows', () => {
-  it('reste synchronisé avec le catalogue via le registre', () => {
-    assertNationalModalityRegistryCoversCatalog();
-  });
-
   it('propose les 7 modalités « Autres » dont astreinte repos et jour de repos', () => {
     const ids = getNationalPrimeOverrideRows().map((r) => r.semanticId);
     expect(ids).toContain('majorationInterventionAstreinte');

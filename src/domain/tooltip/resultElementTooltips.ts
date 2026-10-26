@@ -3,19 +3,22 @@
  */
 import Decimal from 'decimal.js';
 import { CONFIG } from '../config';
+import { isCadre } from '../classification/engine';
 import type { Agreement } from '../agreements/interface';
-import { getAccordNomCourt } from './builders';
 import {
   buildResultTooltipContent,
-  formatFrDecimalAuto,
-  formatFrDecimalFixed,
+  getAccordNomCourt,
   type ResultBreakdownLine,
   type ResultTooltipDetailInput,
 } from './builders';
 import { applyProrataActivite, resolveRef, type ResolvedElement } from '../remuneration/engine';
 import type { ComputeContext, ComputeRef, ElementDef, ElementResult } from '../types';
 import { SEMANTIC_ID } from '../types';
-import { formatMoneyTooltipDetail } from '../utils/format';
+import {
+  formatFrDecimalAuto,
+  formatFrDecimalFixed,
+  formatMoneyTooltipDetail,
+} from '../utils/format';
 import { roundToCents } from '../utils/rounding';
 
 function euroBreakdown(label: string, value: number): ResultBreakdownLine {
@@ -111,7 +114,7 @@ function buildAncienneteAccordTooltip(
     taux = resolveRef(mode.taux, ctx);
   }
   const base = ctx.salaireBase;
-  const cadre = ctx.classe >= CONFIG.SEUIL_CADRE;
+  const cadre = isCadre(ctx.classe);
 
   const breakdown: ResultBreakdownLine[] = [
     euroBreakdown('Salaire de base annuel (assiette)', base),

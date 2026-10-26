@@ -4,7 +4,7 @@ import {
   clearNationalModality,
   setNationalPrimeOverride,
 } from '../nationalModalityState';
-import { getNationalPrimeOverrideRows } from '../catalog';
+import { getNationalPrimeOverrideRows } from '../nationalModalityRegistry';
 
 describe('nationalModalityState', () => {
   const panierRow = getNationalPrimeOverrideRows().find((r) => r.semanticId === 'primePanierNuit')!;

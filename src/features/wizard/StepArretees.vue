@@ -5,11 +5,14 @@ import { usePdfGeneration } from '../../composables/usePdfGeneration';
 import { useWordGeneration } from '../../composables/useWordGeneration';
 import { useArreteesStore } from '../../stores/arretees';
 import { useWizardStore } from '../../stores/wizard';
-import { useSituationStore } from '../../stores/situation';
 import {
-  buildMonthlyPeriodsStub,
+  buildMonthlyPeriods,
   enrichPeriodesSalaireDuMensuel,
-} from '../../composables/useTimeline';
+  isPeriodeSaisie,
+  reporterSalairesVerses,
+} from '../../domain/arretees/timeline';
+import { CONFIG } from '../../domain/config';
+import { GROUPE_SELECT_LABELS } from '../../domain/ui/labels';
 import { buildArreteesSummaryFromPeriodes } from '../../domain/arretees/aggregateFromPeriodes';
 import { buildSmhAssietteHintBlocks } from '../../domain/hints/engine';
 import { useWizardRemunerationInput } from '../../composables/useWizardRemunerationInput';
@@ -22,7 +25,6 @@ import type { ExportDocumentsPayload } from '../../domain/pdf/exportDocumentsPay
 import PostPdfFlow from '../pdf/PostPdfFlow.vue';
 import LegalCarousel from '../legal-guide/LegalCarousel.vue';
 import { useUiStore } from '../../stores/ui';
-import { useAgreementStore } from '../../stores/agreement';
 import { AppTooltip } from '../../components/ui';
 import { WIZARD_LABELS, WIZARD_TOASTS } from '../../domain/ui/labels';
 import { buildWizardTooltipHtml } from '../../domain/ui/wizardTooltips';
@@ -32,7 +34,6 @@ import { isCompleteIsoDateString } from '../../domain/utils/date';
 const { prevStep } = useWizardNavigation();
 const arretees = useArreteesStore();
 const wizard = useWizardStore();
-const situation = useSituationStore();
 const wizardInput = useWizardRemunerationInput();
 const { generating: generatingPdf, generatePdf } = usePdfGeneration();
 const { generating: generatingWord, generateWord } = useWordGeneration();
@@ -58,13 +59,11 @@ const pdfInfosRef = ref<InstanceType<typeof PdfInfosModal> | null>(null);
 const postPdfFlowRef = ref<InstanceType<typeof PostPdfFlow> | null>(null);
 
 const ui = useUiStore();
-const agreementStore = useAgreementStore();
 
-const activeAgreementDoc = computed(() => agreementStore.activeAgreement);
-
+/** Calculé seulement sur l'étape 4 (moteur complet, inutile tant que l'étape est masquée). */
 const arreteesAssietteBlocks = computed(() =>
-  isCompleteIsoDateString(dateEmbauche.value)
-    ? buildSmhAssietteHintBlocks(wizardInput.value, ui.nbMois)
+  wizard.currentStep === 4 && isCompleteIsoDateString(dateEmbauche.value)
+    ? buildSmhAssietteHintBlocks(wizardInput.value, ui.nbMoisEffectif)
     : [],
 );
 
@@ -90,39 +89,40 @@ function rebuildPeriodesFromDate(d: string) {
     arretees.periodes = [];
     return;
   }
-  arretees.periodes = buildMonthlyPeriodsStub({ dateEmbauche: d });
-  const duParams: Parameters<typeof enrichPeriodesSalaireDuMensuel>[1] = {
-    classe: wizard.classe,
-    experiencePro: situation.experiencePro,
-    tempsPartiel: situation.tempsPartiel,
-    tauxActivite: situation.tauxActivite,
+  const dateRupture = arretees.dateRuptureEffective;
+  const periodes = buildMonthlyPeriods(d, dateRupture);
+  enrichPeriodesSalaireDuMensuel(periodes, {
     wizardInput: wizardInput.value,
     dateEmbauche: d,
-    nbMois: ui.nbMois,
+    nbMois: ui.nbMoisEffectif,
     smhSeul: arretees.surSMHSeul,
-    agreement: activeAgreementDoc.value,
-  };
-  if (arretees.dateChangementClassification) {
-    duParams.dateChangementClassification = arretees.dateChangementClassification;
-  }
-  enrichPeriodesSalaireDuMensuel(arretees.periodes, duParams);
+    changementClassification: arretees.changementClassification,
+    dateRupture,
+  });
+  /** Les salaires versés déjà saisis restent acquis : seul le dû est recalculé. */
+  arretees.periodes = reporterSalairesVerses(periodes, arretees.periodes);
+  if (arretees.currentPeriodIndex >= periodes.length) arretees.currentPeriodIndex = -1;
 }
 
-const hasAnySalaireVerse = computed(() => arretees.periodes.some((p) => p.salaireVerse != null));
-
-const moisSaisisCount = computed(
-  () =>
-    arretees.periodes.filter((p) => p.salaireVerse !== undefined && p.salaireVerse !== null).length,
+/** Classifications proposées pour la période antérieure au changement. */
+const classificationAvantOptions = Object.entries(CONFIG.GROUPE_CLASSES).flatMap(
+  ([groupe, classes]) =>
+    classes.map((classe) => ({
+      classe,
+      label: `Classe ${classe} (groupe ${GROUPE_SELECT_LABELS[groupe] ?? groupe})`,
+    })),
 );
+
+const hasAnySalaireVerse = computed(() => arretees.periodes.some(isPeriodeSaisie));
+
+const moisSaisisCount = computed(() => arretees.periodes.filter(isPeriodeSaisie).length);
 
 const moisProgressLabel = computed(
   () => `${moisSaisisCount.value} / ${arretees.periodes.length || 0} mois saisis`,
 );
 
 const allMoisSaisis = computed(
-  () =>
-    arretees.periodes.length > 0 &&
-    arretees.periodes.every((p) => p.salaireVerse !== undefined && p.salaireVerse !== null),
+  () => arretees.periodes.length > 0 && arretees.periodes.every(isPeriodeSaisie),
 );
 
 const canReopenFloatingSaisie = computed(
@@ -155,7 +155,7 @@ async function onFloatingDismissed() {
 
 function reopenFloatingFromProgress() {
   if (!canReopenFloatingSaisie.value) return;
-  const firstEmpty = arretees.periodes.findIndex((p) => p.salaireVerse == null);
+  const firstEmpty = arretees.periodes.findIndex((p) => !isPeriodeSaisie(p));
   const idx = firstEmpty >= 0 ? firstEmpty : Math.max(0, arretees.currentPeriodIndex);
   floatingBlockRef.value?.show(idx);
 }
@@ -191,7 +191,7 @@ async function revealCurveAndOpenFirstSaisie() {
   curveReveal.value = true;
   await nextTick();
   salaryCurveContainerRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  const first = arretees.periodes.findIndex((p) => p.salaireVerse == null);
+  const first = arretees.periodes.findIndex((p) => !isPeriodeSaisie(p));
   if (first < 0) return;
 
   const coords = salaryCurveRef.value?.getPointCoordsInWrapper(first);
@@ -226,19 +226,40 @@ function onDateEmbaucheChange(ev: Event) {
   void commitDateEmbauche(v);
 }
 
+/**
+ * Les étapes restent montées (`v-show`) : une saisie aux étapes 1 à 3 ne recalcule pas la frise
+ * (jusqu'à 120 mois) tant que l'étape 4 est masquée ; elle est recalculée au retour sur l'étape.
+ */
+let friseObsolete = false;
+
+function rafraichirFrise() {
+  if (!dateEmbauche.value) return;
+  if (wizard.currentStep !== 4) {
+    friseObsolete = true;
+    return;
+  }
+  friseObsolete = false;
+  rebuildPeriodesFromDate(dateEmbauche.value);
+}
+
 /** Une seule reconstruction de la frise par cycle, quel que soit le paramètre modifié. */
 watch(
   () => [
     wizardInput.value,
-    ui.nbMois,
+    ui.nbMoisEffectif,
     arretees.surSMHSeul,
-    activeAgreementDoc.value,
-    arretees.dateChangementClassification,
+    arretees.changementClassification,
+    arretees.dateRuptureEffective,
   ],
-  () => {
-    if (dateEmbauche.value) rebuildPeriodesFromDate(dateEmbauche.value);
-  },
+  rafraichirFrise,
   { deep: true },
+);
+
+watch(
+  () => wizard.currentStep,
+  (step) => {
+    if (step === 4 && friseObsolete) rafraichirFrise();
+  },
 );
 
 onMounted(() => {
@@ -246,7 +267,10 @@ onMounted(() => {
   if (!isCompleteIsoDateString(v)) return;
   dateEmbauche.value = v;
   dateEmbaucheDraft.value = v;
-  if (arretees.periodes.length === 0) rebuildPeriodesFromDate(v);
+  /** Session restaurée : frise remise à jour (saisies conservées) et synthèse déjà calculée régénérée. */
+  const avaitSynthese = arretees.summary != null;
+  rebuildPeriodesFromDate(v);
+  if (avaitSynthese) arretees.summary = buildArreteesSummaryFromPeriodes(arretees.periodes);
 });
 
 function onPointClick(index: number) {
@@ -333,7 +357,25 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
               v-model="arretees.dateChangementClassification"
               type="date"
               class="book-input"
+              :min="dateEmbauche || undefined"
             />
+          </div>
+
+          <div v-if="arretees.dateChangementClassification" class="form-group">
+            <label for="classe-avant-changement-arretees">Classification avant le changement</label>
+            <select
+              id="classe-avant-changement-arretees"
+              v-model="arretees.classeAvantChangement"
+              class="book-select"
+            >
+              <option :value="null">— Choisir —</option>
+              <option v-for="o in classificationAvantOptions" :key="o.classe" :value="o.classe">
+                {{ o.label }}
+              </option>
+            </select>
+            <p v-if="arretees.classeAvantChangement == null" class="field-hint">
+              {{ WIZARD_LABELS.classeAvantChangementHint }}
+            </p>
           </div>
 
           <div class="form-group">
@@ -350,7 +392,15 @@ async function onPdfGenerate(data: ExportDocumentsPayload) {
               v-model="arretees.dateRupture"
               type="date"
               class="book-input"
+              :min="dateEmbauche || undefined"
             />
+            <p
+              v-if="arretees.dateRupture && !arretees.dateRuptureEffective"
+              class="field-hint"
+              role="alert"
+            >
+              {{ WIZARD_LABELS.dateRuptureInvalideHint }}
+            </p>
           </div>
 
           <div class="form-group">

@@ -2,9 +2,9 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test, expect } from '@playwright/test';
-import { computeAnnualRemunerationFromWizardStores } from '../src/domain/remuneration/compute';
+import { computeAnnualTotal } from '../src/domain/remuneration/compute';
 import { wizardStoresInputFromFixtureState } from '../tests/fixtures/fixtureState';
-import { goToStep2ViaEstimation, parseEuroFr } from './wizard-helpers';
+import { expectResultValueNear, goToStep2ViaEstimation } from './wizard-helpers';
 import '../src/accords';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -17,15 +17,15 @@ test.describe('Accord Kuhn — URL ?accord=kuhn', () => {
     const st = profils.find((p) => p.id === 'C5-10ans-prime')?.state;
     expect(st).toBeTruthy();
     const baseInput = wizardStoresInputFromFixtureState(st!);
-    const sans = computeAnnualRemunerationFromWizardStores(baseInput).total;
-    const avec = computeAnnualRemunerationFromWizardStores({
+    const sans = computeAnnualTotal(baseInput);
+    const avec = computeAnnualTotal({
       ...baseInput,
       agreement: {
         accordActif: true,
         activeAccordId: 'kuhn',
         inputs: baseInput.agreement.inputs,
       },
-    }).total;
+    });
     expect(avec).not.toBe(sans);
 
     const scores = (st!.scores as number[]) ?? [3, 3, 3, 3, 3, 3];
@@ -33,8 +33,6 @@ test.describe('Accord Kuhn — URL ?accord=kuhn', () => {
     await page.locator('#anciennete').fill('10');
     await page.getByRole('button', { name: /^Calculer/i }).click();
     await page.locator('section[aria-label="Étape 3 — Résultat"]').waitFor({ state: 'visible' });
-    const raw = await page.locator('.result-value').first().textContent();
-    const affiche = parseEuroFr(raw ?? '');
-    expect(Math.abs(affiche - avec)).toBeLessThanOrEqual(1);
+    await expectResultValueNear(page, avec);
   });
 });

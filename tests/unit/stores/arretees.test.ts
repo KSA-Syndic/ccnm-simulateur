@@ -50,4 +50,23 @@ describe('useArreteesStore', () => {
     a.setSalaireVerse(99, 5000);
     expect(a.periodes[0]?.salaireVerse).toBeUndefined();
   });
+
+  it('changementClassification : complet seulement avec date et classe antérieure', () => {
+    const a = useArreteesStore(createFreshPinia());
+    expect(a.changementClassification).toBeNull();
+    a.dateChangementClassification = '2025-03-01';
+    expect(a.changementClassification).toBeNull();
+    a.classeAvantChangement = 4;
+    expect(a.changementClassification).toEqual({ date: '2025-03-01', groupe: 'B', classe: 4 });
+  });
+
+  it('dateRuptureEffective : case cochée et date postérieure à l’embauche', () => {
+    const a = useArreteesStore(createFreshPinia());
+    a.$patch({ dateEmbauche: '2024-02-01', dateRupture: '2025-06-30' });
+    expect(a.dateRuptureEffective).toBeNull();
+    a.ruptureContrat = true;
+    expect(a.dateRuptureEffective).toBe('2025-06-30');
+    a.dateRupture = '2023-12-31';
+    expect(a.dateRuptureEffective).toBeNull();
+  });
 });

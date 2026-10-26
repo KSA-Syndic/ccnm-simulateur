@@ -1,5 +1,5 @@
 import type { ComputeMode, ElementDef } from '../types';
-import type { ModaliteRaw } from './catalog';
+import type { ModaliteRaw } from './nationalModalityRegistry';
 
 const SRC = 'convention' as const;
 

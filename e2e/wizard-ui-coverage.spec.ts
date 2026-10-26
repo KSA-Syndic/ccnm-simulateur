@@ -95,4 +95,39 @@ test.describe('P5.2 — UI wizard (situation, header, footer, hints, graphiques,
     await expect(page.getByRole('dialog', { name: /Export PDF et lettre Word/i })).toBeVisible();
     await expect(page.locator('#pdf-nom')).toBeVisible();
   });
+
+  test('étape 4 — rupture du contrat et changement de classification (saisies conservées)', async ({
+    page,
+  }) => {
+    await goToStep4(page, 'C', '5');
+    await page.locator('#date-embauche-arretees').fill('2024-01-01');
+    await page
+      .locator('#salary-curve-container canvas')
+      .waitFor({ state: 'visible', timeout: 15_000 });
+    await page.keyboard.press('Escape');
+
+    await page.locator('#arretees-options-accordion > summary').click();
+    await page.getByRole('checkbox', { name: /Le contrat est rompu/i }).check();
+    await page.locator('#date-rupture-arretees').fill('2024-06-14');
+    await expect(page.locator('#curve-progress-text')).toHaveText('0 / 6 mois saisis');
+
+    await page.getByRole('button', { name: /Saisie groupée des salaires/i }).click();
+    const dialog = page.getByRole('dialog', { name: /Saisir les salaires versés/i });
+    await dialog.locator('.salary-modal-row').first().locator('input.book-input').fill('1900');
+    await dialog.getByRole('button', { name: /^Enregistrer$/ }).click();
+    await expect(page.locator('#curve-progress-text')).toHaveText('6 / 6 mois saisis');
+
+    await page.locator('#date-changement-classification-arretees').fill('2024-04-01');
+    await expect(page.locator('#classe-avant-changement-arretees')).toBeVisible();
+    await page.selectOption('#classe-avant-changement-arretees', '3');
+    await expect(page.locator('#curve-progress-text')).toHaveText('6 / 6 mois saisis');
+    await page.getByRole('button', { name: /Saisie groupée des salaires/i }).click();
+    await expect(
+      dialog.locator('.salary-modal-row').first().locator('input.book-input'),
+    ).toHaveValue(/^1\s?900/);
+    await dialog.getByRole('button', { name: /^Annuler$/ }).click();
+
+    await page.locator('#date-rupture-arretees').fill('2023-12-01');
+    await expect(page.getByRole('alert')).toContainText(/postérieure à la date d’embauche/i);
+  });
 });

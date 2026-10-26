@@ -1,5 +1,5 @@
 import { omitRecordKeys } from '../utils/record';
-import type { NationalPrimeOverrideRow } from './catalog';
+import type { NationalPrimeOverrideRow } from './nationalModalityRegistry';
 
 /** Clés dynamiques des modalités CCNM (primes et options « Autres »). */
 export type ModalityState = Record<string, boolean | number>;

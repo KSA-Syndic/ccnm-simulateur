@@ -10,9 +10,7 @@ import {
 import { buildComputeContext } from '@/domain/remuneration/engine';
 import {
   computeSmhAssietteVerif,
-  computeSmhGaranti,
   detailContributesToSmhAssiette,
-  evaluateSmhConformity,
   isSujetionSemanticId,
 } from '@/domain/remuneration/smhConformity';
 import { calculateSalaireAnnuelDuPourMois } from '@/domain/arretees/salaireDuPourMois';
@@ -90,7 +88,6 @@ describe('smhConformity — étanchéité et assiette', () => {
 
     expect(forfait).toBeGreaterThan(0);
     expect(assiette).toBeGreaterThan(baseSMH);
-    expect(assiette).toBe(computeSmhGaranti(baseSMH, details));
   });
 
   it('accord Kuhn : prime vacances incluse, équipe exclue de l’assiette', () => {
@@ -114,27 +111,6 @@ describe('smhConformity — étanchéité et assiette', () => {
     expect(equipe?.inclusDansSMH).toBe(false);
     expect(assiette).toBeGreaterThan(baseSMH);
     if (vacances) expect(assiette).toBeGreaterThanOrEqual(baseSMH + vacances.amount);
-  });
-
-  it('evaluateSmhConformity — régularisation sans absorption des sujétions', () => {
-    const smhGaranti = SMH_GRID_2026[5]!;
-    const assietteRecue = smhGaranti - 500;
-    const result = evaluateSmhConformity(assietteRecue, smhGaranti, smhGaranti);
-
-    expect(result.conforme).toBe(false);
-    expect(result.alerte).toBe(true);
-    expect(result.regularisationObligatoire).toBe(500);
-    expect(result.salaireBasePur).toBe(smhGaranti);
-  });
-
-  it('anti-absorption : écart SMH malgré un brut total élevé (sujétions seules)', () => {
-    const smhGaranti = 30_000;
-    const assietteRecue = 28_000;
-    const result = evaluateSmhConformity(assietteRecue, smhGaranti, 28_000);
-    /** Un salaire versé de 35 000 € (dont 7 000 € de sujétions) ne réduit pas la régularisation. */
-    const brutAvecSujetions = assietteRecue + 7_000;
-    expect(brutAvecSujetions).toBeGreaterThan(smhGaranti);
-    expect(result.regularisationObligatoire).toBe(2_000);
   });
 
   it('computePdfRemunerationBreakdown aligné sur computeSmhAssietteVerif', () => {

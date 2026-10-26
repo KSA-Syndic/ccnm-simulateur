@@ -98,11 +98,13 @@ Ne pas générer de JavaScript, ni de fichier AgreementRegistry.js, ni de dossie
 SCHÉMA OBLIGATOIRE (Agreement / PrimeDef)
 ═══════════════════════════════════════════════════════════════
 - id (kebab-case), nom, nomCourt, url, dateEffet, dateSignature?
-- anciennete : seuil, plafond, tousStatuts, baseCalcul 'salaire', barème, inclusDansSMH
-- majorations.nuit : posteNuit, plageDebut, plageFin, seuilHeuresPosteNuit ; dimanche ; heuresSupplementaires? ; forfaitJours?
-- primes[] : id, semanticId?, label, sourceValeur, valueType, unit, valeurAccord, stateKeyActif, stateKeyHeures?, autoHeures?, moisVersement?, inclusDansSMH (obligatoire), conditionAnciennete?, tooltip?, nonCumulAvec?, uiSection?
-- repartition13Mois : actif, moisVersement, inclusDansSMH
-- labels, metadata ; optionnel : elements, pointsVigilance, exemplesRecrutement, conges
+- anciennete : seuil, plafond, tousStatuts, barème, inclusDansSMH
+- majorations.nuit : posteNuit ; dimanche ; heuresSupplementaires? ; forfaitJours?
+- primes[] : id, semanticId?, label, sourceValeur, valueType, unit, valeurAccord, stateKeyActif, stateKeyHeures?, autoHeures?, moisVersement?, inclusDansSMH (obligatoire), conditionAnciennete?, tooltip?, remplaceConvention?
+- repartition13Mois : actif, moisVersement
+- labels : description?, tooltip?, tooltipHeader?
+- DOCUMENTAIRES (facultatifs, non lus par le calcul ; à remplir pour tracer le texte) : anciennete.baseCalcul, majorations.nuit.plageDebut / plageFin / seuilHeuresPosteNuit / posteMatin, heuresSupplementaires.contingent, repartition13Mois.inclusDansSMH, labels.nomCourt, metadata, elements, pointsVigilance, conges, primes[].nonCumulAvec / uiSection / inputUnitLabel / stateKeyValeur
+- Non-cumul effectif avec la prime conventionnelle : remplaceConvention: true (nonCumulAvec seul n'a aucun effet sur le calcul)
 
 Taux en décimal (20% → 0.20). moisVersement déduit du texte de l'accord, jamais copié d'un autre accord.
 

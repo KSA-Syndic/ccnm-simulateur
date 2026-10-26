@@ -4,11 +4,7 @@ import { AppModal, NumericInput } from '../../components/ui';
 import { useArreteesStore } from '../../stores/arretees';
 import { formatMensuelDuComposantes } from '../../domain/arretees/formatDuDetail';
 import { formatMoney } from '../../domain/utils/format';
-import type { ArreteePeriode } from '../../stores/arretees';
-
-function dueComposantes(period: ArreteePeriode): string | null {
-  return formatMensuelDuComposantes(period);
-}
+import { toFiniteNumber } from '../../domain/utils/rounding';
 
 const arreteesStore = useArreteesStore();
 const open = ref(false);
@@ -18,8 +14,7 @@ const editableValues = ref<Record<number, number>>({});
 function show() {
   editableValues.value = {};
   arreteesStore.periodes.forEach((p, i) => {
-    const v = p.salaireVerse;
-    editableValues.value[i] = typeof v === 'number' && Number.isFinite(v) ? v : 0;
+    editableValues.value[i] = toFiniteNumber(p.salaireVerse);
   });
   open.value = true;
 }
@@ -38,7 +33,7 @@ defineExpose({ show });
 
 <template>
   <AppModal :open="open" title="Saisir les salaires versés" @close="open = false">
-    <div class="salary-modal-body">
+    <div v-if="open" class="salary-modal-body">
       <div v-for="(period, i) in arreteesStore.periodes" :key="i" class="salary-modal-row">
         <span class="salary-modal-label">{{ period.label }}</span>
         <div class="salary-modal-field input-with-unit">
@@ -52,8 +47,8 @@ defineExpose({ show });
         </div>
         <p class="salary-modal-due">
           Dû&nbsp;: {{ formatMoney(period.salaireDu) }}
-          <template v-if="dueComposantes(period)">
-            <span class="salary-modal-due-detail"> — {{ dueComposantes(period) }}</span>
+          <template v-if="formatMensuelDuComposantes(period)">
+            <span class="salary-modal-due-detail"> — {{ formatMensuelDuComposantes(period) }}</span>
           </template>
         </p>
       </div>

@@ -1,32 +1,85 @@
 /**
  * Registre unique des modalités nationales « Autres » (CCNM / Code).
  *
- * Pour ajouter une modalité :
- * 1. Compléter `CONVENTION_MODALITES_PRIMES` dans `catalog.ts` (clés d’état, textes juridiques).
- * 2. Ajouter une entrée dans `NATIONAL_MODALITY_ENTRIES` ci-dessous (UI + calcul + surcharge).
- * 3. Lancer `tests/domain/convention/nationalModalityRegistry.test.ts` (cohérence catalogue ↔ registre).
+ * Pour ajouter une modalité : ajouter une entrée dans `NATIONAL_MODALITY_ENTRIES` ci-dessous
+ * (clés d’état et textes juridiques dans `modalite`, puis UI, calcul et surcharge).
  *
  * L’UI (`AutresPrimesNationalesList`), le moteur (`getAllConventionDefs` → PDF, résultat, arriérés)
  * et les surcharges (`applyNationalPrimeOverridesToConventionDefs`) en découlent automatiquement.
  */
 import { CONFIG } from '../config';
 import { SEMANTIC_ID, type ComputeMode, type ElementDef } from '../types';
-import {
-  CONVENTION_MODALITES_PRIMES,
-  type NationalPrimeOverrideRow,
-  type NationalPrimeValueField,
-} from './catalog';
 import { buildConventionPrimeElement, modaliteToPartial } from './primeElementFactory';
 
-export type NationalModalityCatalogKey = keyof typeof CONVENTION_MODALITES_PRIMES;
+/** Règle d’affichage des modalités « Autres » dans le formulaire. */
+export const UI_VISIBLE_MODALITE = {
+  TOUJOURS: 'toujours',
+  COMPTAGE_HORAIRE_CONVENTIONNEL: 'comptageHoraireConventionnel',
+} as const;
+
+export type UiVisibleQuand = (typeof UI_VISIBLE_MODALITE)[keyof typeof UI_VISIBLE_MODALITE];
+
+export function isModaliteVisiblePourProfil(
+  uiVisibleQuand: UiVisibleQuand | undefined,
+  profil: { isCadre: boolean; forfait: string },
+): boolean {
+  if (!uiVisibleQuand || uiVisibleQuand === UI_VISIBLE_MODALITE.TOUJOURS) return true;
+  if (uiVisibleQuand === UI_VISIBLE_MODALITE.COMPTAGE_HORAIRE_CONVENTIONNEL) {
+    if (!profil.isCadre) return true;
+    return profil.forfait !== 'jours';
+  }
+  return true;
+}
+
+export interface ModaliteRaw {
+  stateKeyActif: string;
+  stateKeyHeures?: string;
+  inclusDansSMH: boolean;
+  uiSection: 'main' | 'extra';
+  uiVisibleQuand?: UiVisibleQuand;
+  sourceArticle: string;
+  conditionTexte: string;
+  tooltip: string;
+}
+
+/** Type de champ valeur (taux / montant) pour la ligne « Autres ». */
+export type NationalPrimeValueField = 'coefficient' | 'unitAmount' | 'optionalRate';
+
+/** Lignes UI « Autres primes nationales » (activation + quantités + surcharge). */
+export interface NationalPrimeOverrideRow {
+  semanticId: string;
+  label: string;
+  unit: string;
+  aide: string;
+  /** Titre court pour l’infobulle (souvent identique au libellé de ligne). */
+  title: string;
+  sourceArticle: string;
+  stateKeyActif: string;
+  quantityKey?: string;
+  /** Libellé au-dessus du champ quantité (ligne dédiée). */
+  quantityLabel?: string;
+  quantityUnitLabel?: string;
+  quantityMode?: 'integer' | 'decimal';
+  /** Libellé au-dessus du champ taux / montant (ligne dédiée). */
+  valueLabel?: string;
+  defaultQuantity?: number;
+  valueField: NationalPrimeValueField;
+  /** Valeur barème / préremplissage à l’activation (si `seedOverrideOnActivate`). */
+  defaultValue: number;
+  /** Préremplit `nationalPrimeOverrides` à l’activation (ex. panier, intervention). */
+  seedOverrideOnActivate: boolean;
+  /** Incrément clavier (flèches) pour le champ valeur. */
+  valueStep?: number;
+  uiVisibleQuand?: UiVisibleQuand;
+  /** Masque le 2e champ (taux / montant) lorsque le barème est fixé par la convention. */
+  hideValueField?: boolean;
+}
 
 /** Cible de `nationalPrimeOverrides` pour une entrée du registre. */
 export type NationalModalityOverrideKind =
   | 'heuresXtaux.taux'
   | 'heuresXtaux.base'
   | 'unitesXmontant.montant';
-
-type ModalityRaw = (typeof CONVENTION_MODALITES_PRIMES)[NationalModalityCatalogKey];
 
 export interface NationalModalityUiSpec {
   label: string;
@@ -44,15 +97,18 @@ export interface NationalModalityUiSpec {
 }
 
 export interface NationalModalityRegistryEntry {
-  catalogKey: NationalModalityCatalogKey;
+  /** Identifiant stable de la modalité (tests, diagnostics). */
+  id: string;
   semanticId: string;
   elementId: string;
   /** Libellé affiché dans le détail du calcul (défaut = `ui.label`). */
   calcLabel?: string;
+  /** Clés d’état et métadonnées juridiques (article, condition, infobulle). */
+  modalite: ModaliteRaw;
   ui: NationalModalityUiSpec;
   allowUserOverride: boolean;
   overrideKind?: NationalModalityOverrideKind;
-  buildComputeMode: (mod: ModalityRaw) => ComputeMode;
+  buildComputeMode: (mod: ModaliteRaw) => ComputeMode;
   /** Ex. `{ allowUserOverride: true }` sur `ElementDef.config`. */
   elementConfig?: Record<string, unknown>;
   computeExtras?: Partial<ElementDef>;
@@ -73,22 +129,25 @@ const astreinteCoeffJour = Number(
 const interventionAstreinteTauxMaj = Number(CONFIG.MAJORATIONS_CCN.heuresSup25);
 const habillageHeuresMensuelles = habillageHeures * (52 / 12);
 
-function mod<K extends NationalModalityCatalogKey>(key: K): ModalityRaw {
-  const raw = CONVENTION_MODALITES_PRIMES[key];
-  if (!raw) {
-    throw new Error(`Modalité absente du catalogue : ${String(key)}`);
-  }
-  return raw;
-}
-
 /**
  * Source de vérité ordonnée — une entrée = une modalité « Autres » complète (UI + moteur).
  */
 export const NATIONAL_MODALITY_ENTRIES: readonly NationalModalityRegistryEntry[] = [
   {
-    catalogKey: 'interventionAstreinte',
+    id: 'interventionAstreinte',
     semanticId: SEMANTIC_ID.MAJORATION_INTERVENTION_ASTREINTE,
     elementId: 'majorationInterventionAstreinte',
+    modalite: {
+      stateKeyActif: 'majorationInterventionAstreinte',
+      stateKeyHeures: 'heuresInterventionAstreinte',
+      inclusDansSMH: false,
+      uiSection: 'extra',
+      uiVisibleQuand: UI_VISIBLE_MODALITE.COMPTAGE_HORAIRE_CONVENTIONNEL,
+      sourceArticle: 'Code du travail L3121-9, L3121-10 ; CCNM (travail effectif)',
+      conditionTexte: "Les heures d'intervention pendant une astreinte sont du travail effectif.",
+      tooltip:
+        'Indiquez les heures réellement travaillées en intervention. Les périodes de simple disponibilité sont traitées par les lignes « astreinte » ci-dessous (hors TTE).',
+    },
     ui: {
       label: 'Intervention sous astreinte (travail effectif)',
       unit: 'coeff. / h',
@@ -115,10 +174,22 @@ export const NATIONAL_MODALITY_ENTRIES: readonly NationalModalityRegistryEntry[]
     elementConfig: { allowUserOverride: true },
   },
   {
-    catalogKey: 'astreintePeriodeReposQuotidien',
+    id: 'astreintePeriodeReposQuotidien',
     semanticId: SEMANTIC_ID.PRIME_ASTREINTE_PERIODE_REPOS_QUOTIDIEN,
     elementId: 'primeAstreintePeriodeReposQuotidien',
     calcLabel: 'Astreinte (périodes sur repos quotidien, hors TTE)',
+    modalite: {
+      stateKeyActif: 'primeAstreintePeriodeReposQuotidien',
+      stateKeyHeures: 'periodesAstreinteReposQuotidienMois',
+      inclusDansSMH: false,
+      uiSection: 'extra',
+      uiVisibleQuand: UI_VISIBLE_MODALITE.COMPTAGE_HORAIRE_CONVENTIONNEL,
+      sourceArticle: 'CCNM (organisation du travail, astreinte hors temps de travail effectif)',
+      conditionTexte:
+        "Périodes d'astreinte sur les temps de repos quotidiens prévus par l'emploi du temps, hors travail effectif.",
+      tooltip:
+        'Nombre de périodes concernées par mois. Le montant par période suit le taux SMH horaire de votre classe.',
+    },
     ui: {
       label: 'Disponibilité astreinte — repos entre deux journées',
       unit: 'périodes/mois',
@@ -140,10 +211,21 @@ export const NATIONAL_MODALITY_ENTRIES: readonly NationalModalityRegistryEntry[]
     }),
   },
   {
-    catalogKey: 'astreintePeriodeJourRepos',
+    id: 'astreintePeriodeJourRepos',
     semanticId: SEMANTIC_ID.PRIME_ASTREINTE_PERIODE_JOUR_REPOS,
     elementId: 'primeAstreintePeriodeJourRepos',
     calcLabel: 'Astreinte (périodes jour de repos, hors TTE)',
+    modalite: {
+      stateKeyActif: 'primeAstreintePeriodeJourRepos',
+      stateKeyHeures: 'periodesAstreinteJourReposMois',
+      inclusDansSMH: false,
+      uiSection: 'extra',
+      uiVisibleQuand: UI_VISIBLE_MODALITE.COMPTAGE_HORAIRE_CONVENTIONNEL,
+      sourceArticle: 'CCNM (organisation du travail, astreinte hors temps de travail effectif)',
+      conditionTexte: "Périodes d'astreinte un jour de repos, hors travail effectif.",
+      tooltip:
+        'Nombre de périodes concernées par mois. Le montant par période applique le coefficient « jour de repos » sur le SMH horaire.',
+    },
     ui: {
       label: 'Disponibilité astreinte — jour de repos',
       unit: 'périodes/mois',
@@ -165,9 +247,20 @@ export const NATIONAL_MODALITY_ENTRIES: readonly NationalModalityRegistryEntry[]
     }),
   },
   {
-    catalogKey: 'panierNuit',
+    id: 'panierNuit',
     semanticId: SEMANTIC_ID.PRIME_PANIER_NUIT,
     elementId: 'primePanierNuit',
+    modalite: {
+      stateKeyActif: 'primePanierNuit',
+      stateKeyHeures: 'nbPaniersNuit',
+      inclusDansSMH: false,
+      uiSection: 'extra',
+      sourceArticle: 'CCNM Art. 147 ; barème fiscal repas (ACOSS / Urssaf)',
+      conditionTexte:
+        'Indemnité de repas de nuit lorsque les critères de la branche et la durée minimale de poste sont réunis.',
+      tooltip:
+        "Une unité correspond en principe à un poste éligible. Le montant unitaire suit le barème repas de nuit applicable pour l'année affichée (référence type ACOSS / Urssaf) ; un employeur peut prévoir un montant plus favorable.",
+    },
     ui: {
       label: 'Prime panier nuit',
       unit: '€ / unité',
@@ -192,10 +285,20 @@ export const NATIONAL_MODALITY_ENTRIES: readonly NationalModalityRegistryEntry[]
     elementConfig: { allowUserOverride: true },
   },
   {
-    catalogKey: 'habillageDeshabillage',
+    id: 'habillageDeshabillage',
     semanticId: SEMANTIC_ID.PRIME_HABILLAGE_DESHABILLAGE,
     elementId: 'primeHabillageDeshabillage',
     calcLabel: 'Prime habillage / déshabillage',
+    modalite: {
+      stateKeyActif: 'primeHabillageDeshabillage',
+      inclusDansSMH: false,
+      uiSection: 'extra',
+      sourceArticle: 'Code du travail L3121-3 ; CCNM',
+      conditionTexte:
+        "Contrepartie lorsque la tenue est imposée et que l'habillage ou le déshabillage s'effectue sur le lieu de travail.",
+      tooltip:
+        "Le simulateur applique chaque semaine l'équivalent d'une demi-heure au taux SMH horaire de votre classe.",
+    },
     ui: {
       label: 'Prime habillage / déshabillage',
       unit: '€/h',
@@ -216,10 +319,21 @@ export const NATIONAL_MODALITY_ENTRIES: readonly NationalModalityRegistryEntry[]
     elementConfig: { heuresSMHReferenceParSemaine: habillageHeures, allowUserOverride: true },
   },
   {
-    catalogKey: 'deplacementProfessionnel',
+    id: 'deplacementProfessionnel',
     semanticId: SEMANTIC_ID.PRIME_DEPLACEMENT_PRO,
     elementId: 'primeDeplacementProfessionnel',
     calcLabel: 'Prime déplacements professionnels',
+    modalite: {
+      stateKeyActif: 'primeDeplacementProfessionnel',
+      stateKeyHeures: 'heuresDeplacementCompense',
+      inclusDansSMH: false,
+      uiSection: 'extra',
+      sourceArticle: 'Code du travail L3121-4 ; CCNM',
+      conditionTexte:
+        'Temps de trajet professionnel dépassant le temps habituel : indemnisation du temps excédentaire.',
+      tooltip:
+        'Saisir les heures excédentaires à indemniser ; le taux horaire retenu est le SMH de la classification.',
+    },
     ui: {
       label: 'Indemnisation déplacements professionnels',
       unit: '€/h',
@@ -245,10 +359,21 @@ export const NATIONAL_MODALITY_ENTRIES: readonly NationalModalityRegistryEntry[]
     elementConfig: { allowUserOverride: true },
   },
   {
-    catalogKey: 'inventionBrevetable',
+    id: 'inventionBrevetable',
     semanticId: SEMANTIC_ID.PRIME_INVENTION_BREVETABLE,
     elementId: 'primeInventionBrevetable',
     calcLabel: 'Invention de mission (brevetable)',
+    modalite: {
+      stateKeyActif: 'primeInventionBrevetable',
+      stateKeyHeures: 'nombreInventionsBrevetablesAn',
+      inclusDansSMH: false,
+      uiSection: 'extra',
+      sourceArticle: 'CCNM (invention de mission brevetable)',
+      conditionTexte:
+        'Rémunération minimale assimilée par invention de mission donnant lieu à brevet.',
+      tooltip:
+        "Nombre d'inventions concernées sur l'année. Le minimum conventionnel par invention figure dans le détail du calcul.",
+    },
     ui: {
       label: 'Invention brevetable',
       unit: '€ / invention',
@@ -279,10 +404,6 @@ export function getNationalModalityRegistryEntries(): readonly NationalModalityR
   return NATIONAL_MODALITY_ENTRIES;
 }
 
-export function getNationalModalityCatalogKeys(): NationalModalityCatalogKey[] {
-  return NATIONAL_MODALITY_ENTRIES.map((e) => e.catalogKey);
-}
-
 /** Sémantiques autorisées pour `nationalPrimeOverrides` (dérivé du registre). */
 const OVERRIDE_SEMANTICS: ReadonlySet<string> = new Set(
   NATIONAL_MODALITY_ENTRIES.filter((e) => e.allowUserOverride).map((e) => e.semanticId),
@@ -306,7 +427,7 @@ export function getNationalModalityOverrideKindBySemanticId(): ReadonlyMap<
 }
 
 function registryEntryToUiRow(entry: NationalModalityRegistryEntry): NationalPrimeOverrideRow {
-  const m = mod(entry.catalogKey);
+  const m = entry.modalite;
   const row: NationalPrimeOverrideRow = {
     semanticId: entry.semanticId,
     label: entry.ui.label,
@@ -338,7 +459,7 @@ export function getNationalPrimeOverrideRows(): NationalPrimeOverrideRow[] {
 
 export function buildNationalModalityElementDefs(): ElementDef[] {
   return NATIONAL_MODALITY_ENTRIES.map((entry) => {
-    const m = mod(entry.catalogKey);
+    const m = entry.modalite;
     return buildConventionPrimeElement(
       entry.elementId,
       entry.semanticId,
@@ -351,17 +472,4 @@ export function buildNationalModalityElementDefs(): ElementDef[] {
       },
     );
   });
-}
-
-/** Vérifie que chaque clé du catalogue possède une entrée registre (tests / CI). */
-export function assertNationalModalityRegistryCoversCatalog(): void {
-  const catalogKeys = Object.keys(CONVENTION_MODALITES_PRIMES) as NationalModalityCatalogKey[];
-  const registryKeys = new Set(getNationalModalityCatalogKeys());
-  const missing = catalogKeys.filter((k) => !registryKeys.has(k));
-  const extra = [...registryKeys].filter((k) => !(k in CONVENTION_MODALITES_PRIMES));
-  if (missing.length > 0 || extra.length > 0) {
-    throw new Error(
-      `Registre modalités désynchronisé — manquantes: [${missing.join(', ')}], inconnues: [${extra.join(', ')}]`,
-    );
-  }
 }

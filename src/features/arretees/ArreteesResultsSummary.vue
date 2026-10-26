@@ -5,6 +5,7 @@ import { formatMensuelDuComposantes } from '@/domain/arretees/formatDuDetail';
 import { formatMoney } from '@/domain/utils/format';
 import { useArreteesStore } from '@/stores/arretees';
 import { WIZARD_LABELS } from '@/domain/ui/labels';
+import { buildArreteesLegalNotes } from '@/domain/legal/arreteesLegalNotes';
 
 const props = withDefaults(
   defineProps<{
@@ -21,36 +22,14 @@ const emit = defineEmits<{
 
 const arretees = useArreteesStore();
 
-const legalContent = computed(() => {
-  const neg: string[] = [];
-  const pos: string[] = [];
-  const firstPk = props.summary.detailMois[0]?.periodKey;
-  if (firstPk) {
-    const y = Number(firstPk.slice(0, 4));
-    const mo = Number(firstPk.slice(5, 7)) - 1;
-    const d = new Date(y, mo, 1);
-    const presc = new Date();
-    presc.setFullYear(presc.getFullYear() - 3);
-    if (d < presc) {
-      neg.push(
-        `La prescription de 3 ans limite les arriérés réclamables à partir du ${presc.toLocaleDateString('fr-FR')}.`,
-      );
-    }
-    const ccnm = new Date('2024-01-01');
-    if (d < ccnm) {
-      neg.push(
-        'Les arriérés avant le 1er janvier 2024 ne sont pas réclamables au titre de cette convention.',
-      );
-    }
-  }
-  if (arretees.accordEcrit) {
-    pos.push("Un accord écrit avec l'employeur renforce votre position juridique.");
-  }
-  if (arretees.dateChangementClassification) {
-    pos.push('Un changement de classification documenté peut faciliter la réclamation.');
-  }
-  return { neg, pos, hasAny: neg.length > 0 || pos.length > 0 };
-});
+const legalContent = computed(() =>
+  buildArreteesLegalNotes({
+    firstPeriodKey: props.summary.detailMois[0]?.periodKey,
+    accordEcrit: arretees.accordEcrit,
+    changementClassification: Boolean(arretees.dateChangementClassification),
+    dateRupture: arretees.dateRuptureEffective,
+  }),
+);
 </script>
 
 <template>

@@ -25,7 +25,3 @@ export function resolveActiveAgreement(sel: {
 }): Agreement | null {
   return sel.accordActif && sel.activeAccordId ? getAgreement(sel.activeAccordId) : null;
 }
-
-export function getAllAgreements(): Agreement[] {
-  return Array.from(agreementsRegistry.values());
-}

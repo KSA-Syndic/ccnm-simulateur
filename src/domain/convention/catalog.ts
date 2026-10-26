@@ -6,126 +6,12 @@ import {
   type ComputeContext,
 } from '../types';
 import { roundToEuro, annualFromMonthly } from '../utils/rounding';
+import { isCadre } from '../classification/engine';
 import { buildNationalModalityElementDefs } from './nationalModalityRegistry';
 import { buildConventionPrimeElement } from './primeElementFactory';
 
 type Source = 'convention';
 const SRC: Source = 'convention';
-
-/** Règle d’affichage des modalités « Autres » dans le formulaire. */
-export const UI_VISIBLE_MODALITE = {
-  TOUJOURS: 'toujours',
-  COMPTAGE_HORAIRE_CONVENTIONNEL: 'comptageHoraireConventionnel',
-} as const;
-
-export type UiVisibleQuand = (typeof UI_VISIBLE_MODALITE)[keyof typeof UI_VISIBLE_MODALITE];
-
-export function isModaliteVisiblePourProfil(
-  uiVisibleQuand: UiVisibleQuand | undefined,
-  profil: { isCadre: boolean; forfait: string },
-): boolean {
-  if (!uiVisibleQuand || uiVisibleQuand === UI_VISIBLE_MODALITE.TOUJOURS) return true;
-  if (uiVisibleQuand === UI_VISIBLE_MODALITE.COMPTAGE_HORAIRE_CONVENTIONNEL) {
-    if (!profil.isCadre) return true;
-    return profil.forfait !== 'jours';
-  }
-  return true;
-}
-
-export interface ModaliteRaw {
-  stateKeyActif: string;
-  stateKeyHeures?: string;
-  inclusDansSMH: boolean;
-  uiSection: 'main' | 'extra';
-  uiVisibleQuand?: UiVisibleQuand;
-  sourceArticle: string;
-  conditionTexte: string;
-  tooltip: string;
-}
-
-/**
- * Métadonnées juridiques et clés d’état des modalités « Autres ».
- * Chaque clé doit avoir une entrée miroir dans `nationalModalityRegistry.ts` (`NATIONAL_MODALITY_ENTRIES`).
- */
-export const CONVENTION_MODALITES_PRIMES: Record<string, ModaliteRaw> = {
-  interventionAstreinte: {
-    stateKeyActif: 'majorationInterventionAstreinte',
-    stateKeyHeures: 'heuresInterventionAstreinte',
-    inclusDansSMH: false,
-    uiSection: 'extra',
-    uiVisibleQuand: UI_VISIBLE_MODALITE.COMPTAGE_HORAIRE_CONVENTIONNEL,
-    sourceArticle: 'Code du travail L3121-9, L3121-10 ; CCNM (travail effectif)',
-    conditionTexte: "Les heures d'intervention pendant une astreinte sont du travail effectif.",
-    tooltip:
-      'Indiquez les heures réellement travaillées en intervention. Les périodes de simple disponibilité sont traitées par les lignes « astreinte » ci-dessous (hors TTE).',
-  },
-  astreintePeriodeReposQuotidien: {
-    stateKeyActif: 'primeAstreintePeriodeReposQuotidien',
-    stateKeyHeures: 'periodesAstreinteReposQuotidienMois',
-    inclusDansSMH: false,
-    uiSection: 'extra',
-    uiVisibleQuand: UI_VISIBLE_MODALITE.COMPTAGE_HORAIRE_CONVENTIONNEL,
-    sourceArticle: 'CCNM (organisation du travail, astreinte hors temps de travail effectif)',
-    conditionTexte:
-      "Périodes d'astreinte sur les temps de repos quotidiens prévus par l'emploi du temps, hors travail effectif.",
-    tooltip:
-      'Nombre de périodes concernées par mois. Le montant par période suit le taux SMH horaire de votre classe.',
-  },
-  astreintePeriodeJourRepos: {
-    stateKeyActif: 'primeAstreintePeriodeJourRepos',
-    stateKeyHeures: 'periodesAstreinteJourReposMois',
-    inclusDansSMH: false,
-    uiSection: 'extra',
-    uiVisibleQuand: UI_VISIBLE_MODALITE.COMPTAGE_HORAIRE_CONVENTIONNEL,
-    sourceArticle: 'CCNM (organisation du travail, astreinte hors temps de travail effectif)',
-    conditionTexte: "Périodes d'astreinte un jour de repos, hors travail effectif.",
-    tooltip:
-      'Nombre de périodes concernées par mois. Le montant par période applique le coefficient « jour de repos » sur le SMH horaire.',
-  },
-  panierNuit: {
-    stateKeyActif: 'primePanierNuit',
-    stateKeyHeures: 'nbPaniersNuit',
-    inclusDansSMH: false,
-    uiSection: 'extra',
-    sourceArticle: 'CCNM Art. 147 ; barème fiscal repas (ACOSS / Urssaf)',
-    conditionTexte:
-      'Indemnité de repas de nuit lorsque les critères de la branche et la durée minimale de poste sont réunis.',
-    tooltip:
-      "Une unité correspond en principe à un poste éligible. Le montant unitaire suit le barème repas de nuit applicable pour l'année affichée (référence type ACOSS / Urssaf) ; un employeur peut prévoir un montant plus favorable.",
-  },
-  habillageDeshabillage: {
-    stateKeyActif: 'primeHabillageDeshabillage',
-    inclusDansSMH: false,
-    uiSection: 'extra',
-    sourceArticle: 'Code du travail L3121-3 ; CCNM',
-    conditionTexte:
-      "Contrepartie lorsque la tenue est imposée et que l'habillage ou le déshabillage s'effectue sur le lieu de travail.",
-    tooltip:
-      "Le simulateur applique chaque semaine l'équivalent d'une demi-heure au taux SMH horaire de votre classe.",
-  },
-  deplacementProfessionnel: {
-    stateKeyActif: 'primeDeplacementProfessionnel',
-    stateKeyHeures: 'heuresDeplacementCompense',
-    inclusDansSMH: false,
-    uiSection: 'extra',
-    sourceArticle: 'Code du travail L3121-4 ; CCNM',
-    conditionTexte:
-      'Temps de trajet professionnel dépassant le temps habituel : indemnisation du temps excédentaire.',
-    tooltip:
-      'Saisir les heures excédentaires à indemniser ; le taux horaire retenu est le SMH de la classification.',
-  },
-  inventionBrevetable: {
-    stateKeyActif: 'primeInventionBrevetable',
-    stateKeyHeures: 'nombreInventionsBrevetablesAn',
-    inclusDansSMH: false,
-    uiSection: 'extra',
-    sourceArticle: 'CCNM (invention de mission brevetable)',
-    conditionTexte:
-      'Rémunération minimale assimilée par invention de mission donnant lieu à brevet.',
-    tooltip:
-      "Nombre d'inventions concernées sur l'année. Le minimum conventionnel par invention figure dans le détail du calcul.",
-  },
-};
 
 export function getConventionPrimeDefs(): ElementDef[] {
   return [
@@ -137,7 +23,7 @@ export function getConventionPrimeDefs(): ElementDef[] {
         mode: 'custom',
         /** Mensuel = point × taux(classe) × min(ancienneté, plafond) × prorata ; annuel = `annualFromMonthly`. */
         compute: (ctx: ComputeContext) => {
-          if (ctx.classe >= CONFIG.SEUIL_CADRE) return 0;
+          if (isCadre(ctx.classe)) return 0;
           const anciennete = Number(ctx.state['anciennete']) || 0;
           if (anciennete < CONFIG.ANCIENNETE.seuil) return 0;
           const anneesPrime = Math.min(anciennete, CONFIG.ANCIENNETE.plafond);
@@ -153,8 +39,7 @@ export function getConventionPrimeDefs(): ElementDef[] {
         activation: {
           type: 'custom',
           check: (ctx) =>
-            ctx.classe < CONFIG.SEUIL_CADRE &&
-            Number(ctx.state['anciennete'] ?? 0) >= CONFIG.ANCIENNETE.seuil,
+            !isCadre(ctx.classe) && Number(ctx.state['anciennete'] ?? 0) >= CONFIG.ANCIENNETE.seuil,
         },
         sourceArticle:
           'CCNM Art. 142-143 ; art. 140 (prime d’ancienneté de branche hors assiette SMH)',
@@ -182,7 +67,7 @@ export function getConventionPrimeDefs(): ElementDef[] {
         activation: {
           type: 'custom',
           check: (ctx) =>
-            ctx.classe < CONFIG.SEUIL_CADRE &&
+            !isCadre(ctx.classe) &&
             (ctx.state['travailEquipe'] === true ||
               ctx.state['travailEquipe'] === 'true' ||
               (ctx.state['accordInputs'] as Record<string, unknown> | undefined)?.[
@@ -311,7 +196,7 @@ export function getConventionMajorationDefs(): ElementDef[] {
 }
 
 export function getConventionForfaitDefs(): ElementDef[] {
-  const forfaits = CONFIG.FORFAITS as Record<string, number>;
+  const forfaits = CONFIG.FORFAITS;
   const seuilCadre = CONFIG.SEUIL_CADRE;
   const actifHeures: ElementActivation = {
     type: 'custom',
@@ -328,16 +213,16 @@ export function getConventionForfaitDefs(): ElementDef[] {
       kind: 'forfait',
       source: SRC,
       valueKind: 'pourcentage',
-      label: `Forfait Heures (+${Math.round((forfaits['heures'] ?? 0.15) * 100)}%)`,
+      label: `Forfait Heures (+${Math.round(forfaits.heures * 100)}%)`,
       activation: actifHeures,
       inclusDansSMH: true,
       computeMode: {
         mode: 'pourcentageXbase',
-        taux: { ref: 'constant', value: forfaits['heures'] ?? 0.15 },
+        taux: { ref: 'constant', value: forfaits.heures },
         base: { ref: 'context', key: 'baseSMH' },
         period: 'annual',
       },
-      config: { forfaitKey: 'heures', taux: forfaits['heures'] ?? 0.15 },
+      config: { forfaitKey: 'heures', taux: forfaits.heures },
     },
     {
       id: 'forfaitJours',
@@ -345,16 +230,16 @@ export function getConventionForfaitDefs(): ElementDef[] {
       kind: 'forfait',
       source: SRC,
       valueKind: 'pourcentage',
-      label: `Forfait Jours (+${Math.round((forfaits['jours'] ?? 0.3) * 100)}%)`,
+      label: `Forfait Jours (+${Math.round(forfaits.jours * 100)}%)`,
       activation: actifJours,
       inclusDansSMH: true,
       computeMode: {
         mode: 'pourcentageXbase',
-        taux: { ref: 'constant', value: forfaits['jours'] ?? 0.3 },
+        taux: { ref: 'constant', value: forfaits.jours },
         base: { ref: 'context', key: 'baseSMH' },
         period: 'annual',
       },
-      config: { forfaitKey: 'jours', taux: forfaits['jours'] ?? 0.3 },
+      config: { forfaitKey: 'jours', taux: forfaits.jours },
     },
   ];
 }
@@ -417,38 +302,3 @@ export function getAllConventionDefs(): readonly ElementDef[] {
   ];
   return conventionDefsCache;
 }
-
-/** Type de champ valeur (taux / montant) pour la ligne « Autres ». */
-export type NationalPrimeValueField = 'coefficient' | 'unitAmount' | 'optionalRate';
-
-/** Lignes UI « Autres primes nationales » (activation + quantités + surcharge). */
-export interface NationalPrimeOverrideRow {
-  semanticId: string;
-  label: string;
-  unit: string;
-  aide: string;
-  /** Titre court pour l’infobulle (souvent identique au libellé de ligne). */
-  title: string;
-  sourceArticle: string;
-  stateKeyActif: string;
-  quantityKey?: string;
-  /** Libellé au-dessus du champ quantité (ligne dédiée). */
-  quantityLabel?: string;
-  quantityUnitLabel?: string;
-  quantityMode?: 'integer' | 'decimal';
-  /** Libellé au-dessus du champ taux / montant (ligne dédiée). */
-  valueLabel?: string;
-  defaultQuantity?: number;
-  valueField: NationalPrimeValueField;
-  /** Valeur barème / préremplissage à l’activation (si `seedOverrideOnActivate`). */
-  defaultValue: number;
-  /** Préremplit `nationalPrimeOverrides` à l’activation (ex. panier, intervention). */
-  seedOverrideOnActivate: boolean;
-  /** Incrément clavier (flèches) pour le champ valeur. */
-  valueStep?: number;
-  uiVisibleQuand?: UiVisibleQuand;
-  /** Masque le 2e champ (taux / montant) lorsque le barème est fixé par la convention. */
-  hideValueField?: boolean;
-}
-
-export { getNationalPrimeOverrideRows } from './nationalModalityRegistry';

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import '../../src/accords';
 import { CONFIG } from '../../src/domain/config';
-import { computeAnnualRemunerationFromWizardStores } from '../../src/domain/remuneration/compute';
+import { computeAnnualTotal } from '../../src/domain/remuneration/compute';
 import { wizardStoresInputFromFixtureState } from '../fixtures/fixtureState';
 
 function stateMinimal(over: Record<string, unknown> = {}) {
@@ -33,19 +33,15 @@ function stateMinimal(over: Record<string, unknown> = {}) {
 describe('Invariants rémunération (moteur domaine)', () => {
   it('total ≤ 1.5 × SMH max (classe 18)', () => {
     const smhMax = CONFIG.SMH[18] ?? 0;
-    const r = computeAnnualRemunerationFromWizardStores(
-      wizardStoresInputFromFixtureState(stateMinimal()),
-    );
-    expect(r.total).toBeLessThanOrEqual(Math.ceil(smhMax * 1.5));
-    expect(Number.isFinite(r.total)).toBe(true);
-    expect(Number.isNaN(r.total)).toBe(false);
+    const total = computeAnnualTotal(wizardStoresInputFromFixtureState(stateMinimal()));
+    expect(total).toBeLessThanOrEqual(Math.ceil(smhMax * 1.5));
+    expect(Number.isFinite(total)).toBe(true);
+    expect(Number.isNaN(total)).toBe(false);
   });
 
   it('mensuel cohérent (12 mois)', () => {
-    const r = computeAnnualRemunerationFromWizardStores(
-      wizardStoresInputFromFixtureState(stateMinimal()),
-    );
-    const mensuel = Math.round(r.total / 12);
-    expect(Math.abs(r.total - mensuel * 12)).toBeLessThanOrEqual(6);
+    const total = computeAnnualTotal(wizardStoresInputFromFixtureState(stateMinimal()));
+    const mensuel = Math.round(total / 12);
+    expect(Math.abs(total - mensuel * 12)).toBeLessThanOrEqual(6);
   });
 });

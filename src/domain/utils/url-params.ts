@@ -15,10 +15,6 @@ export function mergeLocationSearchAndHashSearch(search: string, hash: string): 
   return merged;
 }
 
-function mergeSearchParamsFromLocation(): URLSearchParams {
-  return mergeLocationSearchAndHashSearch(window.location.search, window.location.hash);
-}
-
 /**
  * When the query contains `bgcolor=#hex` without encoding, the browser puts `#hex` in the
  * fragment and `bgcolor` is empty. If the hash is only `#RGB` or `#RRGGBB`, treat it as the color.
@@ -29,7 +25,7 @@ export function parseBareHexHashAsBgcolor(hash: string): string | null {
 }
 
 export function extractURLParams(): URLParamsResult {
-  const params = mergeSearchParamsFromLocation();
+  const params = mergeLocationSearchAndHashSearch(window.location.search, window.location.hash);
   const rawBg = params.get('bgcolor');
   const bgcolorFromQuery = rawBg && rawBg.trim() !== '' ? rawBg : null;
   const bgcolorFromHash = parseBareHexHashAsBgcolor(window.location.hash);

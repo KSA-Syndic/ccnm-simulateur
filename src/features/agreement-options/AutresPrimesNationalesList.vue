@@ -7,7 +7,7 @@ import {
   getNationalPrimeOverrideRows,
   isModaliteVisiblePourProfil,
   type NationalPrimeOverrideRow,
-} from '../../domain/convention/catalog';
+} from '../../domain/convention/nationalModalityRegistry';
 import {
   activateNationalModality,
   clearNationalModality,

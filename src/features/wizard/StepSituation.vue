@@ -1,24 +1,23 @@
 <script setup lang="ts">
 import { useWizardStore } from '../../stores/wizard';
 import { useSituationStore } from '../../stores/situation';
-import { useAgreementStore } from '../../stores/agreement';
 import { useWizardNavigation } from '../../composables/useWizardNavigation';
 import { CONFIG } from '../../domain/config';
-import { formatMoney } from '../../domain/utils/format';
+import { formatFrDecimalFixed, formatMoney } from '../../domain/utils/format';
 import { isCadre } from '../../domain/classification/engine';
 import {
   getBaremeDebutantTranche,
   getSmhForClasse,
   hasBaremeDebutant,
+  isBaremeDebutantApplicable,
 } from '../../domain/remuneration/smh';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { AppTooltip, NumericInput, SearchSelect } from '../../components/ui';
 import type { SearchSelectOption } from '../../components/ui/SearchSelect.vue';
 import {
   listTerritoiresPourSelection,
   TERRITOIRE_SAISIE_LIBRE,
 } from '../../domain/remuneration/pointTerritorial';
-import { formatFrDecimalFixed } from '../../domain/tooltip/builders';
 import { buildWizardTooltipHtml } from '../../domain/ui/wizardTooltips';
 import { WIZARD_TOOLTIPS, WIZARD_TOASTS } from '../../domain/ui/labels';
 import { wizardToastAncienneteMax } from '../../domain/ui/wizardToasts';
@@ -27,7 +26,6 @@ import ConditionsTravailPanel from '../agreement-options/ConditionsTravailPanel.
 
 const wizard = useWizardStore();
 const situation = useSituationStore();
-const agreementStore = useAgreementStore();
 const { prevStep, nextStep } = useWizardNavigation();
 
 const isCadreValue = computed(() => isCadre(wizard.classe));
@@ -39,23 +37,26 @@ const statutLabel = computed(() => {
   return isCadreValue.value ? 'Cadre' : 'Non-Cadre';
 });
 
-const minExperiencePro = computed(() =>
-  showCadreDebutant.value ? Math.max(0, Math.floor(Number(situation.anciennete) || 0)) : 0,
+/** Ancienneté en années entières positives : plancher de l'expérience professionnelle. */
+const ancienneteEntiere = computed(() =>
+  Math.max(0, Math.floor(Number(situation.anciennete) || 0)),
 );
+
+const minExperiencePro = computed(() => (showCadreDebutant.value ? ancienneteEntiere.value : 0));
 
 watch(
   () => situation.anciennete,
   () => {
-    const ae = Math.max(0, Math.floor(Number(situation.anciennete) || 0));
-    if (showCadreDebutant.value && situation.experiencePro < ae) {
-      situation.experiencePro = ae;
+    if (showCadreDebutant.value && situation.experiencePro < ancienneteEntiere.value) {
+      situation.experiencePro = ancienneteEntiere.value;
     }
   },
 );
 
 function onExperienceProBlur() {
-  const a = Math.max(0, Math.floor(Number(situation.anciennete) || 0));
-  if (situation.experiencePro < a) situation.experiencePro = a;
+  if (situation.experiencePro < ancienneteEntiere.value) {
+    situation.experiencePro = ancienneteEntiere.value;
+  }
 }
 
 const showCadreDebutant = computed(() => isCadreValue.value && hasBaremeDebutant(wizard.classe));
@@ -66,8 +67,8 @@ const showCadreDebutant = computed(() => isCadreValue.value && hasBaremeDebutant
  */
 const smhDebutantPreview = computed(() => {
   if (!showCadreDebutant.value) return null;
+  if (!isBaremeDebutantApplicable(wizard.classe, situation.experiencePro)) return null;
   const exp = Number(situation.experiencePro) || 0;
-  if (exp >= CONFIG.BAREME_DEBUTANTS_SEUIL_EXP_PRO) return null;
   const tranche = getBaremeDebutantTranche(exp);
   const montant = getSmhForClasse(wizard.classe, CONFIG.CURRENT_DATA_YEAR, exp);
   return { tranche, montant };
@@ -137,12 +138,6 @@ const experienceProTooltip = computed(() => {
 });
 
 const ancienneteTooltip = computed(() => buildWizardTooltipHtml('anciennete'));
-
-onMounted(() => {
-  situation.pointTerritorial = situation.pointTerritorial || CONFIG.POINT_TERRITORIAL.valeurDefaut;
-  if (!situation.territoireId) situation.territoireId = CONFIG.POINT_TERRITORIAL.territoireDefautId;
-  agreementStore.bootstrapFromUrl();
-});
 
 function onExperienceProBlockedByMin() {
   if (!showCadreDebutant.value) return;

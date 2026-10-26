@@ -21,7 +21,7 @@ const KuhnAgreement: Agreement = {
     barème: {
       2: 0.02,
       3: 0.03,
-      4: 0.004,
+      4: 0.04,
       5: 0.05,
       6: 0.06,
       7: 0.07,

@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import '@/accords';
-import { getAgreement } from '@/domain/agreements/registry';
 import { calculateSalaireMensuelDuPourPeriode } from '@/domain/arretees/salaireDuPourMois';
-import { enrichPeriodesSalaireDuMensuel } from '@/composables/useTimeline';
+import { enrichPeriodesSalaireDuMensuel } from '@/domain/arretees/timeline';
 import type { WizardRemunerationInput } from '@/domain/remuneration/compute';
 import { CONFIG } from '@/domain/config';
 
@@ -37,8 +36,6 @@ function kuhnWizardInput(anciennete: number): WizardRemunerationInput {
 }
 
 describe('arriérés — répartition mensuelle accord Kuhn', () => {
-  const agreement = getAgreement('kuhn')!;
-
   it('juillet : prime de vacances dans le dû mensuel', () => {
     const input = kuhnWizardInput(5);
     const july = calculateSalaireMensuelDuPourPeriode(input, {
@@ -46,7 +43,6 @@ describe('arriérés — répartition mensuelle accord Kuhn', () => {
       dateEmbauche: '2020-01-15',
       nbMois: 13,
       smhSeul: false,
-      agreement,
     });
     expect(july.primesVerseesCeMois).toBe(525);
     expect(july.salaireMensuelDu).toBeGreaterThan(july.mensuelDuBase);
@@ -60,7 +56,6 @@ describe('arriérés — répartition mensuelle accord Kuhn', () => {
       dateEmbauche: '2020-01-15',
       nbMois: 13,
       smhSeul: false,
-      agreement,
     });
     expect(aug.primesVerseesCeMois).toBe(0);
   });
@@ -72,14 +67,12 @@ describe('arriérés — répartition mensuelle accord Kuhn', () => {
       dateEmbauche: '2020-01-15',
       nbMois: 13,
       smhSeul: false,
-      agreement,
     });
     const oct = calculateSalaireMensuelDuPourPeriode(input, {
       periodKey: '2025-10',
       dateEmbauche: '2020-01-15',
       nbMois: 13,
       smhSeul: false,
-      agreement,
     });
     expect(nov.estMois13eMois).toBe(true);
     expect(nov.primesVerseesCeMois).toBe(0);
@@ -97,15 +90,10 @@ describe('arriérés — répartition mensuelle accord Kuhn', () => {
       },
     ];
     enrichPeriodesSalaireDuMensuel(periodes, {
-      classe: 1,
-      experiencePro: 5,
-      tempsPartiel: false,
-      tauxActivite: 100,
       wizardInput: input,
       dateEmbauche: '2020-01-15',
       nbMois: 13,
       smhSeul: false,
-      agreement,
     });
     expect(periodes[0]!.primesVerseesCeMois).toBe(525);
     expect(periodes[0]!.salaireDu).toBeGreaterThan(0);

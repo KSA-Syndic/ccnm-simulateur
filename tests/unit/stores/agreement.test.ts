@@ -35,6 +35,17 @@ describe('useAgreementStore', () => {
     expect(a.accordActif).toBe(true);
   });
 
+  it('bootstrapFromUrl respecte « Appliquer » décoché pour un accord déjà chargé', () => {
+    stubLocation('?accord=kuhn');
+    const pinia = createFreshPinia();
+    const a = useAgreementStore(pinia);
+    a.bootstrapFromUrl();
+    a.accordActif = false;
+    a.bootstrapFromUrl();
+    expect(a.activeAccordId).toBe('kuhn');
+    expect(a.accordActif).toBe(false);
+  });
+
   it('bootstrapFromUrl lit accord dans la query du hash', () => {
     stubLocation('', '#/step?accord=kuhn');
     const pinia = createFreshPinia();

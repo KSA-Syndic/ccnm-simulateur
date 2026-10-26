@@ -5,16 +5,16 @@ import { useAgreementStore } from '../stores/agreement';
 import { useUiStore } from '../stores/ui';
 import { CONFIG } from '../domain/config';
 import { isCadre } from '../domain/classification/engine';
-import { getPrimes, type PrimeDef } from '../domain/agreements/interface';
+import { getPrimes, isFlagOn, type PrimeDef } from '../domain/agreements/interface';
 import { computePdfRemunerationBreakdown } from '../domain/remuneration/compute';
 import { useWizardRemunerationInput } from './useWizardRemunerationInput';
 import { buildPdfArrieresAnalyticsPayload, trackPdfArrieres } from '../infra/analytics';
-import { formatMoney } from '../domain/utils/format';
+import { formatFrDecimalFixed, formatMoney } from '../domain/utils/format';
 import {
   aggregateArreteesParAnneeFromPeriodeLabels,
   yearOfPeriode,
 } from '../domain/arretees/aggregateFromPeriodes';
-import { formatFrDecimalFixed } from '../domain/tooltip/builders';
+import { isPeriodeSaisie } from '../domain/arretees/timeline';
 import { getBaremeDebutantTranche } from '../domain/remuneration/smh';
 import { getTerritoirePoint } from '../domain/remuneration/pointTerritorial';
 import { fileDateStamp, MOIS_LONGS, todayFrLong } from '../domain/utils/date';
@@ -33,10 +33,10 @@ import { EDITEUR, PDF_RESOURCES_LABELS, CONVENTION_METALLURGIE_URL } from '../do
 const LEGAL_SNIPPET_INDICATIF =
   'Références indicatives (à contrôler sur les textes en vigueur et le dossier) : CCNM Art. 140 et 141 (SMH) ; Code du travail L. 3245-1 (reclassement des salaires, prescription), L. 2254-2 (nullité des clauses inférieures au minimum).';
 
-function formatFrDateSafe(value: string): string {
+function formatFrDateSafe(value: string, options?: Intl.DateTimeFormatOptions): string {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString('fr-FR');
+  return d.toLocaleDateString('fr-FR', options);
 }
 
 function smhHeaderLines(): string[] {
@@ -46,8 +46,7 @@ function smhHeaderLines(): string[] {
     | { effectiveDate?: string; sourceLabel?: string }
     | undefined;
   if (entry?.effectiveDate) {
-    const d = new Date(entry.effectiveDate);
-    const eff = Number.isNaN(d.getTime()) ? entry.effectiveDate : d.toLocaleDateString('fr-FR');
+    const eff = formatFrDateSafe(entry.effectiveDate);
     const maj = CONFIG.SMH_UPDATE.updatedAt
       ? new Date(CONFIG.SMH_UPDATE.updatedAt).toLocaleDateString('fr-FR')
       : '';
@@ -60,8 +59,7 @@ function smhHeaderLines(): string[] {
 }
 
 function primePdfActive(inputs: Record<string, unknown>, p: PrimeDef): boolean {
-  const v = inputs[p.stateKeyActif];
-  return v === true || v === 'true';
+  return isFlagOn(inputs[p.stateKeyActif]);
 }
 
 function inclusSmhPdfLabel(v: boolean | 'ifSuperiorToConvention' | undefined): string {
@@ -78,15 +76,8 @@ function smhGrilleRowLabel(scenario: string, experiencePro: number): string {
 }
 
 function forfaitPdfLabel(forfa: '35h' | 'heures' | 'jours'): string {
-  const forfaits = CONFIG.FORFAITS as Record<string, number> | undefined;
-  if (forfa === 'heures') {
-    const pct = Math.round(((forfaits?.heures ?? 0.15) as number) * 100);
-    return `Forfait heures (+${pct} %)`;
-  }
-  if (forfa === 'jours') {
-    const pct = Math.round(((forfaits?.jours ?? 0.3) as number) * 100);
-    return `Forfait jours (+${pct} %)`;
-  }
+  if (forfa === 'heures') return `Forfait heures (+${Math.round(CONFIG.FORFAITS.heures * 100)} %)`;
+  if (forfa === 'jours') return `Forfait jours (+${Math.round(CONFIG.FORFAITS.jours * 100)} %)`;
   return 'Horaire collectif (35h/sem.)';
 }
 
@@ -117,7 +108,7 @@ export function usePdfGeneration() {
       const agreementStore = useAgreementStore();
       const uiStore = useUiStore();
 
-      const br = computePdfRemunerationBreakdown(wizardInput.value, uiStore.nbMois);
+      const br = computePdfRemunerationBreakdown(wizardInput.value, uiStore.nbMoisEffectif);
 
       const { active, accDoc } = br;
 
@@ -183,6 +174,13 @@ export function usePdfGeneration() {
       if (infos.employeur)
         contractRows.push(['Employeur', sanitizePdfStandardFontText(infos.employeur)]);
       contractRows.push(['Classification', `${active.groupe}${active.classe}`]);
+      const changement = arreteesStore.changementClassification;
+      if (changement) {
+        contractRows.push([
+          'Changement de classification',
+          `${changement.groupe}${changement.classe} -> ${active.groupe}${active.classe} au ${formatFrDateSafe(changement.date)}`,
+        ]);
+      }
       if (!isCadre(active.classe)) {
         const zone = getTerritoirePoint(situationStore.territoireId);
         contractRows.push([
@@ -195,11 +193,22 @@ export function usePdfGeneration() {
         ]);
       }
       if (arreteesStore.dateEmbauche) {
-        const d = new Date(arreteesStore.dateEmbauche);
-        const emb = Number.isNaN(d.getTime())
-          ? arreteesStore.dateEmbauche
-          : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+        const emb = formatFrDateSafe(arreteesStore.dateEmbauche, {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        });
         contractRows.push(["Date d'embauche", emb]);
+      }
+      if (arreteesStore.dateRuptureEffective) {
+        contractRows.push([
+          'Date de rupture du contrat',
+          formatFrDateSafe(arreteesStore.dateRuptureEffective, {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          }),
+        ]);
       }
       if (accDoc) {
         const parts = [accDoc.nomCourt || accDoc.nom];
@@ -232,7 +241,7 @@ export function usePdfGeneration() {
           body: [
             ['Périmètre retenu', sanitizePdfStandardFontText(scopeLabel)],
             ['Méthodologie associée', sanitizePdfStandardFontText(scopeMethodo)],
-            ['Lissage mensuel (réglage assistant)', `${uiStore.nbMois} mois`],
+            ['Lissage mensuel (réglage assistant)', `${uiStore.nbMoisEffectif} mois`],
           ],
           theme: 'plain',
           styles: { fontSize: 8, cellPadding: 1.2 },
@@ -273,7 +282,7 @@ export function usePdfGeneration() {
           ),
         ],
         ['Base de calcul (lissage)', sanitizePdfStandardFontText(baseCalc)],
-        ['Répartition mensuelle (assistant)', `${uiStore.nbMois} mois`],
+        ['Répartition mensuelle (assistant)', `${uiStore.nbMoisEffectif} mois`],
         [
           'Inclus SMH (actifs, libellés)',
           sanitizePdfStandardFontText(
@@ -397,7 +406,7 @@ export function usePdfGeneration() {
       for (const raw of [
         p1,
         `Jeu de données : grilles SMH et barèmes débutants issus de la configuration simulateur ; années repérées sur la frise : ${yearsLabel}.`,
-        `Les montants « dû » par mois sur la frise sont issus du lissage ${uiStore.nbMois} mois appliqué au total annuel du moteur (simplification UI — le calcul juridique exact peut imposer un salaire dû mois par mois).`,
+        `Les montants « dû » par mois sur la frise sont issus du lissage ${uiStore.nbMoisEffectif} mois appliqué au total annuel du moteur (simplification UI — le calcul juridique exact peut imposer un salaire dû mois par mois).`,
         'Formule documentaire : écart mensuel = salaire dû affiché - salaire versé saisi ; totaux = sommes sur les périodes renseignées.',
       ]) {
         const lines = doc.splitTextToSize(sanitizePdfStandardFontText(raw), textW);
@@ -471,9 +480,7 @@ export function usePdfGeneration() {
           margin: { left: PDF_MARGIN_MM, right: PDF_MARGIN_MM },
         }) + 8;
 
-      const periodesRenseignees = arreteesStore.periodes.filter(
-        (p) => p.salaireVerse !== undefined,
-      );
+      const periodesRenseignees = arreteesStore.periodes.filter(isPeriodeSaisie);
       // Même agrégat que l'écran et la lettre Word : écart positif par année civile (Art. 140).
       const { detailsParAnnee, totalArretees } =
         aggregateArreteesParAnneeFromPeriodeLabels(periodesRenseignees);
@@ -522,11 +529,11 @@ export function usePdfGeneration() {
       y += 6;
 
       const tableData = periodesRenseignees.map((p) => {
-        const ecart = p.salaireDu - (p.salaireVerse ?? 0);
+        const ecart = p.salaireDu - p.salaireVerse;
         return [
           sanitizePdfStandardFontText(p.label),
           formatMoney(p.salaireDu),
-          formatMoney(p.salaireVerse ?? 0),
+          formatMoney(p.salaireVerse),
           pdfEcartCell(ecart),
         ];
       });
@@ -560,10 +567,10 @@ export function usePdfGeneration() {
 
       trackPdfArrieres(
         buildPdfArrieresAnalyticsPayload(arreteesStore.periodes, {
-          totalArretees: arreteesStore.summary?.totalArretees ?? 0,
+          totalArretees,
           groupe: active.groupe,
           classe: active.classe,
-          nbMois: uiStore.nbMois,
+          nbMois: uiStore.nbMoisEffectif,
           accordNomCourt: accDoc ? (accDoc.nomCourt ?? accDoc.nom ?? null) : null,
         }),
       );

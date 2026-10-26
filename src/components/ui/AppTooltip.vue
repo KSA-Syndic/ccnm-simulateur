@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick, useAttrs } from 'vue';
+import { ref, computed, watch, onUnmounted, nextTick, useAttrs } from 'vue';
 import { computePosition, flip, shift, offset, autoUpdate } from '@floating-ui/dom';
 import type { Placement } from '@floating-ui/dom';
 import type { TooltipVariant } from '@/domain/tooltip/model';
@@ -143,10 +143,13 @@ function onClickOutside(e: MouseEvent) {
   }
 }
 
+/** Clic extérieur écouté uniquement infobulle ouverte (une vingtaine d'infobulles montées en permanence). */
 watch(visible, (v) => {
   if (v) {
+    document.addEventListener('click', onClickOutside, true);
     void reposition();
   } else {
+    document.removeEventListener('click', onClickOutside, true);
     cancelHide();
     stopAutoUpdate?.();
     stopAutoUpdate = undefined;
@@ -160,7 +163,6 @@ watch(
   },
 );
 
-onMounted(() => document.addEventListener('click', onClickOutside, true));
 onUnmounted(() => {
   document.removeEventListener('click', onClickOutside, true);
   cancelHide();

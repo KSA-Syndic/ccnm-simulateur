@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CONVENTION_MODALITES_PRIMES } from '@/domain/convention/catalog';
 import {
-  assertNationalModalityRegistryCoversCatalog,
   buildNationalModalityElementDefs,
   getNationalModalityOverrideSemantics,
   getNationalPrimeOverrideRows,
@@ -11,9 +9,11 @@ import { applyNationalPrimeOverridesToConventionDefs } from '@/domain/remunerati
 import { SEMANTIC_ID } from '@/domain/types';
 
 describe('nationalModalityRegistry', () => {
-  it('couvre exactement CONVENTION_MODALITES_PRIMES', () => {
-    expect(() => assertNationalModalityRegistryCoversCatalog()).not.toThrow();
-    expect(NATIONAL_MODALITY_ENTRIES).toHaveLength(Object.keys(CONVENTION_MODALITES_PRIMES).length);
+  it('identifiants, sémantiques et clés d’état uniques', () => {
+    const uniques = (xs: string[]) => new Set(xs).size === xs.length;
+    expect(uniques(NATIONAL_MODALITY_ENTRIES.map((e) => e.id))).toBe(true);
+    expect(uniques(NATIONAL_MODALITY_ENTRIES.map((e) => e.semanticId))).toBe(true);
+    expect(uniques(NATIONAL_MODALITY_ENTRIES.map((e) => e.modalite.stateKeyActif))).toBe(true);
   });
 
   it('dérive autant de lignes UI que d’entrées registre', () => {

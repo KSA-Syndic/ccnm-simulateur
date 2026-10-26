@@ -1,55 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { CONFIG } from '@/domain/config';
-import { eligibleHints, formatHintsHtml, buildResultHintBlocks } from '@/domain/hints/engine';
+import { buildResultHintBlocks } from '@/domain/hints/engine';
 import type { ElementResult } from '@/domain/types';
 
 describe('hints engine', () => {
-  it('cadre débutant F11 + exp sous le seuil catalogue', () => {
-    const ids = eligibleHints({
-      isCadre: true,
-      classe: 11,
-      experiencePro: 2,
-      accordActif: false,
-      travailNuit: false,
-      travailDimanche: false,
-      travailHeuresSup: false,
-    });
-    expect(ids).toContain('cadreDebutant');
-  });
-
-  it('cadre F11 + exp au seuil catalogue : pas de hint cadre débutant', () => {
-    const seuil = CONFIG.BAREME_DEBUTANTS_SEUIL_EXP_PRO;
-    const ids = eligibleHints({
-      isCadre: true,
-      classe: 11,
-      experiencePro: seuil,
-      accordActif: false,
-      travailNuit: false,
-      travailDimanche: false,
-      travailHeuresSup: false,
-    });
-    expect(ids).not.toContain('cadreDebutant');
-  });
-
-  it('majorations sans accord', () => {
-    const ids = eligibleHints({
-      isCadre: false,
-      classe: 5,
-      experiencePro: 10,
-      accordActif: false,
-      travailNuit: true,
-      travailDimanche: false,
-      travailHeuresSup: false,
-    });
-    expect(ids).toContain('majorationsSansAccord');
-  });
-
-  it('formatHintsHtml produit une liste', () => {
-    const html = formatHintsHtml(['defautNonCadre']);
-    expect(html).toContain('<ul');
-    expect(html).toContain('non-cadre');
-  });
-
   it('buildResultHintBlocks — majorations CCNM sans accord', () => {
     const details: ElementResult[] = [
       {

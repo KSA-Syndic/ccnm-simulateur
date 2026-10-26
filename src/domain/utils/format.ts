@@ -3,25 +3,36 @@ import { roundToCents, roundToEuro } from '../utils/rounding';
 const FR = 'fr-FR';
 const NBSP_REGEX = /\u202f/g;
 
+const EUROS_DETAIL_FORMAT = new Intl.NumberFormat(FR, {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const EUROS_ENTIERS_FORMAT = new Intl.NumberFormat(FR, {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+  useGrouping: true,
+});
+
 export function formatEurosDetail(amount: number): string {
-  const n = roundToCents(amount);
-  return new Intl.NumberFormat(FR, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-    .format(n)
-    .replace(NBSP_REGEX, ' ');
+  return EUROS_DETAIL_FORMAT.format(roundToCents(amount)).replace(NBSP_REGEX, ' ');
 }
 
 /** Affichage en euros entiers : plafond sur le montant ramené au centime. */
 export function formatMoney(amount: number): string {
-  const n = roundToEuro(amount);
-  const s = new Intl.NumberFormat(FR, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-    useGrouping: true,
-  }).format(n);
-  return s.replace(NBSP_REGEX, ' ') + ' €';
+  return EUROS_ENTIERS_FORMAT.format(roundToEuro(amount)).replace(NBSP_REGEX, ' ') + ' €';
+}
+
+/** Format décimal fixe `fr-FR` (virgule), sans séparateur de milliers ; `'0'` si non fini. */
+export function formatFrDecimalFixed(value: unknown, digits = 2): string {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '0';
+  return n.toFixed(digits).replace('.', ',');
+}
+
+/** Comme `formatFrDecimalFixed`, sans décimales pour une valeur entière, 2 sinon. */
+export function formatFrDecimalAuto(value: unknown): string {
+  const n = Number(value);
+  return formatFrDecimalFixed(n, n % 1 === 0 ? 0 : 2);
 }
 
 /**

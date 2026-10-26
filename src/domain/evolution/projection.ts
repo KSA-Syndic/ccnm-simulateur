@@ -1,14 +1,16 @@
 import { CONSTANTS } from '../config/constants';
 import { CONFIG } from '../config';
 import { formatMoney } from '../utils/format';
-import {
-  computeAnnualRemunerationFromWizardStores,
-  type WizardRemunerationInput,
-} from '../remuneration/compute';
+import { computeAnnualTotal, type WizardRemunerationInput } from '../remuneration/compute';
 
 export interface ProjectionYearPoint {
   year: number;
   salary: number;
+}
+
+export interface ProjectedSalaryPoint extends ProjectionYearPoint {
+  /** Total annuel moteur (hors augmentation, non arrondi à l'euro). */
+  total: number;
 }
 
 export function getYearsToRetirement(currentAge: number): number {
@@ -24,11 +26,11 @@ export function projectSalaryTotals(
   baseInput: WizardRemunerationInput,
   years: number,
   augmentationAnnuellePct: number,
-): ProjectionYearPoint[] {
+): ProjectedSalaryPoint[] {
   const currentYear = new Date().getFullYear();
   const savedAnc = baseInput.situation.anciennete;
   const savedExp = baseInput.situation.experiencePro;
-  const out: ProjectionYearPoint[] = [];
+  const out: ProjectedSalaryPoint[] = [];
 
   for (let i = 0; i <= years; i++) {
     const input: WizardRemunerationInput = {
@@ -39,10 +41,10 @@ export function projectSalaryTotals(
         experiencePro: savedExp + i,
       },
     };
-    const total = computeAnnualRemunerationFromWizardStores(input).total;
+    const total = computeAnnualTotal(input);
     const aug = Math.pow(1 + augmentationAnnuellePct / 100, i);
     const salary = Math.round(total * aug);
-    out.push({ year: currentYear + i, salary });
+    out.push({ year: currentYear + i, salary, total });
   }
 
   return out;

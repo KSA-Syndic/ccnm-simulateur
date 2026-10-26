@@ -15,18 +15,7 @@ import { resolveActivityRate } from './rates';
 import { resolvePointTerritorial } from './pointTerritorial';
 import { roundHourlyRate, roundToCents } from '../utils/rounding';
 import { computeSmhAssietteVerif, detailContributesToSmhAssiette } from './smhConformity';
-import type { ComputeContext, ElementResult } from '../types';
-
-/** Résultat agrégé du calcul annuel (mode complet) — champs exposés à l’UI et aux tests. */
-export interface AnnualRemunerationSummary {
-  scenario: string;
-  baseSMH: number;
-  total: number;
-  details: Array<Record<string, unknown>>;
-  isCadre: boolean;
-  groupe: string;
-  classe: number;
-}
+import type { ComputeContext, ElementDef, ElementResult } from '../types';
 
 export type WizardSituationInput = {
   anciennete: number;
@@ -89,7 +78,7 @@ export interface WizardRemunerationResolved {
   details: ElementResult[];
 }
 
-interface WizardComputePrepared {
+export interface WizardComputePrepared {
   active: { groupe: string; classe: number };
   baseSMH: number;
   state: Record<string, unknown>;
@@ -164,6 +153,21 @@ export function resolveWizardTauxHoraireBase(input: WizardRemunerationInput): nu
   return roundHourlyRate(prepareWizardCompute(input).ctx.tauxHoraireBase);
 }
 
+const accordDefsCache = new WeakMap<Agreement, readonly ElementDef[]>();
+
+/** Définitions accord (majorations + primes) — dérivées d'un accord immuable du registre, construites une fois. */
+export function getAccordDefsForRemuneration(accDoc: Agreement): readonly ElementDef[] {
+  let defs = accordDefsCache.get(accDoc);
+  if (!defs) {
+    defs = [
+      ...getAccordMajorationDefsForRemuneration(accDoc),
+      ...getAccordElementDefsForRemuneration(accDoc),
+    ];
+    accordDefsCache.set(accDoc, defs);
+  }
+  return defs;
+}
+
 /**
  * Éléments de rémunération résolus (convention + accord).
  * `tooltips: false` pour les calculs en boucle (arriérés, projection, PDF) qui n'affichent pas d'infobulle.
@@ -173,17 +177,24 @@ export function resolveWizardRemunerationElements(
   overrides?: WizardComputeOverrides,
   options: { tooltips?: boolean } = {},
 ): WizardRemunerationResolved {
-  const { active, baseSMH, state, ctx, accDoc } = prepareWizardCompute(input, overrides);
+  return resolvePreparedRemunerationElements(
+    input,
+    prepareWizardCompute(input, overrides),
+    options,
+  );
+}
+
+/** Comme `resolveWizardRemunerationElements`, à partir d'un `prepareWizardCompute` déjà calculé. */
+export function resolvePreparedRemunerationElements(
+  input: WizardRemunerationInput,
+  prepared: WizardComputePrepared,
+  options: { tooltips?: boolean } = {},
+): WizardRemunerationResolved {
+  const { active, baseSMH, state, ctx, accDoc } = prepared;
 
   const convDefs = applyNationalPrimeOverridesToConventionDefs(getAllConventionDefs(), state);
-  const accordDefsRaw = accDoc
-    ? [
-        ...getAccordMajorationDefsForRemuneration(accDoc),
-        ...getAccordElementDefsForRemuneration(accDoc),
-      ]
-    : [];
   const accordDefs = applyAccordPrimeRateOverridesFromSituation(
-    accordDefsRaw,
+    accDoc ? [...getAccordDefsForRemuneration(accDoc)] : [],
     state.nationalPrimeOverrides as Record<string, unknown>,
   );
   const resolved = resolveBySubstitution(convDefs, accordDefs, ctx);
@@ -246,29 +257,21 @@ export function computePdfRemunerationBreakdown(
 }
 
 /**
- * Rémunération annuelle (mode full) via le moteur domaine TS — aligné `ResultDetails` / `aggregateRemunerationDetails`.
- * Le total annuel ne dépend pas du lissage 12/13 mois (`nbMois` fixé à 12 pour l’agrégat mensuel affiché ailleurs).
+ * Total annuel d'éléments déjà résolus — aligné `ResultDetails` / `aggregateRemunerationDetails`.
+ * Le total annuel ne dépend pas du lissage 12/13 mois (`nbMois` fixé à 12).
  */
-export function computeAnnualRemunerationFromWizardStores(
+export function annualTotalFromResolved(resolved: WizardRemunerationResolved): number {
+  return aggregateRemunerationDetails(resolved.details, resolved.baseSMH, 12).totalAnnual;
+}
+
+/** Rémunération annuelle totale (mode complet) via le moteur domaine TS. */
+export function computeAnnualTotal(
   input: WizardRemunerationInput,
   overrides?: WizardComputeOverrides,
-): AnnualRemunerationSummary {
-  const { active, scenario, baseSMH, details } = resolveWizardRemunerationElements(
-    input,
-    overrides,
-    { tooltips: false },
+): number {
+  return annualTotalFromResolved(
+    resolveWizardRemunerationElements(input, overrides, { tooltips: false }),
   );
-  const agg = aggregateRemunerationDetails(details, baseSMH, 12);
-
-  return {
-    scenario,
-    baseSMH: agg.baseSMH,
-    total: agg.totalAnnual,
-    details: [],
-    isCadre: isCadre(active.classe),
-    groupe: active.groupe,
-    classe: active.classe,
-  };
 }
 
 export function scoresArrayFromWizardScores(scores: Record<string, number>): number[] {

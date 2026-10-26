@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { type AggregatedRemuneration } from '../../domain/remuneration/aggregate';
-import { formatMoney } from '../../domain/utils/format';
-import { roundHourlyRate, roundToEuro } from '../../domain/utils/rounding';
+import { formatFrDecimalFixed, formatMoney } from '../../domain/utils/format';
+import { roundHourlyRate } from '../../domain/utils/rounding';
 import { AppTooltip } from '../../components/ui';
 import { useUiStore } from '../../stores/ui';
 import { useSituationStore } from '../../stores/situation';
@@ -73,8 +73,8 @@ const resultContextNotice = computed(() => {
   });
   const tauxJournalier = getSmhDailyBaseRate(smhBaseAnnuel, { activityRate });
   const tauxStr = isForfaitJours
-    ? `${roundHourlyRate(tauxJournalier).toFixed(2).replace('.', ',')} €/j`
-    : `${roundHourlyRate(tauxSmhHoraire).toFixed(2).replace('.', ',')} €/h`;
+    ? `${formatFrDecimalFixed(roundHourlyRate(tauxJournalier))} €/j`
+    : `${formatFrDecimalFixed(roundHourlyRate(tauxSmhHoraire))} €/h`;
   const tauxLabel = isForfaitJours ? 'Taux journalier' : 'Taux horaire de référence (SMH)';
   return `${baseInfo} · ${tauxLabel} ${tauxStr}`;
 });
@@ -131,7 +131,7 @@ function selectNbMois(target: 12 | 13) {
     dispatchAppToast(wizardToastNbMoisImposeParAccord(imp, nom), 'info');
     return;
   }
-  if (ui.nbMois !== target) ui.nbMois = target;
+  ui.nbMois = target;
 }
 </script>
 
@@ -152,7 +152,7 @@ function selectNbMois(target: 12 | 13) {
 
       <div class="result-monthly">
         <span id="result-mensuel" class="result-value-secondary">{{
-          formatMoney(roundToEuro(data.totalAnnual / ui.nbMois))
+          formatMoney(data.totalMonthly)
         }}</span>
         <div id="result-label-mensuel" class="result-label">
           <span>{{ WIZARD_LABELS.resultatMensuel }}</span>
@@ -171,7 +171,7 @@ function selectNbMois(target: 12 | 13) {
           <button
             type="button"
             class="month-btn"
-            :class="{ active: ui.nbMois === 12 }"
+            :class="{ active: ui.nbMoisEffectif === 12 }"
             data-months="12"
             @click="selectNbMois(12)"
           >
@@ -180,7 +180,7 @@ function selectNbMois(target: 12 | 13) {
           <button
             type="button"
             class="month-btn"
-            :class="{ active: ui.nbMois === 13 }"
+            :class="{ active: ui.nbMoisEffectif === 13 }"
             data-months="13"
             @click="selectNbMois(13)"
           >

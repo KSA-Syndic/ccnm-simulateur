@@ -1,12 +1,10 @@
 import { computed } from 'vue';
 import { useWizardStore } from '../stores/wizard';
-import { useUiStore } from '../stores/ui';
 import { wizardToastStepperLocked } from '../domain/ui/wizardToasts';
 import { dispatchAppToast } from '../utils/appToast';
 
 export function useWizardNavigation() {
   const wizard = useWizardStore();
-  const ui = useUiStore();
 
   const currentStep = computed(() => wizard.currentStep);
 
@@ -36,7 +34,6 @@ export function useWizardNavigation() {
 
     wizard.maxStepReached = Math.max(wizard.maxStepReached, step);
     wizard.currentStep = step;
-    ui.markDirty();
   }
 
   function nextStep() {

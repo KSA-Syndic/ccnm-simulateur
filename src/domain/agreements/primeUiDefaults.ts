@@ -27,10 +27,6 @@ export function resolvePrimeOfficialValue(prime: PrimeDef): number | null {
   return Number.isFinite(v) ? v : null;
 }
 
-export function resolvePrimeSemanticIdForUi(prime: PrimeDef): string {
-  return resolvePrimeSemanticId(prime);
-}
-
 /**
  * Coche les primes déclarées `defaultActif` qui n'ont encore aucune valeur saisie.
  * Retourne `null` si rien ne change.
@@ -71,7 +67,7 @@ export function seedAgreementPrimeUiDefaults(
   }
 
   const official = resolvePrimeOfficialValue(prime);
-  const sid = resolvePrimeSemanticIdForUi(prime);
+  const sid = resolvePrimeSemanticId(prime);
   if (official != null && sid && !(sid in nationalPrimeOverrides)) {
     nationalPrimeOverrides[sid] = official;
   }
