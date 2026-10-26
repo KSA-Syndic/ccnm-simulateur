@@ -130,4 +130,30 @@ test.describe('P5.2 — UI wizard (situation, header, footer, hints, graphiques,
     await page.locator('#date-rupture-arretees').fill('2023-12-01');
     await expect(page.getByRole('alert')).toContainText(/postérieure à la date d’embauche/i);
   });
+
+  test('étape 4 — export : téléchargement de la lettre Word et de l’annexe PDF', async ({
+    page,
+  }) => {
+    await goToStep4(page, 'A', '1');
+    await fillOneSalaireViaBulkModal(page);
+    await page.getByRole('button', { name: /Calculer les arriérés/i }).click();
+    await page.getByRole('button', { name: /Générer mon rapport d'arriérés/i }).click();
+    const dialog = page.getByRole('dialog', { name: /Export PDF et lettre Word/i });
+    await dialog.locator('#pdf-nom').fill('Jean Test');
+
+    const downloads: import('@playwright/test').Download[] = [];
+    page.on('download', (d) => downloads.push(d));
+    await dialog.getByRole('button', { name: /Générer lettre Word \+ PDF/i }).click();
+    await expect.poll(() => downloads.length, { timeout: 15_000 }).toBe(2);
+
+    const pdf = downloads.find((d) => d.suggestedFilename().endsWith('.pdf'));
+    const word = downloads.find((d) => d.suggestedFilename().endsWith('.doc'));
+    expect(pdf?.suggestedFilename()).toMatch(/^arretees-salaire-\d{4}-\d{2}-\d{2}\.pdf$/);
+    expect(word).toBeDefined();
+    const chemin = await pdf!.path();
+    const contenu = (await import('node:fs')).readFileSync(chemin!, 'latin1');
+    expect(contenu.startsWith('%PDF')).toBe(true);
+    expect(contenu).toContain('Jean Test');
+    expect(contenu).toContain('Total arri');
+  });
 });

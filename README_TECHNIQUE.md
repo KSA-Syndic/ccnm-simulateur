@@ -14,7 +14,7 @@ Application **Vue 3**, **Pinia**, moteur métier sous **`src/domain/`**. Point d
 | Arriérés                          | `src/domain/arretees/` (frise : `timeline.ts`), `src/stores/arretees.ts`                                     |
 | Évolution / inflation             | `src/domain/evolution/inflationFetch.ts`, `projection.ts`                                                    |
 | Tooltips & libellés               | `src/domain/tooltip/`, `src/domain/ui/labels.ts`                                                             |
-| PDF / Word / post-export          | `src/composables/usePdfGeneration.ts`, `src/domain/pdf/`, `src/features/pdf/`                                |
+| PDF / Word / post-export          | `src/domain/pdf/` (annexe : `arreteesAnnex.ts`), `src/composables/usePdfGeneration.ts`, `src/features/pdf/`  |
 | État global                       | `src/stores/*.ts`, `useWizardRemunerationInput.ts`                                                           |
 | Tests                             | `src/**/__tests__`, `tests/**`, `e2e/**`                                                                     |
 
@@ -98,7 +98,7 @@ Saisie des 6 critères → `calculateClassification` (`domain/classification/eng
 
 1. `domain/arretees/timeline.ts` construit les périodes (embauche → aujourd'hui ou rupture du contrat ; classification antérieure avant un changement, mois du changement au prorata) ; `mensuelDue.ts` / `salaireDuPourMois.ts` pour le dû mensuel accord. Mentions de prescription : `domain/legal/arreteesLegalNotes.ts`.
 2. Saisie : `FloatingBlock.vue`, `SalaryModal.vue` ; courbe : `SalaryCurveView.vue`.
-3. Export : `usePdfGeneration.ts`, lettre Word, flux syndicat (`PostPdfFlow.vue`).
+3. Export : mise en page de l'annexe PDF dans `domain/pdf/arreteesAnnex.ts` (données simples, sans store) ; `usePdfGeneration.ts` rassemble les données, enregistre le fichier et envoie les statistiques ; lettre Word (`domain/word/`), flux syndicat (`PostPdfFlow.vue`).
 
 ## Ajouter un accord d'entreprise
 
